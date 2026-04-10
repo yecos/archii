@@ -46,7 +46,7 @@ export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatP
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && window.innerWidth >= 768) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
@@ -127,15 +127,15 @@ export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
       <div
         className={cn(
-          'relative w-full max-w-lg h-[80vh] max-h-[700px] flex flex-col',
-          'bg-[var(--af-bg1)] border border-[var(--af-bg4)] rounded-2xl shadow-2xl',
+          'relative w-full sm:max-w-lg h-[100dvh] sm:h-[80vh] max-h-[100dvh] sm:max-h-[700px] flex flex-col',
+          'bg-[var(--af-bg1)] border border-[var(--af-bg4)] sm:rounded-2xl rounded-t-2xl shadow-2xl',
           'animate-slideUp overflow-hidden'
         )}
       >
@@ -156,7 +156,7 @@ export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatP
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="w-10 h-10 rounded-lg hover:bg-[var(--af-bg4)] active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -205,12 +205,12 @@ export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatP
 
         {/* Quick prompts */}
         {messages.length <= 1 && (
-          <div className="px-5 pb-2 flex flex-wrap gap-2">
+          <div className="px-4 sm:px-5 pb-2 flex flex-wrap gap-2 max-h-[80px] overflow-y-auto scrollbar-none">
             {QUICK_PROMPTS.map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => sendMessage(prompt)}
-                className="text-xs px-3 py-1.5 rounded-full bg-[var(--af-bg3)] text-muted-foreground hover:text-foreground hover:bg-[var(--af-bg4)] transition-colors border border-transparent hover:border-[var(--af-bg4)]"
+                className="text-xs px-3 py-2 rounded-full bg-[var(--af-bg3)] text-muted-foreground hover:text-foreground active:bg-[var(--af-bg4)] transition-colors border border-transparent hover:border-[var(--af-bg4)] whitespace-nowrap"
               >
                 {prompt}
               </button>
@@ -262,7 +262,7 @@ export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatP
               )}
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground/50 mt-2 text-center">
+          <p className="text-[10px] text-muted-foreground/50 mt-1 text-center pb-[env(safe-area-inset-bottom,0px)]">
             ArchiFlow AI puede cometer errores. Verifica la información importante.
           </p>
         </div>

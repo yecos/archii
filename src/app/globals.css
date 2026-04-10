@@ -184,10 +184,13 @@
 
 /* Toast */
 .af-toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
   padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
   z-index: 9999; transition: opacity 0.3s; pointer-events: none;
   white-space: nowrap; max-width: 90vw; text-align: center;
+}
+@media (min-width: 768px) {
+  .af-toast { top: auto; bottom: 16px; left: auto; transform: none; right: 16px; }
 }
 
 /* File input */

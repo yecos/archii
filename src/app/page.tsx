@@ -1914,7 +1914,7 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1">Principal</div>
           {navItems.filter(n => !n.divider).slice(0, 4).map(n => (
-            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => navigateTo(n.id, null)}>
+            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className="flex-1">{n.label}</span>
               {n.badge !== undefined && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${n.id === 'tasks' && pendingCount > 0 ? 'bg-red-500 text-white' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{n.badge}</span>}
@@ -1922,7 +1922,7 @@ export default function Home() {
           ))}
           <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1">Gestión</div>
           {navItems.filter(n => !n.divider).slice(4).map(n => (
-            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => navigateTo(n.id, null)}>
+            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span>{n.label}</span>
             </div>
@@ -1999,7 +1999,7 @@ export default function Home() {
                 Nuevo proveedor
               </button>
             )}
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${avatarColor(authUser?.uid)}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+            <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${avatarColor(authUser?.uid)}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
           </div>
         </header>
 
@@ -2040,7 +2040,7 @@ export default function Home() {
         {showNotifPanel && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
-            <div className="absolute right-2 sm:right-4 top-[60px] z-50 w-[calc(100vw-16px)] sm:w-[400px] max-h-[85vh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
+            <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85vh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
               {/* Header */}
               <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
@@ -2186,7 +2186,7 @@ export default function Home() {
         )}
 
         {/* Content */}
-        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-20 md:pb-6'}`}>
+        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}>
 
           {/* ===== DASHBOARD ===== */}
           {screen === 'dashboard' && (<div className="animate-fadeIn space-y-6">
@@ -2245,8 +2245,8 @@ export default function Home() {
                     <div className="flex justify-between items-start mb-2.5">
                       <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
                       <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
-                        <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
-                        <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
+                        <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
+                        <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
                       </div>
                     </div>
                     <div className="text-[15px] font-semibold mb-1">{d.name}</div>
@@ -2287,7 +2287,7 @@ export default function Home() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit">
+            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
               {['Resumen', 'Tareas', 'Presupuesto', 'Archivos', 'Obra', 'Portal'].map(tab => (
                 <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${forms.detailTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab }))}>{tab}</button>
               ))}
@@ -2421,7 +2421,7 @@ export default function Home() {
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {f.webUrl && <a href={f.webUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#00a4ef] px-1.5 py-0.5 rounded hover:underline">Abrir</a>}
-                                <button className="opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => odProjectFolder && deleteFromOneDrive(f.id, odProjectFolder)}>✕</button>
+                                <button className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => odProjectFolder && deleteFromOneDrive(f.id, odProjectFolder)}>✕</button>
                               </div>
                             </div>
                           ))}
@@ -2449,7 +2449,7 @@ export default function Home() {
                       <div className="w-10 h-10 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center text-lg">
                         {f.type?.startsWith('image/') ? '🖼️' : f.type === 'application/pdf' ? '📄' : f.type?.includes('video') ? '🎬' : '📎'}
                       </div>
-                      <button className="opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => deleteFile(f)}>✕</button>
+                      <button className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => deleteFile(f)}>✕</button>
                     </div>
                     <div className="text-sm font-medium truncate mb-0.5">{f.name}</div>
                     <div className="text-[11px] text-[var(--af-text3)]">{fmtSize(f.size)}</div>
@@ -2582,19 +2582,19 @@ export default function Home() {
                       </div>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
-                        <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteTask(t.id)}>✕</button>
+                        <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
+                        <button className="text-xs px-2.5 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteTask(t.id)}>✕</button>
                       </div>
                     </div>);
                   })}
                 </div>);
               })
             ) : (
-              <div className="flex gap-3.5 overflow-x-auto pb-2">
+              <div className="flex gap-3.5 overflow-x-auto pb-2 snap-x snap-mandatory">
                 {['Por hacer', 'En progreso', 'Revision', 'Completado'].map(status => {
                   const col = tasks.filter(t => t.data.status === status);
                   const dot = status === 'Completado' ? 'bg-emerald-500' : status === 'En progreso' ? 'bg-blue-500' : status === 'Revision' ? 'bg-amber-500' : 'bg-[var(--af-text3)]';
-                  return (<div key={status} className="flex-shrink-0 w-[240px] bg-[var(--af-bg3)] rounded-xl p-3.5">
+                  return (<div key={status} className="flex-shrink-0 w-[240px] snap-start bg-[var(--af-bg3)] rounded-xl p-3.5">
                     <div className="flex items-center gap-2 mb-3"><div className={`w-2 h-2 rounded-full ${dot}`} /><span className="text-[13px] font-semibold">{status}</span><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">{col.length}</span></div>
                     {col.map(t => {
                       const proj = projects.find(p => p.id === t.data.projectId);
@@ -2614,7 +2614,7 @@ export default function Home() {
           </div>)}
 
           {/* ===== CHAT ===== */}
-          {screen === 'chat' && (<div className="animate-fadeIn flex flex-col h-full md:h-full pb-[56px] md:pb-0">
+          {screen === 'chat' && (<div className="animate-fadeIn flex flex-col h-full md:h-full pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0">
 
             {/* Lista de conversaciones */}
             <div className={`${chatMobileShow ? 'hidden' : 'flex'} flex-col flex-1 md:w-[260px] md:flex-shrink-0 border-r border-[var(--border)] overflow-y-auto bg-[var(--card)] md:bg-transparent`}>
@@ -2647,7 +2647,7 @@ export default function Home() {
             {/* Area de mensajes */}
             <div className={`${chatMobileShow ? 'flex' : 'hidden'} md:flex flex-col flex-1 min-h-0 overflow-hidden bg-background`}>
               <div className="flex items-center gap-2 p-3 border-b border-[var(--border)] flex-shrink-0 bg-[var(--card)]">
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => setChatMobileShow(false)}>
+                <button className="w-11 h-11 rounded-lg flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => setChatMobileShow(false)}>
                   <svg viewBox="0 0 24 24" className="w-4 h-4" style={{stroke:'currentColor',fill:'none'}} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <div className="flex-1 min-w-0">
@@ -2908,7 +2908,7 @@ export default function Home() {
                   <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={prevMonth}>
                     <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
                   </button>
-                  <div className="text-[15px] font-semibold min-w-[160px] text-center">{MESES[calMonth]} {calYear}</div>
+                  <div className="text-[15px] font-semibold min-w-[120px] sm:min-w-[160px] text-center">{MESES[calMonth]} {calYear}</div>
                   <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={nextMonth}>
                     <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
@@ -3119,7 +3119,7 @@ export default function Home() {
           <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>
             <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover" loading="lazy" />
             {/* Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <div className="absolute bottom-0 left-0 right-0 p-2">
                 {photo.data.caption && <div className="text-xs text-white font-medium truncate">{photo.data.caption}</div>}
                 <div className="flex items-center gap-1 mt-0.5">
@@ -3146,7 +3146,7 @@ export default function Home() {
           {/* ===== INVENTORY SECTION ===== */}
           {screen === 'inventory' && (<div className="animate-fadeIn p-4 sm:p-6">
             {/* Sub-tabs */}
-            <div className="flex gap-1 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="flex gap-1 mb-4 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
               {[{ id: 'dashboard' as const, label: '📊 Panel' }, { id: 'products' as const, label: '📦 Productos' }, { id: 'categories' as const, label: '🏷️ Categorías' }, { id: 'warehouse' as const, label: '🏢 Almacén' }, { id: 'movements' as const, label: '📋 Movimientos' }, { id: 'transfers' as const, label: '🔄 Transferencias' }, { id: 'reports' as const, label: '📊 Reportes' }].map(tab => (
                 <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${invTab === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setInvTab(tab.id)}>
                   {tab.label}
@@ -3699,7 +3699,35 @@ export default function Home() {
               {/* Products table (detailed) */}
               <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
                 <h4 className="text-sm font-semibold mb-3">📋 Tabla detallada de productos</h4>
-                <div className="overflow-x-auto">
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-3">
+                  {invProducts.map(p => {
+                    const ts = getTotalStock(p);
+                    const isOut = ts === 0;
+                    const isLow = ts > 0 && ts <= (Number(p.data.minStock) || 0);
+                    return (
+                      <div key={p.id} className="bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+                        <div className="flex items-start gap-3">
+                          {p.data.imageData ? <img src={p.data.imageData} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" /> : <div className="w-10 h-10 rounded-lg bg-[var(--af-bg4)] flex items-center justify-center flex-shrink-0">📦</div>}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold truncate">{p.data.name}</div>
+                            <div className="text-[11px] text-[var(--muted-foreground)]">{getInvCategoryName(p.data.categoryId)}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className={`text-sm font-bold ${isOut ? 'text-red-400' : isLow ? 'text-amber-400' : ''}`}>{ts}</div>
+                            <div className="text-[10px] text-[var(--muted-foreground)]">uds</div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--border)]">
+                          <span className="text-xs text-[var(--muted-foreground)]">Precio: {fmtCOP(Number(p.data.price) || 0)}</span>
+                          <span className="text-xs font-medium text-[var(--af-accent)]">Valor: {fmtCOP((Number(p.data.price) || 0) * ts)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-[var(--border)]">
@@ -3810,7 +3838,8 @@ export default function Home() {
 
                 {/* Gantt Chart */}
                 <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] overflow-hidden">
-                  <div className="overflow-x-auto">
+                  <div className="md:hidden text-center py-8 text-sm text-[var(--muted-foreground)]">El cronograma detallado está disponible en vista de escritorio.</div>
+                  <div className="hidden md:block overflow-x-auto">
                     <div className="min-w-[1200px]">
                       {/* Header */}
                       <div className="flex border-b-2 border-[var(--border)] bg-[var(--card)]" style={{ height: 48 }}>
@@ -4035,7 +4064,8 @@ export default function Home() {
               {adminPermSection === 'permissions' && (<div className="space-y-4">
                 <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
                   <h4 className="text-sm font-semibold mb-3">Permisos por Rol</h4>
-                  <div className="overflow-x-auto">
+                  <div className="md:hidden text-center py-8 text-sm text-[var(--muted-foreground)]">La tabla de permisos está disponible en vista de escritorio.</div>
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-[11px]">
                       <thead><tr className="border-b border-[var(--border)]">
                         <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-medium">Permiso</th>
@@ -4668,7 +4698,7 @@ export default function Home() {
           { id: 'chat', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, label: 'Chat' },
           { id: '_more', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'Más' },
         ].map(item => (
-          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 cursor-pointer transition-colors ${item.id === '_more' ? '' : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
+          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 cursor-pointer transition-colors ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
             {item.icon}
             <span className="text-[10px] leading-tight">{item.label}</span>
           </button>
@@ -5005,7 +5035,7 @@ export default function Home() {
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
   <div className="relative w-full h-full flex flex-col items-center justify-center p-4" onClick={e => e.stopPropagation()}>
     {/* Close button */}
-    <button className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={closeLightbox}>✕</button>
+    <button className="absolute top-3 right-3 pt-[env(safe-area-inset-top,0px)] z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={closeLightbox}>✕</button>
     {/* Photo info */}
     <div className="absolute top-3 left-3 z-10 text-left">
       {lightboxPhoto.data.caption && <div className="text-white text-sm font-medium">{lightboxPhoto.data.caption}</div>}
@@ -5017,7 +5047,7 @@ export default function Home() {
     {/* Image */}
     <img src={lightboxPhoto.data.imageData} alt={lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
     {/* Navigation */}
-    <div className="flex items-center gap-4 mt-4">
+    <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
       <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxPrev}>
         <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>

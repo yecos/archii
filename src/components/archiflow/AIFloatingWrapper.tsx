@@ -57,8 +57,8 @@ export default function AIFloatingWrapper({ projectContext }: AIFloatingWrapperP
         onOpenChat={handleChatOpen}
       />
 
-      {/* Floating Buttons */}
-      <div className="fixed bottom-6 right-6 z-[90] flex flex-col items-end gap-3">
+      {/* Floating Buttons - moved up on mobile to avoid tab bar */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[90] flex flex-col items-end gap-3">
         {/* Tooltip */}
         {tooltip && !chatOpen && !quickOpen && (
           <div className="animate-slideUp mb-1 px-3 py-2 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] shadow-lg text-xs text-muted-foreground max-w-[200px]">
