@@ -1,0 +1,280 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* Light mode (default) */
+  --background: #f8f7f4;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #9e7c3e;
+  --primary-foreground: #ffffff;
+  --secondary: #f0ece4;
+  --secondary-foreground: #1a1a1a;
+  --muted: #e8e5dd;
+  --muted-foreground: #737373;
+  --accent: rgba(158,124,62,0.08);
+  --accent-foreground: #9e7c3e;
+  --destructive: #dc3545;
+  --border: rgba(0,0,0,0.08);
+  --input: rgba(0,0,0,0.1);
+  --ring: #9e7c3e;
+  --chart-1: #9e7c3e;
+  --chart-2: #2d8f5e;
+  --chart-3: #c47a28;
+  --chart-4: #3a7cc4;
+  --chart-5: #7b5bbf;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #9e7c3e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(158,124,62,0.08);
+  --sidebar-accent-foreground: #9e7c3e;
+  --sidebar-border: rgba(0,0,0,0.08);
+  --sidebar-ring: #9e7c3e;
+  --af-green: #2d8f5e;
+  --af-amber: #c47a28;
+  --af-red: #dc3545;
+  --af-blue: #3a7cc4;
+  --af-purple: #7b5bbf;
+  --af-bg3: #f0ece4;
+  --af-bg4: #e8e5dd;
+  --af-text3: #a3a3a3;
+  --af-accent: #9e7c3e;
+  --af-accent2: #b8933f;
+}
+
+.dark {
+  --radius: 0.625rem;
+  --background: #0e0f11;
+  --foreground: #f0f0ee;
+  --card: #16181c;
+  --card-foreground: #f0f0ee;
+  --popover: #16181c;
+  --popover-foreground: #f0f0ee;
+  --primary: #c8a96e;
+  --primary-foreground: #0e0f11;
+  --secondary: #1e2128;
+  --secondary-foreground: #f0f0ee;
+  --muted: #252830;
+  --muted-foreground: #9a9b9e;
+  --accent: rgba(200,169,110,0.1);
+  --accent-foreground: #e2c898;
+  --destructive: #e05555;
+  --border: rgba(255,255,255,0.07);
+  --input: rgba(255,255,255,0.12);
+  --ring: #c8a96e;
+  --chart-1: #c8a96e;
+  --chart-2: #4caf7d;
+  --chart-3: #e09855;
+  --chart-4: #5b9bd5;
+  --chart-5: #9b7ed4;
+  --sidebar: #16181c;
+  --sidebar-foreground: #f0f0ee;
+  --sidebar-primary: #c8a96e;
+  --sidebar-primary-foreground: #0e0f11;
+  --sidebar-accent: rgba(200,169,110,0.1);
+  --sidebar-accent-foreground: #e2c898;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-ring: #c8a96e;
+  --af-green: #4caf7d;
+  --af-amber: #e09855;
+  --af-red: #e05555;
+  --af-blue: #5b9bd5;
+  --af-purple: #9b7ed4;
+  --af-bg3: #1e2128;
+  --af-bg4: #252830;
+  --af-text3: #5e5f63;
+  --af-accent: #c8a96e;
+  --af-accent2: #e2c898;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.2s ease; }
+.animate-slideIn { animation: slideIn 0.2s ease; }
+.animate-slideUp { animation: slideUp 0.3s ease; }
+.animate-spin { animation: spin 0.7s linear infinite; }
+
+/* Toast */
+.af-toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
+  z-index: 9999; transition: opacity 0.3s; pointer-events: none;
+  white-space: nowrap; max-width: 90vw; text-align: center;
+}
+
+/* File input */
+input[type="file"] { display: none; }
+
+/* Mobile modal full screen */
+@media (max-width: 640px) {
+  .af-modal-mobile {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    padding: 20px 16px !important;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+}
+
+/* Safe area padding for iOS */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* Prevent horizontal overflow on mobile */
+@media (max-width: 768px) {
+  .overflow-x-mobile {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .overflow-x-mobile::-webkit-scrollbar { display: none; }
+}
+
+/* Select fix for mobile */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+/* Chat input sticky bar for mobile */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Mobile chat: keep input visible when keyboard opens */
+@media (max-width: 768px) {
+  .h-\[calc\(100dvh-120px\)\] {
+    height: 100dvh;
+  }
+  input:focus, textarea:focus {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  #chat-input-field {
+    font-size: 16px;
+  }
+  /* Ensure chat container fills available space properly */
+  [style*="100dvh"] {
+    max-height: 100dvh;
+  }
+}
+
+/* Prevent rubber-banding on chat scroll on iOS */
+#chat-msgs {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix mobile viewport height for fixed elements */
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+}
+html {
+  height: -webkit-fill-available;
+}
