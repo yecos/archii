@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
@@ -57,6 +57,27 @@ export default function Home() {
   const [oneDriveFiles, setOneDriveFiles] = useState<OneDriveFile[]>([]);
   const [odProjectFolder, setOdProjectFolder] = useState<string | null>(null);
   const [showOneDrive, setShowOneDrive] = useState(false);
+
+  // OneDrive token refresh
+  const [msRefreshToken, setMsRefreshToken] = useState<string | null>(null);
+  const [msTokenExpiry, setMsTokenExpiry] = useState<number>(0);
+
+  // OneDrive enhanced state
+  const [odSearchQuery, setOdSearchQuery] = useState('');
+  const [odSearchResults, setOdSearchResults] = useState<OneDriveFile[]>([]);
+  const [odSearching, setOdSearching] = useState(false);
+  const [odBreadcrumbs, setOdBreadcrumbs] = useState<{id: string, name: string}[]>([]);
+  const [odCurrentFolder, setOdCurrentFolder] = useState<string>('root');
+  const [odViewMode, setOdViewMode] = useState<'list' | 'grid'>('list');
+  const [odRenaming, setOdRenaming] = useState<string | null>(null);
+  const [odRenameName, setOdRenameName] = useState('');
+  const [odUploading, setOdUploading] = useState(false);
+  const [odUploadProgress, setOdUploadProgress] = useState(0);
+  const [odUploadFile, setOdUploadFile] = useState<string>('');
+  const [odDragOver, setOdDragOver] = useState(false);
+  const [odTab, setOdTab] = useState<'files' | 'gallery'>('files');
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [odGalleryPhotos, setOdGalleryPhotos] = useState<any[]>([]);
 
   // Calendar state
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -1095,8 +1116,11 @@ export default function Home() {
       if (credential?.accessToken) {
         setMsAccessToken(credential.accessToken);
         setMsConnected(true);
+        setMsRefreshToken(credential.refreshToken || null);
+        setMsTokenExpiry(Date.now() + 55 * 60 * 1000); // 55 min (5 min buffer)
         localStorage.setItem('msAccessToken', credential.accessToken);
         localStorage.setItem('msConnected', 'true');
+        if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
         showToast('Conectado con Microsoft');
       }
     } catch (e: any) {
@@ -1109,10 +1133,17 @@ export default function Home() {
   const disconnectMicrosoft = () => {
     setMsAccessToken(null);
     setMsConnected(false);
+    setMsRefreshToken(null);
+    setMsTokenExpiry(0);
     setOneDriveFiles([]);
     setOdProjectFolder(null);
+    setOdBreadcrumbs([]);
+    setOdCurrentFolder('root');
+    setOdSearchQuery('');
+    setOdSearchResults([]);
     localStorage.removeItem('msAccessToken');
     localStorage.removeItem('msConnected');
+    localStorage.removeItem('msRefreshToken');
     showToast('Microsoft desconectado');
   };
 
@@ -1120,22 +1151,72 @@ export default function Home() {
   useEffect(() => {
     const saved = localStorage.getItem('msConnected');
     const token = localStorage.getItem('msAccessToken');
+    const refreshToken = localStorage.getItem('msRefreshToken');
     if (saved === 'true' && token) {
       setMsConnected(true);
       setMsAccessToken(token);
+      if (refreshToken) setMsRefreshToken(refreshToken);
+      setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
     }
   }, []);
 
   // OneDrive API helpers
-  const graphApiGet = async (endpoint: string) => {
-    if (!msAccessToken) return null;
-    const res = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
-      headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' }
-    });
-    if (res.status === 401) { disconnectMicrosoft(); return null; }
-    if (!res.ok) return null;
-    return res.json();
-  };
+  const refreshMsToken = useCallback(async () => {
+    if (!msRefreshToken) return null;
+    try {
+      const res = await fetch('/api/onedrive/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: msRefreshToken })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.accessToken) {
+          setMsAccessToken(data.accessToken);
+          sessionStorage.setItem('archiflow-ms-token', data.accessToken);
+          localStorage.setItem('msAccessToken', data.accessToken);
+          setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+          if (data.refreshToken) {
+            setMsRefreshToken(data.refreshToken);
+            localStorage.setItem('msRefreshToken', data.refreshToken);
+          }
+          return data.accessToken;
+        }
+      }
+    } catch (e) {
+      console.error('Error refreshing MS token:', e);
+    }
+    return null;
+  }, [msRefreshToken]);
+
+  // Auto-refresh token effect
+  useEffect(() => {
+    if (!msConnected || !msRefreshToken) return;
+    const interval = setInterval(async () => {
+      if (Date.now() >= msTokenExpiry - 60000) {
+        await refreshMsToken();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [msConnected, msRefreshToken, msTokenExpiry, refreshMsToken]);
+
+  const graphApiGet = useCallback(async (endpoint: string, useToken?: string) => {
+    const token = useToken || msAccessToken;
+    if (!token) return null;
+    try {
+      const res = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 401 && !useToken) {
+        const newToken = await refreshMsToken();
+        if (newToken) return graphApiGet(endpoint, newToken);
+        disconnectMicrosoft();
+        return null;
+      }
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }, [msAccessToken, refreshMsToken]);
 
   const ensureProjectFolder = async (projectName: string) => {
     if (!msAccessToken) return null;
@@ -1230,11 +1311,202 @@ export default function Home() {
     const folderId = await ensureProjectFolder(projectName);
     if (folderId) {
       await loadOneDriveFiles(folderId);
+      setOdCurrentFolder(folderId);
+      setOdBreadcrumbs([{ id: folderId, name: projectName }]);
       setShowOneDrive(true);
+      setOdTab('files');
+      setOdSearchQuery('');
+      setOdSearchResults([]);
     } else {
       showToast('No se pudo crear la carpeta del proyecto', 'error');
     }
   };
+
+  // OneDrive helper functions
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const now = new Date().getTime();
+    const date = new Date(dateStr).getTime();
+    const diff = now - date;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Ahora';
+    if (mins < 60) return `hace ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `hace ${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `hace ${days}d`;
+    return new Date(dateStr).toLocaleDateString('es');
+  };
+
+  const getFileIcon = (mimeType: string, name?: string) => {
+    if (mimeType.includes('folder')) return '📁';
+    if (mimeType.includes('pdf')) return '📄';
+    if (mimeType.includes('image')) return '🖼️';
+    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '📽️';
+    if (mimeType.includes('dwg') || mimeType.includes('dxf')) return '📐';
+    if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦';
+    if (mimeType.includes('video')) return '🎬';
+    if (name?.endsWith('.pdf')) return '📄';
+    if (name?.match(/\.(jpg|jpeg|png|gif|svg|webp|bmp|heic)$/i)) return '🖼️';
+    if (name?.match(/\.(doc|docx)$/i)) return '📝';
+    if (name?.match(/\.(xls|xlsx)$/i)) return '📊';
+    if (name?.match(/\.(dwg|dxf)$/i)) return '📐';
+    if (name?.match(/\.(zip|rar)$/i)) return '📦';
+    if (name?.match(/\.(mp4|mov|avi|mkv)$/i)) return '🎬';
+    return '📎';
+  };
+
+  const navigateToFolder = async (folderId: string, breadcrumbIndex?: number) => {
+    setOdCurrentFolder(folderId);
+    if (breadcrumbIndex !== undefined) {
+      setOdBreadcrumbs(prev => prev.slice(0, breadcrumbIndex + 1));
+    }
+    await loadOneDriveFiles(folderId);
+  };
+
+  const uploadFileWithProgress = async (file: File) => {
+    setOdUploading(true);
+    setOdUploadProgress(0);
+    setOdUploadFile(file.name);
+    try {
+      if (file.size < 4 * 1024 * 1024) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folderId', odCurrentFolder);
+        formData.append('projectId', selectedProjectId || '');
+        setOdUploadProgress(50);
+        const res = await fetch('/api/onedrive/files', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${msAccessToken}` },
+          body: formData
+        });
+        setOdUploadProgress(100);
+        if (res.ok) {
+          showToast('Archivo subido a OneDrive');
+          await loadOneDriveFiles(odCurrentFolder);
+        } else {
+          showToast('Error al subir archivo', 'error');
+        }
+      } else {
+        const sessionRes = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + odCurrentFolder + ':/' + encodeURIComponent(file.name) + '/createUploadSession', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item: { '@microsoft.graph.conflictBehavior': 'rename' } })
+        });
+        if (!sessionRes.ok) throw new Error('No se pudo crear la sesión de carga');
+        const session = await sessionRes.json();
+        const uploadUrl = session.uploadUrl;
+        const chunkSize = 5 * 1024 * 1024;
+        let offset = 0;
+        while (offset < file.size) {
+          const chunk = file.slice(offset, offset + chunkSize);
+          const chunkRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Range': `bytes ${offset}-${Math.min(offset + chunkSize - 1, file.size - 1)}/${file.size}`,
+              'Content-Length': String(chunk.size)
+            },
+            body: chunk
+          });
+          if (!chunkRes.ok) throw new Error('Error en la carga del fragmento');
+          offset += chunkSize;
+          setOdUploadProgress(Math.round((offset / file.size) * 100));
+        }
+        showToast('Archivo subido a OneDrive');
+        await loadOneDriveFiles(odCurrentFolder);
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('Error al subir archivo: ' + (err as Error).message, 'error');
+    } finally {
+      setTimeout(() => { setOdUploading(false); setOdUploadProgress(0); setOdUploadFile(''); }, 500);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !odCurrentFolder) return;
+    await uploadFileWithProgress(file);
+    e.target.value = '';
+  };
+
+  const handleDroppedFiles = async (files: FileList) => {
+    for (let i = 0; i < files.length; i++) {
+      await uploadFileWithProgress(files[i]);
+    }
+  };
+
+  const renameOneDriveFile = async (fileId: string, newName: string) => {
+    if (!newName.trim()) { setOdRenaming(null); return; }
+    try {
+      const res = await fetch(`/api/onedrive/files/${fileId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      });
+      if (res.ok) {
+        showToast('Archivo renombrado');
+        setOdRenaming(null);
+        await loadOneDriveFiles(odCurrentFolder);
+      } else {
+        showToast('Error al renombrar', 'error');
+      }
+    } catch { showToast('Error al renombrar', 'error'); }
+  };
+
+  const downloadOneDriveFile = async (fileId: string, fileName: string) => {
+    try {
+      const res = await fetch(`/api/onedrive/files/${fileId}`, {
+        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        showToast('Error al descargar', 'error');
+      }
+    } catch { showToast('Error al descargar', 'error'); }
+  };
+
+  const searchOneDriveFiles = useCallback(async (query: string) => {
+    if (!query.trim()) { setOdSearchResults([]); return; }
+    setOdSearching(true);
+    try {
+      const res = await fetch(`/api/onedrive/search?q=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOdSearchResults(data.items || data.value || []);
+      }
+    } catch (e) { console.error(e); }
+    setOdSearching(false);
+  }, [msAccessToken]);
+
+  const loadGalleryPhotos = useCallback(async (projectId: string) => {
+    setGalleryLoading(true);
+    try {
+      const res = await fetch(`/api/onedrive/gallery/${projectId}`, {
+        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOdGalleryPhotos(data.items || data.photos || []);
+      }
+    } catch (e) { console.error(e); }
+    setGalleryLoading(false);
+  }, [msAccessToken]);
 
   // Change user role (admin only)
   const updateUserRole = async (uid: string, newRole: string) => {
@@ -2864,7 +3136,14 @@ export default function Home() {
             {/* Tab: Archivos */}
             {forms.detailTab === 'Archivos' && (<div>
               {/* OneDrive Section */}
-              {msConnected && (
+              {!msConnected ? (
+                <div className="mb-4 bg-[#0078d4]/10 border border-[#0078d4]/20 rounded-xl p-6 text-center">
+                  <div className="text-[40px] mb-3">☁️</div>
+                  <div className="text-[15px] font-semibold mb-1">Conectar OneDrive</div>
+                  <div className="text-[13px] text-[var(--muted-foreground)] mb-4">Almacena planos, fotos y documentos en la nube</div>
+                  <button onClick={doMicrosoftLogin} className="px-5 py-2.5 bg-[#0078d4] text-white rounded-lg text-[13px] font-medium hover:bg-[#006cbd] transition-colors cursor-pointer border-none">Conectar con Microsoft</button>
+                </div>
+              ) : (
                 <div className="mb-4">
                   {!showOneDrive ? (
                     <button className="w-full bg-gradient-to-r from-[#00a4ef] to-[#7fba00] text-white border-none rounded-xl py-3 text-sm font-semibold cursor-pointer hover:opacity-90 transition-all flex items-center justify-center gap-2" onClick={() => currentProject && openOneDriveForProject(currentProject.data.name)}>
@@ -2872,54 +3151,225 @@ export default function Home() {
                       Abrir en OneDrive — {currentProject?.data.name}
                     </button>
                   ) : (
-                    <div className="bg-[#00a4ef]/5 border border-[#00a4ef]/20 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
+                    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                      {/* Header with tabs */}
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <svg viewBox="0 0 21 21" className="w-4 h-4"><rect x="1" y="1" width="9" height="9" fill="#00a4ef"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#00a4ef"/></svg>
                           <span className="text-sm font-semibold text-[#00a4ef]">OneDrive — {currentProject?.data.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="flex items-center gap-1.5 bg-[#00a4ef] text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-[#0091d5] transition-colors">
-                            + Subir a OneDrive
-                            <input type="file" className="hidden" onChange={async (e) => {
-                              const file = e.target?.files?.[0];
-                              if (file && odProjectFolder) {
-                                await uploadToOneDrive(file, odProjectFolder);
-                                e.target.value = '';
-                              }
-                            }} />
-                          </label>
-                          <button className="text-xs px-2 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setShowOneDrive(false); setOneDriveFiles([]); }}>✕ Cerrar</button>
+                          <div className="flex items-center gap-0.5 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                            <button onClick={() => setOdTab('files')} className={`px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${odTab === 'files' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}>📋 Archivos</button>
+                            <button onClick={() => { setOdTab('gallery'); if (selectedProjectId) loadGalleryPhotos(selectedProjectId); }} className={`px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${odTab === 'gallery' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}>🖼️ Galería</button>
+                          </div>
+                          <button className="text-xs px-2 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setShowOneDrive(false); setOneDriveFiles([]); setOdBreadcrumbs([]); setOdSearchQuery(''); setOdSearchResults([]); }}>✕</button>
                         </div>
                       </div>
-                      {msLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="w-6 h-6 border-2 border-[#00a4ef]/30 border-t-[#00a4ef] rounded-full animate-spin mr-2" />
-                          <span className="text-xs text-[var(--muted-foreground)]">Cargando...</span>
-                        </div>
-                      ) : oneDriveFiles.length === 0 ? (
-                        <div className="text-center py-8 text-[var(--af-text3)]">
-                          <div className="text-3xl mb-2">☁️</div>
-                          <div className="text-sm">Carpeta vacía en OneDrive</div>
-                          <div className="text-xs mt-1">Sube archivos para sincronizarlos con este proyecto</div>
+
+                      {odTab === 'gallery' ? (
+                        /* === Gallery View === */
+                        <div>
+                          {galleryLoading ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {Array.from({length: 8}).map((_, i) => (
+                                <div key={i} className="bg-[var(--af-bg3)] rounded-lg animate-pulse aspect-square" />
+                              ))}
+                            </div>
+                          ) : odGalleryPhotos.length === 0 ? (
+                            <div className="text-center py-8 text-[var(--af-text3)]">
+                              <div className="text-3xl mb-2">🖼️</div>
+                              <div className="text-sm">Sin fotos en la galería</div>
+                              <div className="text-xs mt-1">Las imágenes de OneDrive aparecerán aquí</div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {odGalleryPhotos.map((photo: any, idx: number) => (
+                                <div key={photo.id || idx} className="relative group rounded-lg overflow-hidden cursor-pointer border border-[var(--border)] hover:border-[#00a4ef]/40 transition-all" onClick={() => { setLightboxPhoto(photo); setLightboxIndex(idx); }}>
+                                  <img
+                                    src={`${photo.thumbnailUrl || photo.thumbnailLarge || photo.webUrl}?access_token=${msAccessToken}`}
+                                    alt={photo.name || ''}
+                                    className="w-full aspect-square object-cover bg-[var(--af-bg3)]"
+                                    loading="lazy"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22>🖼️</text></svg>'; }}
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-end">
+                                    <div className="w-full px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="text-[10px] text-white truncate">{photo.name || 'Foto'}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {oneDriveFiles.filter((f: any) => !f.folder).map((f: any) => (
-                            <div key={f.id} className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 hover:border-[#00a4ef]/30 transition-all group flex items-center gap-3">
-                              <div className="w-9 h-9 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center text-base flex-shrink-0">
-                                {f.name?.endsWith('.pdf') ? '📄' : f.name?.match(/\.(jpg|jpeg|png|gif|svg|webp)$/i) ? '🖼️' : f.name?.match(/\.(doc|docx)$/i) ? '📝' : f.name?.match(/\.(xls|xlsx)$/i) ? '📊' : f.name?.match(/\.(dwg|dxf)$/i) ? '📐' : f.name?.match(/\.(zip|rar)$/i) ? '📦' : '📎'}
+                        /* === Files View === */
+                        <div>
+                          {/* Toolbar */}
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            {/* Breadcrumbs */}
+                            <div className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)] min-w-0 flex-1 overflow-hidden">
+                              <button onClick={() => { if (odProjectFolder) { setOdCurrentFolder(odProjectFolder); setOdBreadcrumbs([]); loadOneDriveFiles(odProjectFolder); } }} className="hover:text-[#00a4ef] truncate shrink-0 cursor-pointer bg-transparent border-none text-inherit">OneDrive</button>
+                              {odBreadcrumbs.map((crumb, i) => (
+                                <React.Fragment key={crumb.id}>
+                                  <span className="shrink-0">/</span>
+                                  <button onClick={() => navigateToFolder(crumb.id, i)} className="hover:text-[#00a4ef] truncate max-w-[80px] sm:max-w-[120px] cursor-pointer bg-transparent border-none text-inherit">{crumb.name}</button>
+                                </React.Fragment>
+                              ))}
+                            </div>
+
+                            {/* Search */}
+                            <div className="relative flex-shrink-0">
+                              <input
+                                value={odSearchQuery}
+                                onChange={(e) => { setOdSearchQuery(e.target.value); if (e.target.value.length > 2) searchOneDriveFiles(e.target.value); else if (!e.target.value) setOdSearchResults([]); }}
+                                placeholder="Buscar archivos..."
+                                className="w-[150px] sm:w-[180px] pl-7 pr-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] outline-none focus:border-[#00a4ef]/40"
+                              />
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px]">🔍</span>
+                              {odSearching && <div className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 border border-[#00a4ef]/30 border-t-[#00a4ef] rounded-full animate-spin" />}
+                            </div>
+
+                            {/* View toggle */}
+                            <div className="flex items-center gap-0.5 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                              <button onClick={() => setOdViewMode('list')} className={`px-1.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${odViewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)]'}`}>📋</button>
+                              <button onClick={() => setOdViewMode('grid')} className={`px-1.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${odViewMode === 'grid' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)]'}`}>⊞</button>
+                            </div>
+
+                            {/* Upload */}
+                            <label className="px-2.5 py-1.5 bg-[#00a4ef] text-white rounded-lg text-[11px] font-medium cursor-pointer hover:bg-[#0091d5] transition-colors flex items-center gap-1">
+                              <span>⬆️</span> Subir
+                              <input type="file" className="hidden" onChange={handleFileUpload} />
+                            </label>
+                          </div>
+
+                          {/* Upload progress */}
+                          {odUploading && (
+                            <div className="mb-3 bg-[var(--af-bg3)] rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[11px] font-medium truncate max-w-[200px]">{odUploadFile}</span>
+                                <span className="text-[10px] text-[var(--muted-foreground)]">{odUploadProgress}%</span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium truncate">{f.name}</div>
-                                <div className="text-[10px] text-[var(--af-text3)]">{fmtSize(f.size || 0)}</div>
-                              </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                {f.webUrl && <a href={f.webUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#00a4ef] px-1.5 py-0.5 rounded hover:underline">Abrir</a>}
-                                <button className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => odProjectFolder && deleteFromOneDrive(f.id, odProjectFolder)}>✕</button>
+                              <div className="w-full bg-[var(--border)] rounded-full h-1.5 overflow-hidden">
+                                <div className="h-full bg-[#00a4ef] rounded-full transition-all duration-300" style={{ width: `${odUploadProgress}%` }} />
                               </div>
                             </div>
-                          ))}
+                          )}
+
+                          {/* Drag & drop wrapper */}
+                          <div
+                            onDragOver={(e) => { e.preventDefault(); setOdDragOver(true); }}
+                            onDragLeave={() => setOdDragOver(false)}
+                            onDrop={async (e) => { e.preventDefault(); setOdDragOver(false); await handleDroppedFiles(e.dataTransfer.files); }}
+                            className={`rounded-lg transition-colors min-h-[120px] ${odDragOver ? 'ring-2 ring-[#00a4ef] bg-[#00a4ef]/5' : ''}`}
+                          >
+                            {msLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <div className="w-5 h-5 border-2 border-[#00a4ef]/30 border-t-[#00a4ef] rounded-full animate-spin mr-2" />
+                                <span className="text-xs text-[var(--muted-foreground)]">Cargando archivos...</span>
+                              </div>
+                            ) : odSearchQuery && odSearchResults.length > 0 ? (
+                              /* Search results */
+                              <div className="space-y-1">
+                                <div className="text-[10px] text-[var(--muted-foreground)] mb-2">{odSearchResults.length} resultado(s) para &quot;{odSearchQuery}&quot;</div>
+                                {odSearchResults.map((f: any) => (
+                                  <div key={f.id} className="flex items-center gap-2 py-2 px-2 bg-[var(--af-bg3)] rounded-lg hover:bg-[var(--af-bg4)] transition-colors">
+                                    <span className="text-sm">{getFileIcon(f.mimeType || '', f.name)}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[11px] font-medium truncate">{f.name}</div>
+                                      <div className="text-[10px] text-[var(--af-text3)]">{formatFileSize(f.size || 0)}</div>
+                                    </div>
+                                    <button onClick={() => downloadOneDriveFile(f.id, f.name)} className="text-[10px] text-[#00a4ef] px-1.5 py-0.5 rounded hover:bg-[#00a4ef]/10 cursor-pointer bg-transparent border-none">⬇️</button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : odSearchQuery && !odSearching && odSearchResults.length === 0 ? (
+                              <div className="text-center py-8 text-[var(--af-text3)]">
+                                <div className="text-sm">Sin resultados para &quot;{odSearchQuery}&quot;</div>
+                              </div>
+                            ) : oneDriveFiles.length === 0 ? (
+                              <div className="text-center py-8 text-[var(--af-text3)]">
+                                <div className="text-3xl mb-2">☁️</div>
+                                <div className="text-sm">Carpeta vacía</div>
+                                <div className="text-xs mt-1">Arrastra archivos aquí o usa el botón &quot;Subir&quot;</div>
+                              </div>
+                            ) : odViewMode === 'grid' ? (
+                              /* Grid view */
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {oneDriveFiles.map((f: any) => (
+                                  <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs(prev => [...prev, { id: f.id, name: f.name }]); } }}>
+                                    <div className="w-9 h-9 bg-[var(--af-bg4)] rounded-lg flex items-center justify-center text-base mb-2">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
+                                    <div className="text-[11px] font-medium truncate mb-0.5">
+                                      {odRenaming === f.id ? (
+                                        <input
+                                          autoFocus
+                                          value={odRenameName}
+                                          onChange={(e) => setOdRenameName(e.target.value)}
+                                          onBlur={() => renameOneDriveFile(f.id, odRenameName)}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') renameOneDriveFile(f.id, odRenameName); if (e.key === 'Escape') setOdRenaming(null); }}
+                                          className="w-full px-1.5 py-0.5 text-[11px] rounded border border-[#00a4ef]/40 bg-[var(--card)] outline-none"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      ) : f.name}
+                                    </div>
+                                    <div className="text-[10px] text-[var(--af-text3)]">{f.folder ? 'Carpeta' : formatFileSize(f.size || 0)}</div>
+                                    {f.lastModifiedDateTime && <div className="text-[9px] text-[var(--af-text3)]">{timeAgo(f.lastModifiedDateTime)}</div>}
+                                    {!f.folder && (
+                                      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                        <button onClick={() => downloadOneDriveFile(f.id, f.name)} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-[var(--card)] cursor-pointer bg-transparent border-none">⬇️</button>
+                                        <button onClick={() => { setOdRenaming(f.id); setOdRenameName(f.name); }} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-[var(--card)] cursor-pointer bg-transparent border-none">✏️</button>
+                                        <button onClick={() => { if (confirm('¿Eliminar archivo de OneDrive?')) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20">✕</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              /* List view */
+                              <div className="space-y-1">
+                                {/* Column headers */}
+                                <div className="flex items-center gap-2 px-2 py-1 text-[10px] text-[var(--muted-foreground)] font-medium border-b border-[var(--border)]">
+                                  <div className="w-7 shrink-0"></div>
+                                  <div className="flex-1 min-w-0">Nombre</div>
+                                  <div className="w-[60px] text-right shrink-0 hidden sm:block">Tamaño</div>
+                                  <div className="w-[70px] text-right shrink-0 hidden sm:block">Fecha</div>
+                                  <div className="w-[60px] shrink-0"></div>
+                                </div>
+                                {oneDriveFiles.map((f: any) => (
+                                  <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs(prev => [...prev, { id: f.id, name: f.name }]); } }}>
+                                    <div className="w-7 h-7 bg-[var(--af-bg3)] rounded-md flex items-center justify-center text-sm flex-shrink-0">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
+                                    <div className="flex-1 min-w-0">
+                                      {odRenaming === f.id ? (
+                                        <input
+                                          autoFocus
+                                          value={odRenameName}
+                                          onChange={(e) => setOdRenameName(e.target.value)}
+                                          onBlur={() => renameOneDriveFile(f.id, odRenameName)}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') renameOneDriveFile(f.id, odRenameName); if (e.key === 'Escape') setOdRenaming(null); }}
+                                          className="w-full px-1.5 py-0.5 text-[11px] rounded border border-[#00a4ef]/40 bg-[var(--card)] outline-none"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      ) : (
+                                        <div className="text-[11px] font-medium truncate">{f.name}</div>
+                                      )}
+                                    </div>
+                                    <div className="w-[60px] text-right text-[10px] text-[var(--af-text3)] shrink-0 hidden sm:block">{f.folder ? '—' : formatFileSize(f.size || 0)}</div>
+                                    <div className="w-[70px] text-right text-[10px] text-[var(--af-text3)] shrink-0 hidden sm:block">{f.lastModifiedDateTime ? timeAgo(f.lastModifiedDateTime) : '—'}</div>
+                                    <div className="flex items-center gap-0.5 w-[60px] shrink-0 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                      {!f.folder && (
+                                        <>
+                                          <button onClick={() => downloadOneDriveFile(f.id, f.name)} className="text-[10px] px-1 py-0.5 rounded hover:bg-[var(--af-bg4)] cursor-pointer bg-transparent border-none" title="Descargar">⬇️</button>
+                                          <button onClick={() => { setOdRenaming(f.id); setOdRenameName(f.name); }} className="text-[10px] px-1 py-0.5 rounded hover:bg-[var(--af-bg4)] cursor-pointer bg-transparent border-none" title="Renombrar">✏️</button>
+                                        </>
+                                      )}
+                                      <button onClick={() => { if (confirm('¿Eliminar de OneDrive?')) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20" title="Eliminar">✕</button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -6332,26 +6782,55 @@ export default function Home() {
   <div className="relative w-full h-full flex flex-col items-center justify-center p-4" onClick={e => e.stopPropagation()}>
     {/* Close button */}
     <button className="absolute top-3 right-3 pt-[env(safe-area-inset-top,0px)] z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={closeLightbox}>✕</button>
-    {/* Photo info */}
-    <div className="absolute top-3 left-3 z-10 text-left">
-      {lightboxPhoto.data.caption && <div className="text-white text-sm font-medium">{lightboxPhoto.data.caption}</div>}
-      <div className="flex items-center gap-2 mt-1">
-        <span className="text-xs px-2 py-0.5 rounded bg-white/15 text-white/80">{lightboxPhoto.data.categoryName}</span>
-        {(() => { const proj = projects.find(p => p.id === lightboxPhoto.data.projectId); return proj ? <span className="text-xs text-white/60">{proj.data.name}</span> : null; })()}
-      </div>
-    </div>
-    {/* Image */}
-    <img src={lightboxPhoto.data.imageData} alt={lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80dvh] object-contain rounded-lg" />
-    {/* Navigation */}
-    <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
-      <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxPrev}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span className="text-white/60 text-sm">{lightboxIndex + 1} / {getFilteredGalleryPhotos().length}</span>
-      <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxNext}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
+    {/* OneDrive photo lightbox */}
+    {lightboxPhoto.thumbnailLarge || lightboxPhoto.thumbnailUrl ? (
+      <>
+        {/* Download button */}
+        <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => downloadOneDriveFile(lightboxPhoto.id, lightboxPhoto.name)} title="Descargar">⬇️</button>
+        {/* Image */}
+        <img src={lightboxPhoto.thumbnailLarge || lightboxPhoto.webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={lightboxPhoto.name || ''} />
+        {/* Navigation */}
+        <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
+          <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
+            const prev = (lightboxIndex - 1 + odGalleryPhotos.length) % odGalleryPhotos.length;
+            setLightboxIndex(prev); setLightboxPhoto(odGalleryPhotos[prev]);
+          }}>
+            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span className="text-white/60 text-sm">{lightboxIndex + 1} / {odGalleryPhotos.length}</span>
+          <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
+            const next = (lightboxIndex + 1) % odGalleryPhotos.length;
+            setLightboxIndex(next); setLightboxPhoto(odGalleryPhotos[next]);
+          }}>
+            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50 text-[11px] mt-2">{lightboxPhoto.name || ''}</div>
+      </>
+    ) : (
+      <>
+        {/* Main gallery photo lightbox */}
+        <div className="absolute top-3 left-3 z-10 text-left">
+          {lightboxPhoto.data.caption && <div className="text-white text-sm font-medium">{lightboxPhoto.data.caption}</div>}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs px-2 py-0.5 rounded bg-white/15 text-white/80">{lightboxPhoto.data.categoryName}</span>
+            {(() => { const proj = projects.find(p => p.id === lightboxPhoto.data.projectId); return proj ? <span className="text-xs text-white/60">{proj.data.name}</span> : null; })()}
+          </div>
+        </div>
+        {/* Image */}
+        <img src={lightboxPhoto.data.imageData} alt={lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80dvh] object-contain rounded-lg" />
+        {/* Navigation */}
+        <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
+          <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxPrev}>
+            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span className="text-white/60 text-sm">{lightboxIndex + 1} / {getFilteredGalleryPhotos().length}</span>
+          <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxNext}>
+            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </>
+    )}
   </div>
 </div>)}
 
