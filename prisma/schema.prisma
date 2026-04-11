@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("Miembro")
+  photoURL  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  status      String   @default("Concepto")
+  client      String   @default("")
+  location    String   @default("")
+  budget      Float    @default(0)
+  description String   @default("")
+  startDate   String   @default("")
+  endDate     String   @default("")
+  progress    Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  projectId   String   @default("")
+  assigneeId  String   @default("")
+  priority    String   @default("Media")
+  status      String   @default("Por hacer")
+  dueDate     String   @default("")
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@map("tasks")
+}
+
+model Expense {
+  id         String   @id @default(uuid())
+  concept    String
+  projectId  String   @default("")
+  category   String   @default("Materiales")
+  amount     Float    @default(0)
+  date       String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@map("expenses")
+}
+
+model Supplier {
+  id       String   @id @default(uuid())
+  name     String
+  category String   @default("Otro")
+  phone    String   @default("")
+  email    String   @default("")
+  address  String   @default("")
+  website  String   @default("")
+  notes    String   @default("")
+  rating   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("suppliers")
+}

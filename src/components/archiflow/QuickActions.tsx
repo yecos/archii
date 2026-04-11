@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useUIStore } from '@/stores/ui-store';
 
 interface QuickActionsProps {
   isOpen: boolean;
   onClose: () => void;
-  projectContext?: string;
   onOpenChat: () => void;
 }
 
@@ -20,6 +20,7 @@ interface SuggestionResult {
   reason?: string;
   description?: string;
   impact?: string;
+  dependencies?: string;
 }
 
 const ACTION_BUTTONS = [
@@ -76,10 +77,12 @@ const ACTION_BUTTONS = [
   },
 ];
 
-export default function QuickActions({ isOpen, onClose, projectContext, onOpenChat }: QuickActionsProps) {
+export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActionsProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionResult[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const projectContext = useUIStore((s) => s.aiProjectContext);
 
   if (!isOpen) return null;
 
@@ -87,6 +90,7 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
     setLoadingId(action.id);
     setActiveId(action.id);
     setSuggestions([]);
+    setError(null);
 
     try {
       const response = await fetch('/api/ai-suggestions', {
@@ -98,12 +102,25 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
         }),
       });
 
-      if (!response.ok) throw new Error('Error obteniendo sugerencias');
-
       const data = await response.json();
-      setSuggestions(data.suggestions || []);
-    } catch {
-      setSuggestions([{ text: 'No se pudieron obtener sugerencias. Intenta de nuevo.' }]);
+
+      if (!response.ok) {
+        if (data.setupRequired) {
+          setError(`${data.error}\n${data.help}`);
+        } else {
+          setError(data.error || 'Error obteniendo sugerencias');
+        }
+        return;
+      }
+
+      const result = data.suggestions || [];
+      setSuggestions(result);
+      if (result.length === 0) {
+        setError('No se generaron sugerencias. Intenta de nuevo.');
+      }
+    } catch (err) {
+      console.error('[ArchiFlow AI] Error en sugerencias:', err);
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
     } finally {
       setLoadingId(null);
     }
@@ -119,14 +136,14 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-[95] w-80 animate-slideUp">
+    <div className="fixed bottom-32 md:bottom-24 right-3 left-3 md:left-auto md:right-6 md:w-80 z-[95] animate-slideUp">
       <div className="bg-[var(--af-bg1)] border border-[var(--af-bg4)] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-[var(--af-bg4)] flex items-center justify-between">
           <h4 className="text-sm font-semibold text-foreground">Acciones rápidas</h4>
           <button
             onClick={onClose}
-            className="w-6 h-6 rounded-md hover:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="w-10 h-10 rounded-lg active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -172,6 +189,15 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
           ))}
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="px-3 pb-3">
+            <div className="px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 leading-relaxed whitespace-pre-wrap">
+              {error}
+            </div>
+          </div>
+        )}
+
         {/* Suggestions Results */}
         {suggestions.length > 0 && (
           <div className="px-3 pb-3 border-t border-[var(--af-bg4)] pt-2">
@@ -198,7 +224,7 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
               onClose();
               onOpenChat();
             }}
-            className="w-full py-2.5 rounded-xl bg-[var(--af-accent)]/10 text-[var(--af-accent)] text-xs font-medium hover:bg-[var(--af-accent)]/20 transition-colors"
+            className="w-full py-3 rounded-xl bg-[var(--af-accent)]/10 text-[var(--af-accent)] text-xs font-medium active:bg-[var(--af-accent)]/20 transition-colors mb-[env(safe-area-inset-bottom,0px)]"
           >
             💬 Preguntar al asistente IA
           </button>
