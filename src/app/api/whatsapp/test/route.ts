@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   // 2. Verificar token con Meta
-  const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
+  const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v25.0';
 
   try {
     const tokenCheck = await fetch(
