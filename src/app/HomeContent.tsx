@@ -46,6 +46,7 @@ export default function Home() {
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatMobileShow, setChatMobileShow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
@@ -2541,33 +2542,36 @@ export default function Home() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`fixed md:static z-50 h-full w-[270px] bg-[var(--card)] border-r border-[var(--border)] flex flex-col flex-shrink-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      <aside className={`fixed md:static z-50 h-full bg-[var(--card)] border-r border-[var(--border)] flex flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[270px]'} max-md:!w-[270px]`}>
+        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden md:flex items-center justify-center h-8 w-8 self-end mr-2 mt-2 rounded-lg hover:bg-[var(--af-bg3)] text-[var(--muted-foreground)] transition-colors cursor-pointer" title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
+          <svg viewBox="0 0 24 24" className="w-4 h-4 transition-transform" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none' }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
         <div className="p-4 pb-3 border-b border-[var(--border)] flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[var(--af-accent)] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-[var(--af-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
-          <div><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v1.0</div></div>
+          <div className={`transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v1.0</div></div>
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
-          <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1">Principal</div>
+          <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
           {navItems.filter(n => !n.divider).slice(0, 5).map(n => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
-              <span className="flex-1">{n.label}</span>
-              {n.badge !== undefined && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${n.id === 'tasks' && pendingCount > 0 ? 'bg-red-500 text-white' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{n.badge}</span>}
+              <span className={`flex-1 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
+              {n.badge !== undefined && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all duration-200 ${n.id === 'tasks' && pendingCount > 0 ? 'bg-red-500 text-white' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'} ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.badge}</span>}
             </div>
           ))}
-          <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1">Gestión</div>
+          <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Gestión</div>
           {navItems.filter(n => !n.divider).slice(5).map(n => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
-              <span>{n.label}</span>
+              <span className={`transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
             </div>
           ))}
         </div>
         <div className="border-t border-[var(--border)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid)} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
-          <div className="flex-1 min-w-0"><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; const displayRole = isEmailAdmin ? 'Admin' : myRole; return `${ROLE_ICONS[displayRole] || '👤'} ${displayRole}`; })()}</div></div>
+          <div className={`flex-1 min-w-0 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; const displayRole = isEmailAdmin ? 'Admin' : myRole; return `${ROLE_ICONS[displayRole] || '👤'} ${displayRole}`; })()}</div></div>
         </div>
       </aside>
 
@@ -2585,7 +2589,7 @@ export default function Home() {
             </button>
           ) : null}
           <div className="flex-1 min-w-0">
-            <div className="text-base font-medium truncate">{screenTitles[screen] || ''}</div>
+            <div className="text-base font-medium truncate af-heading-responsive">{screenTitles[screen] || ''}</div>
             <div className="text-xs text-[var(--muted-foreground)] hidden md:block">
               {screen === 'dashboard' ? `Bienvenido, ${userName.split(' ')[0]}` : screen === 'projectDetail' ? currentProject?.data.status || '' : ''}
             </div>
@@ -2823,11 +2827,44 @@ export default function Home() {
         )}
 
         {/* Content */}
-        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`} style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}>
+        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`} style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}>
 
           {/* ===== DASHBOARD ===== */}
           {screen === 'dashboard' && (<div className="animate-fadeIn space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Skeleton while loading */}
+            {loading && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5">
+                      <div className="af-skeleton h-3 w-24 mb-3" />
+                      <div className="af-skeleton h-7 w-12 mb-1" />
+                      <div className="af-skeleton h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <div className="af-skeleton h-4 w-32 mb-4" />
+                    {[1,2,3].map(i => <div key={i} className="af-skeleton h-12 w-full mb-2 rounded-lg" />)}
+                  </div>
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                    <div className="af-skeleton h-4 w-32 mb-4" />
+                    {[1,2,3].map(i => <div key={i} className="af-skeleton h-12 w-full mb-2 rounded-lg" />)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                      <div className="af-skeleton h-4 w-24 mb-3" />
+                      <div className="af-skeleton h-16 w-full rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!loading && (<>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {[{ val: projects.length, lbl: 'Proyectos totales', color: '' }, { val: projects.filter(p => p.data.status === 'Ejecucion').length, lbl: 'En ejecución', color: '' }, { val: pendingCount, lbl: 'Tareas pendientes', color: '' }, { val: tasks.filter(t => t.data.status === 'Completado').length, lbl: 'Completadas', color: 'text-emerald-400' }].map((m, i) => (
                 <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5"><div className={`text-2xl md:text-[28px] font-semibold ${m.color}`}>{m.val}</div><div className="text-xs text-[var(--muted-foreground)]">{m.lbl}</div></div>
               ))}
@@ -2858,7 +2895,7 @@ export default function Home() {
             </div>
 
             {/* Row 3: Widgets */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Widget: Progreso Sprint */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 col-span-1">
                 <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
@@ -2965,6 +3002,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            </>)}
           </div>)}
 
           {/* ===== PROJECTS ===== */}
@@ -2994,7 +3032,26 @@ export default function Home() {
                 ))}
               </div>
             )}
-            {(() => {
+            {loading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3 animate-pulse">
+                    <div className="h-3 w-24 bg-[var(--af-bg4)] rounded" />
+                    <div className="h-5 w-3/4 bg-[var(--af-bg4)] rounded" />
+                    <div className="flex gap-2">
+                      <div className="h-2 w-16 bg-[var(--af-bg4)] rounded" />
+                      <div className="h-2 w-20 bg-[var(--af-bg4)] rounded" />
+                    </div>
+                    <div className="flex gap-3 mt-2">
+                      <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
+                      <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
+                      <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loading && (() => {
               const projs = visibleProjects().filter(p => !forms.projFilter || p.data.status === forms.projFilter).filter(p => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
               return projs.length === 0 ? (
                 <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
@@ -3398,7 +3455,7 @@ export default function Home() {
                     </div>
                     <div className="text-sm font-medium truncate mb-0.5">{f.name}</div>
                     <div className="text-[11px] text-[var(--af-text3)]">{fmtSize(f.size)}</div>
-                    {f.type?.startsWith('image/') && f.data && <div className="mt-2"><img src={f.data} alt={f.name} className="w-full h-24 object-cover rounded-lg border border-[var(--border)]" /></div>}
+                    {f.type?.startsWith('image/') && f.data && <div className="mt-2"><img src={f.data} alt={f.name} className="w-full h-24 object-cover rounded-lg border border-[var(--border)]" loading="lazy" /></div>}
                     {f.data && <a href={f.data} download={f.name} className="text-[11px] text-[var(--af-accent)] mt-2 inline-block hover:underline">Descargar archivo</a>}
                   </div>
                 ))}
@@ -3519,7 +3576,7 @@ export default function Home() {
                 <div className="text-[15px] font-semibold mb-3">Galería</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {projectFiles.filter(f => f.type?.startsWith('image/')).map(f => (
-                    <a key={f.id} href={f.data} download={f.name}><img src={f.data} alt={f.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" /></a>
+                    <a key={f.id} href={f.data} download={f.name}><img src={f.data} alt={f.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" loading="lazy" /></a>
                   ))}
                 </div>
               </div>)}
@@ -3558,7 +3615,21 @@ export default function Home() {
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva tarea
               </button>
             </div>
-            {(forms.taskView || 'list') === 'list' ? (
+            {loading && (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 animate-pulse">
+                    <div className="w-4 h-4 rounded-full bg-[var(--af-bg4)]" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-3/4 bg-[var(--af-bg4)] rounded" />
+                      <div className="h-2 w-1/2 bg-[var(--af-bg4)] rounded" />
+                    </div>
+                    <div className="h-5 w-16 bg-[var(--af-bg4)] rounded-full" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loading && (forms.taskView || 'list') === 'list' ? (
               tasks.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">✅</div><div className="text-[15px] font-medium text-[var(--muted-foreground)]">Sin tareas</div></div> :
               ['Alta', 'Media', 'Baja'].map(prio => {
                 const group = tasks.filter(t => t.data.priority === prio);
@@ -4203,12 +4274,12 @@ export default function Home() {
       <div className="text-xs text-[var(--muted-foreground)] mt-1">Agrega fotos de tus proyectos para documentar el progreso</div>
     </div>
   ) : (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+    <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))' }}>
       {getFilteredGalleryPhotos().map((photo, idx) => {
         const proj = projects.find(p => p.id === photo.data.projectId);
         return (
           <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>
-            <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover" loading="lazy" />
+            <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover opacity-0 transition-opacity duration-300" loading="lazy" onLoad={e => { (e.target as HTMLImageElement).style.opacity = '1' }} />
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <div className="absolute bottom-0 left-0 right-0 p-2">
@@ -5290,7 +5361,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 mt-3">
                   {[
                     { val: myPending.length, lbl: 'Pendientes', c: 'text-amber-400', bg: 'bg-amber-500/10' },
                     { val: myInProgress.length, lbl: 'En progreso', c: 'text-blue-400', bg: 'bg-blue-500/10' },
@@ -5779,19 +5850,23 @@ export default function Home() {
       </div>
 
       {/* Bottom Nav (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-lg border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { id: 'dashboard', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>, label: 'Inicio' },
           { id: 'projects', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, label: 'Proyectos' },
           { id: 'tasks', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, label: 'Tareas' },
           { id: 'chat', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, label: 'Chat' },
           { id: '_more', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'Más' },
-        ].map(item => (
-          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-colors ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
+        ].map(item => {
+          const isActive = item.id === '_more' ? sidebarOpen : screen === item.id;
+          return (
+          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-all relative ${isActive ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
+            {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[var(--af-accent)]" />}
             {item.icon}
-            <span className="text-[10px] leading-tight">{item.label}</span>
+            <span className="text-[10px] leading-tight font-medium">{item.label}</span>
           </button>
-        ))}
+          );
+        })}
       </nav>
 
       {/* ===== MODALS ===== */}
@@ -6245,7 +6320,7 @@ export default function Home() {
               const billableToday = todayEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
               return (
                 <div>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-xl font-bold text-[var(--af-accent)]">{fmtDuration(totalToday)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Total hoy</div></div>
                     <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-xl font-bold text-emerald-400">{fmtDuration(billableToday)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
                   </div>
@@ -6299,7 +6374,6 @@ export default function Home() {
                   <span>Facturable: <b className="text-emerald-400">{fmtDuration(billableHrs)}</b></span>
                 </div>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)]">
                         <th className="text-left px-4 py-3 font-medium">Fecha</th>
@@ -6325,7 +6399,6 @@ export default function Home() {
                         })}
                       </tbody>
                     </table>
-                  </div>
                 </div>
               </div>
             );
@@ -6759,7 +6832,29 @@ export default function Home() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Productividad por Miembro</h3>
-                <div className="overflow-x-auto">
+                {/* Mobile: Team productivity card view */}
+                <div className="md:hidden space-y-2">
+                  {teamUsers.sort((a, b) => (tasksPerMember[b.id]?.total || 0) - (tasksPerMember[a.id]?.total || 0)).map(u => {
+                    const stats = tasksPerMember[u.id] || { total: 0, done: 0, overdue: 0 };
+                    const hrs = hoursPerMember[u.id] || 0;
+                    return (
+                      <div key={u.id} className="bg-[var(--af-bg3)] rounded-lg p-3 border border-[var(--border)] flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(u.id) }}>{getInitials(u.data.name)}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium truncate">{u.data.name}</div>
+                          <div className="flex gap-3 mt-1 text-[10px] text-[var(--muted-foreground)]">
+                            <span>{stats.total} tareas</span>
+                            <span className="text-emerald-400">{stats.done} listas</span>
+                            <span>{stats.overdue > 0 ? <span className="text-red-400">{stats.overdue} vencidas</span> : '0 vencidas'}</span>
+                            <span>{fmtDuration(hrs)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop: Team productivity table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)] text-xs"><th className="text-left py-2 pr-3">Miembro</th><th className="text-center py-2 px-2">Tareas</th><th className="text-center py-2 px-2">Listas</th><th className="text-center py-2 px-2">Vencidas</th><th className="text-center py-2 pl-2">Horas</th></tr></thead>
                     <tbody>
