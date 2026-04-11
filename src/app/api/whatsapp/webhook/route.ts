@@ -7,8 +7,6 @@ import {
 } from "@/lib/whatsapp-service";
 import {
   getWelcomeMessage,
-  generateLinkCode,
-  verifyLinkCode,
   getLinkedSuccess,
   processCommand,
 } from "@/lib/whatsapp-commands";
@@ -161,8 +159,19 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
 
     const userData = userSnap.docs[0].data();
 
-    // Generar codigo
-    const code = generateLinkCode(email);
+    // Generar codigo y guardarlo en Firestore (no en memoria — serverless no persiste)
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Guardar estado temporal en Firestore INCLUYENDO el codigo
+    await db.collection("whatsappPending").doc(message.from).set({
+      email,
+      userId: userSnap.docs[0].id,
+      userName: userData.name || userData.displayName || email.split("@")[0],
+      createdAt: FieldValue.serverTimestamp(),
+      step: "waiting_code",
+      code: code,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutos
+    });
 
     // Enviar codigo por WhatsApp
     const sendResult = await sendWhatsAppMessage(
@@ -174,15 +183,6 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       console.error("[ArchiFlow WhatsApp] Error enviando codigo:", sendResult.error);
       return { text: 'Error al enviar el codigo. Intenta de nuevo en unos minutos.' };
     }
-
-    // Guardar estado temporal en Firestore
-    await db.collection("whatsappPending").doc(message.from).set({
-      email,
-      userId: userSnap.docs[0].id,
-      userName: userData.name || userData.displayName || email.split("@")[0],
-      createdAt: FieldValue.serverTimestamp(),
-      step: "waiting_code",
-    });
 
     return {
       text: `Email encontrado: ${email}\n\nRevisa tu WhatsApp, te enviamos un codigo de verificacion.`
@@ -203,8 +203,11 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       return { text: "Escribe tu email para comenzar la vinculacion." };
     }
 
-    // Verificar codigo
-    if (verifyLinkCode(pending.email, msg)) {
+    // Verificar codigo desde Firestore (no de memoria — serverless)
+    const codeMatch = pending.code === msg;
+    const notExpired = pending.expiresAt && Date.now() < pending.expiresAt;
+
+    if (codeMatch && notExpired) {
       // Crear vinculo directamente en Firestore
       await db.collection('whatsappLinks').add({
         whatsappPhone: message.from,
@@ -219,8 +222,9 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       return getLinkedSuccess(pending.userName);
     } else {
       await db.collection("whatsappPending").doc(message.from).delete();
+      const reason = !notExpired ? 'Codigo expirado.' : 'Codigo incorrecto.';
       return {
-        text: "Codigo incorrecto o expirado. Escribe tu email de nuevo para recibir un nuevo codigo."
+        text: `${reason} Escribe tu email de nuevo para recibir un nuevo codigo.`
       };
     }
   }
