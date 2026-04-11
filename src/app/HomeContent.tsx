@@ -4,11 +4,11 @@ import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
 // Types & Constants (extracted from monolithic page.tsx)
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 // Helpers (pure formatting functions)
-import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
+import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 
 // Firebase Service (clean typed wrapper replacing all (window as any).firebase)
 import { getFirebase } from '@/lib/firebase-service';
@@ -83,6 +83,28 @@ export default function Home() {
   const [invTransfers, setInvTransfers] = useState<any[]>([]);
   const [invTransferFilterStatus, setInvTransferFilterStatus] = useState<string>('all');
   const [invWarehouseFilter, setInvWarehouseFilter] = useState<string>('all');
+
+  // Time Tracking state
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [timeTab, setTimeTab] = useState<'tracker' | 'entries' | 'summary'>('tracker');
+  const [timeFilterProject, setTimeFilterProject] = useState<string>('all');
+  const [timeFilterDate, setTimeFilterDate] = useState<string>('');
+  const [timeSession, setTimeSession] = useState<{ entryId: string | null; startTime: number | null; description: string; projectId: string; phaseName: string; isRunning: boolean }>({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
+  const [timeTimerMs, setTimeTimerMs] = useState(0);
+
+  // Invoices state
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoiceTab, setInvoiceTab] = useState<'list' | 'create'>('list');
+  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
+
+  // Comments state
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState<string>('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+
+  // Tasks view mode (list / kanban)
+  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
 
   // Admin state
   const [adminTab, setAdminTab] = useState<'timeline' | 'dashboard' | 'permissions' | 'team'>('timeline');
@@ -615,6 +637,45 @@ export default function Home() {
     }, () => {});
     return () => unsub();
   }, [ready, authUser]);
+
+  // Load time entries
+  useEffect(() => {
+    if (!ready || !authUser) return;
+    const db = getFirebase().firestore();
+    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
+      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser]);
+
+  // Load invoices
+  useEffect(() => {
+    if (!ready || !authUser) return;
+    const db = getFirebase().firestore();
+    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser]);
+
+  // Load comments (all, filtered by view)
+  useEffect(() => {
+    if (!ready || !authUser) return;
+    const db = getFirebase().firestore();
+    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
+      setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser]);
+
+  // Time tracker: live timer update
+  useEffect(() => {
+    if (!timeSession.isRunning || !timeSession.startTime) return;
+    const interval = setInterval(() => {
+      setTimeTimerMs(Date.now() - timeSession.startTime!);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeSession.isRunning, timeSession.startTime]);
 
   // Init default chat project (use ref to avoid set-state-in-effect)
   const chatProjectInitRef = useRef(false);
@@ -1922,6 +1983,133 @@ export default function Home() {
   };
   const platform = getPlatform();
 
+  /* ===== TIME TRACKING FUNCTIONS ===== */
+  const startTimeTracking = () => {
+    if (timeSession.isRunning) return;
+    const desc = forms.teDescription || forms.teQuickDesc || 'Trabajo en proyecto';
+    const projId = forms.teProject || '';
+    const phase = forms.tePhase || '';
+    if (!projId) { showToast('Selecciona un proyecto', 'error'); return; }
+    const entryId = 'temp-' + Date.now();
+    setTimeSession({ entryId: null, startTime: Date.now(), description: desc, projectId: projId, phaseName: phase, isRunning: true });
+    setTimeTimerMs(0);
+  };
+
+  const stopTimeTracking = async () => {
+    if (!timeSession.isRunning || !timeSession.startTime) return;
+    const endTime = new Date();
+    const startTime = new Date(timeSession.startTime);
+    const durationMin = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+    if (durationMin < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
+    const dateStr = startTime.toISOString().split('T')[0];
+    const startStr = startTime.toTimeString().substring(0, 5);
+    const endStr = endTime.toTimeString().substring(0, 5);
+    await fbActions.saveTimeEntry({
+      teProject: timeSession.projectId,
+      tePhase: timeSession.phaseName,
+      teDescription: timeSession.description,
+      teStartTime: startStr,
+      teEndTime: endStr,
+      teDuration: durationMin,
+      teBillable: true,
+      teRate: Number(forms.teRate) || 50000,
+      teDate: dateStr,
+    }, null, showToast, authUser);
+    setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
+    setTimeTimerMs(0);
+  };
+
+  const saveManualTimeEntry = () => {
+    const dur = Number(forms.teManualDuration) || 0;
+    if (dur < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
+    if (!forms.teProject) { showToast('Selecciona un proyecto', 'error'); return; }
+    fbActions.saveTimeEntry({
+      teProject: forms.teProject,
+      tePhase: forms.tePhase || '',
+      teDescription: forms.teDescription || '',
+      teStartTime: forms.teStartTime || '08:00',
+      teEndTime: forms.teEndTime || '17:00',
+      teDuration: dur,
+      teBillable: forms.teBillable !== false,
+      teRate: Number(forms.teRate) || 50000,
+      teDate: forms.teDate || new Date().toISOString().split('T')[0],
+    }, editingId, showToast, authUser);
+    closeModal('timeEntry');
+  };
+
+  /* ===== INVOICE FUNCTIONS ===== */
+  const openNewInvoice = () => {
+    setEditingId(null);
+    setInvoiceItems([{ concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
+    setForms(p => ({ ...p, invProject: '', invNumber: '', invStatus: 'Borrador', invTax: 19, invNotes: '', invIssueDate: new Date().toISOString().split('T')[0], invDueDate: '' }));
+    setInvoiceTab('create');
+  };
+
+  const updateInvoiceItem = (idx: number, field: string, value: any) => {
+    setInvoiceItems(prev => {
+      const items = [...prev];
+      items[idx] = { ...items[idx], [field]: value };
+      if (field === 'hours' || field === 'rate') {
+        items[idx].amount = (Number(items[idx].hours) || 0) * (Number(items[idx].rate) || 0);
+      }
+      return items;
+    });
+  };
+
+  const addInvoiceItem = () => setInvoiceItems(prev => [...prev, { concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
+
+  const removeInvoiceItem = (idx: number) => {
+    if (invoiceItems.length <= 1) return;
+    setInvoiceItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const saveInvoice = () => {
+    if (!forms.invProject) { showToast('Selecciona un proyecto', 'error'); return; }
+    const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
+    const tax = Number(forms.invTax) || 19;
+    const total = subtotal + (subtotal * tax / 100);
+    fbActions.saveInvoice({
+      invProject: forms.invProject,
+      invNumber: forms.invNumber || '',
+      invStatus: forms.invStatus || 'Borrador',
+      invItems: invoiceItems,
+      invSubtotal: subtotal,
+      invTax: tax,
+      invTotal: total,
+      invNotes: forms.invNotes || '',
+      invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
+      invDueDate: forms.invDueDate || '',
+    }, editingId, showToast, authUser);
+    setInvoiceTab('list');
+  };
+
+  /* ===== COMMENT FUNCTIONS ===== */
+  const postComment = (taskId: string, projectId: string) => {
+    if (!commentText.trim()) return;
+    const mentions: string[] = [];
+    const mentionRegex = /@(\w+)/g;
+    let match;
+    while ((match = mentionRegex.exec(commentText)) !== null) {
+      const mentionedName = match[1];
+      const mentionedUser = teamUsers.find(u => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
+      if (mentionedUser) mentions.push(mentionedUser.id);
+    }
+    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser);
+    setCommentText('');
+    setReplyingTo(null);
+  };
+
+  /* ===== GANTT HELPER ===== */
+  const calcGanttDays = (startDate: string, endDate: string): number => {
+    if (!startDate || !endDate) return 0;
+    return Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)));
+  };
+
+  const calcGanttOffset = (phaseStart: string, timelineStart: string): number => {
+    if (!phaseStart || !timelineStart) return 0;
+    return Math.max(0, Math.ceil((new Date(phaseStart).getTime() - new Date(timelineStart).getTime()) / (1000 * 60 * 60 * 24)));
+  };
+
   /* ===== LOADING SCREEN ===== */
   if (!ready || loading) return (
     <div className="flex items-center justify-center h-dvh bg-background" style={{ height: '100dvh' }}>
@@ -2641,11 +2829,62 @@ export default function Home() {
 
             {/* Tab: Obra */}
             {forms.detailTab === 'Obra' && (<div>
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">{workPhases.length} fases de obra</div>
-                {workPhases.length === 0 && <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={initDefaultPhases}>Inicializar fases</button>}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
+                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView !== 'gantt' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'timeline' }))}>Timeline</button>
+                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'gantt' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'gantt' }))}>Gantt</button>
+                </div>
+                <div className="flex gap-2">
+                  {workPhases.length === 0 && <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={initDefaultPhases}>Inicializar fases</button>}
+                </div>
               </div>
               {workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> :
+              forms.workView === 'gantt' ? (
+                /* Gantt Chart View */
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 overflow-x-auto">
+                  {(() => {
+                    const phasesWithDates = workPhases.filter(ph => ph.data.startDate || ph.data.endDate);
+                    const allDates = workPhases.filter(ph => ph.data.startDate).map(ph => new Date(ph.data.startDate).getTime()).concat(workPhases.filter(ph => ph.data.endDate).map(ph => new Date(ph.data.endDate).getTime()));
+                    const timelineStart = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
+                    const timelineEnd = allDates.length > 0 ? new Date(Math.max(...allDates)) : new Date(timelineStart.getTime() + 30 * 86400000);
+                    const totalDays = Math.max(1, Math.ceil((timelineEnd.getTime() - timelineStart.getTime()) / 86400000) + 7);
+                    const dayWidth = Math.max(24, Math.min(50, 700 / totalDays));
+                    const ganttColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+                    return phasesWithDates.length === 0 ? (
+                      <div className="text-center py-8 text-[var(--muted-foreground)] text-sm">Las fases necesitan fechas de inicio/fin para mostrar el Gantt. Edita las fases para agregar fechas.</div>
+                    ) : (
+                      <div>
+                        <div className="flex text-[10px] text-[var(--muted-foreground)] mb-2 ml-[140px]" style={{ width: totalDays * dayWidth }}>
+                          {Array.from({ length: Math.min(totalDays, 30) }, (_, i) => {
+                            const d = new Date(timelineStart.getTime() + i * 86400000);
+                            return <div key={i} className="flex-shrink-0 text-center" style={{ width: dayWidth }}>{d.getDate()}/{d.getMonth() + 1}</div>;
+                          })}
+                        </div>
+                        {workPhases.map((phase, idx) => {
+                          const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
+                          const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
+                          const color = ganttColors[idx % ganttColors.length];
+                          const isDone = phase.data.status === 'Completado';
+                          const isActive = phase.data.status === 'En progreso';
+                          return (
+                            <div key={phase.id} className="flex items-center mb-1.5">
+                              <div className="w-[130px] text-[11px] font-medium truncate pr-2 shrink-0 flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+                                {phase.data.name}
+                              </div>
+                              <div className="relative h-6" style={{ width: totalDays * dayWidth }}>
+                                <div className={`absolute h-6 rounded-md flex items-center px-2 text-[10px] font-medium text-white ${isDone ? 'opacity-70' : ''}`} style={{ left: offset * dayWidth, width: Math.max(days * dayWidth, 20), backgroundColor: color }}>
+                                  {days > 2 && phase.data.name.substring(0, 12)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
               <div className="relative pl-6">
                 <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--input)]" />
                 {workPhases.map(phase => {
@@ -2667,7 +2906,8 @@ export default function Home() {
                     </div>
                   </div>);
                 })}
-              </div>}
+              </div>
+              )}
             </div>)}
 
             {/* Tab: Portal */}
@@ -5049,6 +5289,52 @@ export default function Home() {
         </div>
       </div>)}
 
+      {/* Time Entry Modal */}
+      {modals.timeEntry && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('timeEntry')}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold mb-4">Registro Manual de Tiempo</h3>
+          <div className="space-y-3">
+            <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" value={forms.teProject || ''} onChange={e => setForms(p => ({ ...p, teProject: e.target.value }))}>
+              <option value="">Seleccionar proyecto</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            </select>
+            <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" value={forms.tePhase || ''} onChange={e => setForms(p => ({ ...p, tePhase: e.target.value }))}>
+              <option value="">Fase (opcional)</option>
+              {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+            </select>
+            <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Descripcion de la actividad" value={forms.teDescription || ''} onChange={e => setForms(p => ({ ...p, teDescription: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Fecha</label>
+                <input type="date" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" value={forms.teDate || ''} onChange={e => setForms(p => ({ ...p, teDate: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Duracion (min)</label>
+                <input type="number" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" placeholder="Ej: 120" value={forms.teManualDuration || ''} onChange={e => setForms(p => ({ ...p, teManualDuration: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Hora inicio</label>
+                <input type="time" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" value={forms.teStartTime || ''} onChange={e => setForms(p => ({ ...p, teStartTime: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Hora fin</label>
+                <input type="time" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] outline-none" value={forms.teEndTime || ''} onChange={e => setForms(p => ({ ...p, teEndTime: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={forms.teBillable !== false} onChange={e => setForms(p => ({ ...p, teBillable: e.target.checked }))} className="w-4 h-4 accent-[var(--af-accent)]" /><span className="text-sm">Facturable</span></label>
+              <div className="flex items-center gap-2 flex-1"><span className="text-xs text-[var(--muted-foreground)]">Tarifa/h:</span><input type="number" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.teRate || 50000} onChange={e => setForms(p => ({ ...p, teRate: e.target.value }))} /></div>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-5">
+            <button className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)]" onClick={() => closeModal('timeEntry')}>Cancelar</button>
+            <button className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none" onClick={saveManualTimeEntry}>Guardar</button>
+          </div>
+        </div>
+      </div>)}
+
       {/* Approval Modal */}
       {modals.approval && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('approval')}>
         <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
@@ -5303,192 +5589,589 @@ export default function Home() {
       </div>)}
 
       {/* ===== REPORTES ===== */}
-      {screen === 'reports' && (<div className="animate-fadeIn">
-        {(() => {
-          const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
-          const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
-          const projByStatus: Record<string, number> = {};
-          projects.forEach(p => { const st = p.data.status || 'Otro'; projByStatus[st] = (projByStatus[st] || 0) + 1; });
-          const taskCompleted = tasks.filter(t => t.data.status === 'Completado').length;
-          const taskInProgress = tasks.filter(t => t.data.status === 'En progreso').length;
-          const taskPending = tasks.filter(t => t.data.status === 'Pendiente' || t.data.status === 'Por hacer').length;
-          const taskOverdue = tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
-          const taskByPrio: Record<string, number> = {};
-          tasks.forEach(t => { const pr = t.data.priority || 'Otro'; taskByPrio[pr] = (taskByPrio[pr] || 0) + 1; });
-          const catSpend: Record<string, number> = {};
-          expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
-          const topCats = Object.entries(catSpend).sort((a, b) => b[1] - a[1]).slice(0, 5);
-          const budgetPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-          const membersByRole: Record<string, number> = {};
-          teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; membersByRole[r] = (membersByRole[r] || 0) + 1; });
-          const tasksPerMember: Record<string, number> = {};
-          tasks.forEach(t => { if (t.data.assigneeId) { tasksPerMember[t.data.assigneeId] = (tasksPerMember[t.data.assigneeId] || 0) + 1; } });
-          const statusIcon: Record<string, string> = { 'Ejecucion': '🏗️', 'Terminado': '✅', 'Diseno': '🎨', 'Concepto': '📐', 'Pausado': '⏸️' };
-          const prioIcon: Record<string, string> = { 'Alta': '🔴', 'Media': '🟡', 'Baja': '🟢' };
-          return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Card 1: Estado de Proyectos */}
-            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">📁 Estado de Proyectos</h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado Total</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Utilización</div>
-                </div>
-              </div>
-              {Object.keys(projByStatus).length > 0 && <div className="space-y-2">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por estado</div>
-                {Object.entries(projByStatus).map(([st, cnt]) => (
-                  <div key={st} className="flex items-center gap-2">
-                    <span className="text-sm w-5">{statusIcon[st] || '📌'}</span>
-                    <span className="text-sm text-[var(--foreground)] flex-1">{st}</span>
-                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
-                  </div>
-                ))}
-              </div>}
-              {projects.length > 0 && <div className="mt-4 space-y-2">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>
-                {projects.slice(0, 5).map(p => (
-                  <div key={p.id}>
-                    <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div>
-                    <div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div>
-                  </div>
-                ))}
-                {projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos más</div>}
-              </div>}
-            </div>
 
-            {/* Card 2: Tareas y Productividad */}
-            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">✅ Tareas y Productividad</h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--af-accent)]">{tasks.length}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Total Tareas</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-emerald-400">{taskCompleted}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Completadas</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-400">{taskInProgress}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div>
-                </div>
+      {/* ===== TIME TRACKING ===== */}
+      {screen === 'timeTracking' && (<div className="animate-fadeIn space-y-4">
+        <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
+          {[{ k: 'Tracker', v: 'tracker' as const }, { k: 'Registros', v: 'entries' as const }, { k: 'Resumen', v: 'summary' as const }].map(tab => (
+            <button key={tab.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${timeTab === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setTimeTab(tab.v)}>{tab.k}</button>
+          ))}
+        </div>
+
+        {timeTab === 'tracker' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Timer Card */}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+            <h3 className="text-[15px] font-semibold mb-4">Cronometro</h3>
+            <div className={`text-center py-8 rounded-xl mb-4 ${timeSession.isRunning ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-[var(--af-bg3)]'}`}>
+              <div className={`text-5xl font-mono font-bold tracking-wider ${timeSession.isRunning ? 'text-emerald-400' : 'text-[var(--muted-foreground)]'}`}>{timeSession.isRunning ? fmtTimer(timeTimerMs) : '00:00'}</div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-2">{timeSession.isRunning ? 'En curso...' : 'Detenido'}</div>
+              {timeSession.isRunning && <div className="w-3 h-3 bg-emerald-400 rounded-full mx-auto mt-2 animate-pulse" />}
+            </div>
+            <div className="space-y-3 mb-4">
+              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.teProject || ''} onChange={e => setForms(p => ({ ...p, teProject: e.target.value }))}>
+                <option value="">Seleccionar proyecto</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+              </select>
+              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.tePhase || ''} onChange={e => setForms(p => ({ ...p, tePhase: e.target.value }))}>
+                <option value="">Fase (opcional)</option>
+                {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+              </select>
+              <input type="text" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" placeholder="Que vas a hacer?" value={forms.teQuickDesc || ''} onChange={e => setForms(p => ({ ...p, teQuickDesc: e.target.value }))} disabled={timeSession.isRunning} />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--muted-foreground)]">Tarifa/h:</span>
+                <input type="number" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.teRate || 50000} onChange={e => setForms(p => ({ ...p, teRate: e.target.value }))} />
               </div>
-              {taskOverdue > 0 && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
-                  <span className="text-red-400">⚠️</span>
-                  <span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span>
-                </div>
+            </div>
+            <div className="flex gap-2">
+              {!timeSession.isRunning ? (
+                <button className="flex-1 bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-emerald-600 transition-colors" onClick={startTimeTracking}>Iniciar</button>
+              ) : (
+                <button className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-red-600 transition-colors" onClick={stopTimeTracking}>Detener</button>
               )}
-              {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div>
-                <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div>
-                <div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div>
-              </div>}
-              {Object.keys(taskByPrio).length > 0 && <div className="space-y-2">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por prioridad</div>
-                {Object.entries(taskByPrio).map(([pr, cnt]) => (
-                  <div key={pr} className="flex items-center gap-2">
-                    <span className="text-sm w-5">{prioIcon[pr] || '📌'}</span>
-                    <span className="text-sm text-[var(--foreground)] flex-1">{pr}</span>
-                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
-                  </div>
-                ))}
-              </div>}
+              <button className="px-4 py-2.5 rounded-lg text-sm cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--af-bg4)]" onClick={() => { setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); openModal('timeEntry'); }}>+ Manual</button>
             </div>
+          </div>
 
-            {/* Card 3: Presupuesto */}
-            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">💰 Presupuesto</h3>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalBudget)}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div>
-                </div>
-              </div>
-              <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4">
-                <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilización del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div>
-                <div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div>
-              </div>
-              {topCats.length > 0 && <div className="space-y-2">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Top categorías de gasto</div>
-                {topCats.map(([cat, amt]) => {
-                  const pct = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
-                  return (
-                    <div key={cat}>
-                      <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">{cat}</span><span className="text-[var(--muted-foreground)]">{fmtCOP(amt)} ({pct}%)</span></div>
-                      <div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5 transition-all" style={{ width: `${pct}%` }} /></div>
-                    </div>
-                  );
-                })}
-              </div>}
-              {expenses.length === 0 && <div className="text-sm text-[var(--muted-foreground)] text-center py-4">Sin gastos registrados</div>}
-            </div>
-
-            {/* Card 4: Equipo */}
-            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">👥 Equipo</h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div>
-                </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div>
-                </div>
-              </div>
-              {Object.keys(membersByRole).length > 0 && <div className="space-y-2 mb-4">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Miembros por rol</div>
-                {Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (
-                  <div key={role} className="flex items-center gap-2">
-                    <span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span>
-                    <span className="text-sm text-[var(--foreground)] flex-1">{role}</span>
-                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+          {/* Today's entries */}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+            <h3 className="text-[15px] font-semibold mb-4">Hoy</h3>
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const todayEntries = timeEntries.filter(e => e.data.date === today);
+              const totalToday = todayEntries.reduce((s, e) => s + (e.data.duration || 0), 0);
+              const billableToday = todayEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
+              return (
+                <div>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-xl font-bold text-[var(--af-accent)]">{fmtDuration(totalToday)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Total hoy</div></div>
+                    <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-xl font-bold text-emerald-400">{fmtDuration(billableToday)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
                   </div>
-                ))}
-              </div>}
-              {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2">
-                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>
-                {Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {
-                  const member = teamUsers.find(u => u.id === uid);
-                  return (
-                    <div key={uid} className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div>
-                      <span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span>
-                      <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+                  {todayEntries.length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin registros hoy</div> : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {todayEntries.map(e => {
+                        const proj = projects.find(p => p.id === e.data.projectId);
+                        return (
+                          <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--af-bg3)] rounded-lg">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(e.data.userId) }}>{getInitials(e.data.userName)}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{e.data.description || 'Sin descripcion'}</div>
+                              <div className="text-[11px] text-[var(--af-text3)]">{proj?.data.name || '—'}{e.data.phaseName ? ' · ' + e.data.phaseName : ''}</div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-sm font-semibold">{fmtDuration(e.data.duration)}</div>
+                              <div className="text-[10px] text-[var(--af-text3)]">{e.data.startTime} - {e.data.endTime}</div>
+                            </div>
+                            {e.data.billable && <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>}
-              {teamUsers.length === 0 && <div className="text-sm text-[var(--muted-foreground)] text-center py-4">Sin miembros en el equipo</div>}
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>)}
+
+        {timeTab === 'entries' && (<div>
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={timeFilterProject} onChange={e => setTimeFilterProject(e.target.value)}>
+              <option value="all">Todos los proyectos</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            </select>
+            <input type="date" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={timeFilterDate} onChange={e => setTimeFilterDate(e.target.value)} />
+            <button className="ml-auto flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); openModal('timeEntry'); }}>+ Registro manual</button>
+          </div>
+          {(() => {
+            let filtered = [...timeEntries];
+            if (timeFilterProject !== 'all') filtered = filtered.filter(e => e.data.projectId === timeFilterProject);
+            if (timeFilterDate) filtered = filtered.filter(e => e.data.date === timeFilterDate);
+            const totalHrs = filtered.reduce((s, e) => s + (e.data.duration || 0), 0);
+            const billableHrs = filtered.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
+            return filtered.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">⏱️</div><div className="text-sm">Sin registros de tiempo</div></div> : (
+              <div>
+                <div className="flex gap-4 mb-4 text-xs text-[var(--muted-foreground)]">
+                  <span>{filtered.length} registros</span>
+                  <span>Total: <b className="text-[var(--foreground)]">{fmtDuration(totalHrs)}</b></span>
+                  <span>Facturable: <b className="text-emerald-400">{fmtDuration(billableHrs)}</b></span>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                        <th className="text-left px-4 py-3 font-medium">Fecha</th>
+                        <th className="text-left px-4 py-3 font-medium">Proyecto</th>
+                        <th className="text-left px-4 py-3 font-medium">Descripcion</th>
+                        <th className="text-left px-4 py-3 font-medium">Horario</th>
+                        <th className="text-right px-4 py-3 font-medium">Duracion</th>
+                        <th className="text-center px-4 py-3 font-medium">Fact.</th>
+                        <th className="px-4 py-3"></th>
+                      </tr></thead>
+                      <tbody>
+                        {filtered.map(e => {
+                          const proj = projects.find(p => p.id === e.data.projectId);
+                          return (<tr key={e.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--af-bg3)] transition-colors">
+                            <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.date}</td>
+                            <td className="px-4 py-2.5"><div className="truncate max-w-[120px]">{proj?.data.name || '—'}</div></td>
+                            <td className="px-4 py-2.5 truncate max-w-[180px]">{e.data.description}</td>
+                            <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.startTime} - {e.data.endTime}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold">{fmtDuration(e.data.duration)}</td>
+                            <td className="px-4 py-2.5 text-center">{e.data.billable ? '✅' : '—'}</td>
+                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, showToast)}>🗑</button></td>
+                          </tr>);
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>)}
+
+        {timeTab === 'summary' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(() => {
+            const thisWeek = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const ws = getWeekStart(); return d >= ws; });
+            const thisMonth = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
+            const weekTotal = thisWeek.reduce((s, e) => s + (e.data.duration || 0), 0);
+            const weekBillable = thisWeek.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
+            const monthTotal = thisMonth.reduce((s, e) => s + (e.data.duration || 0), 0);
+            const monthBillable = thisMonth.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
+            const byProject: Record<string, number> = {};
+            timeEntries.forEach(e => { byProject[e.data.projectId] = (byProject[e.data.projectId] || 0) + (e.data.duration || 0); });
+            const byPhase: Record<string, number> = {};
+            timeEntries.forEach(e => { if (e.data.phaseName) byPhase[e.data.phaseName] = (byPhase[e.data.phaseName] || 0) + (e.data.duration || 0); });
+            return (<>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Esta Semana</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{fmtDuration(weekTotal)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Horas totales</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{fmtCOP(weekBillable)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Este Mes</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{fmtDuration(monthTotal)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Horas totales</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{fmtCOP(monthBillable)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Horas por Proyecto</h3>
+                {Object.keys(byProject).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
+                  <div className="space-y-2">
+                    {Object.entries(byProject).sort((a, b) => b[1] - a[1]).map(([pid, mins]) => {
+                      const proj = projects.find(p => p.id === pid);
+                      return (<div key={pid}>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{proj?.data.name || pid}</span><span className="text-[var(--muted-foreground)]">{fmtDuration(mins)}</span></div>
+                        <div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(mins / Math.max(...Object.values(byProject))) * 100}%` }} /></div>
+                      </div>);
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Horas por Fase</h3>
+                {Object.keys(byPhase).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
+                  <div className="space-y-2">
+                    {Object.entries(byPhase).sort((a, b) => b[1] - a[1]).map(([phase, mins]) => (
+                      <div key={phase} className="flex items-center gap-2">
+                        <span className="text-sm text-[var(--foreground)] flex-1">{phase}</span>
+                        <span className="text-sm font-semibold">{fmtDuration(mins)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>);
+          })()}
+        </div>)}
+      </div>)}
+
+      {/* ===== INVOICES ===== */}
+      {screen === 'invoices' && (<div className="animate-fadeIn space-y-4">
+        {invoiceTab === 'list' && (<div>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto">
+              {[{ k: 'Todas', v: 'all' }, { k: 'Borrador', v: 'Borrador' }, { k: 'Enviadas', v: 'Enviada' }, { k: 'Pagadas', v: 'Pagada' }, { k: 'Vencidas', v: 'Vencida' }].map(tab => (
+                <button key={tab.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${invoiceFilterStatus === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setInvoiceFilterStatus(tab.v)}>{tab.k}</button>
+              ))}
             </div>
-          </div>;
-        })()}
+            <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={openNewInvoice}>+ Nueva Factura</button>
+          </div>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {(() => {
+              const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
+              const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
+              const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
+              const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
+              return [
+                { lbl: 'Facturado', val: fmtCOP(totalInvoiced), color: 'text-[var(--af-accent)]' },
+                { lbl: 'Pagado', val: fmtCOP(totalPaid), color: 'text-emerald-400' },
+                { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-blue-400' },
+                { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-red-400' },
+              ].map((c, i) => (
+                <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
+                  <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
+                </div>
+              ));
+            })()}
+          </div>
+          {/* Invoice List */}
+          {(() => {
+            const filtered = invoices.filter(i => invoiceFilterStatus === 'all' || i.data.status === invoiceFilterStatus);
+            return filtered.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🧾</div><div className="text-sm">Sin facturas</div></div> : (
+              <div className="space-y-2">
+                {filtered.map(inv => {
+                  const statusColors: Record<string, string> = { Borrador: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', Enviada: 'bg-blue-500/10 text-blue-400', Pagada: 'bg-emerald-500/10 text-emerald-400', Vencida: 'bg-red-500/10 text-red-400', Cancelada: 'bg-red-500/5 text-red-300 line-through' };
+                  return (<div key={inv.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--input)] transition-all">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold">{inv.data.number}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${statusColors[inv.data.status] || ''}`}>{inv.data.status}</span>
+                      </div>
+                      <div className="text-xs text-[var(--muted-foreground)]">{inv.data.projectName}{inv.data.clientName ? ' · ' + inv.data.clientName : ''}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
+                      <div className="text-[10px] text-[var(--muted-foreground)]">{inv.data.issueDate}{inv.data.dueDate ? ' → ' + inv.data.dueDate : ''}</div>
+                    </div>
+                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                      {inv.data.status === 'Borrador' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast)}>Enviar</button>}
+                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast)}>Pagar</button>}
+                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast)}>Vencer</button>}
+                      <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.deleteInvoice(inv.id, showToast)}>🗑</button>
+                    </div>
+                  </div>);
+                })}
+              </div>
+            );
+          })()}
+        </div>)}
+
+        {invoiceTab === 'create' && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[15px] font-semibold">Nueva Factura</h3>
+            <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setInvoiceTab('list')}>Cancelar</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invProject || ''} onChange={e => setForms(p => ({ ...p, invProject: e.target.value }))}>
+              <option value="">Seleccionar proyecto</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            </select>
+            <input type="text" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" placeholder="Numero de factura" value={forms.invNumber || ''} onChange={e => setForms(p => ({ ...p, invNumber: e.target.value }))} />
+            <input type="date" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invIssueDate || ''} onChange={e => setForms(p => ({ ...p, invIssueDate: e.target.value }))} />
+            <input type="date" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invDueDate || ''} onChange={e => setForms(p => ({ ...p, invDueDate: e.target.value }))} />
+          </div>
+          {/* Items */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between"><span className="text-[13px] font-medium">Items</span><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={addInvoiceItem}>+ Agregar item</button></div>
+            <div className="bg-[var(--af-bg3)] rounded-lg p-3 space-y-2">
+              <div className="grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
+                <div className="col-span-4">Concepto</div><div className="col-span-3">Fase</div><div className="col-span-2">Horas</div><div className="col-span-2">Tarifa</div><div className="col-span-1"></div>
+              </div>
+              {invoiceItems.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <input className="col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
+                  <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
+                    <option value="">Fase</option>
+                    {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+                  </select>
+                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
+                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
+                  <button className="col-span-1 text-xs text-red-400 cursor-pointer text-center" onClick={() => removeInvoiceItem(idx)}>✕</button>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-[var(--muted-foreground)]">Subtotal</span>
+              <span>{fmtCOP(invoiceItems.reduce((s, i) => s + (Number(i.amount) || 0), 0))}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[var(--muted-foreground)]">IVA (%)</span>
+              <input type="number" className="w-20 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right outline-none" value={forms.invTax || 19} onChange={e => setForms(p => ({ ...p, invTax: e.target.value }))} />
+            </div>
+            <div className="flex justify-between items-center text-sm font-semibold">
+              <span>Total</span>
+              <span className="text-[var(--af-accent)]">{fmtCOP(invoiceItems.reduce((s, i) => s + (Number(i.amount) || 0), 0) * (1 + (Number(forms.invTax) || 19) / 100))}</span>
+            </div>
+          </div>
+          <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas..." value={forms.invNotes || ''} onChange={e => setForms(p => ({ ...p, invNotes: e.target.value }))} />
+          <button className="w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)]" onClick={saveInvoice}>Crear Factura</button>
+        </div>)}
+      </div>)}
+      {screen === 'reports' && (<div className="animate-fadeIn space-y-4">
+        {/* Export toolbar */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
+            {['General', 'Financiero', 'Tiempo', 'Equipo'].map(tab => (
+              <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${(!forms.reportTab || forms.reportTab === 'General') === (tab === 'General') ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
+            ))}
+          </div>
+          <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30" onClick={() => {
+            try {
+              let csv = 'Tipo,Dato,Valor\n';
+              csv += `Proyectos,Total,${projects.length}\n`;
+              csv += `Presupuesto,Total,${projects.reduce((s, p) => s + (p.data.budget || 0), 0)}\n`;
+              csv += `Gastos,Total,${expenses.reduce((s, e) => s + (e.data.amount || 0), 0)}\n`;
+              csv += `Tareas,Completadas,${tasks.filter(t => t.data.status === 'Completado').length}\n`;
+              csv += `Tareas,Pendientes,${tasks.filter(t => t.data.status !== 'Completado').length}\n`;
+              csv += `Equipo,Miembros,${teamUsers.length}\n`;
+              csv += `Tiempo,Horas totales,${timeEntries.reduce((s, e) => s + (e.data.duration || 0), 0)} minutos\n`;
+              csv += `Facturas,Total facturado,${invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0)}\n`;
+              projects.forEach(p => { csv += `Proyecto,"${p.data.name}",Presupuesto: ${p.data.budget}, Progreso: ${p.data.progress}%\n`; });
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `archiflow-reporte-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+              URL.revokeObjectURL(url);
+              showToast('Reporte CSV descargado');
+            } catch (err) { showToast('Error al exportar', 'error'); }
+          }}>
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+
+        {/* General Report (existing) */}
+        {(!forms.reportTab || forms.reportTab === 'General') && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(() => {
+            const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
+            const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
+            const projByStatus: Record<string, number> = {};
+            projects.forEach(p => { const st = p.data.status || 'Otro'; projByStatus[st] = (projByStatus[st] || 0) + 1; });
+            const taskCompleted = tasks.filter(t => t.data.status === 'Completado').length;
+            const taskInProgress = tasks.filter(t => t.data.status === 'En progreso').length;
+            const taskPending = tasks.filter(t => t.data.status === 'Pendiente' || t.data.status === 'Por hacer').length;
+            const taskOverdue = tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+            const taskByPrio: Record<string, number> = {};
+            tasks.forEach(t => { const pr = t.data.priority || 'Otro'; taskByPrio[pr] = (taskByPrio[pr] || 0) + 1; });
+            const catSpend: Record<string, number> = {};
+            expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
+            const topCats = Object.entries(catSpend).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const budgetPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+            const membersByRole: Record<string, number> = {};
+            teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; membersByRole[r] = (membersByRole[r] || 0) + 1; });
+            const tasksPerMember: Record<string, number> = {};
+            tasks.forEach(t => { if (t.data.assigneeId) { tasksPerMember[t.data.assigneeId] = (tasksPerMember[t.data.assigneeId] || 0) + 1; } });
+            const statusIcon: Record<string, string> = { 'Ejecucion': '🏗️', 'Terminado': '✅', 'Diseno': '🎨', 'Concepto': '📐', 'Pausado': '⏸️' };
+            const prioIcon: Record<string, string> = { 'Alta': '🔴', 'Media': '🟡', 'Baja': '🟢' };
+            return <div className="contents">
+              {/* Card 1: Estado de Proyectos */}
+              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">📁 Estado de Proyectos</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado Total</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilización</div></div>
+                </div>
+                {Object.keys(projByStatus).length > 0 && <div className="space-y-2 mb-4"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por estado</div>{Object.entries(projByStatus).map(([st, cnt]) => (<div key={st} className="flex items-center gap-2"><span className="text-sm w-5">{statusIcon[st] || '📌'}</span><span className="text-sm text-[var(--foreground)] flex-1">{st}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
+                {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos más</div>}</div>}
+              </div>
+              {/* Card 2: Tareas y Productividad */}
+              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">✅ Tareas y Productividad</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{tasks.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Tareas</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{taskCompleted}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Completadas</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-400">{taskInProgress}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div></div>
+                </div>
+                {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
+                {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
+                {Object.keys(taskByPrio).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por prioridad</div>{Object.entries(taskByPrio).map(([pr, cnt]) => (<div key={pr} className="flex items-center gap-2"><span className="text-sm w-5">{prioIcon[pr] || '📌'}</span><span className="text-sm text-[var(--foreground)] flex-1">{pr}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
+              </div>
+              {/* Card 3: Presupuesto */}
+              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">💰 Presupuesto</h3>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div></div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilización del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
+                {/* Budget by project */}
+                {projects.length > 0 && projects.some(p => p.data.budget > 0) && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Presupuesto por proyecto</div>{projects.filter(p => p.data.budget > 0).sort((a, b) => b.data.budget - a.data.budget).slice(0, 5).map(p => {
+                  const spent = expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0);
+                  const pct = p.data.budget > 0 ? Math.round((spent / p.data.budget) * 100) : 0;
+                  return (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{fmtCOP(spent)} / {fmtCOP(p.data.budget)}</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className={`rounded-full h-1.5 transition-all ${pct > 90 ? 'bg-red-400' : pct > 70 ? 'bg-amber-400' : 'bg-[var(--af-accent)]'}`} style={{ width: `${Math.min(pct, 100)}%` }} /></div></div>);
+                })}</div>}
+              </div>
+              {/* Card 4: Equipo */}
+              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">👥 Equipo</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div></div>
+                </div>
+                {Object.keys(membersByRole).length > 0 && <div className="space-y-2 mb-4"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Miembros por rol</div>{Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (<div key={role} className="flex items-center gap-2"><span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span><span className="text-sm text-[var(--foreground)] flex-1">{role}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
+                {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>{Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {const member = teamUsers.find(u => u.id === uid); return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>);})}</div>}
+              </div>
+            </div>;
+          })()}
+        </div>)}
+
+        {/* Financial Report */}
+        {forms.reportTab === 'Financiero' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(() => {
+            const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
+            const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
+            const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
+            const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
+            const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
+            const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
+            const totalBillable = timeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
+            const catSpend: Record<string, number> = {};
+            expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
+            const projBudget: { name: string; budget: number; spent: number }[] = projects.filter(p => p.data.budget > 0).map(p => ({ name: p.data.name, budget: p.data.budget, spent: expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0) }));
+            return (<>
+              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Resumen Financiero</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {[{ lbl: 'Presupuesto', val: fmtCOP(totalBudget), c: 'text-[var(--af-accent)]' }, { lbl: 'Gastado', val: fmtCOP(totalSpent), c: 'text-[var(--foreground)]' }, { lbl: 'Facturado', val: fmtCOP(totalInvoiced), c: 'text-blue-400' }, { lbl: 'Cobrado', val: fmtCOP(totalPaid), c: 'text-emerald-400' }, { lbl: 'Por cobrar', val: fmtCOP(totalPending + totalOverdue), c: totalOverdue > 0 ? 'text-red-400' : 'text-amber-400' }].map((m, i) => (
+                    <div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-xl font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>
+                  ))}
+                </div>
+              </div>
+              {/* Alerts */}
+              {(totalOverdue > 0 || (totalBudget > 0 && totalSpent > totalBudget * 0.9)) && <div className="lg:col-span-2 space-y-2">
+                {totalOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-red-400 text-lg">⚠️</span><span className="text-sm text-red-400 font-medium">Facturas vencidas por {fmtCOP(totalOverdue)}</span></div>}
+                {totalBudget > 0 && totalSpent > totalBudget * 0.9 && <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-amber-400 text-lg">⚠️</span><span className="text-sm text-amber-400 font-medium">Gasto al {Math.round(totalSpent / totalBudget * 100)}% del presupuesto</span></div>}
+              </div>}
+              {/* Budget vs Real by project */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Presupuesto vs Real por Proyecto</h3>
+                {projBudget.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin proyectos con presupuesto</div> : (
+                  <div className="space-y-3">
+                    {projBudget.map(p => {
+                      const pct = p.budget > 0 ? Math.round((p.spent / p.budget) * 100) : 0;
+                      const overBudget = p.spent > p.budget;
+                      return (<div key={p.name}>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.name}</span><span className={overBudget ? 'text-red-400 font-medium' : 'text-[var(--muted-foreground)]'}>{fmtCOP(p.spent)} / {fmtCOP(p.budget)} ({pct}%)</span></div>
+                        <div className="w-full bg-[var(--af-bg3)] rounded-full h-2.5"><div className={`rounded-full h-2.5 transition-all ${overBudget ? 'bg-red-400' : pct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(pct, 100)}%` }} /></div>
+                        {overBudget && <div className="text-[10px] text-red-400 mt-0.5">Excedido por {fmtCOP(p.spent - p.budget)}</div>}
+                      </div>);
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Gastos por categoría */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Gastos por Categoría</h3>
+                {Object.keys(catSpend).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin gastos</div> : (
+                  <div className="space-y-2">
+                    {Object.entries(catSpend).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => {
+                      const pct = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
+                      return (<div key={cat}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">{cat}</span><span className="text-[var(--muted-foreground)]">{fmtCOP(amt)} ({pct}%)</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${pct}%` }} /></div></div>);
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Rentabilidad */}
+              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Métricas de Rentabilidad</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(() => {
+                    const margin = totalInvoiced > 0 ? Math.round(((totalInvoiced - totalSpent) / totalInvoiced) * 100) : 0;
+                    const collectionRate = totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0;
+                    const avgProject = projects.length > 0 ? totalBudget / projects.length : 0;
+                    const timeRevenue = totalBillable;
+                    return [
+                      { lbl: 'Margen', val: `${margin}%`, c: margin > 20 ? 'text-emerald-400' : margin > 0 ? 'text-amber-400' : 'text-red-400' },
+                      { lbl: 'Tasa de cobro', val: `${collectionRate}%`, c: collectionRate > 80 ? 'text-emerald-400' : 'text-amber-400' },
+                      { lbl: 'Promedio proyecto', val: fmtCOP(avgProject), c: 'text-[var(--af-accent)]' },
+                      { lbl: 'Horas facturables', val: fmtCOP(timeRevenue), c: 'text-blue-400' },
+                    ].map((m, i) => (<div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>));
+                  })()}
+                </div>
+              </div>
+            </>);
+          })()}
+        </div>)}
+
+        {/* Time Report */}
+        {forms.reportTab === 'Tiempo' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(() => {
+            const totalHrs = timeEntries.reduce((s, e) => s + (e.data.duration || 0), 0);
+            const billableHrs = timeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
+            const totalBillable = timeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
+            const thisWeek = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); return d >= getWeekStart(); });
+            const weekHrs = thisWeek.reduce((s, e) => s + (e.data.duration || 0), 0);
+            const byProject: Record<string, { hrs: number; billable: number }> = {};
+            timeEntries.forEach(e => { if (!byProject[e.data.projectId]) byProject[e.data.projectId] = { hrs: 0, billable: 0 }; byProject[e.data.projectId].hrs += e.data.duration || 0; if (e.data.billable) byProject[e.data.projectId].billable += (e.data.duration || 0) * (e.data.rate || 0) / 60; });
+            const byUser: Record<string, number> = {};
+            timeEntries.forEach(e => { byUser[e.data.userId] = (byUser[e.data.userId] || 0) + (e.data.duration || 0); });
+            return (<>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Resumen de Tiempo</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{fmtDuration(totalHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Total registrado</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{fmtDuration(billableHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-400">{fmtCOP(totalBillable)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Valor facturable</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtDuration(weekHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Esta semana</div></div>
+                </div>
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Horas por Proyecto</h3>
+                {Object.keys(byProject).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
+                  <div className="space-y-2">{Object.entries(byProject).sort((a, b) => b[1].hrs - a[1].hrs).map(([pid, data]) => {
+                    const proj = projects.find(p => p.id === pid);
+                    return (<div key={pid}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{proj?.data.name || pid}</span><span className="text-[var(--muted-foreground)]">{fmtDuration(data.hrs)} · {fmtCOP(data.billable)}</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(data.hrs / Math.max(...Object.values(byProject).map(v => v.hrs))) * 100}%` }} /></div></div>);
+                  })}</div>
+                )}
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Horas por Miembro</h3>
+                {Object.keys(byUser).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
+                  <div className="space-y-2">{Object.entries(byUser).sort((a, b) => b[1] - a[1]).map(([uid, mins]) => {
+                    const user = teamUsers.find(u => u.id === uid);
+                    return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{user ? getInitials(user.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1">{user?.data.name || uid.substring(0, 10)}</span><span className="text-sm font-semibold">{fmtDuration(mins)}</span></div>);
+                  })}</div>
+                )}
+              </div>
+            </>);
+          })()}
+        </div>)}
+
+        {/* Team Report */}
+        {forms.reportTab === 'Equipo' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(() => {
+            const membersByRole: Record<string, number> = {};
+            teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; membersByRole[r] = (membersByRole[r] || 0) + 1; });
+            const tasksPerMember: Record<string, { total: number; done: number; overdue: number }> = {};
+            teamUsers.forEach(u => { tasksPerMember[u.id] = { total: 0, done: 0, overdue: 0 }; });
+            tasks.forEach(t => { if (t.data.assigneeId && tasksPerMember[t.data.assigneeId]) { tasksPerMember[t.data.assigneeId].total++; if (t.data.status === 'Completado') tasksPerMember[t.data.assigneeId].done++; if (t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()) tasksPerMember[t.data.assigneeId].overdue++; } });
+            const hoursPerMember: Record<string, number> = {};
+            timeEntries.forEach(e => { hoursPerMember[e.data.userId] = (hoursPerMember[e.data.userId] || 0) + (e.data.duration || 0); });
+            return (<>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Distribución por Roles</h3>
+                {Object.keys(membersByRole).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div> : (
+                  <div className="space-y-2">{Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (
+                    <div key={role} className="flex items-center gap-2"><span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span><div className="flex-1"><div className="flex justify-between text-xs mb-1"><span>{role}</span><span className="text-[var(--muted-foreground)]">{cnt}</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(cnt / teamUsers.length) * 100}%` }} /></div></div></div>
+                  ))}</div>
+                )}
+              </div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Productividad por Miembro</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)] text-xs"><th className="text-left py-2 pr-3">Miembro</th><th className="text-center py-2 px-2">Tareas</th><th className="text-center py-2 px-2">Listas</th><th className="text-center py-2 px-2">Vencidas</th><th className="text-center py-2 pl-2">Horas</th></tr></thead>
+                    <tbody>
+                      {teamUsers.sort((a, b) => (tasksPerMember[b.id]?.total || 0) - (tasksPerMember[a.id]?.total || 0)).map(u => {
+                        const stats = tasksPerMember[u.id] || { total: 0, done: 0, overdue: 0 };
+                        const hrs = hoursPerMember[u.id] || 0;
+                        return (<tr key={u.id} className="border-b border-[var(--border)] last:border-0"><td className="py-2 pr-3"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(u.id) }}>{getInitials(u.data.name)}</div><span className="text-xs truncate max-w-[80px]">{u.data.name}</span></div></td><td className="text-center py-2 px-2 text-xs">{stats.total}</td><td className="text-center py-2 px-2 text-xs text-emerald-400">{stats.done}</td><td className="text-center py-2 px-2 text-xs">{stats.overdue > 0 ? <span className="text-red-400">{stats.overdue}</span> : '0'}</td><td className="text-center py-2 pl-2 text-xs">{fmtDuration(hrs)}</td></tr>);
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>);
+          })()}
+        </div>)}
       </div>)}
 
       {/* Lightbox Viewer */}

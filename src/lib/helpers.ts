@@ -106,6 +106,42 @@ export const fmtRecTime = (seconds: number): string => {
 };
 
 /**
+ * Formatea minutos a representación legible: "Xh Ym" o "Ym".
+ */
+export const fmtDuration = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return '0m';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+};
+
+/**
+ * Formatea milisegundos a "HH:MM:SS" para cronómetro en vivo.
+ */
+export const fmtTimer = (ms: number): string => {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Obtiene la fecha de inicio de la semana (lunes).
+ */
+export const getWeekStart = (date: Date = new Date()): Date => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+/**
  * Convierte un archivo a Base64 (para subir imágenes/documentos).
  */
 export const fileToBase64 = (file: File): Promise<string> =>

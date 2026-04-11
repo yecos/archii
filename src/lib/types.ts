@@ -224,6 +224,79 @@ export interface NotifEntry {
   itemId: string | null;
 }
 
+export interface TimeEntry {
+  id: string;
+  data: {
+    userId: string;
+    userName: string;
+    projectId: string;
+    phaseName: string;
+    description: string;
+    startTime: string;
+    endTime: string;
+    duration: number; // minutos
+    billable: boolean;
+    rate: number; // COP/hora
+    date: string;
+    createdAt: any;
+    updatedAt?: any;
+  };
+}
+
+export interface Invoice {
+  id: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    clientName: string;
+    number: string;
+    status: 'Borrador' | 'Enviada' | 'Pagada' | 'Vencida' | 'Cancelada';
+    items: InvoiceItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    notes: string;
+    issueDate: string;
+    dueDate: string;
+    paidDate?: string;
+    createdAt: any;
+    createdBy: string;
+  };
+}
+
+export interface InvoiceItem {
+  concept: string;
+  phase: string;
+  hours: number;
+  rate: number;
+  amount: number;
+}
+
+export interface Comment {
+  id: string;
+  data: {
+    taskId: string;
+    projectId: string;
+    userId: string;
+    userName: string;
+    userPhoto?: string;
+    text: string;
+    mentions: string[];
+    parentId?: string;
+    createdAt: any;
+    updatedAt?: any;
+  };
+}
+
+export interface TimeSession {
+  entryId: string | null;
+  startTime: number | null;
+  description: string;
+  projectId: string;
+  phaseName: string;
+  isRunning: boolean;
+}
+
 /* ===== CONSTANTES ===== */
 
 export const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
@@ -294,6 +367,7 @@ export const NAV_ITEMS = [
   { id: 'profile', icon: '👤', label: 'Mi Perfil' },
   { id: 'projects', icon: '📁', label: 'Proyectos' },
   { id: 'tasks', icon: '✅', label: 'Tareas' },
+  { id: 'timeTracking', icon: '⏱️', label: 'Tiempo' },
   { id: 'chat', icon: '💬', label: 'Chat' },
   { id: 'budget', icon: '💰', label: 'Presupuestos' },
   { id: 'files', icon: '📂', label: 'Archivos' },
@@ -301,11 +375,12 @@ export const NAV_ITEMS = [
   { id: 'suppliers', icon: '🏪', label: 'Proveedores' },
   { id: 'team', icon: '👥', label: 'Equipo' },
   { id: 'companies', icon: '🏢', label: 'Empresas' },
+  { id: 'invoices', icon: '🧾', label: 'Facturas' },
   { id: 'calendar', icon: '📅', label: 'Calendario' },
   { id: 'clientPortal', icon: '🤝', label: 'Portal Cliente' },
   { id: 'gallery', icon: '📸', label: 'Galería' },
   { id: 'inventory', icon: '📦', label: 'Inventario' },
-  { id: 'reports', icon: '📊', label: 'Reportes' },
+  { id: 'reports', icon: '📈', label: 'Reportes' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
 ] as const;
 
@@ -314,6 +389,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   profile: 'Mi Perfil',
   projects: 'Proyectos',
   tasks: 'Tareas',
+  timeTracking: 'Time Tracking',
   chat: 'Chat',
   budget: 'Presupuestos',
   files: 'Archivos',
@@ -321,6 +397,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   suppliers: 'Proveedores',
   team: 'Equipo',
   companies: 'Empresas',
+  invoices: 'Facturación',
   calendar: 'Calendario',
   clientPortal: 'Portal Cliente',
   gallery: 'Galería de Fotos',
