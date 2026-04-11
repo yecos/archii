@@ -2594,16 +2594,16 @@ export default function Home() {
                   <div className="relative w-[80px] h-[80px]">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="3" />
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks / tasks.length) >= 0.8 ? '#10b981' : (completedTasks / tasks.length) >= 0.4 ? 'var(--af-accent)' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="3" strokeDasharray={`${tasks.length > 0 ? ((completedTasks / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" />
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? 'var(--af-accent)' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="3" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[17px] font-bold">{tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0}%</span>
+                      <span className="text-[17px] font-bold">{tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%</span>
                     </div>
                   </div>
                 </div>
                 <div className="mt-3 text-center">
-                  <div className="text-[12px] text-[var(--muted-foreground)]">{completedTasks} de {tasks.length} tareas</div>
-                  <div className="text-[11px] text-emerald-400 mt-1">{activeTasks} en progreso</div>
+                  <div className="text-[12px] text-[var(--muted-foreground)]">{completedTasks.length} de {tasks.length} tareas</div>
+                  <div className="text-[11px] text-emerald-400 mt-1">{activeTasks.length} en progreso</div>
                 </div>
               </div>
 
@@ -2669,7 +2669,7 @@ export default function Home() {
                       }).length;
                       return { label, count: done, isToday: i === (dayOfWeek === 0 ? 6 : dayOfWeek - 1), isFuture: i > (dayOfWeek === 0 ? 6 : dayOfWeek - 1) };
                     });
-                    const total = pendingCount + completedTasks;
+                    const total = pendingCount + completedTasks.length;
                     return weekData.map((d, i) => {
                       let doneSoFar = 0;
                       for (let j = 0; j <= i; j++) doneSoFar += weekData[j].count;
@@ -2679,7 +2679,7 @@ export default function Home() {
                         <div key={i} className="flex-1 flex flex-col items-center gap-1">
                           <div className="text-[9px] text-[var(--muted-foreground)]">{rem}</div>
                           <div className="w-full bg-[var(--af-bg4)] rounded-sm overflow-hidden" style={{ height: '70px' }}>
-                            <div className="w-full rounded-sm transition-all duration-500" style={{ height: pct > 0 ? Math.max(pct, 4) + '%' : '0%', background: d.isToday ? 'var(--af-accent)' : d.isFuture ? 'var(--af-bg3)' : 'var(--af-accent)/40' }} />
+                            <div className="w-full rounded-sm transition-all duration-500" style={{ height: pct > 0 ? Math.max(pct, 4) + '%' : '0%', background: d.isToday ? 'var(--af-accent)' : d.isFuture ? 'var(--af-bg3)' : 'rgba(200,169,110,0.4)' }} />
                           </div>
                           <span className={`text-[9px] ${d.isToday ? 'font-bold text-[var(--af-accent)]' : 'text-[var(--muted-foreground)]'}`}>{d.label}</span>
                         </div>
@@ -2689,7 +2689,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-[10px] text-[var(--muted-foreground)]">{pendingCount} pendientes</span>
-                  <span className="text-[10px] text-emerald-400">{completedTasks} completadas</span>
+                  <span className="text-[10px] text-emerald-400">{completedTasks.length} completadas</span>
                 </div>
               </div>
             </div>
