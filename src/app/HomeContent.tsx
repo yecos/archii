@@ -145,6 +145,7 @@ export default function Home() {
 
   // Chat voice & files state
   const [isRecording, setIsRecording] = useState(false);
+  const [isSavingTask, setIsSavingTask] = useState(false);
   const [recDuration, setRecDuration] = useState(0);
   const [recVolume, setRecVolume] = useState(0);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
@@ -1295,8 +1296,10 @@ export default function Home() {
   };
 
   const saveTask = async () => {
+    if (isSavingTask) return;
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
+    setIsSavingTask(true);
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
@@ -1314,6 +1317,7 @@ export default function Home() {
       }
       closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    finally { setIsSavingTask(false); }
   };
 
   const openEditTask = (t: Task) => {
@@ -5239,7 +5243,7 @@ export default function Home() {
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Fecha límite</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" type="date" value={forms.taskDue || ''} onChange={e => setForms(p => ({ ...p, taskDue: e.target.value }))} /></div>
           <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
             <button className="px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all" onClick={() => closeModal('task')}>Cancelar</button>
-            <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveTask}>{editingId ? 'Guardar cambios' : 'Crear tarea'}</button>
+            <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={saveTask} disabled={isSavingTask}>{isSavingTask ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Crear tarea'}</button>
           </div>
         </div>
       </div>)}
