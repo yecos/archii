@@ -1138,7 +1138,41 @@ export default function Home() {
     try {
       await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
       showToast(`Rol actualizado a ${newRole}`);
-    } catch { showToast('Error al cambiar rol', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al cambiar rol', 'error'); }
+  };
+
+  const updateUserCompany = async (uid: string, companyId: string) => {
+    try {
+      await getFirebase().firestore().collection('users').doc(uid).update({ companyId: companyId || null });
+      showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al asignar empresa', 'error'); }
+  };
+
+  // Get the current user's company ID
+  const getMyCompanyId = () => {
+    if (!authUser) return null;
+    const me = teamUsers.find(u => u.id === authUser.uid);
+    return me?.data?.companyId || null;
+  };
+
+  // Get current user's role
+  const getMyRole = () => {
+    if (!authUser) return 'Miembro';
+    const me = teamUsers.find(u => u.id === authUser.uid);
+    return me?.data?.role || 'Miembro';
+  };
+
+  // Filter projects based on company (Admin/Director see all, others see their company only)
+  const visibleProjects = () => {
+    const myRole = getMyRole();
+    const myComp = getMyCompanyId();
+    if (myRole === 'Admin' || myRole === 'Director') {
+      return projects; // Admin y Director ven todo
+    }
+    if (myComp) {
+      return projects.filter(p => !p.data.companyId || p.data.companyId === myComp);
+    }
+    return projects; // Si no tiene empresa, ve todo
   };
 
   const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
@@ -2263,9 +2297,10 @@ export default function Home() {
           {/* ===== PROJECTS ===== */}
           {screen === 'projects' && (<div className="animate-fadeIn">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto">
+              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto flex-wrap">
                 {[{ k: 'Todos', v: '' }, { k: 'Concepto', v: 'Concepto' }, { k: 'Diseño', v: 'Diseno' }, { k: 'Ejecución', v: 'Ejecucion' }, { k: 'Terminados', v: 'Terminado' }].map((tab, i) => {
-                  const count = tab.v ? projects.filter(p => p.data.status === tab.v).length : projects.length;
+                  const projs = visibleProjects();
+                  const count = tab.v ? projs.filter(p => p.data.status === tab.v).length : projs.length;
                   return (<button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, projFilter: tab.v }))}>{tab.k} ({count})</button>);
                 })}
               </div>
@@ -2273,32 +2308,52 @@ export default function Home() {
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proyecto
               </button>
             </div>
-            {projects.length === 0 ? (
-              <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.filter(p => !forms.projFilter || p.data.status === forms.projFilter).map(p => {
-                  const d = p.data, prog = d.progress || 0;
-                  return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
-                    <div className="flex justify-between items-start mb-2.5">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
-                      <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
-                        <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
-                        <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
-                      </div>
-                    </div>
-                    <div className="text-[15px] font-semibold mb-1">{d.name}</div>
-                    <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
-                    <div className="flex gap-4 mb-3">
-                      <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
-                      <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
-                    </div>
-                    <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-                  </div>);
-                })}
+            {/* Company filter bar */}
+            {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
+              <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-none pb-1">
+                <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.projCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, projCompanyFilter: '' }))}>
+                  🌐 Todas las empresas
+                </button>
+                {companies.map(c => (
+                  <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.projCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, projCompanyFilter: c.id }))}>
+                    🏢 {c.data.name}
+                  </button>
+                ))}
               </div>
             )}
+            {(() => {
+              const projs = visibleProjects().filter(p => !forms.projFilter || p.data.status === forms.projFilter).filter(p => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
+              return projs.length === 0 ? (
+                <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projs.map(p => {
+                    const d = p.data, prog = d.progress || 0;
+                    const compName = companies.find(c => c.id === d.companyId)?.data?.name;
+                    return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
+                      <div className="flex justify-between items-start mb-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
+                          {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {compName}</span>}
+                        </div>
+                        <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
+                          <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
+                          <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
+                        </div>
+                      </div>
+                      <div className="text-[15px] font-semibold mb-1">{d.name}</div>
+                      <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
+                      <div className="flex gap-4 mb-3">
+                        <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
+                        <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
+                      </div>
+                      <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
+                    </div>);
+                  })}
+                </div>
+              );
+            })()}
           </div>)}
 
           {/* ===== PROJECT DETAIL ===== */}
@@ -2857,12 +2912,26 @@ export default function Home() {
           {/* ===== TEAM MANAGEMENT ===== */}
           {screen === 'team' && (<div className="animate-fadeIn">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.length} miembros en el equipo</div>
+              {/* Company filter for team */}
+              {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
+                  <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
+                    👥 Todo el equipo
+                  </button>
+                  {companies.map(c => (
+                    <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
+                      🏢 {c.data.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</div>
             </div>
             {/* Role Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
               {USER_ROLES.slice(0, 4).map(role => {
-                const count = teamUsers.filter(u => u.data.role === role).length;
+                const filtered = teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter);
+                const count = filtered.filter(u => u.data.role === role).length;
                 return (
                   <div key={role} className={`border rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
                     <div className="text-lg mb-0.5">{ROLE_ICONS[role]}</div>
@@ -2874,13 +2943,15 @@ export default function Home() {
             </div>
             {/* Team Members List */}
             <div className="space-y-2">
-              {teamUsers.map(user => {
+              {teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).map(user => {
                 const role = user.data.role || 'Miembro';
                 const isMe = user.id === authUser?.uid;
-                const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro';
+                const myRole = getMyRole();
                 const canChangeRole = myRole === 'Admin' || myRole === 'Director';
+                const canChangeCompany = myRole === 'Admin' || myRole === 'Director';
                 const userTasks = tasks.filter(t => t.data.assigneeId === user.id);
                 const userPending = userTasks.filter(t => t.data.status !== 'Completado').length;
+                const userCompName = companies.find(c => c.id === user.data.companyId)?.data?.name;
                 return (
                   <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
                     <div className="flex items-center gap-3">
@@ -2892,6 +2963,7 @@ export default function Home() {
                           <span className="text-[14px] font-semibold">{user.data.name}</span>
                           {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">Tú</span>}
                           <span className={`text-[9px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>{ROLE_ICONS[role]} {role}</span>
+                          {userCompName && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {userCompName}</span>}
                         </div>
                         <div className="text-[11px] text-[var(--muted-foreground)] truncate">{user.data.email}</div>
                         <div className="flex items-center gap-3 mt-1.5">
@@ -2899,7 +2971,18 @@ export default function Home() {
                           <span className="text-[10px] text-[var(--af-text3)]">{userPending} pendientes</span>
                         </div>
                       </div>
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 flex flex-col gap-1.5 items-end">
+                        {canChangeCompany && !isMe ? (
+                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
+                            <option value="">Sin empresa</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
+                          </select>
+                        ) : canChangeCompany && isMe ? (
+                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Tu empresa">
+                            <option value="">Sin empresa</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
+                          </select>
+                        ) : null}
                         {canChangeRole && !isMe ? (
                           <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => updateUserRole(user.id, e.target.value)}>
                             {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
