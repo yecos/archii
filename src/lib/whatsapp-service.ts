@@ -1,7 +1,11 @@
 /**
  * ArchiFlow — WhatsApp Service
- * Conexión con Meta Cloud API para enviar/recibir mensajes de WhatsApp.
- * Las funciones de Firestore usan Firebase Admin (server-side).
+ * Conexion con Meta Cloud API para enviar/recibir mensajes de WhatsApp.
+ * Este modulo es PURO (no importa firebase-admin) para evitar problemas
+ * de bundling con Turbopack.
+ *
+ * Las operaciones de Firestore se hacen directamente en los API routes
+ * (/api/whatsapp/webhook, /api/whatsapp/notify) via dynamic import.
  */
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
@@ -145,7 +149,6 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
     const message = value?.messages?.[0];
 
     if (!message) return null;
-
     if (value?.statuses) return null;
 
     const from = message.from || '';
@@ -182,8 +185,7 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
   }
 }
 
-// ─── Firestore links (usados desde webhook con Firebase Admin) ───
-
+// ─── Firestore link interface (usado en API routes) ───
 export interface WhatsAppLink {
   id?: string;
   whatsappPhone: string;
@@ -192,57 +194,4 @@ export interface WhatsAppLink {
   userName: string;
   linkedAt: any;
   active: boolean;
-}
-
-export async function createWhatsAppLink(data: Omit<WhatsAppLink, 'linkedAt' | 'id'>): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { getAdminDb } = await import('./firebase-admin');
-    const { FieldValue } = await import('firebase-admin/firestore');
-    const db = getAdminDb();
-
-    await db.collection('whatsappLinks').add({
-      ...data,
-      linkedAt: FieldValue.serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error creando vinculo:', err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-export async function getLinksByUserId(userId: string): Promise<WhatsAppLink[]> {
-  try {
-    const { getAdminDb } = await import('./firebase-admin');
-    const db = getAdminDb();
-
-    const snap = await db
-      .collection('whatsappLinks')
-      .where('userId', '==', userId)
-      .where('active', '==', true)
-      .get();
-
-    return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error buscando por userId:', err.message);
-    return [];
-  }
-}
-
-export async function getAllActiveLinks(): Promise<WhatsAppLink[]> {
-  try {
-    const { getAdminDb } = await import('./firebase-admin');
-    const db = getAdminDb();
-
-    const snap = await db
-      .collection('whatsappLinks')
-      .where('active', '==', true)
-      .get();
-
-    return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error obteniendo vinculos:', err.message);
-    return [];
-  }
 }

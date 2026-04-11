@@ -205,21 +205,18 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
 
     // Verificar codigo
     if (verifyLinkCode(pending.email, msg)) {
-      const { createWhatsAppLink } = await import("@/lib/whatsapp-service");
-      const result = await createWhatsAppLink({
+      // Crear vinculo directamente en Firestore
+      await db.collection('whatsappLinks').add({
         whatsappPhone: message.from,
         userId: pending.userId,
         userEmail: pending.email,
         userName: pending.userName,
         active: true,
+        linkedAt: FieldValue.serverTimestamp(),
       });
 
-      if (result.success) {
-        await db.collection("whatsappPending").doc(message.from).delete();
-        return getLinkedSuccess(pending.userName);
-      } else {
-        return { text: "Error al vincular. Intenta de nuevo." };
-      }
+      await db.collection("whatsappPending").doc(message.from).delete();
+      return getLinkedSuccess(pending.userName);
     } else {
       await db.collection("whatsappPending").doc(message.from).delete();
       return {
