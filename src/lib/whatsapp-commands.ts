@@ -62,19 +62,33 @@ export async function processCommand(
 // ─── COMANDO: Mis tareas pendientes ───
 async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
   try {
+    // Consulta simple sin orderBy para evitar necesidad de índice compuesto
     const snap = await db
       .collection('tasks')
       .where('assigneeId', '==', link.userId)
-      .where('status', 'in', ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'])
-      .orderBy('dueDate', 'asc')
-      .limit(10)
+      .limit(50)
       .get();
 
     if (snap.empty) {
-      return { text: 'No tienes tareas pendientes. Todo al dia.' };
+      return { text: 'No tienes tareas asignadas.' };
     }
 
-    const tasks = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    // Filtrar y ordenar en JavaScript
+    const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
+    const tasks = snap.docs
+      .map((d: any) => ({ id: d.id, ...d.data() }))
+      .filter(t => activeStatuses.includes(t.status))
+      .sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      })
+      .slice(0, 10);
+
+    if (tasks.length === 0) {
+      return { text: 'No tienes tareas pendientes. Todo al dia.' };
+    }
 
     let text = `*Tus tareas pendientes (${tasks.length})*\n\n`;
 
@@ -177,10 +191,10 @@ async function cmdPresupuesto(db: any): Promise<CommandResult> {
 // ─── COMANDO: Equipo ───
 async function cmdEquipo(db: any): Promise<CommandResult> {
   try {
+    // Los usuarios están en la colección 'users', no 'team'
     const snap = await db
-      .collection('team')
-      .orderBy('name', 'asc')
-      .limit(20)
+      .collection('users')
+      .limit(50)
       .get();
 
     if (snap.empty) {
