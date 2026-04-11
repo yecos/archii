@@ -1,14 +1,13 @@
 /**
  * ArchiFlow — WhatsApp Service
  * Conexión con Meta Cloud API para enviar/recibir mensajes de WhatsApp.
- *
- * Documentación: https://developers.facebook.com/docs/whatsapp/cloud-api
+ * Las funciones de Firestore usan Firebase Admin (server-side).
  */
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
-// ─── Environment Variables ( obligatorias en Vercel ) ───
+// ─── Environment Variables ───
 function getConfig() {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -29,10 +28,9 @@ function getConfig() {
 // ─── Send text message ───
 export async function sendWhatsAppMessage(to: string, text: string): Promise<{ success: boolean; error?: string }> {
   const config = getConfig();
-  if (!config) return { success: false, error: 'WhatsApp no configurado. Agrega variables en Vercel.' };
+  if (!config) return { success: false, error: 'WhatsApp no configurado.' };
 
   try {
-    // Asegurar que el número tiene formato internacional sin +
     const phone = to.replace(/[^0-9]/g, '');
 
     const response = await fetch(`${BASE_URL}/${config.phoneId}/messages`, {
@@ -62,7 +60,7 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<{ s
     console.log('[ArchiFlow WhatsApp] Mensaje enviado:', data.messages?.[0]?.id);
     return { success: true };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error de conexión:', err.message);
+    console.error('[ArchiFlow WhatsApp] Error de conexion:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -110,54 +108,7 @@ export async function sendWhatsAppButtons(
 
     return { success: true };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error conexión botones:', err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-// ─── Send list message (menu principal) ───
-export async function sendWhatsAppList(
-  to: string,
-  bodyText: string,
-  buttonText: string,
-  sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
-): Promise<{ success: boolean; error?: string }> {
-  const config = getConfig();
-  if (!config) return { success: false, error: 'WhatsApp no configurado.' };
-
-  try {
-    const phone = to.replace(/[^0-9]/g, '');
-
-    const response = await fetch(`${BASE_URL}/${config.phoneId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: phone,
-        type: 'interactive',
-        interactive: {
-          type: 'list',
-          body: { text: bodyText },
-          action: {
-            button: buttonText,
-            sections: sections.slice(0, 10),
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('[ArchiFlow WhatsApp] Error enviando lista:', response.status, err);
-      return { success: false, error: `Error ${response.status}` };
-    }
-
-    return { success: true };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error conexión lista:', err.message);
+    console.error('[ArchiFlow WhatsApp] Error conexion botones:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -177,13 +128,13 @@ export function verifyWebhook(mode: string, token: string, challenge: string): {
 
 // ─── Parse incoming webhook (POST) ───
 export interface WhatsAppMessage {
-  from: string;       // número del usuario (sin +)
-  name: string;       // nombre del usuario en WhatsApp
-  body: string;       // texto del mensaje
-  messageId: string;  // ID del mensaje
-  timestamp: string;  // timestamp de Meta
+  from: string;
+  name: string;
+  body: string;
+  messageId: string;
+  timestamp: string;
   type: 'text' | 'interactive' | 'unknown';
-  buttonId?: string;  // ID del botón presionado
+  buttonId?: string;
 }
 
 export function parseWebhookPayload(body: any): WhatsAppMessage | null {
@@ -195,7 +146,6 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
 
     if (!message) return null;
 
-    // Ignorar statuses (confirmaciones de entrega)
     if (value?.statuses) return null;
 
     const from = message.from || '';
@@ -232,50 +182,23 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
   }
 }
 
-// ─── Firestore: vincular WhatsApp ↔ ArchiFlow ───
+// ─── Firestore links (usados desde webhook con Firebase Admin) ───
 
 export interface WhatsAppLink {
+  id?: string;
   whatsappPhone: string;
   userId: string;
   userEmail: string;
   userName: string;
-  linkedAt: any; // Firestore Timestamp
+  linkedAt: any;
   active: boolean;
 }
 
-/**
- * Busca un vínculo activo por número de WhatsApp
- */
-export async function getLinkedUser(whatsappPhone: string): Promise<WhatsAppLink | null> {
+export async function createWhatsAppLink(data: Omit<WhatsAppLink, 'linkedAt' | 'id'>): Promise<{ success: boolean; error?: string }> {
   try {
-    const { getFirebase } = await import('./firebase-service');
-    const db = getFirebase().firestore();
-
-    const snap = await db
-      .collection('whatsappLinks')
-      .where('whatsappPhone', '==', whatsappPhone)
-      .where('active', '==', true)
-      .limit(1)
-      .get();
-
-    if (snap.empty) return null;
-
-    const doc = snap.docs[0];
-    return { id: doc.id, ...doc.data() } as any;
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error buscando vínculo:', err.message);
-    return null;
-  }
-}
-
-/**
- * Crea un vínculo WhatsApp → cuenta ArchiFlow
- */
-export async function createWhatsAppLink(data: Omit<WhatsAppLink, 'linkedAt'>): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { getFirebase } = await import('./firebase-service');
-    const db = getFirebase().firestore();
-    const FieldValue = getFirebase().firestore.FieldValue;
+    const { getAdminDb } = await import('./firebase-admin');
+    const { FieldValue } = await import('firebase-admin/firestore');
+    const db = getAdminDb();
 
     await db.collection('whatsappLinks').add({
       ...data,
@@ -284,38 +207,15 @@ export async function createWhatsAppLink(data: Omit<WhatsAppLink, 'linkedAt'>): 
 
     return { success: true };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error creando vínculo:', err.message);
+    console.error('[ArchiFlow WhatsApp] Error creando vinculo:', err.message);
     return { success: false, error: err.message };
   }
 }
 
-/**
- * Obtiene todos los vínculos activos (para enviar notificaciones masivas)
- */
-export async function getAllActiveLinks(): Promise<WhatsAppLink[]> {
-  try {
-    const { getFirebase } = await import('./firebase-service');
-    const db = getFirebase().firestore();
-
-    const snap = await db
-      .collection('whatsappLinks')
-      .where('active', '==', true)
-      .get();
-
-    return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error obteniendo vínculos:', err.message);
-    return [];
-  }
-}
-
-/**
- * Busca vínculos activos por userId (para enviar notificación a un usuario específico)
- */
 export async function getLinksByUserId(userId: string): Promise<WhatsAppLink[]> {
   try {
-    const { getFirebase } = await import('./firebase-service');
-    const db = getFirebase().firestore();
+    const { getAdminDb } = await import('./firebase-admin');
+    const db = getAdminDb();
 
     const snap = await db
       .collection('whatsappLinks')
@@ -326,6 +226,23 @@ export async function getLinksByUserId(userId: string): Promise<WhatsAppLink[]> 
     return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
   } catch (err: any) {
     console.error('[ArchiFlow WhatsApp] Error buscando por userId:', err.message);
+    return [];
+  }
+}
+
+export async function getAllActiveLinks(): Promise<WhatsAppLink[]> {
+  try {
+    const { getAdminDb } = await import('./firebase-admin');
+    const db = getAdminDb();
+
+    const snap = await db
+      .collection('whatsappLinks')
+      .where('active', '==', true)
+      .get();
+
+    return snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+  } catch (err: any) {
+    console.error('[ArchiFlow WhatsApp] Error obteniendo vinculos:', err.message);
     return [];
   }
 }
