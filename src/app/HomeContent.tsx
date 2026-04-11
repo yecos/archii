@@ -176,6 +176,8 @@ export default function Home() {
   const isTabVisibleRef = useRef(true);
   const prevProjectsRef = useRef<any[]>([]);
   const overdueCheckedRef = useRef<string>('');
+  // Track first data load to avoid re-notifying existing items
+  const firstLoadDoneRef = useRef(false);
   const [inAppNotifs, setInAppNotifs] = useState<any[]>([]);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
@@ -666,6 +668,25 @@ export default function Home() {
     try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch (err) { console.error("[ArchiFlow]", err); };
   }, [notifPrefs]);
 
+  // After loading finishes, mark all current data as "seen" to avoid re-notifying
+  useEffect(() => {
+    if (!loading && !firstLoadDoneRef.current) {
+      // Wait a bit for all Firestore listeners to populate
+      const timer = setTimeout(() => {
+        prevMessagesRef.current = messages;
+        prevTasksRef.current = tasks;
+        prevMeetingsRef.current = meetings;
+        prevApprovalsRef.current = approvals;
+        prevMovementsRef.current = invMovements;
+        prevTransfersRef.current = invTransfers;
+        prevProjectsRef.current = projects;
+        firstLoadDoneRef.current = true;
+        console.log('[ArchiFlow] First load complete — notifications armed');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, messages, tasks, meetings, approvals, invMovements, invTransfers, projects]);
+
   // Calculate unread notification count
   useEffect(() => {
     setUnreadCount(notifHistory.filter(n => !n.read).length);
@@ -673,6 +694,7 @@ export default function Home() {
 
   // Detect new chat messages and notify
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (messages.length === 0) { prevMessagesRef.current = []; return; }
     const prev = prevMessagesRef.current;
     const newMsgs = messages.filter(m => !prev.find(p => p.id === m.id));
@@ -700,6 +722,7 @@ export default function Home() {
 
   // Detect new/changed tasks assigned to me
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (tasks.length === 0) { prevTasksRef.current = []; return; }
     const prev = prevTasksRef.current;
     const newTasks = tasks.filter(t => !prev.find(p => p.id === t.id));
@@ -742,6 +765,7 @@ export default function Home() {
 
   // Detect new meetings
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (meetings.length === 0) { prevMeetingsRef.current = []; return; }
     const prev = prevMeetingsRef.current;
     const newMeetings = meetings.filter(m => !prev.find(p => p.id === m.id));
@@ -763,6 +787,7 @@ export default function Home() {
 
   // Detect new approvals
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (approvals.length === 0) { prevApprovalsRef.current = []; return; }
     const prev = prevApprovalsRef.current;
     const newApprovals = approvals.filter(a => !prev.find(p => p.id === a.id));
@@ -796,6 +821,7 @@ export default function Home() {
 
   // Detect low stock and inventory alerts (debounced - max once per 2 minutes)
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.inventory) return;
     const prevMov = prevMovementsRef.current;
     const prevTrans = prevTransfersRef.current;
@@ -847,6 +873,7 @@ export default function Home() {
 
   // Meeting reminder check (every 60 seconds)
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.meetings || !authUser) return;
     const check = () => {
       const now = new Date();
@@ -879,6 +906,7 @@ export default function Home() {
 
   // Detect project status changes
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (projects.length === 0) { prevProjectsRef.current = []; return; }
     const prev = prevProjectsRef.current;
     const changedProjects = projects.filter(p => {
@@ -902,6 +930,7 @@ export default function Home() {
 
   // Overdue tasks reminder (check every 30 min)
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.tasks || !authUser) return;
     const check = () => {
       const today = new Date().toISOString().split('T')[0];
@@ -932,6 +961,7 @@ export default function Home() {
 
   // Low stock periodic check (every 10 min)
   useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.inventory) return;
     let lastLowStockCount = -1;
     const check = () => {
