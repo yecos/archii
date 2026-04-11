@@ -1,48 +1,28 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useUIStore } from '@/stores/ui-store';
 
-/* ===== TYPES ===== */
-interface User { uid: string; displayName: string; email: string; photoURL?: string }
-interface TeamUser { id: string; data: { name: string; email: string; role?: string; photoURL?: string } }
-interface Project { id: string; data: { name: string; status: string; client: string; location: string; budget: number; description: string; startDate: string; endDate: string; progress: number; createdAt: any; updatedAt?: any; createdBy?: string } }
-interface Task { id: string; data: { title: string; projectId: string; assigneeId: string; priority: string; status: string; dueDate: string; createdAt: any; createdBy?: string } }
-interface Expense { id: string; data: { concept: string; projectId: string; category: string; amount: number; date: string; createdAt: any } }
-interface Supplier { id: string; data: { name: string; category: string; phone: string; email: string; address: string; website: string; notes: string; rating: number; createdAt: any } }
-interface Approval { id: string; data: { title: string; description: string; status: string; createdAt: any } }
-interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; createdAt: any } }
-interface ProjectFile { id: string; name: string; type: string; size: number; url: string; createdAt: any }
-interface OneDriveFile { id: string; name: string; size: number; mimeType: string; webUrl: string; createdDateTime: string; '@microsoft.graph.downloadUrl'?: string }
-interface GalleryPhoto { id: string; data: { projectId: string; categoryName: string; caption: string; imageData: string; createdAt: any; createdBy: string } }
-interface InvProduct { id: string; data: { name: string; sku: string; categoryId: string; unit: string; price: number; stock: number; minStock: number; description: string; imageData: string; warehouse: string; warehouseStock: Record<string, number>; createdAt: any; createdBy: string; updatedAt?: any } }
-interface InvCategory { id: string; data: { name: string; color: string; description: string; createdAt: any } }
-interface InvMovement { id: string; data: { productId: string; type: 'Entrada' | 'Salida'; quantity: number; reason: string; reference: string; date: string; createdAt: any; createdBy: string } }
-interface InvTransfer { id: string; data: { productId: string; productName: string; fromWarehouse: string; toWarehouse: string; quantity: number; status: string; date: string; notes: string; createdAt: any; createdBy: string; completedAt?: any } }
+/* ===== MODULED IMPORTS ===== */
+// Types & Constants (extracted from monolithic page.tsx)
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
+import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
-/* ===== HELPERS ===== */
-const fmtCOP = (n: number) => { if (!n) return '$0'; if (n >= 1e6) return '$' + (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'; return '$' + Number(n).toLocaleString('es-CO'); };
-const fmtDate = (ts: any) => { if (!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }); };
-const fmtSize = (b: number) => { if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; };
-const getInitials = (n: string) => n ? n.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : '?';
-const statusColor = (s: string) => ({ Concepto: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', Diseno: 'bg-blue-500/10 text-blue-400', Ejecucion: 'bg-amber-500/10 text-amber-400', Terminado: 'bg-emerald-500/10 text-emerald-400' }[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-const prioColor = (p: string) => ({ Alta: 'bg-red-500/10 text-red-400', Media: 'bg-amber-500/10 text-amber-400', Baja: 'bg-emerald-500/10 text-emerald-400' }[p] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-const taskStColor = (s: string) => ({ 'Por hacer': 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', 'En progreso': 'bg-blue-500/10 text-blue-400', Revision: 'bg-amber-500/10 text-amber-400', Completado: 'bg-emerald-500/10 text-emerald-400' }[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-const avatarColors = ['bg-emerald-500/15 text-emerald-400 border-emerald-500/30', 'bg-blue-500/15 text-blue-400 border-blue-500/30', 'bg-purple-500/15 text-purple-400 border-purple-500/30', 'bg-amber-500/15 text-amber-400 border-amber-500/30'];
-const avatarColor = (id: string) => { let h = 0; for (let i = 0; i < (id || '').length; i++) h = id.charCodeAt(i) + ((h << 5) - h); return avatarColors[Math.abs(h) % avatarColors.length]; };
+// Helpers (pure formatting functions)
+import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 
-const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
-const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos'];
-const SUPPLIER_CATS = ['Materiales', 'Mobiliario', 'Iluminación', 'Acabados', 'Eléctrico', 'Plomería', 'Otro'];
-const PHOTO_CATS = ['Fachada', 'Interior', 'Obra', 'Planos', 'Renders', 'Otro'];
-const INV_UNITS = ['Unidad', 'Metro', 'Metro²', 'Metro³', 'Kilogramo', 'Litro', 'Galon', 'Rollo', 'Saco', 'Caja', 'Paquete', 'Pieza', 'Par', 'Set', 'Otro'] as const;
-const INV_WAREHOUSES = ['Almacén Principal', 'Obra en Curso', 'Bodega Reserva'] as const;
-const TRANSFER_STATUSES = ['Pendiente', 'En tránsito', 'Completada', 'Cancelada'] as const;
-const CAT_COLORS = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1'];
-const ADMIN_EMAILS = ['yecos11@gmail.com'];
-const USER_ROLES = ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente', 'Miembro'] as const;
-const ROLE_COLORS: Record<string, string> = { Admin: 'bg-red-500/10 text-red-400 border-red-500/30', Director: 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30', Arquitecto: 'bg-blue-500/10 text-blue-400 border-blue-500/30', Interventor: 'bg-purple-500/10 text-purple-400 border-purple-500/30', Contratista: 'bg-amber-500/10 text-amber-400 border-amber-500/30', Cliente: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', Miembro: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)] border-[var(--border)]' };
-const ROLE_ICONS: Record<string, string> = { Admin: '👑', Director: '🎯', Arquitecto: '📐', Interventor: '🔍', Contratista: '🏗️', Cliente: '🤝', Miembro: '👤' };
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+// Firebase Service (clean typed wrapper replacing all (window as any).firebase)
+import { getFirebase } from '@/lib/firebase-service';
+
+// Firestore Actions (centralized CRUD with consistent error handling)
+import * as fbActions from '@/lib/firestore-actions';
+
+// Hooks (extracted from monolithic page.tsx)
+import { useFirestoreData } from '@/hooks/useFirestoreData';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+
+/* ===== TYPES & CONSTANTS — now imported from @/lib/types.ts ===== */
+/* ===== HELPERS — now imported from @/lib/helpers.ts ===== */
 
 /* ===== MAIN COMPONENT ===== */
 export default function Home() {
@@ -55,6 +35,8 @@ export default function Home() {
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [chatProjectId, setChatProjectId] = useState<string | null>(null);
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
@@ -109,6 +91,32 @@ export default function Home() {
   const [adminTooltipTask, setAdminTooltipTask] = useState<any>(null);
   const [adminTooltipPos, setAdminTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [adminPermSection, setAdminPermSection] = useState<string>('roles');
+  const [rolePerms, setRolePerms] = useState<Record<string, string[]>>({
+    'Ver Dashboard': ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'],
+    'Crear proyectos': ['Admin','Director','Arquitecto'],
+    'Editar proyectos': ['Admin','Director','Arquitecto'],
+    'Eliminar proyectos': ['Admin','Director'],
+    'Crear tareas': ['Admin','Director','Arquitecto','Interventor','Contratista'],
+    'Asignar tareas': ['Admin','Director','Arquitecto'],
+    'Gestionar equipo': ['Admin','Director'],
+    'Cambiar roles': ['Admin'],
+    'Ver presupuestos': ['Admin','Director','Arquitecto','Interventor','Cliente'],
+    'Ver inventario': ['Admin','Director','Arquitecto','Contratista','Interventor'],
+    'Gestionar inventario': ['Admin','Director','Contratista'],
+    'Panel Admin': ['Admin','Director'],
+    'Chat general': ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'],
+    'Portal cliente': ['Admin','Director','Cliente'],
+  });
+  const toggleRolePerm = (permName: string, role: string) => {
+    setRolePerms(prev => {
+      const current = prev[permName] || [];
+      const has = current.includes(role);
+      const updated = { ...prev, [permName]: has ? current.filter(r => r !== role) : [...current, role] };
+      // Save to localStorage
+      try { localStorage.setItem('archiflow-role-perms', JSON.stringify(updated)); } catch (err) { console.error("[ArchiFlow]", err); }
+      return updated;
+    });
+  };
 
   // Chat voice & files state
   const [isRecording, setIsRecording] = useState(false);
@@ -176,7 +184,7 @@ export default function Home() {
       const isDark = saved ? saved === 'dark' : true;
       setDarkMode(isDark);
       document.documentElement.classList.toggle('dark', isDark);
-    } catch {}
+    } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
   // Check if running as standalone app
@@ -256,7 +264,15 @@ export default function Home() {
 
   // Vibrate on mobile
   const vibrateNotif = useCallback(() => {
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch {}
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (err) { console.error("[ArchiFlow]", err); }
+  }, []);
+
+  // Load saved role permissions from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('archiflow-role-perms');
+      if (saved) setRolePerms(JSON.parse(saved));
+    } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
   // Request notification permission
@@ -305,7 +321,7 @@ export default function Home() {
       osc.start();
       setTimeout(() => { osc.frequency.value = f2; }, 100);
       setTimeout(() => { gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25); osc.stop(ctx.currentTime + 0.25); }, 200);
-    } catch {}
+    } catch (err) { console.error("[ArchiFlow]", err); }
   }, [notifSound]);
 
   // UNIFIED NOTIFICATION: sends both in-app toast AND OS notification
@@ -388,7 +404,7 @@ export default function Home() {
   useEffect(() => {
     const iv = setInterval(() => {
       try {
-        const fb = (window as any).firebase;
+        const fb = getFirebase();
         if (fb && fb.apps && fb.apps.length > 0) {
           clearInterval(iv);
           setReady(true);
@@ -403,7 +419,7 @@ export default function Home() {
   // Auth state
   useEffect(() => {
     if (!ready) return;
-    const fb = (window as any).firebase;
+    const fb = getFirebase();
     const auth = fb.auth();
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthUser(user || null);
@@ -434,7 +450,7 @@ export default function Home() {
   // Load team
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
       setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -444,7 +460,7 @@ export default function Home() {
   // Load projects
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -454,7 +470,7 @@ export default function Home() {
   // Load tasks
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -464,7 +480,7 @@ export default function Home() {
   // Load expenses
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -474,17 +490,24 @@ export default function Home() {
   // Load suppliers
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
-    const unsub = db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const db = getFirebase().firestore();
+    const unsubs: any[] = [];
+    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
-    return () => unsub();
+    }, () => {}));
+
+    // Companies listener
+    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot(snap => {
+      setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {}));
+
+    return () => unsubs.forEach(u => u());
   }, [ready, authUser]);
 
   // Load chat messages
   useEffect(() => {
     if (!ready || !chatProjectId) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     let unsub: any;
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
@@ -501,7 +524,7 @@ export default function Home() {
   // Load work phases
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot(snap => {
       setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -511,7 +534,7 @@ export default function Home() {
   // Load project files
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
     }, () => {});
@@ -521,7 +544,7 @@ export default function Home() {
   // Load approvals
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -531,7 +554,7 @@ export default function Home() {
   // Load meetings
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -541,7 +564,7 @@ export default function Home() {
   // Load gallery photos
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -551,7 +574,7 @@ export default function Home() {
   // Load inventory products
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -561,7 +584,7 @@ export default function Home() {
   // Load inventory categories
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot(snap => {
       setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -571,7 +594,7 @@ export default function Home() {
   // Load inventory movements
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -581,7 +604,7 @@ export default function Home() {
   // Load inventory transfers
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
+    const db = getFirebase().firestore();
     const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -615,7 +638,7 @@ export default function Home() {
       if (savedPrefs) setNotifPrefs(JSON.parse(savedPrefs));
       const savedSound = localStorage.getItem('archiflow-notif-sound');
       if (savedSound !== null) setNotifSound(savedSound === 'true');
-    } catch {}
+    } catch (err) { console.error("[ArchiFlow]", err); }
     // Auto-show permission banner after 5 seconds if not granted and not recently dismissed
     if (Notification.permission === 'default') {
       const dismissed = localStorage.getItem('archiflow-notif-dismissed');
@@ -632,12 +655,12 @@ export default function Home() {
 
   // Save notif sound pref
   useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-sound', String(notifSound)); } catch {}
+    try { localStorage.setItem('archiflow-notif-sound', String(notifSound)); } catch (err) { console.error("[ArchiFlow]", err); }
   }, [notifSound]);
 
   // Save notification preferences
   useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch {};
+    try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch (err) { console.error("[ArchiFlow]", err); };
   }, [notifPrefs]);
 
   // Calculate unread notification count
@@ -941,29 +964,29 @@ export default function Home() {
   const doLogin = async () => {
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
-    try { await (window as any).firebase.auth().signInWithEmailAndPassword(email, pass); } catch (e: any) { showToast(e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : e.code === 'auth/user-not-found' ? 'No existe cuenta con ese correo' : 'Error al iniciar sesión', 'error'); }
+    try { await getFirebase().auth().signInWithEmailAndPassword(email, pass); } catch (e: any) { showToast(e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : e.code === 'auth/user-not-found' ? 'No existe cuenta con ese correo' : 'Error al iniciar sesión', 'error'); }
   };
 
   const doRegister = async () => {
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      const cred = await (window as any).firebase.auth().createUserWithEmailAndPassword(email, pass);
+      const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
-      const db = (window as any).firebase.firestore();
-      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() });
+      const db = getFirebase().firestore();
+      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
     } catch (e: any) { showToast(e.code === 'auth/email-already-in-use' ? 'Ese correo ya está registrado' : e.code === 'auth/weak-password' ? 'Mínimo 6 caracteres' : 'Error al registrar', 'error'); }
   };
 
   const doGoogleLogin = async () => {
-    try { await (window as any).firebase.auth().signInWithPopup(new ((window as any).firebase.auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
+    try { await getFirebase().auth().signInWithPopup(new (getFirebase().auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
   };
 
   const doMicrosoftLogin = async () => {
     try {
-      const provider = new ((window as any).firebase.auth).OAuthProvider('microsoft.com');
+      const provider = new (getFirebase().auth).OAuthProvider('microsoft.com');
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await (window as any).firebase.auth().signInWithPopup(provider);
+      const result = await getFirebase().auth().signInWithPopup(provider);
       // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
@@ -1096,7 +1119,7 @@ export default function Home() {
       });
       if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); }
       else { showToast('Error al eliminar', 'error'); }
-    } catch { showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
     setMsLoading(false);
   };
 
@@ -1113,47 +1136,47 @@ export default function Home() {
   // Change user role (admin only)
   const updateUserRole = async (uid: string, newRole: string) => {
     try {
-      await (window as any).firebase.firestore().collection('users').doc(uid).update({ role: newRole });
+      await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
       showToast(`Rol actualizado a ${newRole}`);
     } catch { showToast('Error al cambiar rol', 'error'); }
   };
 
-  const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; (window as any).firebase.auth().signOut(); };
+  const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
 
   const getUserName = (uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; };
 
   const saveProject = async () => {
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    const db = (window as any).firebase.firestore();
-    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
-    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
       else { await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 }); showToast('Proyecto creado'); }
-      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' }));
+      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await (window as any).firebase.firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch { showToast('Error', 'error'); } };
+  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
 
   const openEditProject = (p: Project) => {
     setEditingId(p.id);
-    setForms(f => ({ ...f, projName: p.data.name, projStatus: p.data.status, projClient: p.data.client, projLocation: p.data.location, projBudget: p.data.budget, projDesc: p.data.description, projStart: p.data.startDate, projEnd: p.data.endDate }));
+    setForms(f => ({ ...f, projName: p.data.name, projStatus: p.data.status, projClient: p.data.client, projLocation: p.data.location, projBudget: p.data.budget, projDesc: p.data.description, projStart: p.data.startDate, projEnd: p.data.endDate, projCompany: p.data.companyId || '' }));
     openModal('project');
   };
 
   const saveTask = async () => {
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
-    const db = (window as any).firebase.firestore();
-    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else { await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Tarea creada'); }
       closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
-    } catch { showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const openEditTask = (t: Task) => {
@@ -1164,28 +1187,28 @@ export default function Home() {
 
   const updateProjectProgress = async (val: number) => {
     if (!selectedProjectId) return;
-    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch { showToast('Error', 'error'); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const updateUserName = async (newName: string) => {
     if (!newName || !authUser) return;
-    try { await authUser.updateProfile({ displayName: newName }); await (window as any).firebase.firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch { showToast('Error', 'error'); }
+    try { await authUser.updateProfile({ displayName: newName }); await getFirebase().firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const toggleTask = async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
-    try { await (window as any).firebase.firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() }); } catch {}
+    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await (window as any).firebase.firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch {} };
+  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
     const text = textOverride || forms.chatInput || '';
     if (!text && !audioData && !fileData) return;
     if (!chatProjectId) return;
     try {
-      const db = (window as any).firebase.firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() };
+      const db = getFirebase().firestore();
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -1305,6 +1328,7 @@ export default function Home() {
   };
 
   const sendAll = async () => {
+    if (audioPreviewBlobRef.current) { await sendVoiceNote(); return; }
     if (pendingFiles.length > 0) { await sendPendingFiles(); }
     if (forms.chatInput?.trim()) { await sendMessage(); }
   };
@@ -1333,26 +1357,39 @@ export default function Home() {
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
-    const db = (window as any).firebase.firestore();
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount: Number(forms.expAmount) || 0, date: forms.expDate || '', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
-    try { await db.collection('expenses').add(data); showToast('Gasto registrado'); closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] })); } catch { showToast('Error', 'error'); }
+    const db = getFirebase().firestore();
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount: Number(forms.expAmount) || 0, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    try { await db.collection('expenses').add(data); showToast('Gasto registrado'); closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
-  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await (window as any).firebase.firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch {} };
+  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const saveSupplier = async () => {
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    const db = (window as any).firebase.firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const db = getFirebase().firestore();
+    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
       closeModal('supplier'); setForms(p => ({ ...p, supName: '', supCategory: '', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' }));
-    } catch { showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
-  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await (window as any).firebase.firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch {} };
+  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+
+  // Company CRUD
+  const saveCompany = async () => {
+    const name = forms.compName || '';
+    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    try {
+      const db = getFirebase().firestore();
+      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
+      else { await db.collection('companies').add(data); showToast('Empresa creada'); }
+      closeModal('company'); setEditingId(null);
+    } catch { showToast('Error al guardar', 'error'); }
+  };
 
   const fileToBase64 = (file: any): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -1370,8 +1407,8 @@ export default function Home() {
     showToast('Subiendo archivo...');
     try {
       const base64 = await fileToBase64(file);
-      const db = (window as any).firebase.firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
+      const db = getFirebase().firestore();
+      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
@@ -1380,15 +1417,15 @@ export default function Home() {
   const deleteFile = async (file: ProjectFile) => {
     if (!confirm('¿Eliminar archivo?')) return;
     try {
-      await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId).collection('files').doc(file.id).delete();
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('files').doc(file.id).delete();
       showToast('Archivo eliminado');
     } catch { showToast('Error al eliminar', 'error'); }
   };
 
   const initDefaultPhases = async () => {
     if (workPhases.length > 0) return;
-    const db = (window as any).firebase.firestore();
-    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     for (let i = 0; i < DEFAULT_PHASES.length; i++) {
       await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
     }
@@ -1396,23 +1433,23 @@ export default function Home() {
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
-    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch {}
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
   const saveApproval = async () => {
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
-    } catch { showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const updateApproval = async (id: string, status: string) => {
-    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status }); showToast('Estado actualizado'); } catch {}
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status }); showToast('Estado actualizado'); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch {} };
+  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // ===== INVENTORY ACTIONS =====
   const getWarehouseStock = (product: any, warehouse: string) => {
@@ -1447,8 +1484,8 @@ export default function Home() {
     const name = forms.invProdName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
@@ -1462,7 +1499,7 @@ export default function Home() {
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await (window as any).firebase.firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch {} };
+  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const openEditInvProduct = (p: any) => {
     setEditingId(p.id);
@@ -1477,8 +1514,8 @@ export default function Home() {
     const name = forms.invCatName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
@@ -1486,7 +1523,7 @@ export default function Home() {
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await (window as any).firebase.firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch {} };
+  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   const saveInvMovement = async () => {
@@ -1495,8 +1532,8 @@ export default function Home() {
     const warehouse = forms.invMovWarehouse || 'Almacén Principal';
     if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const type = forms.invMovType || 'Entrada';
       const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
       await db.collection('invMovements').add(data);
@@ -1513,7 +1550,7 @@ export default function Home() {
     } catch { showToast('Error al registrar movimiento', 'error'); }
   };
 
-  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await (window as any).firebase.firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch {} };
+  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const saveInvTransfer = async () => {
     const productId = forms.invTrProduct || '';
@@ -1522,8 +1559,8 @@ export default function Home() {
     const to = forms.invTrTo || '';
     if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const product = invProducts.find(p => p.id === productId);
       const ws = product ? buildWarehouseStock(product) : {};
       const fromStock = ws[from] || 0;
@@ -1544,7 +1581,7 @@ export default function Home() {
     } catch { showToast('Error en transferencia', 'error'); }
   };
 
-  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await (window as any).firebase.firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch {} };
+  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const getInvCategoryName = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.name : 'Sin categoría'; };
   const getInvCategoryColor = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.color : '#6b7280'; };
@@ -1667,7 +1704,8 @@ export default function Home() {
     setScreen(s);
     setSelectedProjectId(projId ?? selectedProjectId);
     setSidebarOpen(false);
-    setChatMobileShow(false);
+    if (s !== 'chat') setChatMobileShow(false);
+    useUIStore.getState().setCurrentScreen(s);
   };
   navigateToRef.current = navigateTo;
 
@@ -1676,25 +1714,25 @@ export default function Home() {
     const title = forms.meetTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
-    } catch { showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
-  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await (window as any).firebase.firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch {} };
+  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
-  const openProject = (id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); };
+  const openProject = (id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); };
 
   // Gallery functions
   const saveGalleryPhoto = async () => {
     const imageData = forms.galleryImageData || '';
     if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
     try {
-      const db = (window as any).firebase.firestore();
-      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
@@ -1702,7 +1740,7 @@ export default function Home() {
     } catch { showToast('Error al guardar foto', 'error'); }
   };
 
-  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await (window as any).firebase.firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch {} };
+  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const handleGalleryImageSelect = async (e: any) => {
     const file = e.target?.files?.[0];
@@ -1767,7 +1805,7 @@ export default function Home() {
 
   /* ===== LOADING SCREEN ===== */
   if (!ready || loading) return (
-    <div className="flex items-center justify-center h-screen bg-background">
+    <div className="flex items-center justify-center h-dvh bg-background" style={{ height: '100dvh' }}>
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 border-2 border-[var(--af-accent)]/30 border-t-[var(--af-accent)] rounded-full animate-spin" />
         <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-xl text-[var(--af-accent)]">ArchiFlow</div>
@@ -1841,6 +1879,7 @@ export default function Home() {
   /* ===== MAIN APP ===== */
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+    { id: 'profile', label: 'Mi Perfil', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
     { id: 'projects', label: 'Proyectos', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, badge: projects.length },
     { id: 'tasks', label: 'Tareas', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: 'chat', label: 'Chat', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> },
@@ -1857,24 +1896,24 @@ export default function Home() {
     { id: 'calendar', label: 'Calendario', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
     { divider: true },
-    { id: 'profile', label: 'Mi Perfil', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+    { id: 'companies', label: 'Empresas', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18Z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg> },
     { id: 'install', label: 'Instalar App', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> },
   ];
 
-  const screenTitles: Record<string, string> = { dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes', budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario', admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo', calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App', projectDetail: currentProject?.data.name || 'Proyecto' };
+  const screenTitles: Record<string, string> = { dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes', budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario', admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo', calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App', companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto' };
 
   const userName = authUser?.displayName || authUser?.email?.split('@')[0] || 'Usuario';
   const initials = getInitials(userName);
 
   /* ===== RENDER ===== */
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>
       {/* Toast */}
       {toast && <div className={`af-toast ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-600'} text-white`}>{toast.msg}</div>}
 
       {/* Install Banner (Android/Chrome Desktop) */}
       {showInstallBanner && installPrompt && !isStandalone && (
-        <div className="fixed top-0 left-0 right-0 z-[200] p-3 sm:p-4 animate-slideIn">
+        <div className="fixed top-0 left-0 right-0 z-[200] p-3 sm:p-4 animate-slideIn" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
           <div className="max-w-lg mx-auto bg-[var(--card)] border border-[var(--af-accent)]/30 rounded-2xl p-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 bg-[var(--af-accent)] rounded-xl flex items-center justify-center flex-shrink-0">
@@ -1892,7 +1931,7 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-              <button className="w-6 h-6 flex items-center justify-center text-[var(--af-text3)] cursor-pointer hover:text-[var(--foreground)] flex-shrink-0" onClick={dismissInstallBanner}>
+              <button className="w-9 h-9 flex items-center justify-center text-[var(--af-text3)] cursor-pointer hover:text-[var(--foreground)] flex-shrink-0" onClick={dismissInstallBanner}>
                 <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -1913,7 +1952,7 @@ export default function Home() {
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1">Principal</div>
-          {navItems.filter(n => !n.divider).slice(0, 4).map(n => (
+          {navItems.filter(n => !n.divider).slice(0, 5).map(n => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className="flex-1">{n.label}</span>
@@ -1921,7 +1960,7 @@ export default function Home() {
             </div>
           ))}
           <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1">Gestión</div>
-          {navItems.filter(n => !n.divider).slice(4).map(n => (
+          {navItems.filter(n => !n.divider).slice(5).map(n => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span>{n.label}</span>
@@ -2040,7 +2079,7 @@ export default function Home() {
         {showNotifPanel && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
-            <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85vh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
+            <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
               {/* Header */}
               <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
@@ -2186,7 +2225,7 @@ export default function Home() {
         )}
 
         {/* Content */}
-        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}>
+        <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`} style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}>
 
           {/* ===== DASHBOARD ===== */}
           {screen === 'dashboard' && (<div className="animate-fadeIn space-y-6">
@@ -2614,7 +2653,7 @@ export default function Home() {
           </div>)}
 
           {/* ===== CHAT ===== */}
-          {screen === 'chat' && (<div className="animate-fadeIn flex flex-col h-full md:h-full pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0">
+          {screen === 'chat' && (<div className="animate-fadeIn flex flex-col md:h-full pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-0" style={{ minHeight: 0, flex: 1 }}>
 
             {/* Lista de conversaciones */}
             <div className={`${chatMobileShow ? 'hidden' : 'flex'} flex-col flex-1 md:w-[260px] md:flex-shrink-0 border-r border-[var(--border)] overflow-y-auto bg-[var(--card)] md:bg-transparent`}>
@@ -2688,9 +2727,9 @@ export default function Home() {
                   </div>);
                 })}
               </div>
-              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><button className="ml-auto text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={cancelRecording}>Cancelar</button></div>)}
-              {audioPreviewUrl && !isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-accent)]/5 flex items-center gap-3"><div className="text-[20px]">🎙️</div><div className="flex-1 min-w-0"><div className="text-[12px] font-medium text-[var(--muted-foreground)]">Nota de voz</div><div className="text-[10px] text-[var(--af-text3)]">{fmtRecTime(audioPreviewDuration)}</div></div><button className="text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={() => { setAudioPreviewUrl(null); audioPreviewBlobRef.current = null; }}>Descartar</button><button className="text-[11px] px-3 py-1 rounded-full bg-[var(--af-accent)] text-background font-semibold cursor-pointer border-none" onClick={sendVoiceNote}>Enviar</button></div>)}
-              {pendingFiles.length > 0 && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-bg3)]"><div className="flex gap-2 overflow-x-auto pb-1">{pendingFiles.map(f => (<div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden">{f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}<button className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center cursor-pointer border-none leading-none" onClick={() => removePendingFile(f.id)}>✕</button><div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-0.5 py-px">{f.name}</div></div>))}</div></div>)}
+              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><button className="ml-auto text-[11px] px-3 py-1 rounded-full bg-red-500 text-white font-semibold cursor-pointer border-none" onClick={async () => { const blob = await stopRecording(); if (blob) { const url = URL.createObjectURL(blob); setAudioPreviewUrl(url); setAudioPreviewDuration(recDuration); audioPreviewBlobRef.current = blob; } }}>Detener</button></div>)}
+              {audioPreviewUrl && !isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-accent)]/5 flex items-center gap-3"><div className="text-[20px]">🎙️</div><div className="flex-1 min-w-0"><div className="text-[12px] font-medium text-[var(--muted-foreground)]">Nota de voz ({fmtRecTime(audioPreviewDuration)})</div></div><button className="text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={() => { setAudioPreviewUrl(null); audioPreviewBlobRef.current = null; }}>Descartar</button></div>)}
+              {pendingFiles.length > 0 && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-bg3)]"><div className="flex gap-2 overflow-x-auto pb-1">{pendingFiles.map(f => (<div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden">{f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}<button className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center cursor-pointer border-none leading-none" onClick={() => removePendingFile(f.id)}>✕</button><div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-0.5 py-px">{f.name}</div></div>))}</div></div>)}
               <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--card)]">
                 <div className="flex gap-1.5 items-end px-2.5 py-2.5 safe-bottom">
                   <input ref={fileInputRef} type="file" className="hidden" multiple onChange={(e) => handleFileSelect(e.target.files)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.dwg,.txt,.csv" />
@@ -2878,9 +2917,50 @@ export default function Home() {
             </div>
           </div>)}
 
+          {/* ===== COMPANIES ===== */}
+          {screen === 'companies' && (<div className="animate-fadeIn space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="text-sm text-[var(--muted-foreground)]">{companies.length} empresa{companies.length !== 1 ? 's' : ''} registrada{companies.length !== 1 ? 's' : ''}</div>
+              <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, compName: '', compNit: '', compAddress: '', compPhone: '', compEmail: '', compLegal: '' })); openModal('company'); }}>
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva empresa
+              </button>
+            </div>
+            {companies.length === 0 ? (<div className="text-center py-16"><div className="text-4xl mb-3">🏢</div><div className="text-sm text-[var(--muted-foreground)]">No hay empresas registradas</div><div className="text-xs text-[var(--af-text3)] mt-1">Crea tu primera empresa para organizar proyectos</div></div>) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {companies.map(c => {
+                const compProjects = projects.filter(p => p.data.companyId === c.id);
+                return (<div key={c.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--af-accent)]/30 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-[var(--af-accent)]/10 flex items-center justify-center text-lg">🏢</div>
+                      <div><div className="text-sm font-semibold">{c.data.name || 'Sin nombre'}</div><div className="text-[10px] text-[var(--muted-foreground)]">NIT: {c.data.nit || 'N/A'}</div></div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setEditingId(c.id); setForms(p => ({ ...p, compName: c.data.name || '', compNit: c.data.nit || '', compAddress: c.data.address || '', compPhone: c.data.phone || '', compEmail: c.data.email || '', compLegal: c.data.legalName || '' })); openModal('company'); }} title="Editar">
+                        <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={async () => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(c.id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }} title="Eliminar">
+                        <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  {c.data.address && <div className="text-[11px] text-[var(--muted-foreground)] mb-1">📍 {c.data.address}</div>}
+                  {c.data.phone && <div className="text-[11px] text-[var(--muted-foreground)] mb-1">📞 {c.data.phone}</div>}
+                  {c.data.email && <div className="text-[11px] text-[var(--muted-foreground)] mb-2">✉️ {c.data.email}</div>}
+                  <div className="pt-3 border-t border-[var(--border)] mt-2 flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--af-text3)]">{compProjects.length} proyecto{compProjects.length !== 1 ? 's' : ''}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">{compProjects.length > 0 ? 'Activa' : 'Sin proyectos'}</span>
+                  </div>
+                </div>);
+              })}
+            </div>
+            )}
+          </div>)}
+
           {/* ===== CALENDAR ===== */}
           {screen === 'calendar' && (() => {
             const today = new Date();
+            const todayOnly = new Date(new Date().toDateString()); // midnight today for correct overdue check
             const firstDay = new Date(calYear, calMonth, 1);
             const lastDay = new Date(calYear, calMonth + 1, 0);
             const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
@@ -2933,7 +3013,7 @@ export default function Home() {
                   <div className="text-[9px] text-red-400/70">Urgentes</div>
                 </div>
                 <div className="bg-amber-500/10 rounded-lg p-2.5 text-center">
-                  <div className="text-base font-bold text-amber-400">{calTasks.filter(t => { const d = t.data.dueDate; return d && new Date(d) < today; }).length}</div>
+                  <div className="text-base font-bold text-amber-400">{calTasks.filter(t => { const d = t.data.dueDate; return d && new Date(d) < todayOnly; }).length}</div>
                   <div className="text-[9px] text-amber-400/70">Vencidas</div>
                 </div>
                 <div className="bg-blue-500/10 rounded-lg p-2.5 text-center">
@@ -2967,7 +3047,7 @@ export default function Home() {
                         <div className="space-y-0.5">
                           {dayTasks.slice(0, 3).map(t => {
                             const proj = projects.find(p => p.id === t.data.projectId);
-                            const isOverdue = new Date(t.data.dueDate) < today;
+                            const isOverdue = new Date(t.data.dueDate) < todayOnly;
                             return (
                               <div key={t.id} className={`text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate ${t.data.priority === 'Alta' ? 'bg-red-500/15 text-red-400' : t.data.priority === 'Media' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'}`} title={t.data.title}>
                                 {isOverdue ? '⚡ ' : ''}{t.data.title}
@@ -3003,7 +3083,7 @@ export default function Home() {
                         return (pOrder[a.data.priority as keyof typeof pOrder] || 1) - (pOrder[b.data.priority as keyof typeof pOrder] || 1);
                       }).map(t => {
                         const proj = projects.find(p => p.id === t.data.projectId);
-                        const isOverdue = new Date(t.data.dueDate) < today;
+                        const isOverdue = new Date(t.data.dueDate) < todayOnly;
                         return (
                           <div key={t.id} className={`border rounded-lg p-3 ${isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-[var(--border)] bg-[var(--af-bg3)]'}`}>
                             <div className="flex items-start justify-between gap-2 mb-1">
@@ -4063,33 +4143,29 @@ export default function Home() {
 
               {adminPermSection === 'permissions' && (<div className="space-y-4">
                 <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
-                  <h4 className="text-sm font-semibold mb-3">Permisos por Rol</h4>
-                  <div className="md:hidden text-center py-8 text-sm text-[var(--muted-foreground)]">La tabla de permisos está disponible en vista de escritorio.</div>
-                  <div className="hidden md:block overflow-x-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">Permisos por Rol</h4>
+                    <span className="text-[10px] text-[var(--muted-foreground)]">Los cambios se guardan automáticamente</span>
+                  </div>
+                  <div className="overflow-x-auto -mx-4 px-4 pb-2">
                     <table className="w-full text-[11px]">
                       <thead><tr className="border-b border-[var(--border)]">
-                        <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-medium">Permiso</th>
-                        {USER_ROLES.map(r => <th key={r} className="text-center py-2 px-2 text-[var(--muted-foreground)] font-medium whitespace-nowrap">{ROLE_ICONS[r]} {r}</th>)}
+                        <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-medium sticky left-0 bg-[var(--af-bg3)] min-w-[120px]">Permiso</th>
+                        {USER_ROLES.map(r => <th key={r} className="text-center py-2 px-1.5 text-[var(--muted-foreground)] font-medium whitespace-nowrap min-w-[70px]">{ROLE_ICONS[r]} {r}</th>)}
                       </tr></thead>
                       <tbody>
-                        {[
-                          { name: 'Ver Dashboard', perms: ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'] },
-                          { name: 'Crear proyectos', perms: ['Admin','Director','Arquitecto'] },
-                          { name: 'Editar proyectos', perms: ['Admin','Director','Arquitecto'] },
-                          { name: 'Eliminar proyectos', perms: ['Admin','Director'] },
-                          { name: 'Crear tareas', perms: ['Admin','Director','Arquitecto','Interventor','Contratista'] },
-                          { name: 'Asignar tareas', perms: ['Admin','Director','Arquitecto'] },
-                          { name: 'Gestionar equipo', perms: ['Admin','Director'] },
-                          { name: 'Cambiar roles', perms: ['Admin'] },
-                          { name: 'Ver presupuestos', perms: ['Admin','Director','Arquitecto','Interventor','Cliente'] },
-                          { name: 'Ver inventario', perms: ['Admin','Director','Arquitecto','Contratista','Interventor'] },
-                          { name: 'Gestionar inventario', perms: ['Admin','Director','Contratista'] },
-                          { name: 'Panel Admin', perms: ['Admin','Director'] },
-                          { name: 'Chat general', perms: ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'] },
-                          { name: 'Portal cliente', perms: ['Admin','Director','Cliente'] },
-                        ].map((perm, i) => (<tr key={i} className="border-b border-[var(--border)]/50">
-                          <td className="py-2 px-2 font-medium">{perm.name}</td>
-                          {USER_ROLES.map(r => (<td key={r} className="py-2 px-2 text-center">{perm.perms.includes(r) ? <span className="text-emerald-400">✓</span> : <span className="text-red-400/40">✕</span>}</td>))}
+                        {Object.entries(rolePerms).map(([permName, perms], i) => (<tr key={i} className="border-b border-[var(--border)]/50">
+                          <td className="py-2 px-2 font-medium sticky left-0 bg-[var(--af-bg3)]">{permName}</td>
+                          {USER_ROLES.map(r => {
+                            const has = perms.includes(r);
+                            return (<td key={r} className="py-2 px-1.5 text-center">
+                              <button
+                                className={`w-6 h-6 rounded-md flex items-center justify-center mx-auto cursor-pointer border-none transition-all text-[13px] ${has ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/5 text-red-400/30 hover:bg-red-500/10'}`}
+                                onClick={() => toggleRolePerm(permName, r)}
+                                title={has ? 'Quitar permiso' : 'Dar permiso'}
+                              >{has ? '✓' : '✕'}</button>
+                            </td>);
+                          })}
                         </tr>))}
                       </tbody>
                     </table>
@@ -4690,7 +4766,7 @@ export default function Home() {
       </div>
 
       {/* Bottom Nav (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] flex z-40 safe-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { id: 'dashboard', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>, label: 'Inicio' },
           { id: 'projects', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, label: 'Proyectos' },
@@ -4698,7 +4774,7 @@ export default function Home() {
           { id: 'chat', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, label: 'Chat' },
           { id: '_more', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'Más' },
         ].map(item => (
-          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 cursor-pointer transition-colors ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
+          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-colors ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
             {item.icon}
             <span className="text-[10px] leading-tight">{item.label}</span>
           </button>
@@ -4709,7 +4785,7 @@ export default function Home() {
 
       {/* Project Modal */}
       {modals.project && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('project')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar proyecto' : 'Nuevo proyecto'}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Casa Pérez" value={forms.projName || ''} onChange={e => setForms(p => ({ ...p, projName: e.target.value }))} /></div>
@@ -4718,6 +4794,10 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Cliente</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Nombre del cliente" value={forms.projClient || ''} onChange={e => setForms(p => ({ ...p, projClient: e.target.value }))} /></div>
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Ubicación</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Barrio, Ciudad" value={forms.projLocation || ''} onChange={e => setForms(p => ({ ...p, projLocation: e.target.value }))} /></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Empresa</label><select className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.projCompany || ''} onChange={e => setForms(p => ({ ...p, projCompany: e.target.value }))}><option value="">Sin empresa asignada</option>{companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}</select></div>
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Presupuesto (COP)</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" type="number" placeholder="48000000" value={forms.projBudget || ''} onChange={e => setForms(p => ({ ...p, projBudget: e.target.value }))} /></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Fecha inicio</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" type="date" value={forms.projStart || ''} onChange={e => setForms(p => ({ ...p, projStart: e.target.value }))} /></div>
@@ -4734,7 +4814,7 @@ export default function Home() {
 
       {/* Task Modal */}
       {modals.task && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('task')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar tarea' : 'Nueva tarea'}</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Título *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="¿Qué hay que hacer?" value={forms.taskTitle || ''} onChange={e => setForms(p => ({ ...p, taskTitle: e.target.value }))} /></div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Descripción</label><textarea className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none" rows="2" placeholder="Detalles adicionales..." value={forms.taskDescription || ''} onChange={e => setForms(p => ({ ...p, taskDescription: e.target.value }))} /></div>
@@ -4756,7 +4836,7 @@ export default function Home() {
 
       {/* Expense Modal */}
       {modals.expense && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('expense')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">Registrar gasto</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Concepto *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Descripción del gasto" value={forms.expConcept || ''} onChange={e => setForms(p => ({ ...p, expConcept: e.target.value }))} /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -4776,7 +4856,7 @@ export default function Home() {
 
       {/* Supplier Modal */}
       {modals.supplier && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('supplier')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Nombre del proveedor" value={forms.supName || ''} onChange={e => setForms(p => ({ ...p, supName: e.target.value }))} /></div>
@@ -4814,7 +4894,7 @@ export default function Home() {
 
       {/* Meeting Modal */}
       {modals.meeting && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('meeting')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar reunión' : 'Nueva reunión'}</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Título *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Junta de obra" value={forms.meetTitle || ''} onChange={e => setForms(p => ({ ...p, meetTitle: e.target.value }))} /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -4852,7 +4932,7 @@ export default function Home() {
 
       {/* Gallery Photo Modal */}
       {modals.gallery && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('gallery')}>
-  <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+  <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
     <div className="text-lg font-semibold mb-5">{editingId ? 'Editar foto' : '📸 Agregar foto'}</div>
     
     {/* Image preview / upload area */}
@@ -4901,7 +4981,7 @@ export default function Home() {
 
       {/* Inventory Product Modal */}
       {modals.invProduct && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invProduct')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[520px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[520px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar producto' : '📦 Nuevo producto'}</div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="col-span-2"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Cemento Portland" value={forms.invProdName || ''} onChange={e => setForms(p => ({ ...p, invProdName: e.target.value }))} /></div>
@@ -4954,7 +5034,7 @@ export default function Home() {
 
       {/* Inventory Category Modal */}
       {modals.invCategory && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invCategory')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[420px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[420px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">{editingId ? 'Editar categoría' : '🏷️ Nueva categoría'}</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Materiales" value={forms.invCatName || ''} onChange={e => setForms(p => ({ ...p, invCatName: e.target.value }))} /></div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Color</label><div className="flex flex-wrap gap-2">{CAT_COLORS.map(color => (<button key={color} className={`w-8 h-8 rounded-lg border-2 cursor-pointer transition-transform ${forms.invCatColor === color ? 'border-[var(--foreground)] scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} onClick={() => setForms(p => ({ ...p, invCatColor: color }))} />))}</div></div>
@@ -4968,7 +5048,7 @@ export default function Home() {
 
       {/* Inventory Movement Modal */}
       {modals.invMovement && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invMovement')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">📋 Registrar movimiento</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Tipo *</label>
             <div className="grid grid-cols-2 gap-2">
@@ -5004,7 +5084,7 @@ export default function Home() {
 
       {/* Inventory Transfer Modal */}
       {modals.invTransfer && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invTransfer')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">🔄 Nueva transferencia</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Producto *</label><select className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invTrProduct || ''} onChange={e => setForms(p => ({ ...p, invTrProduct: e.target.value }))}><option value="">Seleccionar producto</option>{invProducts.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}</select></div>
           <div className="grid grid-cols-2 gap-3 mb-3">
@@ -5031,6 +5111,27 @@ export default function Home() {
         </div>
       </div>)}
 
+      {/* Company Modal */}
+      {modals.company && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('company')}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[500px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+          <div className="text-lg font-semibold mb-5">{editingId ? 'Editar empresa' : 'Nueva empresa'}</div>
+          <div className="space-y-3">
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre comercial *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Arquitectura Pérez SAS" value={forms.compName || ''} onChange={e => setForms(p => ({ ...p, compName: e.target.value }))} /></div>
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Razón legal</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Nombre legal completo" value={forms.compLegal || ''} onChange={e => setForms(p => ({ ...p, compLegal: e.target.value }))} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">NIT</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: 900123456-7" value={forms.compNit || ''} onChange={e => setForms(p => ({ ...p, compNit: e.target.value }))} /></div>
+              <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Teléfono</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="+57 300 1234567" value={forms.compPhone || ''} onChange={e => setForms(p => ({ ...p, compPhone: e.target.value }))} /></div>
+            </div>
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Correo de contacto</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="contacto@empresa.com" value={forms.compEmail || ''} onChange={e => setForms(p => ({ ...p, compEmail: e.target.value }))} /></div>
+            <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Dirección</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Dirección de la empresa" value={forms.compAddress || ''} onChange={e => setForms(p => ({ ...p, compAddress: e.target.value }))} /></div>
+          </div>
+          <div className="flex gap-3 mt-5">
+            <button className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all" onClick={() => closeModal('company')}>Cancelar</button>
+            <button className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveCompany}>{editingId ? 'Guardar cambios' : 'Crear empresa'}</button>
+          </div>
+        </div>
+      </div>)}
+
       {/* Lightbox Viewer */}
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
   <div className="relative w-full h-full flex flex-col items-center justify-center p-4" onClick={e => e.stopPropagation()}>
@@ -5045,7 +5146,7 @@ export default function Home() {
       </div>
     </div>
     {/* Image */}
-    <img src={lightboxPhoto.data.imageData} alt={lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+    <img src={lightboxPhoto.data.imageData} alt={lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80dvh] object-contain rounded-lg" />
     {/* Navigation */}
     <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
       <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxPrev}>

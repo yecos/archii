@@ -253,11 +253,9 @@ select {
   .h-\[calc\(100dvh-120px\)\] {
     height: 100dvh;
   }
-  input:focus, textarea:focus {
-    font-size: 16px; /* Prevents iOS zoom on focus */
-  }
-  #chat-input-field {
-    font-size: 16px;
+  /* Prevent iOS zoom on focus for ALL form inputs */
+  input, select, textarea {
+    font-size: 16px !important;
   }
   /* Ensure chat container fills available space properly */
   [style*="100dvh"] {

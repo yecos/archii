@@ -28,6 +28,10 @@ interface UIState {
   setUnreadCount: (count: number) => void;
   incrementUnread: () => void;
   clearUnread: () => void;
+
+  // Current screen (for mobile optimization)
+  currentScreen: string;
+  setCurrentScreen: (screen: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -64,4 +68,8 @@ export const useUIStore = create<UIState>((set) => ({
   setUnreadCount: (count) => set({ unreadCount: count }),
   incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
   clearUnread: () => set({ unreadCount: 0 }),
+
+  // Current screen (for mobile optimization)
+  currentScreen: 'dashboard',
+  setCurrentScreen: (screen) => set({ currentScreen: screen }),
 }));
