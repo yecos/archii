@@ -1734,6 +1734,26 @@ export default function Home() {
   const projectBudget = currentProject?.data.budget || 0;
   const projectSpent = projectExpenses.reduce((s, e) => s + (Number(e.data.amount) || 0), 0);
 
+  // Actualizar contexto del proyecto para la IA cuando se selecciona uno
+  useEffect(() => {
+    if (currentProject) {
+      const ctx = [
+        `Proyecto: ${currentProject.data.name}`,
+        currentProject.data.description ? `Descripción: ${currentProject.data.description}` : '',
+        currentProject.data.client ? `Cliente: ${currentProject.data.client}` : '',
+        currentProject.data.location ? `Ubicación: ${currentProject.data.location}` : '',
+        currentProject.data.status ? `Estado: ${currentProject.data.status}` : '',
+        currentProject.data.budget ? `Presupuesto: ${fmtCOP(currentProject.data.budget)}` : '',
+        currentProject.data.progress !== undefined ? `Progreso: ${currentProject.data.progress}%` : '',
+        projectTasks.length > 0 ? `Tareas: ${projectTasks.length} (${projectTasks.filter(t => t.data.status === 'Completado').length} completadas)` : '',
+        projectExpenses.length > 0 ? `Gastos registrados: ${fmtCOP(projectSpent)} de ${fmtCOP(projectBudget)}` : '',
+      ].filter(Boolean).join('\n');
+      useUIStore.getState().setAIProjectContext(ctx);
+    } else {
+      useUIStore.getState().setAIProjectContext('');
+    }
+  }, [currentProject, projectTasks.length, projectSpent, projectBudget]);
+
   const navigateTo = (s: string, projId?: string | null) => {
     setScreen(s);
     setSelectedProjectId(projId ?? selectedProjectId);

@@ -42,8 +42,13 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      console.error("[ArchiFlow AI] GEMINI_API_KEY no configurada en las variables de entorno");
       return NextResponse.json(
-        { error: "API key de Gemini no configurada. Agrega GEMINI_API_KEY en las variables de entorno." },
+        {
+          error: "La IA no está configurada aún.",
+          setupRequired: true,
+          help: "Necesitas agregar GEMINI_API_KEY en Vercel (Settings > Environment Variables). Obtén tu clave gratis en: https://aistudio.google.com/app/apikey",
+        },
         { status: 500 }
       );
     }
@@ -78,15 +83,43 @@ export async function POST(request: NextRequest) {
     );
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error("Gemini API error:", err);
+      const errText = await response.text();
+      console.error("[ArchiFlow AI] Gemini API error (suggestions):", response.status, errText);
+
+      if (response.status === 400 || response.status === 403) {
+        return NextResponse.json(
+          {
+            error: "La API key de Gemini es inválida o no tiene permisos.",
+            setupRequired: true,
+            help: "Verifica que GEMINI_API_KEY sea correcta en Vercel (Settings > Environment Variables).",
+          },
+          { status: 502 }
+        );
+      }
+
+      if (response.status === 429) {
+        return NextResponse.json(
+          { error: "Se excedió el límite de peticiones. Espera unos segundos e intenta de nuevo." },
+          { status: 502 }
+        );
+      }
+
       return NextResponse.json(
-        { error: "Error comunicándose con la IA" },
+        { error: "Error temporal comunicándose con la IA. Intenta de nuevo." },
         { status: 502 }
       );
     }
 
     const data = await response.json();
+
+    if (!data?.candidates?.[0]) {
+      console.error("[ArchiFlow AI] Respuesta de sugerencias bloqueada:", data?.promptFeedback?.blockReason);
+      return NextResponse.json({
+        suggestions: [{ text: "No pude generar sugerencias para esa consulta. Intenta de nuevo." }],
+        type,
+      });
+    }
+
     const rawContent =
       data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
@@ -101,9 +134,10 @@ export async function POST(request: NextRequest) {
           suggestions: [{ text: rawContent, category: "general" }],
         };
       }
-    } catch {
+    } catch (parseErr) {
+      console.error("[ArchiFlow AI] Error parseando JSON de sugerencias:", parseErr);
       suggestions = {
-        suggestions: [{ text: rawContent, category: "general" }],
+        suggestions: [{ text: rawContent || "No se pudieron procesar las sugerencias.", category: "general" }],
       };
     }
 
@@ -114,7 +148,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor";
-    console.error("AI Suggestions error:", message);
+    console.error("[ArchiFlow AI] Error en sugerencias:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
