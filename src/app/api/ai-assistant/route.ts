@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
 
 const SYSTEM_PROMPT = `
 Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de arquitectura e interiorismo.
@@ -35,13 +34,38 @@ Siempre responde de forma clara y bien estructurada. Usa listas cuando sea aprop
 Nunca inventes datos específicos del usuario. Si necesitas información que no tienes, pídelo.
 `;
 
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
+async function callGemini(messages: { role: string; content: string }[]) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY no configurada");
 
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
+  const geminiMessages = messages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: geminiMessages,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${err}`);
   }
-  return zaiInstance;
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, no pude generar una respuesta.";
 }
 
 export async function POST(request: NextRequest) {
@@ -55,30 +79,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const zai = await getZAI();
-
     const systemMessage = projectContext
       ? `${SYSTEM_PROMPT}\n\nContexto del proyecto actual del usuario:\n${projectContext}`
       : SYSTEM_PROMPT;
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "system", content: systemMessage },
-        ...messages.map((m: { role: string; content: string }) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      ],
-      temperature: 0.7,
-      max_tokens: 2048,
-    });
+    const allMessages = [
+      { role: "system", content: systemMessage },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    ];
 
-    const assistantMessage =
-      completion.choices?.[0]?.message?.content || "Lo siento, no pude generar una respuesta.";
+    const assistantMessage = await callGemini(allMessages);
 
     return NextResponse.json({
       message: assistantMessage,
-      usage: completion.usage || null,
     });
   } catch (error: unknown) {
     const message =
