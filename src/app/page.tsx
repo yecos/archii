@@ -2094,7 +2094,7 @@ export default function Home() {
         )}
 
         {/* In-App Notification Toasts (bottom-right) */}
-        <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
+        <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
           {inAppNotifs.map(n => (
             <div key={n.id} className="pointer-events-auto bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-2xl flex items-start gap-3 animate-slideUp cursor-pointer hover:border-[var(--af-accent)]/30 transition-all" style={{ width: '340px', maxWidth: 'calc(100vw - 32px)' }} onClick={() => { markNotifRead(n.id); if (n.screen) navigateTo(n.screen, n.itemId); }}>
               <div className="text-lg flex-shrink-0 mt-0.5">{n.icon}</div>
@@ -3307,7 +3307,7 @@ export default function Home() {
 
 
           {/* ===== INVENTORY SECTION ===== */}
-          {screen === 'inventory' && (<div className="animate-fadeIn p-4 sm:p-6">
+          {screen === 'inventory' && (<div className="animate-fadeIn">
             {/* Sub-tabs */}
             <div className="flex gap-1 mb-4 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
               {[{ id: 'dashboard' as const, label: '📊 Panel' }, { id: 'products' as const, label: '📦 Productos' }, { id: 'categories' as const, label: '🏷️ Categorías' }, { id: 'warehouse' as const, label: '🏢 Almacén' }, { id: 'movements' as const, label: '📋 Movimientos' }, { id: 'transfers' as const, label: '🔄 Transferencias' }, { id: 'reports' as const, label: '📊 Reportes' }].map(tab => (
@@ -4065,7 +4065,9 @@ export default function Home() {
                   const proj = projects.find(p => p.id === t.data.projectId);
                   const sc = GANTT_STATUS_CFG[t.data.status] || { label: t.data.status, color: '#6b7280' };
                   const pc = GANTT_PRIO_CFG[t.data.priority] || { label: t.data.priority || '', bg: '#f1f5f9', color: '#475569' };
-                  return (<div className="fixed z-[200] bg-[var(--foreground)] text-[var(--card)] rounded-lg p-3 text-[11px] max-w-[280px] shadow-xl pointer-events-none" style={{ left: adminTooltipPos.x, top: adminTooltipPos.y - 10, transform: 'translateY(-100%)' }}>
+                  return (
+                  /* Admin tooltip — hidden on mobile (touch has no hover) */
+                  <div key={t.id} className="hidden md:block fixed z-[200] bg-[var(--foreground)] text-[var(--card)] rounded-lg p-3 text-[11px] max-w-[280px] shadow-xl pointer-events-none" style={{ left: adminTooltipPos.x, top: adminTooltipPos.y - 10, transform: 'translateY(-100%)' }}>
                     <div className="flex gap-2"><span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold" style={{ backgroundColor: pc.bg + '33', color: pc.color }}>{pc.label}</span><span className="text-[9px] text-[var(--muted-foreground)]">{sc.label}</span></div>
                     <div className="text-[12px] font-semibold mt-1">{t.data.title}</div>
                     {proj && <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{proj.data.name}</div>}
@@ -4641,7 +4643,7 @@ export default function Home() {
               {/* Mi Actividad Financiera */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
                 <div className="text-[13px] sm:text-[15px] font-semibold mb-3">Actividad Financiera</div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3.5 text-center">
                     <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalSpent)}</div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-1">Gastos registrados</div>
@@ -4964,7 +4966,7 @@ export default function Home() {
 
       {/* Approval Modal */}
       {modals.approval && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('approval')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">Nueva aprobación</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Título *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="¿Qué necesita aprobación?" value={forms.appTitle || ''} onChange={e => setForms(p => ({ ...p, appTitle: e.target.value }))} /></div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Descripción</label><textarea className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none" rows="3" placeholder="Detalles..." value={forms.appDesc || ''} onChange={e => setForms(p => ({ ...p, appDesc: e.target.value }))} /></div>

@@ -216,9 +216,17 @@ input[type="file"] { display: none; }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-top { padding-top: env(safe-area-inset-top, 0px); }
 
-/* Better touch targets on mobile */
+/* Better touch targets on mobile (44px minimum per Apple HIG) */
 @media (max-width: 768px) {
   button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Exception: small inline buttons in cards use 36px minimum */
+  button[class*="text-"], button[class*="px-"] {
     min-height: 36px;
     min-width: 36px;
   }
@@ -245,8 +253,7 @@ select {
   padding-right: 32px;
 }
 
-/* Chat input sticky bar for mobile */
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Chat input sticky bar for mobile — safe-bottom already defined above */
 
 /* Mobile chat: keep input visible when keyboard opens */
 @media (max-width: 768px) {
@@ -267,6 +274,32 @@ select {
 #chat-msgs {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Global smooth scroll on all overflow containers for iOS */
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch feedback for mobile — press effect on buttons */
+@media (max-width: 768px) {
+  button:not(:disabled), a:not(:disabled), [role="button"]:not(:disabled), select:not(:disabled) {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+  }
+  button:active:not(:disabled), a:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+}
+
+/* Toast safe-area on mobile */
+@media (max-width: 768px) {
+  .af-toast {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 /* Fix mobile viewport height for fixed elements */
