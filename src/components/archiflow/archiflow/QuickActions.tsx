@@ -119,14 +119,14 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-[95] w-80 animate-slideUp">
+    <div className="fixed bottom-32 md:bottom-24 right-3 left-3 md:left-auto md:right-6 md:w-80 z-[95] animate-slideUp">
       <div className="bg-[var(--af-bg1)] border border-[var(--af-bg4)] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-[var(--af-bg4)] flex items-center justify-between">
           <h4 className="text-sm font-semibold text-foreground">Acciones rápidas</h4>
           <button
             onClick={onClose}
-            className="w-6 h-6 rounded-md hover:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="w-10 h-10 rounded-lg active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -198,7 +198,7 @@ export default function QuickActions({ isOpen, onClose, projectContext, onOpenCh
               onClose();
               onOpenChat();
             }}
-            className="w-full py-2.5 rounded-xl bg-[var(--af-accent)]/10 text-[var(--af-accent)] text-xs font-medium hover:bg-[var(--af-accent)]/20 transition-colors"
+            className="w-full py-3 rounded-xl bg-[var(--af-accent)]/10 text-[var(--af-accent)] text-xs font-medium active:bg-[var(--af-accent)]/20 transition-colors mb-[env(safe-area-inset-bottom,0px)]"
           >
             💬 Preguntar al asistente IA
           </button>

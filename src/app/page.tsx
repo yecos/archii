@@ -2,30 +2,48 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 
-/* ===== MODULED IMPORTS ===== */
-// Types & Constants (extracted from monolithic page.tsx)
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
-import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
+/* ===== TYPES ===== */
+interface User { uid: string; displayName: string; email: string; photoURL?: string }
+interface TeamUser { id: string; data: { name: string; email: string; role?: string; photoURL?: string; companyId?: string } }
+interface Project { id: string; data: { name: string; status: string; client: string; location: string; budget: number; description: string; startDate: string; endDate: string; progress: number; companyId?: string; createdAt: any; updatedAt?: any; createdBy?: string } }
+interface Task { id: string; data: { title: string; projectId: string; assigneeId: string; priority: string; status: string; dueDate: string; createdAt: any; createdBy?: string } }
+interface Expense { id: string; data: { concept: string; projectId: string; category: string; amount: number; date: string; createdAt: any } }
+interface Supplier { id: string; data: { name: string; category: string; phone: string; email: string; address: string; website: string; notes: string; rating: number; createdAt: any } }
+interface Approval { id: string; data: { title: string; description: string; status: string; createdAt: any } }
+interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; createdAt: any } }
+interface ProjectFile { id: string; name: string; type: string; size: number; url: string; createdAt: any }
+interface OneDriveFile { id: string; name: string; size: number; mimeType: string; webUrl: string; createdDateTime: string; '@microsoft.graph.downloadUrl'?: string }
+interface GalleryPhoto { id: string; data: { projectId: string; categoryName: string; caption: string; imageData: string; createdAt: any; createdBy: string } }
+interface InvProduct { id: string; data: { name: string; sku: string; categoryId: string; unit: string; price: number; stock: number; minStock: number; description: string; imageData: string; warehouse: string; warehouseStock: Record<string, number>; createdAt: any; createdBy: string; updatedAt?: any } }
+interface InvCategory { id: string; data: { name: string; color: string; description: string; createdAt: any } }
+interface InvMovement { id: string; data: { productId: string; type: 'Entrada' | 'Salida'; quantity: number; reason: string; reference: string; date: string; createdAt: any; createdBy: string } }
+interface InvTransfer { id: string; data: { productId: string; productName: string; fromWarehouse: string; toWarehouse: string; quantity: number; status: string; date: string; notes: string; createdAt: any; createdBy: string; completedAt?: any } }
 
-// Helpers (pure formatting functions)
-import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
+/* ===== HELPERS ===== */
+const fmtCOP = (n: number) => { if (!n) return '$0'; if (n >= 1e6) return '$' + (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'; return '$' + Number(n).toLocaleString('es-CO'); };
+const fmtDate = (ts: any) => { if (!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }); };
+const fmtSize = (b: number) => { if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; };
+const getInitials = (n: string) => n ? n.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : '?';
+const statusColor = (s: string) => ({ Concepto: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', Diseno: 'bg-blue-500/10 text-blue-400', Ejecucion: 'bg-amber-500/10 text-amber-400', Terminado: 'bg-emerald-500/10 text-emerald-400' }[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
+const prioColor = (p: string) => ({ Alta: 'bg-red-500/10 text-red-400', Media: 'bg-amber-500/10 text-amber-400', Baja: 'bg-emerald-500/10 text-emerald-400' }[p] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
+const taskStColor = (s: string) => ({ 'Por hacer': 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', 'En progreso': 'bg-blue-500/10 text-blue-400', Revision: 'bg-amber-500/10 text-amber-400', Completado: 'bg-emerald-500/10 text-emerald-400' }[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
+const avatarColors = ['bg-emerald-500/15 text-emerald-400 border-emerald-500/30', 'bg-blue-500/15 text-blue-400 border-blue-500/30', 'bg-purple-500/15 text-purple-400 border-purple-500/30', 'bg-amber-500/15 text-amber-400 border-amber-500/30'];
+const avatarColor = (id: string) => { let h = 0; for (let i = 0; i < (id || '').length; i++) h = id.charCodeAt(i) + ((h << 5) - h); return avatarColors[Math.abs(h) % avatarColors.length]; };
 
-// Firebase Service (clean typed wrapper replacing all (window as any).firebase)
-import { getFirebase } from '@/lib/firebase-service';
-
-// Firestore Actions (centralized CRUD with consistent error handling)
-import * as fbActions from '@/lib/firestore-actions';
-
-// Hooks (extracted from monolithic page.tsx)
-import { useFirestoreData } from '@/hooks/useFirestoreData';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useVoiceRecording } from '@/hooks/useVoiceRecording';
-
-/* ===== WHATSAPP NOTIFICATIONS ===== */
-import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
-
-/* ===== TYPES & CONSTANTS — now imported from @/lib/types.ts ===== */
-/* ===== HELPERS — now imported from @/lib/helpers.ts ===== */
+const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
+const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos'];
+const SUPPLIER_CATS = ['Materiales', 'Mobiliario', 'Iluminación', 'Acabados', 'Eléctrico', 'Plomería', 'Otro'];
+const PHOTO_CATS = ['Fachada', 'Interior', 'Obra', 'Planos', 'Renders', 'Otro'];
+const INV_UNITS = ['Unidad', 'Metro', 'Metro²', 'Metro³', 'Kilogramo', 'Litro', 'Galon', 'Rollo', 'Saco', 'Caja', 'Paquete', 'Pieza', 'Par', 'Set', 'Otro'] as const;
+const INV_WAREHOUSES = ['Almacén Principal', 'Obra en Curso', 'Bodega Reserva'] as const;
+const TRANSFER_STATUSES = ['Pendiente', 'En tránsito', 'Completada', 'Cancelada'] as const;
+const CAT_COLORS = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1'];
+const ADMIN_EMAILS = ['yecos11@gmail.com'];
+const USER_ROLES = ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente', 'Miembro'] as const;
+const ROLE_COLORS: Record<string, string> = { Admin: 'bg-red-500/10 text-red-400 border-red-500/30', Director: 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30', Arquitecto: 'bg-blue-500/10 text-blue-400 border-blue-500/30', Interventor: 'bg-purple-500/10 text-purple-400 border-purple-500/30', Contratista: 'bg-amber-500/10 text-amber-400 border-amber-500/30', Cliente: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', Miembro: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)] border-[var(--border)]' };
+const ROLE_ICONS: Record<string, string> = { Admin: '👑', Director: '🎯', Arquitecto: '📐', Interventor: '🔍', Contratista: '🏗️', Cliente: '🤝', Miembro: '👤' };
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 /* ===== MAIN COMPONENT ===== */
 export default function Home() {
@@ -116,7 +134,7 @@ export default function Home() {
       const has = current.includes(role);
       const updated = { ...prev, [permName]: has ? current.filter(r => r !== role) : [...current, role] };
       // Save to localStorage
-      try { localStorage.setItem('archiflow-role-perms', JSON.stringify(updated)); } catch (err) { console.error("[ArchiFlow]", err); }
+      try { localStorage.setItem('archiflow-role-perms', JSON.stringify(updated)); } catch {}
       return updated;
     });
   };
@@ -187,7 +205,7 @@ export default function Home() {
       const isDark = saved ? saved === 'dark' : true;
       setDarkMode(isDark);
       document.documentElement.classList.toggle('dark', isDark);
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch {}
   }, []);
 
   // Check if running as standalone app
@@ -267,7 +285,7 @@ export default function Home() {
 
   // Vibrate on mobile
   const vibrateNotif = useCallback(() => {
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch {}
   }, []);
 
   // Load saved role permissions from localStorage
@@ -275,7 +293,7 @@ export default function Home() {
     try {
       const saved = localStorage.getItem('archiflow-role-perms');
       if (saved) setRolePerms(JSON.parse(saved));
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch {}
   }, []);
 
   // Request notification permission
@@ -324,7 +342,7 @@ export default function Home() {
       osc.start();
       setTimeout(() => { osc.frequency.value = f2; }, 100);
       setTimeout(() => { gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25); osc.stop(ctx.currentTime + 0.25); }, 200);
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch {}
   }, [notifSound]);
 
   // UNIFIED NOTIFICATION: sends both in-app toast AND OS notification
@@ -407,7 +425,7 @@ export default function Home() {
   useEffect(() => {
     const iv = setInterval(() => {
       try {
-        const fb = getFirebase();
+        const fb = (window as any).firebase;
         if (fb && fb.apps && fb.apps.length > 0) {
           clearInterval(iv);
           setReady(true);
@@ -422,7 +440,7 @@ export default function Home() {
   // Auth state
   useEffect(() => {
     if (!ready) return;
-    const fb = getFirebase();
+    const fb = (window as any).firebase;
     const auth = fb.auth();
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthUser(user || null);
@@ -453,7 +471,7 @@ export default function Home() {
   // Load team
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
       setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -463,7 +481,7 @@ export default function Home() {
   // Load projects
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -473,7 +491,7 @@ export default function Home() {
   // Load tasks
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -483,7 +501,7 @@ export default function Home() {
   // Load expenses
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -493,7 +511,7 @@ export default function Home() {
   // Load suppliers
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsubs: any[] = [];
     unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
@@ -510,7 +528,7 @@ export default function Home() {
   // Load chat messages
   useEffect(() => {
     if (!ready || !chatProjectId) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     let unsub: any;
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
@@ -527,7 +545,7 @@ export default function Home() {
   // Load work phases
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot(snap => {
       setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -537,7 +555,7 @@ export default function Home() {
   // Load project files
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
     }, () => {});
@@ -547,7 +565,7 @@ export default function Home() {
   // Load approvals
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -557,7 +575,7 @@ export default function Home() {
   // Load meetings
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -567,7 +585,7 @@ export default function Home() {
   // Load gallery photos
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -577,7 +595,7 @@ export default function Home() {
   // Load inventory products
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -587,7 +605,7 @@ export default function Home() {
   // Load inventory categories
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot(snap => {
       setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -597,7 +615,7 @@ export default function Home() {
   // Load inventory movements
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -607,7 +625,7 @@ export default function Home() {
   // Load inventory transfers
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
+    const db = (window as any).firebase.firestore();
     const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
@@ -641,7 +659,7 @@ export default function Home() {
       if (savedPrefs) setNotifPrefs(JSON.parse(savedPrefs));
       const savedSound = localStorage.getItem('archiflow-notif-sound');
       if (savedSound !== null) setNotifSound(savedSound === 'true');
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch {}
     // Auto-show permission banner after 5 seconds if not granted and not recently dismissed
     if (Notification.permission === 'default') {
       const dismissed = localStorage.getItem('archiflow-notif-dismissed');
@@ -658,12 +676,12 @@ export default function Home() {
 
   // Save notif sound pref
   useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-sound', String(notifSound)); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { localStorage.setItem('archiflow-notif-sound', String(notifSound)); } catch {}
   }, [notifSound]);
 
   // Save notification preferences
   useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch (err) { console.error("[ArchiFlow]", err); };
+    try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch {};
   }, [notifPrefs]);
 
   // Calculate unread notification count
@@ -967,29 +985,29 @@ export default function Home() {
   const doLogin = async () => {
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
-    try { await getFirebase().auth().signInWithEmailAndPassword(email, pass); } catch (e: any) { showToast(e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : e.code === 'auth/user-not-found' ? 'No existe cuenta con ese correo' : 'Error al iniciar sesión', 'error'); }
+    try { await (window as any).firebase.auth().signInWithEmailAndPassword(email, pass); } catch (e: any) { showToast(e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : e.code === 'auth/user-not-found' ? 'No existe cuenta con ese correo' : 'Error al iniciar sesión', 'error'); }
   };
 
   const doRegister = async () => {
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
+      const cred = await (window as any).firebase.auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
-      const db = getFirebase().firestore();
-      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
+      const db = (window as any).firebase.firestore();
+      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() });
     } catch (e: any) { showToast(e.code === 'auth/email-already-in-use' ? 'Ese correo ya está registrado' : e.code === 'auth/weak-password' ? 'Mínimo 6 caracteres' : 'Error al registrar', 'error'); }
   };
 
   const doGoogleLogin = async () => {
-    try { await getFirebase().auth().signInWithPopup(new (getFirebase().auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
+    try { await (window as any).firebase.auth().signInWithPopup(new ((window as any).firebase.auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
   };
 
   const doMicrosoftLogin = async () => {
     try {
-      const provider = new (getFirebase().auth).OAuthProvider('microsoft.com');
+      const provider = new ((window as any).firebase.auth).OAuthProvider('microsoft.com');
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await getFirebase().auth().signInWithPopup(provider);
+      const result = await (window as any).firebase.auth().signInWithPopup(provider);
       // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
@@ -1122,7 +1140,7 @@ export default function Home() {
       });
       if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); }
       else { showToast('Error al eliminar', 'error'); }
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch { showToast('Error', 'error'); }
     setMsLoading(false);
   };
 
@@ -1139,54 +1157,20 @@ export default function Home() {
   // Change user role (admin only)
   const updateUserRole = async (uid: string, newRole: string) => {
     try {
-      await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
+      await (window as any).firebase.firestore().collection('users').doc(uid).update({ role: newRole });
       showToast(`Rol actualizado a ${newRole}`);
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al cambiar rol', 'error'); }
+    } catch { showToast('Error al cambiar rol', 'error'); }
   };
 
-  const updateUserCompany = async (uid: string, companyId: string) => {
-    try {
-      await getFirebase().firestore().collection('users').doc(uid).update({ companyId: companyId || null });
-      showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al asignar empresa', 'error'); }
-  };
-
-  // Get the current user's company ID
-  const getMyCompanyId = () => {
-    if (!authUser) return null;
-    const me = teamUsers.find(u => u.id === authUser.uid);
-    return me?.data?.companyId || null;
-  };
-
-  // Get current user's role
-  const getMyRole = () => {
-    if (!authUser) return 'Miembro';
-    const me = teamUsers.find(u => u.id === authUser.uid);
-    return me?.data?.role || 'Miembro';
-  };
-
-  // Filter projects based on company (Admin/Director see all, others see their company only)
-  const visibleProjects = () => {
-    const myRole = getMyRole();
-    const myComp = getMyCompanyId();
-    if (myRole === 'Admin' || myRole === 'Director') {
-      return projects; // Admin y Director ven todo
-    }
-    if (myComp) {
-      return projects.filter(p => !p.data.companyId || p.data.companyId === myComp);
-    }
-    return projects; // Si no tiene empresa, ve todo
-  };
-
-  const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
+  const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; (window as any).firebase.auth().signOut(); };
 
   const getUserName = (uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; };
 
   const saveProject = async () => {
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const db = (window as any).firebase.firestore();
+    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
     const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
@@ -1195,7 +1179,7 @@ export default function Home() {
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
+  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await (window as any).firebase.firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch { showToast('Error', 'error'); } };
 
   const openEditProject = (p: Project) => {
     setEditingId(p.id);
@@ -1206,23 +1190,14 @@ export default function Home() {
   const saveTask = async () => {
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const db = (window as any).firebase.firestore();
+    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
     const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
-      else {
-        await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
-        showToast('Tarea creada');
-        // Notificar por WhatsApp al asignado
-        if (forms.taskAssignee && forms.taskProject) {
-          const proj = projects.find(p => p.id === forms.taskProject);
-          const projName = proj?.data.name || 'Proyecto';
-          notifyWhatsApp.taskAssigned(forms.taskAssignee, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {});
-        }
-      }
+      else { await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Tarea creada'); }
       closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch { showToast('Error', 'error'); }
   };
 
   const openEditTask = (t: Task) => {
@@ -1233,28 +1208,28 @@ export default function Home() {
 
   const updateProjectProgress = async (val: number) => {
     if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch { showToast('Error', 'error'); }
   };
 
   const updateUserName = async (newName: string) => {
     if (!newName || !authUser) return;
-    try { await authUser.updateProfile({ displayName: newName }); await getFirebase().firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await authUser.updateProfile({ displayName: newName }); await (window as any).firebase.firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch { showToast('Error', 'error'); }
   };
 
   const toggleTask = async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await (window as any).firebase.firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() }); } catch {}
   };
 
-  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await (window as any).firebase.firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch {} };
 
   const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
     const text = textOverride || forms.chatInput || '';
     if (!text && !audioData && !fileData) return;
     if (!chatProjectId) return;
     try {
-      const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
+      const db = (window as any).firebase.firestore();
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -1323,15 +1298,15 @@ export default function Home() {
 
   const handleMicButton = async () => {
     if (isRecording) {
+      // Al detener, enviar automáticamente (flujo simplificado 2 pasos)
       const blob = await stopRecording();
       if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      setAudioPreviewUrl(url);
-      setAudioPreviewDuration(recDuration);
-      audioPreviewBlobRef.current = blob;
-    } else if (audioPreviewUrl) {
-      setAudioPreviewUrl(null); setAudioPreviewDuration(0);
-      audioPreviewBlobRef.current = null;
+      showToast('Enviando nota de voz...');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        await sendMessage('', reader.result as string, recDuration);
+      };
+      reader.readAsDataURL(blob);
     } else {
       await startRecording();
     }
@@ -1403,45 +1378,57 @@ export default function Home() {
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
-    const db = getFirebase().firestore();
-    const amount = Number(forms.expAmount) || 0;
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
-    try {
-      await db.collection('expenses').add(data);
-      showToast('Gasto registrado');
-      closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] }));
-      // Notificar por WhatsApp al creador
-      if (forms.expProject) {
-        const proj = projects.find(p => p.id === forms.expProject);
-        const projName = proj?.data.name || 'Proyecto';
-        notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(() => {});
-      }
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    const db = (window as any).firebase.firestore();
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount: Number(forms.expAmount) || 0, date: forms.expDate || '', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    try { await db.collection('expenses').add(data); showToast('Gasto registrado'); closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] })); } catch { showToast('Error', 'error'); }
   };
 
-  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await (window as any).firebase.firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch {} };
 
   const saveSupplier = async () => {
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    const db = getFirebase().firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const db = (window as any).firebase.firestore();
+    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
       closeModal('supplier'); setForms(p => ({ ...p, supName: '', supCategory: '', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch { showToast('Error', 'error'); }
   };
 
-  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await (window as any).firebase.firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch {} };
+
+  const updateUserCompany = async (uid: string, companyId: string) => {
+    try {
+      await (window as any).firebase.firestore().collection('users').doc(uid).update({ companyId: companyId || '' });
+      showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
+    } catch { showToast('Error al asignar empresa', 'error'); }
+  };
+
+  const getMyCompanyId = () => {
+    const me = teamUsers.find(u => u.id === authUser?.uid);
+    return me?.data?.companyId || '';
+  };
+  const getMyRole = () => {
+    const me = teamUsers.find(u => u.id === authUser?.uid);
+    return isEmailAdmin ? 'Admin' : (me?.data?.role || 'Miembro');
+  };
+  const visibleProjects = (() => {
+    const role = getMyRole();
+    if (role === 'Admin' || role === 'Director') return projects;
+    const myCompId = getMyCompanyId();
+    if (!myCompId) return projects; // Sin empresa asignada, ve todo
+    return projects.filter(p => !p.data.companyId || p.data.companyId === myCompId);
+  })();
 
   // Company CRUD
   const saveCompany = async () => {
     const name = forms.compName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      const db = (window as any).firebase.firestore();
+      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), updatedAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
@@ -1464,8 +1451,8 @@ export default function Home() {
     showToast('Subiendo archivo...');
     try {
       const base64 = await fileToBase64(file);
-      const db = getFirebase().firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
+      const db = (window as any).firebase.firestore();
+      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
@@ -1474,15 +1461,15 @@ export default function Home() {
   const deleteFile = async (file: ProjectFile) => {
     if (!confirm('¿Eliminar archivo?')) return;
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('files').doc(file.id).delete();
+      await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId).collection('files').doc(file.id).delete();
       showToast('Archivo eliminado');
     } catch { showToast('Error al eliminar', 'error'); }
   };
 
   const initDefaultPhases = async () => {
     if (workPhases.length > 0) return;
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const db = (window as any).firebase.firestore();
+    const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
     for (let i = 0; i < DEFAULT_PHASES.length; i++) {
       await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
     }
@@ -1490,35 +1477,23 @@ export default function Home() {
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch {}
   };
 
   const saveApproval = async () => {
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
+      await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: (window as any).firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
-      // Notificar por WhatsApp (broadcast a admins)
-      const projName = currentProject?.data.name || 'Proyecto';
-      notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch { showToast('Error', 'error'); }
   };
 
   const updateApproval = async (id: string, status: string) => {
-    try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
-      showToast('Estado actualizado');
-      // Notificar por WhatsApp al creador de la aprobación
-      const approval = approvals.find(a => a.id === id);
-      if (approval?.data?.createdBy) {
-        const projName = currentProject?.data.name || 'Proyecto';
-        notifyWhatsApp.approvalResolved(approval.data.createdBy, approval.data.title, status, authUser?.displayName || undefined).catch(() => {});
-      }
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status }); showToast('Estado actualizado'); } catch {}
   };
 
-  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch {} };
 
   // ===== INVENTORY ACTIONS =====
   const getWarehouseStock = (product: any, warehouse: string) => {
@@ -1553,8 +1528,8 @@ export default function Home() {
     const name = forms.invProdName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
@@ -1568,7 +1543,7 @@ export default function Home() {
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await (window as any).firebase.firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch {} };
 
   const openEditInvProduct = (p: any) => {
     setEditingId(p.id);
@@ -1583,8 +1558,8 @@ export default function Home() {
     const name = forms.invCatName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
@@ -1592,7 +1567,7 @@ export default function Home() {
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await (window as any).firebase.firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch {} };
   const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   const saveInvMovement = async () => {
@@ -1601,8 +1576,8 @@ export default function Home() {
     const warehouse = forms.invMovWarehouse || 'Almacén Principal';
     if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const type = forms.invMovType || 'Entrada';
       const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
       await db.collection('invMovements').add(data);
@@ -1619,7 +1594,7 @@ export default function Home() {
     } catch { showToast('Error al registrar movimiento', 'error'); }
   };
 
-  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await (window as any).firebase.firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch {} };
 
   const saveInvTransfer = async () => {
     const productId = forms.invTrProduct || '';
@@ -1628,8 +1603,8 @@ export default function Home() {
     const to = forms.invTrTo || '';
     if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const product = invProducts.find(p => p.id === productId);
       const ws = product ? buildWarehouseStock(product) : {};
       const fromStock = ws[from] || 0;
@@ -1650,7 +1625,7 @@ export default function Home() {
     } catch { showToast('Error en transferencia', 'error'); }
   };
 
-  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await (window as any).firebase.firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch {} };
 
   const getInvCategoryName = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.name : 'Sin categoría'; };
   const getInvCategoryColor = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.color : '#6b7280'; };
@@ -1769,26 +1744,6 @@ export default function Home() {
   const projectBudget = currentProject?.data.budget || 0;
   const projectSpent = projectExpenses.reduce((s, e) => s + (Number(e.data.amount) || 0), 0);
 
-  // Actualizar contexto del proyecto para la IA cuando se selecciona uno
-  useEffect(() => {
-    if (currentProject) {
-      const ctx = [
-        `Proyecto: ${currentProject.data.name}`,
-        currentProject.data.description ? `Descripción: ${currentProject.data.description}` : '',
-        currentProject.data.client ? `Cliente: ${currentProject.data.client}` : '',
-        currentProject.data.location ? `Ubicación: ${currentProject.data.location}` : '',
-        currentProject.data.status ? `Estado: ${currentProject.data.status}` : '',
-        currentProject.data.budget ? `Presupuesto: ${fmtCOP(currentProject.data.budget)}` : '',
-        currentProject.data.progress !== undefined ? `Progreso: ${currentProject.data.progress}%` : '',
-        projectTasks.length > 0 ? `Tareas: ${projectTasks.length} (${projectTasks.filter(t => t.data.status === 'Completado').length} completadas)` : '',
-        projectExpenses.length > 0 ? `Gastos registrados: ${fmtCOP(projectSpent)} de ${fmtCOP(projectBudget)}` : '',
-      ].filter(Boolean).join('\n');
-      useUIStore.getState().setAIProjectContext(ctx);
-    } else {
-      useUIStore.getState().setAIProjectContext('');
-    }
-  }, [currentProject, projectTasks.length, projectSpent, projectBudget]);
-
   const navigateTo = (s: string, projId?: string | null) => {
     setScreen(s);
     setSelectedProjectId(projId ?? selectedProjectId);
@@ -1803,15 +1758,15 @@ export default function Home() {
     const title = forms.meetTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch { showToast('Error', 'error'); }
   };
-  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await (window as any).firebase.firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch {} };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
   const openProject = (id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); };
 
@@ -1820,8 +1775,8 @@ export default function Home() {
     const imageData = forms.galleryImageData || '';
     if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
       const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
@@ -1829,7 +1784,7 @@ export default function Home() {
     } catch { showToast('Error al guardar foto', 'error'); }
   };
 
-  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await (window as any).firebase.firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch {} };
 
   const handleGalleryImageSelect = async (e: any) => {
     const file = e.target?.files?.[0];
@@ -2149,7 +2104,7 @@ export default function Home() {
         )}
 
         {/* In-App Notification Toasts (bottom-right) */}
-        <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
+        <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
           {inAppNotifs.map(n => (
             <div key={n.id} className="pointer-events-auto bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-2xl flex items-start gap-3 animate-slideUp cursor-pointer hover:border-[var(--af-accent)]/30 transition-all" style={{ width: '340px', maxWidth: 'calc(100vw - 32px)' }} onClick={() => { markNotifRead(n.id); if (n.screen) navigateTo(n.screen, n.itemId); }}>
               <div className="text-lg flex-shrink-0 mt-0.5">{n.icon}</div>
@@ -2352,63 +2307,43 @@ export default function Home() {
           {/* ===== PROJECTS ===== */}
           {screen === 'projects' && (<div className="animate-fadeIn">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto flex-wrap">
+              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto">
                 {[{ k: 'Todos', v: '' }, { k: 'Concepto', v: 'Concepto' }, { k: 'Diseño', v: 'Diseno' }, { k: 'Ejecución', v: 'Ejecucion' }, { k: 'Terminados', v: 'Terminado' }].map((tab, i) => {
-                  const projs = visibleProjects();
-                  const count = tab.v ? projs.filter(p => p.data.status === tab.v).length : projs.length;
+                  const count = tab.v ? visibleProjects.filter(p => p.data.status === tab.v).length : visibleProjects.length;
                   return (<button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, projFilter: tab.v }))}>{tab.k} ({count})</button>);
                 })}
+                {getMyCompanyId() && <span className="px-2 py-1 text-[10px] text-[var(--af-accent)] bg-[var(--af-accent)]/10 rounded-md whitespace-nowrap">🏢 {companies.find(c => c.id === getMyCompanyId())?.data?.name || 'Mi empresa'}</span>}
               </div>
               <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('project'); }}>
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proyecto
               </button>
             </div>
-            {/* Company filter bar */}
-            {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
-              <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-none pb-1">
-                <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.projCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, projCompanyFilter: '' }))}>
-                  🌐 Todas las empresas
-                </button>
-                {companies.map(c => (
-                  <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.projCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, projCompanyFilter: c.id }))}>
-                    🏢 {c.data.name}
-                  </button>
-                ))}
+            {visibleProjects.length === 0 ? (
+              <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">{projects.length === 0 ? 'Sin proyectos' : 'Sin proyectos visibles'}</div><div className="text-[13px]">{projects.length === 0 ? 'Crea tu primer proyecto' : 'Los proyectos están filtrados por tu empresa asignada'}</div></div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {visibleProjects.filter(p => !forms.projFilter || p.data.status === forms.projFilter).map(p => {
+                  const d = p.data, prog = d.progress || 0;
+                  return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
+                    <div className="flex justify-between items-start mb-2.5">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
+                      <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
+                        <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
+                        <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
+                      </div>
+                    </div>
+                    <div className="text-[15px] font-semibold mb-1">{d.name}</div>
+                    <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
+                    <div className="flex gap-4 mb-3">
+                      <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
+                      <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
+                    </div>
+                    <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
+                  </div>);
+                })}
               </div>
             )}
-            {(() => {
-              const projs = visibleProjects().filter(p => !forms.projFilter || p.data.status === forms.projFilter).filter(p => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
-              return projs.length === 0 ? (
-                <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {projs.map(p => {
-                    const d = p.data, prog = d.progress || 0;
-                    const compName = companies.find(c => c.id === d.companyId)?.data?.name;
-                    return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
-                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
-                      <div className="flex justify-between items-start mb-2.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
-                          {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {compName}</span>}
-                        </div>
-                        <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
-                          <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
-                          <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
-                        </div>
-                      </div>
-                      <div className="text-[15px] font-semibold mb-1">{d.name}</div>
-                      <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
-                      <div className="flex gap-4 mb-3">
-                        <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
-                        <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
-                      </div>
-                      <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-                    </div>);
-                  })}
-                </div>
-              );
-            })()}
           </div>)}
 
           {/* ===== PROJECT DETAIL ===== */}
@@ -2837,8 +2772,7 @@ export default function Home() {
                   </div>);
                 })}
               </div>
-              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><button className="ml-auto text-[11px] px-3 py-1 rounded-full bg-red-500 text-white font-semibold cursor-pointer border-none" onClick={async () => { const blob = await stopRecording(); if (blob) { const url = URL.createObjectURL(blob); setAudioPreviewUrl(url); setAudioPreviewDuration(recDuration); audioPreviewBlobRef.current = blob; } }}>Detener</button></div>)}
-              {audioPreviewUrl && !isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-accent)]/5 flex items-center gap-3"><div className="text-[20px]">🎙️</div><div className="flex-1 min-w-0"><div className="text-[12px] font-medium text-[var(--muted-foreground)]">Nota de voz ({fmtRecTime(audioPreviewDuration)})</div></div><button className="text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={() => { setAudioPreviewUrl(null); audioPreviewBlobRef.current = null; }}>Descartar</button></div>)}
+              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><span className="ml-auto text-[11px] text-red-400">Toca 🎙️ para detener y enviar</span></div>)}
               {pendingFiles.length > 0 && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-bg3)]"><div className="flex gap-2 overflow-x-auto pb-1">{pendingFiles.map(f => (<div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden">{f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}<button className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center cursor-pointer border-none leading-none" onClick={() => removePendingFile(f.id)}>✕</button><div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-0.5 py-px">{f.name}</div></div>))}</div></div>)}
               <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--card)]">
                 <div className="flex gap-1.5 items-end px-2.5 py-2.5 safe-bottom">
@@ -2967,26 +2901,12 @@ export default function Home() {
           {/* ===== TEAM MANAGEMENT ===== */}
           {screen === 'team' && (<div className="animate-fadeIn">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              {/* Company filter for team */}
-              {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
-                  <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
-                    👥 Todo el equipo
-                  </button>
-                  {companies.map(c => (
-                    <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
-                      🏢 {c.data.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</div>
+              <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.length} miembros en el equipo</div>
             </div>
             {/* Role Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
               {USER_ROLES.slice(0, 4).map(role => {
-                const filtered = teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter);
-                const count = filtered.filter(u => u.data.role === role).length;
+                const count = teamUsers.filter(u => u.data.role === role).length;
                 return (
                   <div key={role} className={`border rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
                     <div className="text-lg mb-0.5">{ROLE_ICONS[role]}</div>
@@ -2998,15 +2918,13 @@ export default function Home() {
             </div>
             {/* Team Members List */}
             <div className="space-y-2">
-              {teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).map(user => {
+              {teamUsers.map(user => {
                 const role = user.data.role || 'Miembro';
                 const isMe = user.id === authUser?.uid;
-                const myRole = getMyRole();
+                const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro';
                 const canChangeRole = myRole === 'Admin' || myRole === 'Director';
-                const canChangeCompany = myRole === 'Admin' || myRole === 'Director';
                 const userTasks = tasks.filter(t => t.data.assigneeId === user.id);
                 const userPending = userTasks.filter(t => t.data.status !== 'Completado').length;
-                const userCompName = companies.find(c => c.id === user.data.companyId)?.data?.name;
                 return (
                   <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
                     <div className="flex items-center gap-3">
@@ -3018,30 +2936,25 @@ export default function Home() {
                           <span className="text-[14px] font-semibold">{user.data.name}</span>
                           {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">Tú</span>}
                           <span className={`text-[9px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>{ROLE_ICONS[role]} {role}</span>
-                          {userCompName && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {userCompName}</span>}
                         </div>
                         <div className="text-[11px] text-[var(--muted-foreground)] truncate">{user.data.email}</div>
                         <div className="flex items-center gap-3 mt-1.5">
                           <span className="text-[10px] text-[var(--af-text3)]">{userTasks.length} tareas</span>
                           <span className="text-[10px] text-[var(--af-text3)]">{userPending} pendientes</span>
+                          {user.data.companyId && <span className="text-[10px] text-[var(--af-accent)]">🏢 {companies.find(c => c.id === user.data.companyId)?.data?.name || ''}</span>}
                         </div>
                       </div>
                       <div className="flex-shrink-0 flex flex-col gap-1.5 items-end">
-                        {canChangeCompany && !isMe ? (
-                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
-                            <option value="">Sin empresa</option>
-                            {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
-                          </select>
-                        ) : canChangeCompany && isMe ? (
-                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Tu empresa">
-                            <option value="">Sin empresa</option>
-                            {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
-                          </select>
-                        ) : null}
-                        {canChangeRole && !isMe ? (
-                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => updateUserRole(user.id, e.target.value)}>
-                            {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
-                          </select>
+                        {canChangeRole ? (
+                          <>
+                            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => updateUserRole(user.id, e.target.value)}>
+                              {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
+                            </select>
+                            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)}>
+                              <option value="">Sin empresa</option>
+                              {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
+                            </select>
+                          </>
                         ) : isMe ? (
                           <span className="text-[10px] text-[var(--af-text3)]">Tu rol</span>
                         ) : (
@@ -3077,7 +2990,7 @@ export default function Home() {
                       <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setEditingId(c.id); setForms(p => ({ ...p, compName: c.data.name || '', compNit: c.data.nit || '', compAddress: c.data.address || '', compPhone: c.data.phone || '', compEmail: c.data.email || '', compLegal: c.data.legalName || '' })); openModal('company'); }} title="Editar">
                         <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
-                      <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={async () => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(c.id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }} title="Eliminar">
+                      <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={async () => { if (!confirm('¿Eliminar esta empresa?')) return; try { await (window as any).firebase.firestore().collection('companies').doc(c.id).delete(); showToast('Empresa eliminada'); } catch { showToast('Error', 'error'); } }} title="Eliminar">
                         <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                       </button>
                     </div>
@@ -3362,7 +3275,7 @@ export default function Home() {
 
 
           {/* ===== INVENTORY SECTION ===== */}
-          {screen === 'inventory' && (<div className="animate-fadeIn">
+          {screen === 'inventory' && (<div className="animate-fadeIn p-4 sm:p-6">
             {/* Sub-tabs */}
             <div className="flex gap-1 mb-4 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
               {[{ id: 'dashboard' as const, label: '📊 Panel' }, { id: 'products' as const, label: '📦 Productos' }, { id: 'categories' as const, label: '🏷️ Categorías' }, { id: 'warehouse' as const, label: '🏢 Almacén' }, { id: 'movements' as const, label: '📋 Movimientos' }, { id: 'transfers' as const, label: '🔄 Transferencias' }, { id: 'reports' as const, label: '📊 Reportes' }].map(tab => (
@@ -4120,9 +4033,7 @@ export default function Home() {
                   const proj = projects.find(p => p.id === t.data.projectId);
                   const sc = GANTT_STATUS_CFG[t.data.status] || { label: t.data.status, color: '#6b7280' };
                   const pc = GANTT_PRIO_CFG[t.data.priority] || { label: t.data.priority || '', bg: '#f1f5f9', color: '#475569' };
-                  return (
-                  /* Admin tooltip — hidden on mobile (touch has no hover) */
-                  <div key={t.id} className="hidden md:block fixed z-[200] bg-[var(--foreground)] text-[var(--card)] rounded-lg p-3 text-[11px] max-w-[280px] shadow-xl pointer-events-none" style={{ left: adminTooltipPos.x, top: adminTooltipPos.y - 10, transform: 'translateY(-100%)' }}>
+                  return (<div className="fixed z-[200] bg-[var(--foreground)] text-[var(--card)] rounded-lg p-3 text-[11px] max-w-[280px] shadow-xl pointer-events-none" style={{ left: adminTooltipPos.x, top: adminTooltipPos.y - 10, transform: 'translateY(-100%)' }}>
                     <div className="flex gap-2"><span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold" style={{ backgroundColor: pc.bg + '33', color: pc.color }}>{pc.label}</span><span className="text-[9px] text-[var(--muted-foreground)]">{sc.label}</span></div>
                     <div className="text-[12px] font-semibold mt-1">{t.data.title}</div>
                     {proj && <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{proj.data.name}</div>}
@@ -4698,7 +4609,7 @@ export default function Home() {
               {/* Mi Actividad Financiera */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
                 <div className="text-[13px] sm:text-[15px] font-semibold mb-3">Actividad Financiera</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3.5 text-center">
                     <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalSpent)}</div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-1">Gastos registrados</div>
@@ -5021,7 +4932,7 @@ export default function Home() {
 
       {/* Approval Modal */}
       {modals.approval && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('approval')}>
-        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
           <div className="text-lg font-semibold mb-5">Nueva aprobación</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Título *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="¿Qué necesita aprobación?" value={forms.appTitle || ''} onChange={e => setForms(p => ({ ...p, appTitle: e.target.value }))} /></div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Descripción</label><textarea className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none" rows="3" placeholder="Detalles..." value={forms.appDesc || ''} onChange={e => setForms(p => ({ ...p, appDesc: e.target.value }))} /></div>

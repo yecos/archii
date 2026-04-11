@@ -93,7 +93,7 @@ export default function RootLayout({
           }
         ` }} />
         {children}
-        {/* AI Assistant - Floating wrapper (lee contexto del store) */}
+        {/* AI Assistant - Floating wrapper (chat + quick actions) */}
         <AIFloatingWrapper />
         {/* Keyboard Shortcuts - Global initialization */}
         <KeyboardShortcutsInitializer />
