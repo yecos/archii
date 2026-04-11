@@ -5302,6 +5302,195 @@ export default function Home() {
         </div>
       </div>)}
 
+      {/* ===== REPORTES ===== */}
+      {screen === 'reports' && (<div className="animate-fadeIn">
+        {(() => {
+          const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
+          const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
+          const projByStatus: Record<string, number> = {};
+          projects.forEach(p => { const st = p.data.status || 'Otro'; projByStatus[st] = (projByStatus[st] || 0) + 1; });
+          const taskCompleted = tasks.filter(t => t.data.status === 'Completado').length;
+          const taskInProgress = tasks.filter(t => t.data.status === 'En progreso').length;
+          const taskPending = tasks.filter(t => t.data.status === 'Pendiente' || t.data.status === 'Por hacer').length;
+          const taskOverdue = tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+          const taskByPrio: Record<string, number> = {};
+          tasks.forEach(t => { const pr = t.data.priority || 'Otro'; taskByPrio[pr] = (taskByPrio[pr] || 0) + 1; });
+          const catSpend: Record<string, number> = {};
+          expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
+          const topCats = Object.entries(catSpend).sort((a, b) => b[1] - a[1]).slice(0, 5);
+          const budgetPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+          const membersByRole: Record<string, number> = {};
+          teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; membersByRole[r] = (membersByRole[r] || 0) + 1; });
+          const tasksPerMember: Record<string, number> = {};
+          tasks.forEach(t => { if (t.data.assigneeId) { tasksPerMember[t.data.assigneeId] = (tasksPerMember[t.data.assigneeId] || 0) + 1; } });
+          const statusIcon: Record<string, string> = { 'Ejecucion': '🏗️', 'Terminado': '✅', 'Diseno': '🎨', 'Concepto': '📐', 'Pausado': '⏸️' };
+          const prioIcon: Record<string, string> = { 'Alta': '🔴', 'Media': '🟡', 'Baja': '🟢' };
+          return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Card 1: Estado de Proyectos */}
+            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">📁 Estado de Proyectos</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado Total</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Utilización</div>
+                </div>
+              </div>
+              {Object.keys(projByStatus).length > 0 && <div className="space-y-2">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por estado</div>
+                {Object.entries(projByStatus).map(([st, cnt]) => (
+                  <div key={st} className="flex items-center gap-2">
+                    <span className="text-sm w-5">{statusIcon[st] || '📌'}</span>
+                    <span className="text-sm text-[var(--foreground)] flex-1">{st}</span>
+                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+                  </div>
+                ))}
+              </div>}
+              {projects.length > 0 && <div className="mt-4 space-y-2">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>
+                {projects.slice(0, 5).map(p => (
+                  <div key={p.id}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div>
+                    <div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div>
+                  </div>
+                ))}
+                {projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos más</div>}
+              </div>}
+            </div>
+
+            {/* Card 2: Tareas y Productividad */}
+            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">✅ Tareas y Productividad</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--af-accent)]">{tasks.length}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Total Tareas</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-emerald-400">{taskCompleted}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Completadas</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{taskInProgress}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div>
+                </div>
+              </div>
+              {taskOverdue > 0 && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
+                  <span className="text-red-400">⚠️</span>
+                  <span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div>
+                <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div>
+                <div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div>
+              </div>}
+              {Object.keys(taskByPrio).length > 0 && <div className="space-y-2">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por prioridad</div>
+                {Object.entries(taskByPrio).map(([pr, cnt]) => (
+                  <div key={pr} className="flex items-center gap-2">
+                    <span className="text-sm w-5">{prioIcon[pr] || '📌'}</span>
+                    <span className="text-sm text-[var(--foreground)] flex-1">{pr}</span>
+                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+                  </div>
+                ))}
+              </div>}
+            </div>
+
+            {/* Card 3: Presupuesto */}
+            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">💰 Presupuesto</h3>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalBudget)}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div>
+                </div>
+              </div>
+              <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4">
+                <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilización del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div>
+                <div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div>
+              </div>
+              {topCats.length > 0 && <div className="space-y-2">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Top categorías de gasto</div>
+                {topCats.map(([cat, amt]) => {
+                  const pct = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
+                  return (
+                    <div key={cat}>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">{cat}</span><span className="text-[var(--muted-foreground)]">{fmtCOP(amt)} ({pct}%)</span></div>
+                      <div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5 transition-all" style={{ width: `${pct}%` }} /></div>
+                    </div>
+                  );
+                })}
+              </div>}
+              {expenses.length === 0 && <div className="text-sm text-[var(--muted-foreground)] text-center py-4">Sin gastos registrados</div>}
+            </div>
+
+            {/* Card 4: Equipo */}
+            <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">👥 Equipo</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div>
+                </div>
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div>
+                </div>
+              </div>
+              {Object.keys(membersByRole).length > 0 && <div className="space-y-2 mb-4">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Miembros por rol</div>
+                {Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (
+                  <div key={role} className="flex items-center gap-2">
+                    <span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span>
+                    <span className="text-sm text-[var(--foreground)] flex-1">{role}</span>
+                    <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+                  </div>
+                ))}
+              </div>}
+              {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2">
+                <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>
+                {Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {
+                  const member = teamUsers.find(u => u.id === uid);
+                  return (
+                    <div key={uid} className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div>
+                      <span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span>
+                      <span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span>
+                    </div>
+                  );
+                })}
+              </div>}
+              {teamUsers.length === 0 && <div className="text-sm text-[var(--muted-foreground)] text-center py-4">Sin miembros en el equipo</div>}
+            </div>
+          </div>;
+        })()}
+      </div>)}
+
       {/* Lightbox Viewer */}
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
   <div className="relative w-full h-full flex flex-col items-center justify-center p-4" onClick={e => e.stopPropagation()}>

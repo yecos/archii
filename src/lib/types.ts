@@ -305,6 +305,7 @@ export const NAV_ITEMS = [
   { id: 'clientPortal', icon: '🤝', label: 'Portal Cliente' },
   { id: 'gallery', icon: '📸', label: 'Galería' },
   { id: 'inventory', icon: '📦', label: 'Inventario' },
+  { id: 'reports', icon: '📊', label: 'Reportes' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
 ] as const;
 
@@ -324,5 +325,6 @@ export const SCREEN_TITLES: Record<string, string> = {
   clientPortal: 'Portal Cliente',
   gallery: 'Galería de Fotos',
   inventory: 'Inventario',
+  reports: 'Reportes',
   admin: 'Panel de Administración',
 };
