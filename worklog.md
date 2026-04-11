@@ -224,3 +224,28 @@ Stage Summary:
 - ZIP created: /home/z/my-project/download/archiflow-v2-time-kanban-reports.zip (556K)
 - All 6 features implemented and compiling correctly
 ---
+
+---
+Task ID: 1
+Agent: main
+Task: Agregar emojis al chat y chat directo con colaboradores
+
+Work Log:
+- Investigado el componente de chat en HomeContent.tsx (input en línea 3159, mensajes en 3119)
+- Agregado estado `showEmojiPicker` y `chatDmUser`
+- Insertado botón 😀 en la barra de chat (entre input y micrófono)
+- Creado popup de emoji picker con 55 emojis (caras, gestos, arquitectura)
+- Agregada sección "Colaboradores" en la lista de conversaciones del chat
+- Implementado sistema de DMs usando colección `directMessages` en Firestore
+- Cada DM usa ID `dm_{uid1}_{uid2}` ordenado alfabéticamente
+- Actualizado `sendMessage` para soportar DM, General y Project channels
+- Actualizado loading de mensajes con listener para DMs
+- Actualizado header del chat para mostrar nombre del colaborador en DM
+- Cerrado emoji picker al enviar, navegar o cambiar conversación
+- Cero errores de TypeScript nuevos
+
+Stage Summary:
+- Emojis: Botón 😀 con grid popup de 55 emojis (emociones + arquitectura)
+- DMs: Chat directo con cada colaborador, se muestra en lista de conversaciones
+- Firestore: Nueva colección `directMessages/{dmId}/messages/`
+- Zip actualizado: https://tmpfiles.org/dl/33037463/archiflow-latest.zip
