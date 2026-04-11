@@ -21,6 +21,9 @@ import { useFirestoreData } from '@/hooks/useFirestoreData';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
+/* ===== WHATSAPP NOTIFICATIONS ===== */
+import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
+
 /* ===== TYPES & CONSTANTS — now imported from @/lib/types.ts ===== */
 /* ===== HELPERS — now imported from @/lib/helpers.ts ===== */
 
@@ -1208,7 +1211,16 @@ export default function Home() {
     const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
-      else { await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Tarea creada'); }
+      else {
+        await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
+        showToast('Tarea creada');
+        // Notificar por WhatsApp al asignado
+        if (forms.taskAssignee && forms.taskProject) {
+          const proj = projects.find(p => p.id === forms.taskProject);
+          const projName = proj?.data.name || 'Proyecto';
+          notifyWhatsApp.taskAssigned(forms.taskAssignee, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {});
+        }
+      }
       closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
@@ -1392,8 +1404,19 @@ export default function Home() {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount: Number(forms.expAmount) || 0, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
-    try { await db.collection('expenses').add(data); showToast('Gasto registrado'); closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    const amount = Number(forms.expAmount) || 0;
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    try {
+      await db.collection('expenses').add(data);
+      showToast('Gasto registrado');
+      closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] }));
+      // Notificar por WhatsApp al creador
+      if (forms.expProject) {
+        const proj = projects.find(p => p.id === forms.expProject);
+        const projName = proj?.data.name || 'Proyecto';
+        notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(() => {});
+      }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -1476,11 +1499,23 @@ export default function Home() {
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
+      // Notificar por WhatsApp (broadcast a admins)
+      const projName = currentProject?.data.name || 'Proyecto';
+      notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const updateApproval = async (id: string, status: string) => {
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status }); showToast('Estado actualizado'); } catch (err) { console.error("[ArchiFlow]", err); }
+    try {
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
+      showToast('Estado actualizado');
+      // Notificar por WhatsApp al creador de la aprobación
+      const approval = approvals.find(a => a.id === id);
+      if (approval?.data?.createdBy) {
+        const projName = currentProject?.data.name || 'Proyecto';
+        notifyWhatsApp.approvalResolved(approval.data.createdBy, approval.data.title, status, authUser?.displayName || undefined).catch(() => {});
+      }
+    } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
   const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
