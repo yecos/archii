@@ -2,25 +2,64 @@ import { initializeApp, getApps, getApp, cert, ServiceAccount } from 'firebase-a
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
-const serviceAccount: ServiceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID || 'archiflow-c2855',
-  privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
-};
+let _adminDb: ReturnType<typeof getFirestore> | null = null;
+let _adminAuth: ReturnType<typeof getAuth> | null = null;
+let _initAttempted = false;
 
-const adminApp = getApps().length ? getApp() : initializeApp({
-  credential: serviceAccount.privateKey && serviceAccount.clientEmail
-    ? cert(serviceAccount)
-    : cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}')),
-});
+function initAdmin() {
+  if (_initAttempted) return;
+  _initAttempted = true;
 
-export const adminDb = getFirestore(adminApp);
-export const adminAuth = getAuth(adminApp);
-export { FieldValue };
+  try {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
-// Alias used by other modules (whatsapp, etc.)
-export function getAdminDb() {
-  return adminDb;
+    if (!projectId || !rawKey || !clientEmail) {
+      console.warn('[Firebase Admin] Missing FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL env vars — admin SDK not initialized');
+      return;
+    }
+
+    const privateKey = rawKey.replace(/\\n/g, '\n');
+
+    const serviceAccount: ServiceAccount = {
+      projectId,
+      privateKey,
+      clientEmail,
+    };
+
+    const adminApp = getApps().length ? getApp() : initializeApp({
+      credential: cert(serviceAccount),
+    });
+
+    _adminDb = getFirestore(adminApp);
+    _adminAuth = getAuth(adminApp);
+    console.log('[Firebase Admin] Initialized successfully');
+  } catch (err: any) {
+    console.error('[Firebase Admin] Initialization failed:', err?.message || err);
+  }
 }
 
-export default adminApp;
+// Lazy getter — safe to call even without credentials (returns null)
+export function getAdminDb() {
+  initAdmin();
+  return _adminDb;
+}
+
+export function adminDb() {
+  initAdmin();
+  return _adminDb;
+}
+
+export function adminAuth() {
+  initAdmin();
+  return _adminAuth;
+}
+
+export { FieldValue };
+
+// Default export (lazy)
+export default {
+  get db() { initAdmin(); return _adminDb; },
+  get auth() { initAdmin(); return _adminAuth; },
+};
