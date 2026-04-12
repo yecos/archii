@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import type { NextConfig } from \"next\";\n\nconst nextConfig: NextConfig = {\n  typescript: {\n    ignoreBuildErrors: true,\n  },\n  reactStrictMode: false,\n};\n\nexport default nextConfig;\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/yecos/apparq/main/next.config.ts",
+    "usage": {
+      "tokens": 87
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 87
+    }
+  },
+  "status": 20000
+}

@@ -73,6 +73,8 @@ export default function Home() {
   const [oneDriveFiles, setOneDriveFiles] = useState<OneDriveFile[]>([]);
   const [odProjectFolder, setOdProjectFolder] = useState<string | null>(null);
   const [showOneDrive, setShowOneDrive] = useState(false);
+  const [msTokenTime, setMsTokenTime] = useState<number>(0);
+  const msRefreshLockRef = useRef(false);
 
   // Calendar state
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -406,26 +408,34 @@ export default function Home() {
     if (!ready) return;
     const fb = (window as any).firebase;
     const auth = fb.auth();
+    // Ensure LOCAL persistence so session survives refreshes
+    auth.setPersistence(fb.auth.Auth.Persistence.LOCAL).catch(() => {});
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
-      setAuthUser(user || null);
-      if (user) {
-        await fb.auth().currentUser;
-        const db = fb.firestore();
-        // Save user profile
-        const ref = db.collection('users').doc(user.uid);
-        const snap = await ref.get();
-        const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-        console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
-        if (!snap.exists) {
-          await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
-        } else if (isAdminEmail) {
-          // Force admin role for ADMIN_EMAILS on every login
-          const current = snap.data()?.role;
-          if (current !== 'Admin') {
-            console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
-            await ref.update({ role: 'Admin' });
+      try {
+        setAuthUser(user || null);
+        if (user) {
+          await fb.auth().currentUser;
+          const db = fb.firestore();
+          // Save user profile
+          const ref = db.collection('users').doc(user.uid);
+          const snap = await ref.get();
+          const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
+          if (!snap.exists) {
+            try { await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() }); } catch (writeErr: any) { console.warn('[ArchiFlow] Error creando perfil de usuario:', writeErr); }
+          } else if (isAdminEmail) {
+            // Force admin role for ADMIN_EMAILS on every login
+            const current = snap.data()?.role;
+            if (current !== 'Admin') {
+              console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
+              try { await ref.update({ role: 'Admin' }); } catch (updateErr: any) { console.warn('[ArchiFlow] Error actualizando rol:', updateErr); }
+            }
           }
         }
+      } catch (err: any) {
+        console.error('[ArchiFlow] Error en auth state:', err);
+        // Even if Firestore fails, keep the user logged in
+        if (user) setAuthUser(user);
       }
       setLoading(false);
     });
@@ -960,25 +970,30 @@ export default function Home() {
     try { await (window as any).firebase.auth().signInWithPopup(new ((window as any).firebase.auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
   };
 
-  const doMicrosoftLogin = async () => {
+  const doMicrosoftLogin = async (isRefresh = false) => {
     try {
       const provider = new ((window as any).firebase.auth).OAuthProvider('microsoft.com');
-      provider.setCustomParameters({ prompt: 'select_account' });
+      provider.addScope('Files.ReadWrite');
+      provider.addScope('offline_access');
+      provider.setCustomParameters({ prompt: isRefresh ? 'none' : 'select_account' });
       const result = await (window as any).firebase.auth().signInWithPopup(provider);
-      // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
         setMsAccessToken(credential.accessToken);
         setMsConnected(true);
+        setMsTokenTime(Date.now());
         localStorage.setItem('msAccessToken', credential.accessToken);
         localStorage.setItem('msConnected', 'true');
-        showToast('Conectado con Microsoft');
+        localStorage.setItem('msTokenTime', String(Date.now()));
+        if (!isRefresh) showToast('Conectado con Microsoft');
+        return true;
       }
     } catch (e: any) {
-      if (e.code !== 'auth/popup-closed-by-user') {
-        showToast('Error al conectar con Microsoft', 'error');
+      if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/popup-blocked') {
+        showToast(isRefresh ? 'Sesión de Microsoft expirada — reconecta manualmente' : 'Error al conectar con Microsoft', 'error');
       }
     }
+    return false;
   };
 
   const disconnectMicrosoft = () => {
@@ -986,30 +1001,90 @@ export default function Home() {
     setMsConnected(false);
     setOneDriveFiles([]);
     setOdProjectFolder(null);
+    setMsTokenTime(0);
     localStorage.removeItem('msAccessToken');
     localStorage.removeItem('msConnected');
+    localStorage.removeItem('msTokenTime');
     showToast('Microsoft desconectado');
   };
 
-  // Restore Microsoft session
-  useEffect(() => {
-    const saved = localStorage.getItem('msConnected');
-    const token = localStorage.getItem('msAccessToken');
-    if (saved === 'true' && token) {
-      setMsConnected(true);
-      setMsAccessToken(token);
+  // Auto-refresh Microsoft token when expired (55 min)
+  const isMsTokenExpired = useCallback(() => {
+    if (!msTokenTime) return true;
+    return Date.now() - msTokenTime > 55 * 60 * 1000;
+  }, [msTokenTime]);
+
+  const refreshMsToken = useCallback(async (): Promise<boolean> => {
+    if (msRefreshLockRef.current) return false;
+    msRefreshLockRef.current = true;
+    try {
+      const success = await doMicrosoftLogin(true);
+      return success;
+    } finally {
+      msRefreshLockRef.current = false;
     }
   }, []);
 
-  // OneDrive API helpers
-  const graphApiGet = async (endpoint: string) => {
+  // Restore Microsoft session (check token age)
+  useEffect(() => {
+    const saved = localStorage.getItem('msConnected');
+    const token = localStorage.getItem('msAccessToken');
+    const tokenTime = parseInt(localStorage.getItem('msTokenTime') || '0');
+    if (saved === 'true' && token) {
+      setMsConnected(true);
+      setMsAccessToken(token);
+      setMsTokenTime(tokenTime || Date.now());
+    }
+  }, []);
+
+  // OneDrive API helpers — with auto-refresh on 401
+  const graphApiGet = async (endpoint: string): Promise<any | null> => {
     if (!msAccessToken) return null;
-    const res = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
-      headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' }
-    });
-    if (res.status === 401) { disconnectMicrosoft(); return null; }
-    if (!res.ok) return null;
-    return res.json();
+    try {
+      const res = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+        headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' }
+      });
+      if (res.status === 401) {
+        // Token expired — try auto-refresh
+        const refreshed = await refreshMsToken();
+        if (refreshed && msAccessToken) {
+          const retry = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+            headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' }
+          });
+          if (retry.ok) return retry.json();
+        }
+        disconnectMicrosoft();
+        return null;
+      }
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  };
+
+  const graphApiPost = async (endpoint: string, body: any): Promise<any | null> => {
+    if (!msAccessToken) return null;
+    try {
+      const res = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.status === 401) {
+        const refreshed = await refreshMsToken();
+        if (refreshed && msAccessToken) {
+          const retry = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          if (retry.ok) return retry.json();
+        }
+        disconnectMicrosoft();
+        return null;
+      }
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
   };
 
   const ensureProjectFolder = async (projectName: string) => {
@@ -1024,13 +1099,8 @@ export default function Home() {
       if (archiFolder) {
         archiFolderId = archiFolder.id;
       } else {
-        const created = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'ArchiFlow', folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
-        });
-        if (!created.ok) { setMsLoading(false); return null; }
-        const createdData = await created.json();
+        const createdData = await graphApiPost('/me/drive/root/children', { name: 'ArchiFlow', folder: {}, '@microsoft.graph.conflictBehavior': 'rename' });
+        if (!createdData) { setMsLoading(false); return null; }
         archiFolderId = createdData.id;
       }
       // Check if project subfolder exists
@@ -1041,13 +1111,8 @@ export default function Home() {
       if (projFolder) {
         projFolderId = projFolder.id;
       } else {
-        const pCreated = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${archiFolderId}/children`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: projectName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
-        });
-        if (!pCreated.ok) { setMsLoading(false); return null; }
-        const pCreatedData = await pCreated.json();
+        const pCreatedData = await graphApiPost(`/me/drive/items/${archiFolderId}/children`, { name: projectName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' });
+        if (!pCreatedData) { setMsLoading(false); return null; }
         projFolderId = pCreatedData.id;
       }
       setOdProjectFolder(projFolderId);
@@ -1072,12 +1137,25 @@ export default function Home() {
     if (!msAccessToken) return;
     setMsLoading(true);
     try {
-      const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${folderId}:/${encodeURIComponent(file.name)}:/content`, {
+      const graphUrl = `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}:/${encodeURIComponent(file.name)}:/content`;
+      const res = await fetch(graphUrl, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${msAccessToken}` },
         body: file
       });
-      if (res.ok) {
+      if (res.status === 401) {
+        const refreshed = await refreshMsToken();
+        if (refreshed && msAccessToken) {
+          const retry = await fetch(graphUrl, {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${msAccessToken}` },
+            body: file
+          });
+          if (retry.ok) { showToast('Archivo subido a OneDrive'); loadOneDriveFiles(folderId); setMsLoading(false); return; }
+        }
+        disconnectMicrosoft();
+        showToast('Sesión expirada — reconecta Microsoft', 'error');
+      } else if (res.ok) {
         showToast('Archivo subido a OneDrive');
         loadOneDriveFiles(folderId);
       } else {
@@ -1091,12 +1169,28 @@ export default function Home() {
     if (!confirm('¿Eliminar archivo de OneDrive?')) return;
     setMsLoading(true);
     try {
-      const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {
+      const graphUrl = `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`;
+      const res = await fetch(graphUrl, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${msAccessToken}` }
       });
-      if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); }
-      else { showToast('Error al eliminar', 'error'); }
+      if (res.status === 401) {
+        const refreshed = await refreshMsToken();
+        if (refreshed && msAccessToken) {
+          const retry = await fetch(graphUrl, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${msAccessToken}` }
+          });
+          if (retry.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); setMsLoading(false); return; }
+        }
+        disconnectMicrosoft();
+        showToast('Sesión expirada', 'error');
+      } else if (res.ok) {
+        showToast('Eliminado de OneDrive');
+        loadOneDriveFiles(folderId);
+      } else {
+        showToast('Error al eliminar', 'error');
+      }
     } catch { showToast('Error', 'error'); }
     setMsLoading(false);
   };
@@ -1849,6 +1943,7 @@ export default function Home() {
     { divider: true },
     { id: 'budget', label: 'Presupuestos', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg> },
     { id: 'files', label: 'Planos y archivos', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+    { id: 'onedrive', label: 'OneDrive', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><path d="M10.5 18.5H5.5a3.5 3.5 0 110-7h.2A4.5 4.5 0 0118.5 7.5a3 3 0 013 3h.2a3.5 3.5 0 010 7h-5" opacity="0.6"/><path d="M10.5 18.5L6 22l1.5-3.5L6 15l4.5 3.5z" opacity="0.8"/><path d="M16 14l-3 3-1.5-2.5L16 14z" opacity="0.7"/></svg>, badge: msConnected ? '✓' : undefined },
     { id: 'obra', label: 'Seguimiento obra', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> },
     { id: 'gallery', label: 'Galería', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, badge: galleryPhotos.length > 0 ? galleryPhotos.length : undefined },
     { id: 'inventory', label: 'Inventario', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>, badge: invLowStock.length > 0 ? invLowStock.length : undefined },
@@ -1859,11 +1954,12 @@ export default function Home() {
     { id: 'calendar', label: 'Calendario', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
     { divider: true },
+    { id: 'settings', label: 'Configuración', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> },
     { id: 'profile', label: 'Mi Perfil', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
     { id: 'install', label: 'Instalar App', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> },
   ];
 
-  const screenTitles: Record<string, string> = { dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes', budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario', admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo', calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App', projectDetail: currentProject?.data.name || 'Proyecto' };
+  const screenTitles: Record<string, string> = { dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes', budget: 'Presupuestos', files: 'Planos y archivos', onedrive: 'OneDrive', gallery: 'Galería', inventory: 'Inventario', admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo', calendar: 'Calendario', portal: 'Portal cliente', settings: 'Configuración', profile: 'Mi Perfil', install: 'Instalar App', projectDetail: currentProject?.data.name || 'Proyecto' };
 
   const userName = authUser?.displayName || authUser?.email?.split('@')[0] || 'Usuario';
   const initials = getInitials(userName);
@@ -1913,6 +2009,15 @@ export default function Home() {
           </div>
           <div><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v1.0</div></div>
         </div>
+        {/* Profile - TOP */}
+        <div className="px-3 py-3 border-b border-[var(--border)] flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 ${avatarColor(authUser?.uid)}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-semibold truncate">{userName}</div>
+            <div className="text-[11px] text-[var(--muted-foreground)]">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; const displayRole = isEmailAdmin ? 'Admin' : myRole; return `${ROLE_ICONS[displayRole] || '👤'} ${displayRole}`; })()}</div>
+          </div>
+          <svg viewBox="0 0 24 24" className="w-4 h-4 text-[var(--af-text3)] stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1">Principal</div>
           {navItems.filter(n => !n.divider).slice(0, 4).map(n => (
@@ -1929,10 +2034,6 @@ export default function Home() {
               <span>{n.label}</span>
             </div>
           ))}
-        </div>
-        <div className="border-t border-[var(--border)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid)} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
-          <div className="flex-1 min-w-0"><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; const displayRole = isEmailAdmin ? 'Admin' : myRole; return `${ROLE_ICONS[displayRole] || '👤'} ${displayRole}`; })()}</div></div>
         </div>
       </aside>
 
@@ -4529,6 +4630,87 @@ export default function Home() {
               </div>
             </div>);
           })()}
+
+          {/* ===== SETTINGS SCREEN ===== */}
+          {screen === 'settings' && (<div className="animate-fadeIn space-y-5">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">Apariencia</div>
+              <div className="flex items-center justify-between py-3 border-b border-[var(--border)]">
+                <div>
+                  <div className="text-sm font-medium">Modo oscuro</div>
+                  <div className="text-xs text-[var(--muted-foreground)]">Cambiar entre tema claro y oscuro</div>
+                </div>
+                <button onClick={toggleTheme} className={`w-12 h-7 rounded-full transition-colors relative ${darkMode ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-all ${darkMode ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">Notificaciones</div>
+              <div className="space-y-3">
+                {Object.entries(notifPrefs).map(([key, val]) => (
+                  <div key={key} className="flex items-center justify-between py-2">
+                    <div className="text-sm capitalize">{key === 'chat' ? '💬 Chat' : key === 'tasks' ? '📋 Tareas' : key === 'meetings' ? '📅 Reuniones' : key === 'approvals' ? '✅ Aprobaciones' : key === 'inventory' ? '📦 Inventario' : key === 'projects' ? '🏗️ Proyectos' : `🔔 ${key}`}</div>
+                    <button onClick={() => toggleNotifPref(key)} className={`w-10 h-6 rounded-full transition-colors relative ${val ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${val ? 'left-5' : 'left-1'}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">Sonido de notificaciones</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm">Tono de alerta</div>
+                <button onClick={() => setNotifSound(!notifSound)} className={`w-10 h-6 rounded-full transition-colors relative ${notifSound ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${notifSound ? 'left-5' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+          </div>)}
+
+          {/* ===== ONEDRIVE SCREEN ===== */}
+          {screen === 'onedrive' && (<div className="animate-fadeIn space-y-5">
+            {!msConnected ? (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 text-center">
+                <div className="text-4xl mb-3">☁️</div>
+                <div className="text-[15px] font-semibold mb-2">Conectar OneDrive</div>
+                <div className="text-xs text-[var(--muted-foreground)] mb-4 max-w-md mx-auto">Conecta tu cuenta de Microsoft para gestionar archivos de proyectos directamente en OneDrive. Cada proyecto tendrá su propia carpeta en la nube.</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 max-w-lg mx-auto">
+                  <div className="bg-[var(--af-bg3)] rounded-xl p-3 text-center"><div className="text-lg mb-1">☁️</div><div className="text-[11px] font-medium">Almacenamiento en la nube</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-xl p-3 text-center"><div className="text-lg mb-1">📁</div><div className="text-[11px] font-medium">Carpeta por proyecto</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-xl p-3 text-center"><div className="text-lg mb-1">🔄</div><div className="text-[11px] font-medium">Sincronización</div></div>
+                </div>
+                <button className="bg-[#0078d4] hover:bg-[#106ebe] text-white border-none rounded-xl px-6 py-3 text-sm font-semibold cursor-pointer transition-colors" onClick={() => doMicrosoftLogin()}>
+                  Conectar con Microsoft
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2">
+                  <span className="text-emerald-400 text-sm">✓</span>
+                  <span className="text-sm text-emerald-400">Conectado con Microsoft OneDrive</span>
+                  <button className="ml-auto text-xs text-red-400 hover:text-red-300 cursor-pointer" onClick={disconnectMicrosoft}>Desconectar</button>
+                </div>
+                <div className="text-xs text-[var(--muted-foreground)]">Los archivos se organizan en <strong>OneDrive/ArchiFlow/[Proyecto]/</strong>. Abre un proyecto para ver sus archivos.</div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+                  <div className="text-[15px] font-semibold mb-4">Proyectos — Abrir en OneDrive</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {projects.map(p => (
+                      <button key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-3 text-left cursor-pointer hover:border-[#0078d4] transition-all flex items-center gap-3" onClick={() => openOneDriveForProject(p.data.name)}>
+                        <div className="w-9 h-9 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400 flex-shrink-0">📁</div>
+                        <div>
+                          <div className="text-sm font-medium">{p.data.name}</div>
+                          <div className="text-[11px] text-[var(--muted-foreground)]">{statusColor(p.data.status)} <span className="ml-1">{p.data.status}</span></div>
+                        </div>
+                      </button>
+                    ))}
+                    {projects.length === 0 && <div className="text-sm text-[var(--muted-foreground)] col-span-2 text-center py-4">No hay proyectos creados</div>}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>)}
 
           {/* ===== INSTALL APP GUIDE ===== */}
           {screen === 'install' && (<div className="animate-fadeIn space-y-5">
