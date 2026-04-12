@@ -91,7 +91,7 @@ export function useFirestoreData(
                 email: user.email,
                 photoURL: user.photoURL || '',
                 role: isAdminEmail ? 'Admin' : 'Miembro',
-                createdAt: fb.firestore.FieldValue.serverTimestamp(),
+                createdAt: fb.FieldValue.serverTimestamp(),
               });
             } else if (isAdminEmail) {
               const current = snap.data()?.role;

@@ -476,7 +476,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const isAdminEmail = ADMIN_EMAILS.includes(user.email);
         console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
         if (!snap.exists) {
-          await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+          await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.FieldValue.serverTimestamp() });
         } else if (isAdminEmail) {
           // Force admin role for ADMIN_EMAILS on every login
           const current = snap.data()?.role;
@@ -1091,7 +1091,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
-      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
+      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().FieldValue.serverTimestamp() });
     } catch (e: any) { showToast(e.code === 'auth/email-already-in-use' ? 'Ese correo ya está registrado' : e.code === 'auth/weak-password' ? 'Mínimo 6 caracteres' : 'Error al registrar', 'error'); }
   };
 
@@ -1551,7 +1551,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const ts = getFirebase().FieldValue.serverTimestamp();
     const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
@@ -1574,7 +1574,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     setIsSavingTask(true);
     const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const ts = getFirebase().FieldValue.serverTimestamp();
     const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
@@ -1601,7 +1601,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const updateProjectProgress = async (val: number) => {
     if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
   const updateUserName = async (newName: string) => {
@@ -1611,7 +1611,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const toggleTask = async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
   const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -1622,7 +1622,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!chatProjectId) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: getFirebase().FieldValue.serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -1780,7 +1780,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
     const amount = Number(forms.expAmount) || 0;
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: getFirebase().FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       await db.collection('expenses').add(data);
       showToast('Gasto registrado');
@@ -1800,7 +1800,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: getFirebase().FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
@@ -1816,7 +1816,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: getFirebase().FieldValue.serverTimestamp(), updatedAt: getFirebase().FieldValue.serverTimestamp(), createdBy: authUser?.uid };
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
@@ -1840,7 +1840,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const base64 = await fileToBase64(file);
       const db = getFirebase().firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
+      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
@@ -1857,7 +1857,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const initDefaultPhases = async () => {
     if (workPhases.length > 0) return;
     const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const ts = getFirebase().FieldValue.serverTimestamp();
     for (let i = 0; i < DEFAULT_PHASES.length; i++) {
       await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
     }
@@ -1872,7 +1872,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().FieldValue.serverTimestamp(), createdBy: authUser?.uid });
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
       // Notificar por WhatsApp (broadcast a admins)
       const projName = currentProject?.data.name || 'Proyecto';
@@ -1929,7 +1929,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
@@ -1959,7 +1959,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
@@ -1977,7 +1977,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const type = forms.invMovType || 'Entrada';
       const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
       await db.collection('invMovements').add(data);
@@ -2004,7 +2004,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const product = invProducts.find(p => p.id === productId);
       const ws = product ? buildWarehouseStock(product) : {};
       const fromStock = ws[from] || 0;
@@ -2179,7 +2179,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
@@ -2196,7 +2196,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      const ts = getFirebase().FieldValue.serverTimestamp();
       const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
@@ -2291,7 +2291,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const fb = getFirebase();
       const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const ts = fb.FieldValue.serverTimestamp();
       const proj = projects.find(p => p.id === timeSession.projectId);
       await db.collection('timeEntries').add({
         projectId: timeSession.projectId,
@@ -2320,7 +2320,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const fb = getFirebase();
       const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const ts = fb.FieldValue.serverTimestamp();
       await db.collection('timeEntries').add({
         projectId: forms.teProject,
         phaseName: forms.tePhase || '',
@@ -2374,7 +2374,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const fb = getFirebase();
       const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const ts = fb.FieldValue.serverTimestamp();
       const proj = projects.find(p => p.id === forms.invProject);
       await db.collection('invoices').add({
         projectId: forms.invProject,
@@ -2411,7 +2411,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const fb = getFirebase();
       const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const ts = fb.FieldValue.serverTimestamp();
       await db.collection('comments').add({
         taskId,
         projectId,

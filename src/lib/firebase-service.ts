@@ -7,9 +7,8 @@
  * cargada por el script en layout.tsx, con tipado y manejo de errores.
  */
 
-import type { User as FirebaseUser } from 'firebase/auth';
-
 /* ---- Firebase compat types (usado via script tag en layout.tsx) ---- */
+interface FirebaseUser { uid: string; displayName?: string; email?: string; photoURL?: string; };
 interface FirebaseApp {
   auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any> };
   firestore(): FirestoreDB;

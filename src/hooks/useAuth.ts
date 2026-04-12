@@ -83,7 +83,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       const db = fb.firestore();
       await db.collection('users').doc(cred.user.uid).set({
         name, email, photoURL: '', role: 'Miembro',
-        createdAt: fb.firestore.FieldValue.serverTimestamp(),
+        createdAt: fb.FieldValue.serverTimestamp(),
       });
       showToast('✅ Cuenta creada exitosamente');
     } catch (err: any) {
