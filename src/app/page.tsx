@@ -144,7 +144,7 @@ export default function Home() {
   const [chatTab, setChatTab] = useState<'channels' | 'direct' | 'ai'>('channels');
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [chatSearchMsg, setChatSearchMsg] = useState('');
-const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [aiChatHistory, setAiChatHistory] = useState<{role: string; content: string}[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [reactionPickerMsg, setReactionPickerMsg] = useState<string | null>(null);
@@ -1505,21 +1505,25 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   // Online presence tracking
   useEffect(() => {
     if (!ready || !authUser) return;
-    const db = (window as any).firebase.firestore();
-    const userStatusRef = db.collection('userStatus').doc(authUser.uid);
-    const connectedRef = db.collection('.info/connected');
-    const unsubConnected = connectedRef.onSnapshot((snap: any) => {
-      if (snap.data()?.connected === true) {
-        userStatusRef.set({ online: true, lastSeen: (window as any).firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        userStatusRef.onDisconnect().set({ online: false, lastSeen: (window as any).firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      }
-    }, () => {});
-    const unsubStatus = db.collection('userStatus').onSnapshot(snap => {
-      const onlines = new Set<string>();
-      snap.docs.forEach((d: any) => { if (d.data()?.online) onlines.add(d.id); });
-      setOnlineUsers(onlines);
-    }, () => {});
-    return () => { unsubConnected(); unsubStatus(); };
+    try {
+      const db = (window as any).firebase.firestore();
+      const userStatusRef = db.collection('userStatus').doc(authUser.uid);
+      const connectedRef = db.collection('.info/connected');
+      const unsubConnected = connectedRef.onSnapshot((snap: any) => {
+        try {
+          if (snap.data()?.connected === true) {
+            userStatusRef.set({ online: true, lastSeen: (window as any).firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+            userStatusRef.onDisconnect().set({ online: false, lastSeen: (window as any).firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+          }
+        } catch {}
+      }, () => {});
+      const unsubStatus = db.collection('userStatus').onSnapshot(snap => {
+        const onlines: string[] = [];
+        snap.docs.forEach((d: any) => { if (d.data()?.online) onlines.push(d.id); });
+        setOnlineUsers(onlines);
+      }, () => {});
+      return () => { try { unsubConnected(); unsubStatus(); } catch {} };
+    } catch {}
   }, [ready, authUser]);
 
   // Track unread counts
@@ -1527,8 +1531,6 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
     if (messages.length === 0) return;
     const convId = chatTab === 'direct' && directChatId ? `dm_${directChatId}` : chatProjectId || '';
     if (!convId) return;
-    const lastReadId = lastReadPerChat[convId];
-    const wasInChat = lastReadId !== undefined;
     // If user is viewing this conversation, mark all as read
     setLastReadPerChat(prev => ({ ...prev, [convId]: messages[messages.length - 1]?.id || '' }));
     // Calculate unread for other conversations
@@ -1540,20 +1542,31 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
     });
   }, [messages, chatProjectId, directChatId, chatTab]);
 
-  // Increment unread when messages come in for non-active conversations
-  const prevMsgCountRef = useRef<Record<string, number>>({});
+  // Track unread counts per conversation (increment on new messages from others)
+  const prevMsgLenRef = useRef(0);
   useEffect(() => {
-    messages.forEach(m => {
+    if (!ready || !authUser) return;
+    const prevLen = prevMsgLenRef.current;
+    const curLen = messages.length;
+    prevMsgLenRef.current = curLen;
+    if (curLen <= prevLen) return;
+    // Only check new messages
+    const newMsgs = messages.slice(prevLen);
+    const activeConvId = chatTab === 'direct' ? `dm_${directChatId}` : chatProjectId || '';
+    let delta: Record<string, number> = {};
+    newMsgs.forEach(m => {
       if (m.uid === authUser?.uid) return;
-      const convId = chatTab === 'direct' && directChatId ? `dm_${directChatId}` : chatProjectId || '';
-      if (!convId) return;
-      setUnreadCounts(prev => {
-        const activeConvId = chatTab === 'direct' ? `dm_${directChatId}` : chatProjectId || '';
-        if (activeConvId === convId) return { ...prev, [convId]: 0 };
-        return { ...prev, [convId]: (prev[convId] || 0) + 1 };
-      });
+      const cId = m._isDM ? `dm_${directChatId}` : chatProjectId || '';
+      if (cId && cId !== activeConvId) { delta[cId] = (delta[cId] || 0) + 1; }
     });
-  }, [messages.length]);
+    if (Object.keys(delta).length > 0) {
+      setUnreadCounts(prev => {
+        const next = { ...prev };
+        Object.entries(delta).forEach(([k, v]) => { next[k] = (next[k] || 0) + v; });
+        return next;
+      });
+    }
+  }, [messages.length, ready, authUser, chatTab, chatProjectId, directChatId]);
 
   // AI Assistant chat
   const sendAIChat = async () => {
@@ -3391,7 +3404,7 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
               {/* Channel list */}
               {chatTab === 'channels' && (<div className="flex-1 overflow-y-auto">
                 {/* Chat General */}
-                <div className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${chatProjectId === '__general__' ? 'bg-[var(--af-accent)]/10 border-l-3 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setChatProjectId('__general__'); setChatMobileShow(true); }}>
+                <div className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${chatProjectId === '__general__' ? 'bg-[var(--af-accent)]/10 border-l-2 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setChatProjectId('__general__'); setChatMobileShow(true); }}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-lg flex-shrink-0 shadow-md">💬</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between"><div className="text-[13px] font-semibold">Chat General</div></div>
@@ -3401,7 +3414,7 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
                 {/* Project chats */}
                 {projects.length === 0 ? <div className="p-6 text-center text-[var(--af-text3)] text-sm">Crea un proyecto primero</div> :
                 projects.filter(p => !forms.chatSearch || p.data.name.toLowerCase().includes((forms.chatSearch || '').toLowerCase())).map(p => (
-                  <div key={p.id} className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${p.id === chatProjectId ? 'bg-[var(--af-accent)]/10 border-l-3 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setChatProjectId(p.id); setChatMobileShow(true); }}>
+                  <div key={p.id} className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${p.id === chatProjectId ? 'bg-[var(--af-accent)]/10 border-l-2 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setChatProjectId(p.id); setChatMobileShow(true); }}>
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm" style={{ background: `linear-gradient(135deg, ${p.data.status === 'Ejecucion' ? '#f59e0b, #ef4444' : p.data.status === 'Diseno' ? '#3b82f6, #8b5cf6' : p.data.status === 'Terminado' ? '#10b981, #06b6d4' : 'var(--af-bg4), var(--border)'})` }}>🏗️</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2"><div className="text-[13px] font-medium truncate">{p.data.name}</div><span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span></div>
@@ -3423,10 +3436,10 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
                   const otherId = dm.data.participants?.find((p: string) => p !== myUid) || '';
                   const otherName = dm.data.participantNames?.[otherId] || 'Usuario';
                   const otherPhoto = dm.data.participantPhotos?.[otherId] || '';
-                  const isOtherOnline = onlineUsers.has(otherId);
+                  const isOtherOnline = onlineUsers.includes(otherId);
                   const lastMsg = dm.data.lastMessage;
                   return (
-                    <div key={dm.id} className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${dm.id === directChatId ? 'bg-[var(--af-accent)]/10 border-l-3 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setDirectChatId(dm.id); setChatMobileShow(true); }}>
+                    <div key={dm.id} className={`p-3 border-b border-[var(--border)] cursor-pointer transition-colors flex items-center gap-3 ${dm.id === directChatId ? 'bg-[var(--af-accent)]/10 border-l-2 border-l-[var(--af-accent)]' : 'hover:bg-[var(--af-bg3)]'}`} onClick={() => { setDirectChatId(dm.id); setChatMobileShow(true); }}>
                       <div className="relative flex-shrink-0">
                         {otherPhoto ? <img src={otherPhoto} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold ${avatarColor(otherId)}`}>{getInitials(otherName)}</div>}
                         {isOtherOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[var(--card)]" />}
@@ -3470,7 +3483,7 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
                       <button key={u.id} className="w-full flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors text-left" onClick={() => startDM(u.id)}>
                         <div className="relative flex-shrink-0">
                           {u.data.photoURL ? <img src={u.data.photoURL} className="w-9 h-9 rounded-full object-cover" alt="" /> : <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold ${avatarColor(u.id)}`}>{getInitials(u.data.name)}</div>}
-                          {onlineUsers.has(u.id) && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--card)]" />}
+                          {onlineUsers.includes(u.id) && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--card)]" />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-[13px] font-medium">{u.data.name}</div>
@@ -3501,7 +3514,7 @@ const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
                     const otherId = dm?.data?.participants?.find((p: string) => p !== myUid) || '';
                     const otherName = dm?.data?.participantNames?.[otherId] || 'Usuario';
                     const otherPhoto = dm?.data?.participantPhotos?.[otherId] || '';
-                    const isOnline = onlineUsers.has(otherId);
+                    const isOnline = onlineUsers.includes(otherId);
                     return (<div className="flex items-center gap-2">
                       <div className="relative">{otherPhoto ? <img src={otherPhoto} className="w-8 h-8 rounded-full object-cover" alt="" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold ${avatarColor(otherId)}`}>{getInitials(otherName)}</div>}{isOnline && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--card)]" />}</div>
                       <div><div className="text-sm font-semibold">{otherName}</div><div className="text-[10px]">{isOnline ? <span className="text-emerald-400">En línea</span> : 'Desconectado'}</div></div>
