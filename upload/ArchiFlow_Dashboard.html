@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArchiFlow - Dashboard de Desarrollo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #09090b;
+  --bg-card: rgba(24,24,27,0.8);
+  --bg-secondary: rgba(39,39,42,0.5);
+  --border: rgba(63,63,70,0.5);
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
+  --blue: #60a5fa; --blue-glow: rgba(96,165,250,0.15);
+  --cyan: #22d3ee; --cyan-glow: rgba(34,211,238,0.15);
+  --emerald: #34d399; --emerald-glow: rgba(52,211,153,0.15);
+  --amber: #fbbf24; --amber-glow: rgba(251,191,36,0.15);
+  --red: #f87171; --red-glow: rgba(248,113,113,0.15);
+  --purple: #c084fc; --purple-glow: rgba(192,132,252,0.15);
+  --rose: #fb7185; --rose-glow: rgba(251,113,133,0.15);
+  --orange: #fb923c; --orange-glow: rgba(251,146,60,0.15);
+  --pink: #f472b6; --teal: #2dd4bf;
+  --indigo: #818cf8; --lime: #a3e635;
+  --green: #4ade80;
+  --sidebar-w: 240px;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ========== SIDEBAR ========== */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: rgba(9,9,11,0.95);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  display: flex; flex-direction: column;
+  padding: 24px 0;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px; margin-bottom: 32px;
+}
+
+.sidebar-logo .logo-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #22d3ee);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.sidebar-logo h2 {
+  font-size: 18px; font-weight: 700;
+  background: linear-gradient(135deg, var(--blue), var(--cyan), var(--emerald));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar-nav { flex: 1; padding: 0 8px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-radius: 8px;
+  color: var(--text-muted); text-decoration: none;
+  font-size: 13px; font-weight: 500;
+  transition: all 0.2s; cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+.nav-item.active {
+  color: var(--text); background: rgba(255,255,255,0.06);
+  border-color: var(--border);
+}
+
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-dim);
+}
+
+/* ========== MOBILE ========== */
+.mobile-toggle {
+  display: none; position: fixed; top: 16px; left: 16px; z-index: 200;
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(24,24,27,0.9); border: 1px solid var(--border);
+  color: var(--text); cursor: pointer;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.mobile-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 99;
+}
+
+/* ========== MAIN ========== */
+.main {
+  margin-left: var(--sidebar-w);
+  max-width: 1100px;
+  padding: 32px 32px 80px;
+}
+
+/* ========== HERO ========== */
+.hero {
+  position: relative; text-align: center;
+  padding: 64px 24px 48px; margin-bottom: 48px;
+  border-radius: 20px; overflow: hidden;
+  background: linear-gradient(180deg, rgba(59,130,246,0.06) 0%, transparent 70%);
+}
+
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(34,211,238,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.hero-title-row {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin-bottom: 12px;
+}
+
+.hero-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6, #22d3ee);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 32px rgba(59,130,246,0.25);
+}
+
+.hero h1 {
+  font-size: 3.2rem; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--blue), var(--cyan), var(--emerald));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero .tagline {
+  font-size: 1.25rem; color: var(--text-muted);
+  font-weight: 300; margin-bottom: 24px;
+}
+
+.hero-badges {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid; backdrop-filter: blur(4px);
+}
+
+.badge-amber { border-color: rgba(251,191,36,0.3); color: var(--amber); background: var(--amber-glow); }
+.badge-green { border-color: rgba(52,211,153,0.3); color: var(--emerald); background: var(--emerald-glow); }
+
+.badge .pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.hero-links { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #0891b2);
+  color: #fff; font-weight: 600; font-size: 14px;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.3);
+}
+.btn-primary:hover { box-shadow: 0 8px 32px rgba(37,99,235,0.45); transform: translateY(-1px); }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 12px;
+  background: var(--bg-card); color: var(--text);
+  font-weight: 600; font-size: 14px;
+  text-decoration: none; border: 1px solid var(--border); cursor: pointer;
+  transition: all 0.25s;
+}
+.btn-secondary:hover { background: rgba(39,39,42,0.8); border-color: var(--text-dim); }
+
+.hero-links svg { width: 16px; height: 16px; }
+
+.hero-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 16px; margin-top: 48px;
+}
+
+.stat-card {
+  background: var(--bg-card); backdrop-filter: blur(8px);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+}
+
+.stat-card .stat-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.stat-card .stat-value { font-size: 1.5rem; font-weight: 700; }
+.stat-card .stat-label { font-size: 11px; color: var(--text-muted); }
+
+/* ========== SECTION ========== */
+.section { margin-bottom: 56px; }
+
+.section-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 16px;
+}
+
+.section-icon {
+  margin-top: 4px; padding: 8px; border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.section-icon svg { width: 20px; height: 20px; }
+
+.section-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+.section-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.btn-sm {
+  font-size: 11px; color: var(--text-muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; transition: all 0.2s;
+}
+.btn-sm:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+/* ========== FILE TREE ========== */
+.tree-container {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+
+.tree-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text-muted);
+}
+
+.tree-header svg { width: 14px; height: 14px; }
+.tree-header .hint { margin-left: auto; font-size: 10px; opacity: 0.5; }
+
+.tree-body { max-height: 600px; overflow-y: auto; padding: 8px 0; }
+
+.tree-node { user-select: none; }
+
+.tree-btn {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding: 5px 8px; border: none; background: none;
+  color: var(--text-muted); font-size: 13px; font-family: inherit;
+  cursor: pointer; border-radius: 6px; text-align: left;
+  transition: all 0.15s;
+}
+
+.tree-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+
+.tree-btn .chevron {
+  width: 14px; height: 14px; flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.tree-btn .chevron.open { transform: rotate(90deg); }
+.tree-btn .spacer { width: 14px; flex-shrink: 0; }
+.tree-btn .file-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.tree-btn .folder-name { font-weight: 500; }
+
+.tree-children {
+  overflow: hidden; max-height: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+.tree-children.open { max-height: 2000px; opacity: 1; }
+
+.tree-desc {
+  font-size: 10px; color: var(--text-dim); margin-left: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px; display: none;
+}
+
+.tree-btn:hover .tree-desc { display: inline; }
+
+/* ========== FEATURES ========== */
+.features-label {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px; font-size: 15px; font-weight: 600;
+}
+.features-label svg { width: 16px; height: 16px; }
+
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-bottom: 24px;
+}
+
+.feature-card {
+  padding: 18px 20px; border-radius: 12px;
+  border: 1px solid; backdrop-filter: blur(8px);
+  transition: transform 0.2s, box-shadow 0.2s; cursor: default;
+}
+.feature-card:hover { transform: scale(1.02); }
+
+.feature-card .fc-top {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.feature-card .fc-top svg { width: 20px; height: 20px; }
+.feature-card .fc-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.feature-card .fc-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+
+.fc-blue { background: var(--blue-glow); border-color: rgba(96,165,250,0.2); }
+.fc-purple { background: var(--purple-glow); border-color: rgba(192,132,252,0.2); }
+.fc-amber { background: var(--amber-glow); border-color: rgba(251,191,36,0.2); }
+.fc-emerald { background: var(--emerald-glow); border-color: rgba(52,211,153,0.2); }
+.fc-cyan { background: var(--cyan-glow); border-color: rgba(34,211,238,0.2); }
+.fc-rose { background: var(--rose-glow); border-color: rgba(251,113,133,0.2); }
+.fc-orange { background: var(--orange-glow); border-color: rgba(251,146,60,0.2); }
+
+.planned-toggle {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: none; color: var(--text); cursor: pointer;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  padding: 0; margin-bottom: 16px;
+}
+.planned-toggle svg.arrow { width: 16px; height: 16px; transition: transform 0.2s; }
+.planned-toggle svg.arrow.open { transform: rotate(180deg); }
+
+.planned-container {
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+}
+.planned-container.open { max-height: 2000px; opacity: 1; }
+
+.planned-card {
+  padding: 14px 16px; border-radius: 10px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  transition: background 0.2s; cursor: default;
+}
+.planned-card:hover { background: rgba(63,63,70,0.4); }
+
+.planned-card .pc-top {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.planned-card .pc-top svg { width: 18px; height: 18px; }
+.planned-card .pc-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.planned-card .pc-desc { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
+
+.count-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid;
+}
+.count-green { border-color: rgba(52,211,153,0.2); color: var(--emerald); }
+.count-blue { border-color: rgba(96,165,250,0.2); color: var(--blue); }
+
+/* ========== ROADMAP ========== */
+.roadmap { position: relative; }
+
+.roadmap-line {
+  position: absolute; left: 22px; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, var(--red) 0%, var(--amber) 33%, var(--blue) 66%, var(--emerald) 100%);
+  opacity: 0.3;
+}
+
+.roadmap-item { position: relative; padding-left: 52px; margin-bottom: 20px; }
+
+.roadmap-dot {
+  position: absolute; left: 16px; top: 18px;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 3px solid var(--bg);
+}
+
+.dot-red { background: var(--red); }
+.dot-amber { background: var(--amber); }
+.dot-blue { background: var(--blue); }
+.dot-emerald { background: var(--emerald); }
+
+.roadmap-card {
+  background: var(--bg-card); backdrop-filter: blur(8px);
+  border: 1px solid; border-radius: 12px;
+  padding: 20px;
+}
+
+.roadmap-card .rc-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+
+.phase-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px;
+  border-radius: 6px;
+}
+.phase-red { color: var(--red); background: var(--red-glow); }
+.phase-amber { color: var(--amber); background: var(--amber-glow); }
+.phase-blue { color: var(--blue); background: var(--blue-glow); }
+.phase-emerald { color: var(--emerald); background: var(--emerald-glow); }
+
+.rc-title { font-size: 14px; font-weight: 600; }
+
+.roadmap-card ul { list-style: none; }
+
+.roadmap-card li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13px; color: var(--text-muted); margin-bottom: 8px;
+}
+.roadmap-card li svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+
+/* ========== TECH STACK ========== */
+.tech-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.tech-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px; text-align: center;
+  transition: all 0.25s; cursor: default;
+}
+.tech-card:hover { transform: scale(1.05) translateY(-2px); border-color: var(--text-dim); }
+
+.tech-icon {
+  display: inline-flex; padding: 12px; border-radius: 12px;
+  background: var(--bg-secondary); margin-bottom: 10px;
+}
+.tech-icon svg { width: 20px; height: 20px; }
+.tech-card:hover .tech-icon { background: rgba(63,63,70,0.6); }
+
+.tech-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.tech-desc { font-size: 11px; color: var(--text-muted); }
+
+/* ========== NOTES ========== */
+.issue-card {
+  background: var(--bg-card); border: 1px solid; border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.issue-card:hover { border-color: var(--text-dim); }
+
+.issue-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.issue-header svg { width: 16px; height: 16px; }
+.issue-title { font-size: 13px; font-weight: 600; }
+
+.severity {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 4px; margin-left: auto;
+}
+.sev-alta { color: var(--red); background: var(--red-glow); }
+.sev-media { color: var(--amber); background: var(--amber-glow); }
+.sev-baja { color: var(--emerald); background: var(--emerald-glow); }
+
+.issue-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; padding-left: 26px; }
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(113,113,122,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(113,113,122,0.5); }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .features-grid, .planned-grid { grid-template-columns: repeat(2, 1fr); }
+  .tech-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-toggle { display: flex; }
+  .mobile-overlay.show { display: block; }
+  .main { margin-left: 0; padding: 80px 16px 60px; }
+  .hero h1 { font-size: 2.2rem; }
+  .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  .features-grid, .planned-grid { grid-template-columns: 1fr; }
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+  .roadmap-line { display: none; }
+  .roadmap-item { padding-left: 0; }
+  .section-header { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .hero-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tech-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+/* ========== ANIMATIONS ========== */
+.fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- MOBILE TOGGLE -->
+<button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="mobile-overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20"/><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M10 22V8h4v14"/><path d="M10 12h4"/></svg>
+    </div>
+    <h2>ArchiFlow</h2>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-section="hero" onclick="scrollTo('hero')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+      Inicio
+    </a>
+    <a class="nav-item" data-section="structure" onclick="scrollTo('structure')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg>
+      Estructura
+    </a>
+    <a class="nav-item" data-section="features" onclick="scrollTo('features')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      Funcionalidades
+    </a>
+    <a class="nav-item" data-section="roadmap" onclick="scrollTo('roadmap')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Hoja de Ruta
+    </a>
+    <a class="nav-item" data-section="tech-stack" onclick="scrollTo('tech-stack')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      Tecnologias
+    </a>
+    <a class="nav-item" data-section="notes" onclick="scrollTo('notes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      Notas
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    yecos/archii &middot; v0.2.0
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+<!-- ==================== HERO ==================== -->
+<section id="hero" class="hero fade-in">
+  <div class="hero-content">
+    <div class="hero-title-row">
+      <div class="hero-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20"/><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M10 22V8h4v14"/><path d="M10 12h4"/></svg>
+      </div>
+      <h1>ArchiFlow</h1>
+    </div>
+    <p class="tagline">Gestion de Proyectos de Construccion</p>
+
+    <div class="hero-badges">
+      <span class="badge badge-amber">
+        <span class="pulse-dot"></span> En Desarrollo
+      </span>
+      <span class="badge badge-green">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+        v0.2.0
+      </span>
+    </div>
+
+    <div class="hero-links">
+      <a href="https://archii-theta.vercel.app" target="_blank" rel="noopener" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Ver App en Vivo
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <a href="https://github.com/yecos/archii" target="_blank" rel="noopener" class="btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+        Repositorio
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-card">
+        <svg class="stat-icon" style="color:var(--blue)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <div><div class="stat-value">4</div><div class="stat-label">Pantallas</div></div>
+      </div>
+      <div class="stat-card">
+        <svg class="stat-icon" style="color:var(--purple)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <div><div class="stat-value">18+</div><div class="stat-label">Componentes</div></div>
+      </div>
+      <div class="stat-card">
+        <svg class="stat-icon" style="color:var(--amber)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <div><div class="stat-value">12</div><div class="stat-label">Features Planeadas</div></div>
+      </div>
+      <div class="stat-card">
+        <svg class="stat-icon" style="color:var(--emerald)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <div><div class="stat-value">4</div><div class="stat-label">Fases de Roadmap</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== STRUCTURE ==================== -->
+<section id="structure" class="section fade-in">
+  <div class="section-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="section-icon">
+        <svg style="color:var(--blue)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Estructura del Proyecto</h2>
+        <p class="section-desc">Explorador de archivos interactivo - 13 carpetas, 30+ archivos</p>
+      </div>
+    </div>
+    <button class="btn-sm" onclick="toggleAll()">Expandir Todo</button>
+  </div>
+
+  <div class="tree-container">
+    <div class="tree-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg>
+      <span>yecos/archii</span>
+      <span class="hint">Click para expandir</span>
+    </div>
+    <div class="tree-body" id="tree-body"></div>
+  </div>
+</section>
+
+<!-- ==================== FEATURES ==================== -->
+<section id="features" class="section fade-in">
+  <div class="section-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="section-icon">
+        <svg style="color:var(--amber)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Funcionalidades</h2>
+        <p class="section-desc">Funciones actuales implementadas y planes futuros</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current -->
+  <div class="features-label" style="color:var(--emerald)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Implementadas
+    <span class="count-badge count-green">7</span>
+  </div>
+  <div class="features-grid" id="current-features"></div>
+
+  <!-- Planned -->
+  <button class="planned-toggle" onclick="togglePlanned()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Planeadas
+    <span class="count-badge count-blue">12</span>
+    <svg class="arrow" id="planned-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="planned-container" id="planned-container">
+    <div class="features-grid planned-grid" id="planned-features"></div>
+  </div>
+</section>
+
+<!-- ==================== ROADMAP ==================== -->
+<section id="roadmap" class="section fade-in">
+  <div class="section-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="section-icon">
+        <svg style="color:var(--red)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Hoja de Ruta de Optimizacion</h2>
+        <p class="section-desc">Plan de mejoras progresivas para la arquitectura del proyecto</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap">
+    <div class="roadmap-line"></div>
+    <div id="roadmap-items"></div>
+  </div>
+</section>
+
+<!-- ==================== TECH STACK ==================== -->
+<section id="tech-stack" class="section fade-in">
+  <div class="section-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="section-icon">
+        <svg style="color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Stack Tecnologico</h2>
+        <p class="section-desc">Tecnologias utilizadas en el proyecto</p>
+      </div>
+    </div>
+  </div>
+  <div class="tech-grid" id="tech-grid"></div>
+</section>
+
+<!-- ==================== NOTES ==================== -->
+<section id="notes" class="section fade-in">
+  <div class="section-header">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="section-icon">
+        <svg style="color:var(--amber)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Notas de Desarrollo</h2>
+        <p class="section-desc">Issues conocidos y areas de mejora identificadas</p>
+      </div>
+    </div>
+  </div>
+  <div id="issues-list"></div>
+</section>
+
+</main>
+
+<script>
+// ==================== DATA ====================
+
+const fileTree = [
+  { name: 'yecos/archii/', type: 'folder', color: '#60a5fa', children: [
+    { name: '.env.example', type: 'file', desc: 'Variables de entorno de ejemplo' },
+    { name: '.gitignore', type: 'file', desc: 'Archivos ignorados por Git' },
+    { name: 'Caddyfile', type: 'file', desc: 'Configuracion del servidor Caddy' },
+    { name: 'components.json', type: 'file', desc: 'Configuracion de shadcn/ui' },
+    { name: 'eslint.config.mjs', type: 'file', desc: 'Configuracion de ESLint' },
+    { name: 'next.config.ts', type: 'file', desc: 'Configuracion de Next.js' },
+    { name: 'package.json', type: 'file', desc: 'Dependencias y scripts del proyecto' },
+    { name: 'postcss.config.mjs', type: 'file', desc: 'Configuracion de PostCSS' },
+    { name: 'tailwind.config.ts', type: 'file', desc: 'Configuracion de Tailwind CSS' },
+    { name: 'tsconfig.json', type: 'file', desc: 'Configuracion de TypeScript' },
+    { name: 'vercel.json', type: 'file', desc: 'Configuracion de despliegue Vercel' },
+    { name: 'prisma/', type: 'folder', color: '#34d399', children: [
+      { name: 'schema.prisma', type: 'file', desc: 'Modelos de base de datos (User/Post por defecto)' },
+    ]},
+    { name: 'public/', type: 'folder', color: '#fb923c', children: [
+      { name: 'favicon.ico', type: 'file', desc: 'Icono del sitio' },
+    ]},
+    { name: 'examples/', type: 'folder', color: '#c084fc', children: [
+      { name: 'websocket/', type: 'folder', color: '#c084fc', children: [
+        { name: 'ejemplo de websocket', type: 'file', desc: 'Codigo de ejemplo de WebSocket' },
+      ]},
+    ]},
+    { name: 'mini-services/', type: 'folder', color: '#fb7185', desc: 'Directorio de microservicios' },
+    { name: 'src/', type: 'folder', color: '#38bdf8', children: [
+      { name: 'app/', type: 'folder', color: '#fbbf24', children: [
+        { name: 'page.tsx', type: 'file', desc: 'Pagina principal (actualmente solo muestra logo)' },
+        { name: 'layout.tsx', type: 'file', desc: 'Layout raiz con fuentes y metadata' },
+        { name: 'globals.css', type: 'file', desc: 'Estilos globales y tema oscuro' },
+      ]},
+      { name: 'components/', type: 'folder', color: '#22d3ee', children: [
+        { name: 'dashboard/', type: 'folder', color: '#22d3ee', children: [
+          { name: 'DashboardScreen.tsx', type: 'file', desc: 'Dashboard con KPIs, estado del proyecto' },
+        ]},
+        { name: 'implementation/', type: 'folder', color: '#22d3ee', children: [
+          { name: 'ImplementationScreen.tsx', type: 'file', desc: 'Pantalla de implementacion (Kanban + Timeline)' },
+          { name: 'KanbanView.tsx', type: 'file', desc: 'Vista de tablero Kanban' },
+          { name: 'TimelineView.tsx', type: 'file', desc: 'Vista de linea de tiempo' },
+          { name: 'AlertsPanel.tsx', type: 'file', desc: 'Panel de alertas y notificaciones' },
+          { name: 'ScheduleAdjuster.tsx', type: 'file', desc: 'Herramienta de ajuste de cronograma' },
+          { name: 'TaskBoard.tsx', type: 'file', desc: 'Componente de tablero de tareas' },
+          { name: 'TaskFormDialog.tsx', type: 'file', desc: 'Formulario de tarea en dialogo' },
+          { name: 'ScheduleAdjustDialog.tsx', type: 'file', desc: 'Dialogo de ajuste de cronograma' },
+          { name: 'AlertPanel.tsx', type: 'file', desc: 'Panel de alertas' },
+        ]},
+        { name: 'bitacora/', type: 'folder', color: '#22d3ee', children: [
+          { name: 'BitacoraScreen.tsx', type: 'file', desc: 'Formularios de bitacora, fotos, firmas' },
+          { name: 'BitacoraForm.tsx', type: 'file', desc: 'Formulario de entrada de bitacora' },
+          { name: 'BitacoraDetail.tsx', type: 'file', desc: 'Vista detallada de entrada' },
+          { name: 'PhotoGallery.tsx', type: 'file', desc: 'Galeria de fotos de obra' },
+        ]},
+        { name: 'actas/', type: 'folder', color: '#22d3ee', children: [
+          { name: 'ActasScreen.tsx', type: 'file', desc: 'Pantalla principal de actas (pendiente)' },
+          { name: 'MeetingForm.tsx', type: 'file', desc: 'Formulario de actas de reunion' },
+          { name: 'MeetingDetail.tsx', type: 'file', desc: 'Vista detallada de acta' },
+          { name: 'TaskGenerationDialog.tsx', type: 'file', desc: 'Generacion de tareas desde compromisos' },
+        ]},
+        { name: 'layout/', type: 'folder', color: '#22d3ee', children: [
+          { name: 'Sidebar.tsx', type: 'file', desc: 'Barra lateral de navegacion' },
+          { name: 'TopBar.tsx', type: 'file', desc: 'Barra superior' },
+        ]},
+        { name: 'ui/', type: 'folder', color: '#a1a1aa', desc: 'Componentes de UI (shadcn/ui)' },
+      ]},
+      { name: 'lib/', type: 'folder', color: '#fbbf24', children: [
+        { name: 'store.ts', type: 'file', desc: 'Zustand store (300+ lineas, toda la logica de negocio)' },
+        { name: 'types.ts', type: 'file', desc: 'Todos los tipos TypeScript en un solo archivo' },
+        { name: 'utils.ts', type: 'file', desc: 'Funciones utilitarias' },
+        { name: 'db.ts', type: 'file', desc: 'Cliente de base de datos Prisma' },
+        { name: 'sample-data.ts', type: 'file', desc: 'Datos de ejemplo para desarrollo' },
+      ]},
+    ]},
+  ]},
+];
+
+const currentFeatures = [
+  { title: 'Dashboard de Proyecto', desc: 'Panel principal con KPIs de proyecto, estado general y metricas clave', cls: 'fc-blue', color: '#60a5fa',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  { title: 'Pantalla de Implementacion', desc: 'Tablero Kanban interactivo y linea de tiempo para seguimiento de tareas', cls: 'fc-purple', color: '#c084fc',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>' },
+  { title: 'Sistema de Alertas', desc: 'Notificaciones automaticas para retrasos, hitos y eventos criticos', cls: 'fc-amber', color: '#fbbf24',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>' },
+  { title: 'Ajuste de Cronograma', desc: 'Herramienta para modificar fechas de inicio/fin y evaluar impactos', cls: 'fc-emerald', color: '#34d399',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+  { title: 'Bitacora de Obra', desc: 'Registro diario de actividades, clima, personal y fotos del progreso', cls: 'fc-cyan', color: '#22d3ee',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>' },
+  { title: 'Actas de Reunion', desc: 'Formularios completos para minutas con compromisos y participantes', cls: 'fc-rose', color: '#fb7185',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>' },
+  { title: 'Generacion Automatica de Tareas', desc: 'Tareas creadas automaticamente desde compromisos de reuniones', cls: 'fc-orange', color: '#fb923c',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><rect x="13" y="5" width="6" height="6" rx="1"/><path d="m13 17 2 2 4-4"/></svg>' },
+];
+
+const plannedFeatures = [
+  { title: 'Integracion con Microsoft Project', desc: 'Import/export de archivos MPP via CSV/Excel, libreria MPXJ o Microsoft Graph API', color: '#60a5fa',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>' },
+  { title: 'Gestion Documental', desc: 'Administracion de planos, permisos y contratos de construccion', color: '#34d399',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+  { title: 'Presupuesto y Costos', desc: 'Seguimiento de presupuesto con categorias de costos y analisis de variacion', color: '#4ade80',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>' },
+  { title: 'Reportes Automaticos', desc: 'Generacion automatica de reportes PDF/Excel con graficos', color: '#c084fc',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { title: 'Roles y Permisos', desc: 'Control de acceso basado en roles (Admin, Director, Ingeniero, Contratista)', color: '#f87171',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },
+  { title: 'Modo Offline', desc: 'PWA con sincronizacion offline mediante Service Workers', color: '#a1a1aa',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><line x1="12" y1="14" x2="12" y2="20"/></svg>' },
+  { title: 'Gestion de Recursos', desc: 'Asignacion de recursos, seguimiento de equipos e inventario de materiales', color: '#fb923c',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
+  { title: 'Galeria Multimedia Avanzada', desc: 'Fotos 360 grados, sliders de comparacion de progreso y video logs', color: '#f472b6',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>' },
+  { title: 'Notificaciones en Tiempo Real', desc: 'Notificaciones instantaneas via WebSocket', color: '#22d3ee',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>' },
+  { title: 'API Publica', desc: 'API REST/GraphQL para integraciones con terceros', color: '#818cf8',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>' },
+  { title: 'Dashboard de Analytics', desc: 'Analytics avanzados con prediccion de retrasos y pronostico de costos', color: '#fbbf24',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' },
+  { title: 'Firma Digital', desc: 'Firmas digitales para aprobaciones y cumplimiento normativo', color: '#2dd4bf',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>' },
+];
+
+const roadmapPhases = [
+  { phase: 1, title: 'Fase 1 - Inmediato', dot: 'dot-red', badge: 'phase-red', border: 'rgba(248,113,113,0.3)', textColor: 'var(--red)',
+    items: ['Dividir store.ts en stores separados (projects, tasks, alerts, bitacora, meetings, ui)', 'Dividir types.ts por dominio'] },
+  { phase: 2, title: 'Fase 2 - Corto Plazo', dot: 'dot-amber', badge: 'phase-amber', border: 'rgba(251,191,36,0.3)', textColor: 'var(--amber)',
+    items: ['Crear archivo constants.ts para valores duplicados', 'Extraer logica de negocio a custom hooks'] },
+  { phase: 3, title: 'Fase 3 - Mediano Plazo', dot: 'dot-blue', badge: 'phase-blue', border: 'rgba(96,165,250,0.3)', textColor: 'var(--blue)',
+    items: ['Reestructurar por features (no por tipo)', 'Actualizar Prisma + crear API routes para datos persistentes'] },
+  { phase: 4, title: 'Fase 4 - Largo Plazo', dot: 'dot-emerald', badge: 'phase-emerald', border: 'rgba(52,211,153,0.3)', textColor: 'var(--emerald)',
+    items: ['Configurar autenticacion con next-auth', 'Implementar roles y permisos'] },
+];
+
+const techStack = [
+  { name: 'Next.js 15', desc: 'Framework React con App Router', color: '#ffffff',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
+  { name: 'TypeScript', desc: 'Tipado estatico', color: '#60a5fa',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>' },
+  { name: 'Zustand', desc: 'Estado del cliente', color: '#fb923c',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22.54 12.42-1.22.56"/><path d="m22.54 16.42-8.58 3.9a2 2 0 0 1-1.66 0l-8.58-3.9"/><path d="m2.46 12.42 1.22.56"/></svg>' },
+  { name: 'Tailwind CSS', desc: 'Framework de estilos', color: '#22d3ee',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' },
+  { name: 'Prisma', desc: 'ORM para base de datos', color: '#34d399',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>' },
+  { name: 'next-auth', desc: 'Autenticacion', color: '#c084fc',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' },
+  { name: 'Vercel', desc: 'Plataforma de despliegue', color: '#a1a1aa',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>' },
+  { name: 'Framer Motion', desc: 'Animaciones', color: '#f472b6',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+];
+
+const knownIssues = [
+  { title: 'page.tsx solo muestra un logo', desc: 'La pagina principal actualmente solo renderiza el logo y no despliega la aplicacion completa. Los componentes existen pero no se integran.', severity: 'alta', sevCls: 'sev-alta',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 15h.01"/><path d="M15 15h.01"/></svg>' },
+  { title: 'MeetingForm usa useState en lugar de useEffect', desc: 'El formulario de actas inicializa datos con useState en lugar de useEffect, lo que puede causar problemas de hidratacion en SSR.', severity: 'media', sevCls: 'sev-media',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { title: 'Conflicto de nombre en PhotoGallery', desc: 'El componente PhotoGallery tiene un conflicto de nombre con otro componente o importacion en el proyecto.', severity: 'media', sevCls: 'sev-media',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+  { title: 'ActasScreen.tsx no existe completamente', desc: 'El componente principal de la pantalla de actas de reunion no ha sido implementado aun.', severity: 'alta', sevCls: 'sev-alta',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 15h.01"/><path d="M15 15h.01"/></svg>' },
+  { title: 'Schema de Prisma con modelos por defecto', desc: 'El esquema de Prisma todavia tiene los modelos User/Post por defecto sin personalizar para el dominio de construccion.', severity: 'baja', sevCls: 'sev-baja',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>' },
+];
+
+// ==================== SVG ICONS ====================
+const folderIcon = '<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg>';
+const folderOpenIcon = '<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>';
+const chevronIcon = '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+
+function getFileTypeColor(name) {
+  if (name.endsWith('.tsx') || name.endsWith('.jsx')) return '#60a5fa';
+  if (name.endsWith('.ts') || name.endsWith('.js')) return '#fbbf24';
+  if (name.endsWith('.json')) return '#fbbf24';
+  if (name.endsWith('.css')) return '#f472b6';
+  if (name.endsWith('.prisma')) return '#34d399';
+  if (name.endsWith('.mjs')) return '#a3e635';
+  if (name.endsWith('.ico')) return '#fb923c';
+  return '#a1a1aa';
+}
+
+function getFileIcon(name) {
+  const c = getFileTypeColor(name);
+  if (name.endsWith('.prisma')) {
+    return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>`;
+  }
+  return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+}
+
+function getFolderSvg(color) {
+  return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg>`;
+}
+
+function getFolderOpenSvg(color) {
+  return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>`;
+}
+
+// ==================== RENDER FUNCTIONS ====================
+
+function renderTree(nodes, container, depth = 0) {
+  nodes.forEach(node => {
+    const div = document.createElement('div');
+    div.className = 'tree-node';
+
+    const btn = document.createElement('button');
+    btn.className = 'tree-btn';
+    btn.style.paddingLeft = (depth * 16 + 12) + 'px';
+
+    if (node.type === 'folder') {
+      const isOpen = depth < 1;
+      btn.innerHTML = `
+        <svg class="chevron ${isOpen ? 'open' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        ${isOpen ? getFolderOpenSvg(node.color || '#60a5fa') : getFolderSvg(node.color || '#60a5fa')}
+        <span class="folder-name" style="color:${node.color || 'inherit'}">${node.name}</span>
+      `;
+      if (node.desc) {
+        btn.innerHTML += `<span class="tree-desc">${node.desc}</span>`;
+      }
+
+      const childDiv = document.createElement('div');
+      childDiv.className = 'tree-children' + (isOpen ? ' open' : '');
+
+      btn.addEventListener('click', () => {
+        const ch = btn.querySelector('.chevron');
+        const isOpenNow = ch.classList.toggle('open');
+        const fi = btn.querySelector('.file-icon');
+        fi.outerHTML = isOpenNow ? getFolderOpenSvg(node.color || '#60a5fa') : getFolderSvg(node.color || '#60a5fa');
+        childDiv.classList.toggle('open');
+      });
+
+      div.appendChild(btn);
+      if (node.children) {
+        renderTree(node.children, childDiv, depth + 1);
+        div.appendChild(childDiv);
+      }
+    } else {
+      btn.innerHTML = `<span class="spacer"></span>${getFileIcon(node.name)}<span>${node.name}</span>`;
+      if (node.desc) {
+        btn.innerHTML += `<span class="tree-desc">${node.desc}</span>`;
+      }
+      div.appendChild(btn);
+    }
+
+    container.appendChild(div);
+  });
+}
+
+function renderFeatures() {
+  const container = document.getElementById('current-features');
+  currentFeatures.forEach(f => {
+    container.innerHTML += `
+      <div class="feature-card ${f.cls}">
+        <div class="fc-top" style="color:${f.color}">
+          <span style="width:20px;height:20px;display:flex">${f.icon}</span>
+          <span class="fc-title">${f.title}</span>
+        </div>
+        <div class="fc-desc">${f.desc}</div>
+      </div>
+    `;
+  });
+
+  const plannedContainer = document.getElementById('planned-features');
+  plannedFeatures.forEach(f => {
+    plannedContainer.innerHTML += `
+      <div class="planned-card">
+        <div class="pc-top" style="color:${f.color}">
+          <span style="width:18px;height:18px;display:flex">${f.icon}</span>
+          <span class="pc-title">${f.title}</span>
+        </div>
+        <div class="pc-desc">${f.desc}</div>
+      </div>
+    `;
+  });
+}
+
+function renderRoadmap() {
+  const container = document.getElementById('roadmap-items');
+  roadmapPhases.forEach(p => {
+    container.innerHTML += `
+      <div class="roadmap-item">
+        <div class="roadmap-dot ${p.dot}"></div>
+        <div class="roadmap-card" style="border-color:${p.border}">
+          <div class="rc-header">
+            <span class="phase-badge ${p.badge}">FASE ${p.phase}</span>
+            <span class="rc-title">${p.title}</span>
+          </div>
+          <ul>
+            ${p.items.map(item => `
+              <li>
+                <svg style="color:${p.textColor}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span>${item}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderTech() {
+  const container = document.getElementById('tech-grid');
+  techStack.forEach(t => {
+    container.innerHTML += `
+      <div class="tech-card">
+        <div class="tech-icon" style="color:${t.color}">
+          <span style="width:20px;height:20px;display:flex">${t.icon}</span>
+        </div>
+        <div class="tech-name">${t.name}</div>
+        <div class="tech-desc">${t.desc}</div>
+      </div>
+    `;
+  });
+}
+
+function renderIssues() {
+  const container = document.getElementById('issues-list');
+  knownIssues.forEach(i => {
+    container.innerHTML += `
+      <div class="issue-card" style="border-color:${i.severity === 'alta' ? 'rgba(248,113,113,0.2)' : i.severity === 'media' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'}">
+        <div class="issue-header">
+          <span style="width:16px;height:16px;display:flex">${i.icon}</span>
+          <span class="issue-title">${i.title}</span>
+          <span class="severity ${i.sevCls}">${i.severity.charAt(0).toUpperCase() + i.severity.slice(1)}</span>
+        </div>
+        <div class="issue-desc">${i.desc}</div>
+      </div>
+    `;
+  });
+}
+
+// ==================== INTERACTIONS ====================
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+
+function scrollTo(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-section="${id}"]`).classList.add('active');
+  if (window.innerWidth < 768) toggleSidebar();
+}
+
+function togglePlanned() {
+  const c = document.getElementById('planned-container');
+  const a = document.getElementById('planned-arrow');
+  c.classList.toggle('open');
+  a.classList.toggle('open');
+}
+
+let allExpanded = false;
+function toggleAll() {
+  allExpanded = !allExpanded;
+  document.querySelectorAll('.tree-children').forEach(el => {
+    el.classList[allExpanded ? 'add' : 'remove']('open');
+  });
+  document.querySelectorAll('.tree-btn .chevron').forEach(el => {
+    el.classList[allExpanded ? 'add' : 'remove']('open');
+  });
+  // Also toggle folder icons
+  document.querySelectorAll('.tree-btn').forEach(btn => {
+    const folderIcon = btn.querySelector('.file-icon');
+    if (!folderIcon) return;
+    const svg = folderIcon.outerHTML;
+    if (svg.includes('M20 20a2 2 0 0 0 2-2V8')) {
+      // It's a closed folder
+      if (allExpanded) {
+        const colorMatch = svg.match(/stroke="([^"]+)"/);
+        const color = colorMatch ? colorMatch[1] : '#60a5fa';
+        folderIcon.outerHTML = getFolderOpenSvg(color);
+      }
+    }
+  });
+  document.querySelector('.btn-sm').textContent = allExpanded ? 'Contraer Todo' : 'Expandir Todo';
+}
+
+// Active nav tracking
+window.addEventListener('scroll', () => {
+  const sections = ['hero', 'structure', 'features', 'roadmap', 'tech-stack', 'notes'];
+  let current = 'hero';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top <= 120) current = id;
+  });
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.section === current);
+  });
+});
+
+// Fade in on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.05 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  const treeBody = document.getElementById('tree-body');
+  renderTree(fileTree, treeBody);
+  renderFeatures();
+  renderRoadmap();
+  renderTech();
+  renderIssues();
+});
+</script>
+
+</body>
+</html>

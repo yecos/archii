@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"ui\",\n    \"path\": \"src/components/ui\",\n    \"sha\": \"a4e7809d307bf1260bd0d17b43bb16747b57eca5\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/yecos/apparq/contents/src/components/ui?ref=main\",\n    \"html_url\": \"https://github.com/yecos/apparq/tree/main/src/components/ui\",\n    \"git_url\": \"https://api.github.com/repos/yecos/apparq/git/trees/a4e7809d307bf1260bd0d17b43bb16747b57eca5\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/yecos/apparq/contents/src/components/ui?ref=main\",\n      \"git\": \"https://api.github.com/repos/yecos/apparq/git/trees/a4e7809d307bf1260bd0d17b43bb16747b57eca5\",\n      \"html\": \"https://github.com/yecos/apparq/tree/main/src/components/ui\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 10 Apr 2026 02:10:05 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/yecos/apparq/contents/src/components",
+    "usage": {
+      "tokens": 307
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 307
+    }
+  },
+  "status": 20000
+}

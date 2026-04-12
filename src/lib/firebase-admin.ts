@@ -1,65 +1,66 @@
-import { initializeApp, getApps, getApp, cert, ServiceAccount } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+/**
+ * firebase-admin.ts
+ * Firebase Admin SDK para uso en API routes (server-side).
+ * El firebase-service.ts usa window.firebase (client-side),
+ * pero las API routes corren en el servidor donde no existe window.
+ *
+ * Este módulo inicializa firebase-admin con las credenciales del proyecto.
+ */
+
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
-let _adminDb: ReturnType<typeof getFirestore> | null = null;
-let _adminAuth: ReturnType<typeof getAuth> | null = null;
-let _initAttempted = false;
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-c2855';
 
-function initAdmin() {
-  if (_initAttempted) return;
-  _initAttempted = true;
-
-  try {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-
-    if (!projectId || !rawKey || !clientEmail) {
-      console.warn('[Firebase Admin] Missing FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL env vars — admin SDK not initialized');
-      return;
+// Credenciales para firebase-admin desde variables de entorno o JSON
+function getAdminConfig() {
+  // Si hay un JSON de credenciales completo, usarlo
+  const credJson = process.env.FIREBASE_ADMIN_CREDENTIALS;
+  if (credJson) {
+    try {
+      return cert(JSON.parse(credJson));
+    } catch (e) {
+      console.error('[ArchiFlow Admin] Error parseando FIREBASE_ADMIN_CREDENTIALS');
     }
-
-    const privateKey = rawKey.replace(/\\n/g, '\n');
-
-    const serviceAccount: ServiceAccount = {
-      projectId,
-      privateKey,
-      clientEmail,
-    };
-
-    const adminApp = getApps().length ? getApp() : initializeApp({
-      credential: cert(serviceAccount),
-    });
-
-    _adminDb = getFirestore(adminApp);
-    _adminAuth = getAuth(adminApp);
-    console.log('[Firebase Admin] Initialized successfully');
-  } catch (err: any) {
-    console.error('[Firebase Admin] Initialization failed:', err?.message || err);
   }
+
+  // Si no, usar credenciales individuales (Application Default Credentials en Vercel)
+  // Esto funciona si configuramos la cuenta de servicio en Vercel
+  return undefined; // Usa ADC automáticamente
 }
 
-// Lazy getter — safe to call even without credentials (returns null)
+// Singleton
+let _adminApp: ReturnType<typeof initializeApp> | null = null;
+let _adminDb: ReturnType<typeof getFirestore> | null = null;
+
+export function getAdminApp() {
+  if (_adminApp) return _adminApp;
+  if (getApps().length > 0) {
+    _adminApp = getApp();
+  } else {
+    _adminApp = initializeApp({
+      projectId: FIREBASE_PROJECT_ID,
+      credential: getAdminConfig(),
+    });
+  }
+  return _adminApp;
+}
+
 export function getAdminDb() {
-  initAdmin();
+  if (_adminDb) return _adminDb;
+  _adminDb = getFirestore(getAdminApp());
   return _adminDb;
 }
 
-export function adminDb() {
-  initAdmin();
-  return _adminDb;
+export function getAdminAuth() {
+  return getAuth(getAdminApp());
 }
 
-export function adminAuth() {
-  initAdmin();
-  return _adminAuth;
+/**
+ * FieldValue equivalente para server-side
+ */
+export function getAdminFieldValue() {
+  const { FieldValue } = require('firebase-admin/firestore');
+  return FieldValue;
 }
-
-export { FieldValue };
-
-// Default export (lazy)
-export default {
-  get db() { initAdmin(); return _adminDb; },
-  get auth() { initAdmin(); return _adminAuth; },
-};

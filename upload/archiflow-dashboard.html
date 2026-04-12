@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchiFlow - Panel de Proyectos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: linear-gradient(135deg, #1a1d2e 0%, #252a3a 100%);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(124, 111, 255, 0.2);
+        }
+
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-logo .icon-box {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #7c6fff, #a78bfa);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .topbar-logo h1 {
+            font-size: 1.4rem;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .topbar-logo span {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+        }
+
+        .topbar-date {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+        }
+
+        /* ===== KPI CARDS ===== */
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 28px 40px;
+        }
+
+        .kpi-card {
+            background: #1a1d2e;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover { transform: translateY(-3px); }
+
+        .kpi-card .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .kpi-card:nth-child(1) .kpi-icon { background: rgba(124,111,255,0.15); color: #7c6fff; }
+        .kpi-card:nth-child(2) .kpi-icon { background: rgba(80,250,123,0.12); color: #50fa7b; }
+        .kpi-card:nth-child(3) .kpi-icon { background: rgba(255,121,198,0.12); color: #ff79c6; }
+        .kpi-card:nth-child(4) .kpi-icon { background: rgba(139,233,253,0.12); color: #8be9fd; }
+        .kpi-card:nth-child(5) .kpi-icon { background: rgba(241,250,140,0.12); color: #f1fa8c; }
+
+        .kpi-label {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* ===== SECTIONS ===== */
+        .main-content {
+            padding: 0 40px 40px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: #fff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .section-title .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #7c6fff;
+        }
+
+        /* ===== PROJECT CARDS ===== */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .project-card {
+            background: #1a1d2e;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 22px;
+            transition: transform 0.2s, border-color 0.3s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(124,111,255,0.3);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .project-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #fff;
+            max-width: 200px;
+        }
+
+        .project-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .status-diseno {
+            background: rgba(139,233,253,0.12);
+            color: #8be9fd;
+        }
+
+        .status-concepto {
+            background: rgba(241,250,140,0.12);
+            color: #f1fa8c;
+        }
+
+        .status-ejecucion {
+            background: rgba(80,250,123,0.12);
+            color: #50fa7b;
+        }
+
+        .project-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .info-row .info-icon {
+            width: 18px;
+            text-align: center;
+            opacity: 0.6;
+        }
+
+        .progress-bar-container {
+            margin-top: 4px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #7c6fff, #a78bfa);
+            transition: width 0.6s ease;
+        }
+
+        .progress-fill.high {
+            background: linear-gradient(90deg, #50fa7b, #2ecc71);
+        }
+
+        .project-budget {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .budget-label {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .budget-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* ===== TASKS TABLE ===== */
+        .tasks-section {
+            margin-bottom: 36px;
+        }
+
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1a1d2e;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .tasks-table thead {
+            background: rgba(124,111,255,0.08);
+        }
+
+        .tasks-table th {
+            padding: 14px 18px;
+            text-align: left;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+        }
+
+        .tasks-table td {
+            padding: 16px 18px;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .task-project-tag {
+            display: inline-block;
+            background: rgba(124,111,255,0.1);
+            color: #a78bfa;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .task-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .task-status-porhacer {
+            background: rgba(255,121,198,0.12);
+            color: #ff79c6;
+        }
+
+        .task-status-enprogreso {
+            background: rgba(139,233,253,0.12);
+            color: #8be9fd;
+        }
+
+        .task-status-hecho {
+            background: rgba(80,250,123,0.12);
+            color: #50fa7b;
+        }
+
+        .priority-badge {
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .priority-alta { background: rgba(255,85,85,0.15); color: #ff5555; }
+        .priority-media { background: rgba(241,250,140,0.12); color: #f1fa8c; }
+        .priority-med { background: rgba(241,250,140,0.12); color: #f1fa8c; }
+        .priority-baja { background: rgba(80,250,123,0.12); color: #50fa7b; }
+
+        .task-due {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.82rem;
+        }
+
+        .task-due.overdue {
+            color: #ff5555;
+        }
+
+        /* ===== EXPENSES ===== */
+        .expenses-section {
+            margin-bottom: 36px;
+        }
+
+        .expenses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .expense-card {
+            background: #1a1d2e;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+
+        .expense-card:hover { transform: translateY(-2px); }
+
+        .expense-left {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .expense-concept {
+            font-weight: 600;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .expense-meta {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+            display: flex;
+            gap: 12px;
+        }
+
+        .expense-category {
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            background: rgba(255,121,198,0.1);
+            color: #ff79c6;
+        }
+
+        .expense-amount {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ff79c6;
+            white-space: nowrap;
+        }
+
+        /* ===== EXPENSES SUMMARY BOX ===== */
+        .expense-summary {
+            background: linear-gradient(135deg, rgba(124,111,255,0.08), rgba(255,121,198,0.08));
+            border: 1px solid rgba(124,111,255,0.15);
+            border-radius: 14px;
+            padding: 22px 28px;
+            margin-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .expense-summary .total-label {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .expense-summary .total-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .expense-summary .total-entries {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .topbar, .kpi-section, .main-content {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            .kpi-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            .tasks-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-section {
+                grid-template-columns: 1fr;
+            }
+            .topbar {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="topbar-logo">
+            <div class="icon-box">&#9650;</div>
+            <div>
+                <h1>ArchiFlow</h1>
+                <span>Panel de Proyectos</span>
+            </div>
+        </div>
+        <div class="topbar-date" id="currentDate"></div>
+    </div>
+
+    <!-- KPI SECTION -->
+    <div class="kpi-section">
+        <div class="kpi-card">
+            <div class="kpi-icon">&#128203;</div>
+            <div class="kpi-label">Proyectos</div>
+            <div class="kpi-value">5</div>
+            <div class="kpi-sub">3 en Diseno &bull; 1 en Concepto</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">&#9989;</div>
+            <div class="kpi-label">Progreso Promedio</div>
+            <div class="kpi-value">15%</div>
+            <div class="kpi-sub">1 proyecto al 50%</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">&#128195;</div>
+            <div class="kpi-label">Tareas</div>
+            <div class="kpi-value">3</div>
+            <div class="kpi-sub">1 en progreso &bull; 2 por hacer</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">&#128176;</div>
+            <div class="kpi-label">Gastos Totales</div>
+            <div class="kpi-value" style="font-size:1.3rem;">$212.000</div>
+            <div class="kpi-sub">2 registros</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">&#128197;</div>
+            <div class="kpi-label">Presupuesto Total</div>
+            <div class="kpi-value" style="font-size:1.3rem;">$8.7M</div>
+            <div class="kpi-sub">Presupuestado</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- PROJECTS -->
+        <div class="section-title">
+            <div class="dot"></div>
+            Proyectos Activos
+        </div>
+        <div class="projects-grid">
+
+            <!-- Proyecto 1: Casa Juana -->
+            <div class="project-card">
+                <div class="project-header">
+                    <div class="project-name">Casa Juana</div>
+                    <div class="project-status status-diseno">Diseno</div>
+                </div>
+                <div class="project-info">
+                    <div class="info-row">
+                        <span class="info-icon">&#128205;</span>
+                        Alto de palmas
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128100;</span>
+                        Juana
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128197;</span>
+                        Oct 2025 &mdash; May 2026
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label">
+                        <span>Progreso</span>
+                        <span>50%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill high" style="width: 50%;"></div>
+                    </div>
+                </div>
+                <div class="project-budget">
+                    <span class="budget-label">Presupuesto</span>
+                    <span class="budget-value">Sin asignar</span>
+                </div>
+            </div>
+
+            <!-- Proyecto 2: New York -->
+            <div class="project-card">
+                <div class="project-header">
+                    <div class="project-name">New York</div>
+                    <div class="project-status status-diseno">Diseno</div>
+                </div>
+                <div class="project-info">
+                    <div class="info-row">
+                        <span class="info-icon">&#128205;</span>
+                        New York USA
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128221;</span>
+                        Diseno restaurante exterior y discoteca. Renders y Planimetria
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128197;</span>
+                        Mar 2026 &mdash; Abr 2026
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label">
+                        <span>Progreso</span>
+                        <span>25%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 25%;"></div>
+                    </div>
+                </div>
+                <div class="project-budget">
+                    <span class="budget-label">Presupuesto</span>
+                    <span class="budget-value">Sin asignar</span>
+                </div>
+            </div>
+
+            <!-- Proyecto 3: Ceiba Bruja -->
+            <div class="project-card">
+                <div class="project-header">
+                    <div class="project-name">Ceiba Bruja</div>
+                    <div class="project-status status-diseno">Diseno</div>
+                </div>
+                <div class="project-info">
+                    <div class="info-row">
+                        <span class="info-icon">&#128205;</span>
+                        Envigado
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128197;</span>
+                        Ene 2025 &mdash; May 2026
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label">
+                        <span>Progreso</span>
+                        <span>0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="project-budget">
+                    <span class="budget-label">Presupuesto</span>
+                    <span class="budget-value">$165</span>
+                </div>
+            </div>
+
+            <!-- Proyecto 4: Diseno interior Natalia -->
+            <div class="project-card">
+                <div class="project-header">
+                    <div class="project-name">Diseno interior Natalia</div>
+                    <div class="project-status status-diseno">Diseno</div>
+                </div>
+                <div class="project-info">
+                    <div class="info-row">
+                        <span class="info-icon">&#128205;</span>
+                        Bello
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128100;</span>
+                        Natalia
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128197;</span>
+                        Abr 2026 &mdash; Abr 2026
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label">
+                        <span>Progreso</span>
+                        <span>0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="project-budget">
+                    <span class="budget-label">Presupuesto</span>
+                    <span class="budget-value">$3.500.000</span>
+                </div>
+            </div>
+
+            <!-- Proyecto 5: Casa Julian Jardin -->
+            <div class="project-card">
+                <div class="project-header">
+                    <div class="project-name">Casa Julian Jardin</div>
+                    <div class="project-status status-concepto">Concepto</div>
+                </div>
+                <div class="project-info">
+                    <div class="info-row">
+                        <span class="info-icon">&#128205;</span>
+                        El Jardin
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128100;</span>
+                        Julian
+                    </div>
+                    <div class="info-row">
+                        <span class="info-icon">&#128197;</span>
+                        Abr 2026 &mdash; May 2026
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label">
+                        <span>Progreso</span>
+                        <span>0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="project-budget">
+                    <span class="budget-label">Presupuesto</span>
+                    <span class="budget-value">$5.500.000</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TASKS -->
+        <div class="tasks-section">
+            <div class="section-title">
+                <div class="dot"></div>
+                Tareas
+            </div>
+            <table class="tasks-table">
+                <thead>
+                    <tr>
+                        <th>Tarea</th>
+                        <th>Proyecto</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th>Fecha Limite</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="color:#fff;font-weight:500;">Renders</td>
+                        <td><span class="task-project-tag">New York</span></td>
+                        <td><span class="priority-badge priority-alta">Alta</span></td>
+                        <td><span class="task-status-badge task-status-porhacer">Por hacer</span></td>
+                        <td class="task-due overdue">Abr 17, 2026</td>
+                    </tr>
+                    <tr>
+                        <td style="color:#fff;font-weight:500;">Detalle mobiliario</td>
+                        <td><span class="task-project-tag">Ceiba Bruja</span></td>
+                        <td><span class="priority-badge priority-media">Media</span></td>
+                        <td><span class="task-status-badge task-status-enprogreso">En progreso</span></td>
+                        <td class="task-due overdue">Abr 10, 2026</td>
+                    </tr>
+                    <tr>
+                        <td style="color:#fff;font-weight:500;">Planos Arquitectonicos</td>
+                        <td><span class="task-project-tag">Casa Julian Jardin</span></td>
+                        <td><span class="priority-badge priority-med">Media</span></td>
+                        <td><span class="task-status-badge task-status-porhacer">Por hacer</span></td>
+                        <td class="task-due">Sin fecha</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- EXPENSES -->
+        <div class="expenses-section">
+            <div class="section-title">
+                <div class="dot"></div>
+                Gastos
+            </div>
+            <div class="expenses-grid">
+                <div class="expense-card">
+                    <div class="expense-left">
+                        <div class="expense-concept">Almuerzo reunion</div>
+                        <div class="expense-meta">
+                            <span>Diseno interior Natalia</span>
+                            <span>&bull;</span>
+                            <span>Abr 9, 2026</span>
+                        </div>
+                        <div class="expense-category">Imprevistos</div>
+                    </div>
+                    <div class="expense-amount">$200.000</div>
+                </div>
+                <div class="expense-card">
+                    <div class="expense-left">
+                        <div class="expense-concept">Imprimir planos</div>
+                        <div class="expense-meta">
+                            <span>Casa Julian Jardin</span>
+                            <span>&bull;</span>
+                            <span>Abr 2, 2026</span>
+                        </div>
+                        <div class="expense-category">Imprevistos</div>
+                    </div>
+                    <div class="expense-amount">$12.000</div>
+                </div>
+            </div>
+            <div class="expense-summary">
+                <div>
+                    <div class="total-label">Total Gastos Registrados</div>
+                    <div class="total-entries">2 registros en la categoria Imprevistos</div>
+                </div>
+                <div class="total-value">$212.000</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Set current date
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('es-CO', options);
+
+        // Animate progress bars on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.progress-fill').forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 200);
+            });
+        });
+    </script>
+
+</body>
+</html>

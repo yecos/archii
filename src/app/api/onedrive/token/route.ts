@@ -1,71 +1,118 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
+
 /**
- * POST /api/onedrive/token
- * Refreshes the Microsoft access token using a refresh token.
- * The client sends the refresh_token, and we exchange it via Azure AD.
+ * POST — Refresh a Microsoft access token using a refresh token.
  *
- * Required environment variables:
- * - AZURE_AD_CLIENT_ID: Azure AD App Registration Client ID
- * - AZURE_AD_CLIENT_SECRET: Azure AD App Registration Client Secret
- * - AZURE_AD_TENANT_ID: Azure AD Tenant ID (or "common" for multi-tenant)
+ * Requires `AZURE_CLIENT_SECRET` to be set in environment variables.
+ * Falls back to `NEXT_PUBLIC_MS_CLIENT_ID` for the client ID.
+ *
+ * Body: { refreshToken: string }
+ * Returns: { accessToken: string, expiresIn: number }
  */
-
-const AZURE_TOKEN_URL = 'https://login.microsoftonline.com';
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { refreshToken, uid } = await req.json();
+    const body = await request.json();
+    const { refreshToken } = body;
 
-    if (!refreshToken) {
-      return NextResponse.json({ error: 'refreshToken is required' }, { status: 400 });
-    }
-
-    const clientId = process.env.AZURE_AD_CLIENT_ID;
-    const clientSecret = process.env.AZURE_AD_CLIENT_SECRET;
-    const tenantId = process.env.AZURE_AD_TENANT_ID || 'consumers';
-
-    if (!clientId || !clientSecret) {
+    if (!refreshToken || typeof refreshToken !== 'string') {
       return NextResponse.json(
-        { error: 'Azure AD credentials not configured on server' },
-        { status: 500 }
+        { error: 'refreshToken is required' },
+        { status: 400 }
       );
     }
 
-    const tokenUrl = `${AZURE_TOKEN_URL}/${tenantId}/oauth2/v2.0/token`;
+    const clientId =
+      process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
 
-    const body = new URLSearchParams({
+    if (!clientSecret) {
+      return NextResponse.json(
+        {
+          error: 'Azure AD not configured',
+          message:
+            'AZURE_CLIENT_SECRET environment variable is not set. Token refresh requires server-side client credentials.',
+        },
+        { status: 503 }
+      );
+    }
+
+    if (!clientId) {
+      return NextResponse.json(
+        { error: 'Client ID not configured', message: 'AZURE_CLIENT_ID or NEXT_PUBLIC_MS_CLIENT_ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const params = new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: refreshToken,
       grant_type: 'refresh_token',
-      scope: 'Files.ReadWrite offline_access openid profile email',
+      refresh_token: refreshToken,
+      scope: 'Files.ReadWrite.All Sites.ReadWrite.All offline_access',
     });
 
-    const response = await fetch(tokenUrl, {
+    const tokenRes = await fetch(TOKEN_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
     });
 
-    const data = await response.json();
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      let errorDetail: string;
 
-    if (!response.ok) {
-      console.error('[OneDrive Token] Azure error:', data);
+      try {
+        const errJson = JSON.parse(errBody);
+        errorDetail =
+          errJson.error_description || errJson.error || errBody;
+      } catch {
+        errorDetail = errBody;
+      }
+
+      // Handle specific token endpoint errors
+      if (tokenRes.status === 400) {
+        if (errorDetail.includes('AADSTS70008') || errorDetail.includes('AADSTS700082')) {
+          // Refresh token expired
+          return NextResponse.json(
+            { error: 'Refresh token expired', code: 'REFRESH_TOKEN_EXPIRED', detail: errorDetail },
+            { status: 401 }
+          );
+        }
+        if (errorDetail.includes('AADSTS70000')) {
+          // Invalid grant
+          return NextResponse.json(
+            { error: 'Invalid refresh token', code: 'INVALID_REFRESH_TOKEN', detail: errorDetail },
+            { status: 401 }
+          );
+        }
+      }
+
       return NextResponse.json(
-        { error: data.error_description || 'Failed to refresh token' },
-        { status: response.status }
+        { error: 'Token refresh failed', detail: errorDetail },
+        { status: tokenRes.status }
       );
     }
 
+    const tokenData = await tokenRes.json();
+
+    // Calculate expiry time from expires_in (seconds)
+    const expiresIn = tokenData.expires_in || 3600; // Default 1 hour
+
     return NextResponse.json({
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in,
-      scope: data.scope,
+      accessToken: tokenData.access_token,
+      expiresIn: Number(expiresIn),
+      tokenType: tokenData.token_type,
+      scope: tokenData.scope,
+      // Also return the new refresh token if one was issued
+      refreshToken: tokenData.refresh_token || null,
     });
-  } catch (error: any) {
-    console.error('[OneDrive Token] Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    console.error('[OneDrive Token POST]', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
