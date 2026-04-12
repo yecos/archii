@@ -10,7 +10,8 @@ interface Task { id: string; data: { title: string; projectId: string; assigneeI
 interface Expense { id: string; data: { concept: string; projectId: string; category: string; amount: number; date: string; createdAt: any } }
 interface Supplier { id: string; data: { name: string; category: string; phone: string; email: string; address: string; website: string; notes: string; rating: number; createdAt: any } }
 interface Approval { id: string; data: { title: string; description: string; status: string; createdAt: any } }
-interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; group: string; active: boolean; createdAt: any } }
+interface PhaseEntry { id: string; text: string; confirmed: boolean; createdAt: any; createdBy: string }
+interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; group: string; active: boolean; entries: PhaseEntry[]; createdAt: any } }
 interface ProjectFile { id: string; name: string; type: string; size: number; url: string; createdAt: any }
 interface OneDriveFile { id: string; name: string; size: number; mimeType: string; webUrl: string; createdDateTime: string; '@microsoft.graph.downloadUrl'?: string }
 interface GalleryPhoto { id: string; data: { projectId: string; categoryName: string; caption: string; imageData: string; createdAt: any; createdBy: string } }
@@ -1528,6 +1529,48 @@ export default function Home() {
     } catch { showToast('Error', 'error'); }
   };
 
+  const toggleGroupActive = async (groupName: string, enable: boolean) => {
+    const db = (window as any).firebase.firestore();
+    const batch = db.batch();
+    const groupPhases = workPhases.filter(p => p.data.group === groupName);
+    for (const phase of groupPhases) {
+      batch.update(db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phase.id), { active: enable });
+    }
+    try { await batch.commit(); showToast(`${enable ? 'Activado' : 'Desactivado'}: ${groupName}`); } catch {}
+  };
+
+  const addPhaseEntry = async (phaseId: string) => {
+    const text = (forms.phaseEntryText || '').trim();
+    if (!text) return;
+    try {
+      const db = (window as any).firebase.firestore();
+      const phase = workPhases.find(p => p.id === phaseId);
+      const existingEntries: PhaseEntry[] = Array.isArray(phase?.data?.entries) ? phase.data.entries : [];
+      const newEntry: PhaseEntry = { id: `entry-${Date.now()}`, text, confirmed: false, createdAt: new Date().toISOString(), createdBy: authUser?.uid || '' };
+      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ entries: [...existingEntries, newEntry] });
+      setForms(p => ({ ...p, phaseEntryText: '' }));
+    } catch { showToast('Error al agregar entrada', 'error'); }
+  };
+
+  const toggleEntryConfirmed = async (phaseId: string, entryId: string) => {
+    try {
+      const db = (window as any).firebase.firestore();
+      const phase = workPhases.find(p => p.id === phaseId);
+      const existingEntries: PhaseEntry[] = Array.isArray(phase?.data?.entries) ? phase.data.entries : [];
+      const updatedEntries = existingEntries.map(e => e.id === entryId ? { ...e, confirmed: !e.confirmed } : e);
+      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ entries: updatedEntries });
+    } catch {}
+  };
+
+  const deletePhaseEntry = async (phaseId: string, entryId: string) => {
+    try {
+      const db = (window as any).firebase.firestore();
+      const phase = workPhases.find(p => p.id === phaseId);
+      const existingEntries: PhaseEntry[] = Array.isArray(phase?.data?.entries) ? phase.data.entries : [];
+      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ entries: existingEntries.filter(e => e.id !== entryId) });
+    } catch {}
+  };
+
   const updatePhaseStatus = async (phaseId: string, status: string) => {
     try {
       const db = (window as any).firebase.firestore();
@@ -2861,6 +2904,15 @@ export default function Home() {
                 ...g,
                 phases: g.phases.map(name => workPhases.find(p => p.data.name === name)).filter(Boolean),
               }));
+              const expandedPhase = forms.expandedPhase || null;
+              const getGroupActive = (groupName: string) => {
+                const gp = groupedPhases.find(g => g.group === groupName);
+                return gp ? gp.phases.length > 0 && gp.phases.some(p => p.data.active !== false) : false;
+              };
+              const getGroupAllActive = (groupName: string) => {
+                const gp = groupedPhases.find(g => g.group === groupName);
+                return gp ? gp.phases.every(p => p.data.active !== false) : false;
+              };
               return (<div>
                 {/* Phase progress summary */}
                 <div className="bg-gradient-to-r from-[var(--af-accent)]/10 to-transparent border border-[var(--af-accent)]/20 rounded-xl p-4 mb-5">
@@ -2880,53 +2932,115 @@ export default function Home() {
                 <div className="flex items-center gap-2 mb-4 flex-wrap">
                   <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={initDefaultPhases}>{workPhases.length > 0 ? '🔄 Resetear fases' : '⚡ Inicializar fases'}</button>
                   <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openModal('customPhase')}>+ Fase personalizada</button>
-                  {workPhases.length > 0 && <span className="text-[11px] text-[var(--muted-foreground)] ml-auto">{activePhases.length} activas de {workPhases.length} totales</span>}
+                  {workPhases.length > 0 && <span className="text-[11px] text-[var(--muted-foreground)] ml-auto">{activePhases.length} activas de {workPhases.length}</span>}
                 </div>
                 {/* Phases grouped */}
                 {workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Configura las fases del proyecto</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Puedes activar/desactivar según el tipo de obra</div></div> :
                 <div className="space-y-6">
                   {groupedPhases.map(group => {
-                    const groupActive = group.phases.filter(p => p && p.data.active !== false);
-                    const groupCompleted = groupActive.filter(p => p && p.data.status === 'Completado');
-                    const groupProg = groupActive.length > 0 ? Math.round((groupCompleted.length / groupActive.length) * 100) : 0;
+                    const groupPhases = group.phases.filter(p => p && p.data.active !== false);
+                    const groupCompleted = groupPhases.filter(p => p && p.data.status === 'Completado');
+                    const groupProg = groupPhases.length > 0 ? Math.round((groupCompleted.length / groupPhases.length) * 100) : 0;
+                    const isGroupOn = getGroupActive(group.group);
+                    const isAllOn = getGroupAllActive(group.group);
                     return (
-                      <div key={group.group}>
-                        <div className="flex items-center justify-between mb-3">
+                      <div key={group.group} className={`transition-opacity ${!isGroupOn ? 'opacity-40' : ''}`}>
+                        {/* Group header with toggle */}
+                        <div className="flex items-center justify-between mb-3 bg-[var(--af-bg3)] rounded-xl px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="text-base">{PHASE_GROUP_ICONS[group.group] || '📋'}</span>
                             <span className="text-[14px] font-semibold">{group.group}</span>
                             <span className="text-[11px] text-[var(--muted-foreground)]">{groupProg}%</span>
                           </div>
-                          <div className="h-1.5 w-20 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: groupProg + '%' }} /></div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-1.5 w-16 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: groupProg + '%' }} /></div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-[var(--muted-foreground)]">{isAllOn ? 'Todo ON' : 'Parcial'}</span>
+                              <button className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 cursor-pointer border-none ${isAllOn ? 'bg-emerald-500' : isGroupOn ? 'bg-amber-500' : 'bg-[var(--af-bg4)]'}`} onClick={() => toggleGroupActive(group.group, !isAllOn)}>
+                                <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${isAllOn ? 'left-[18px]' : 'left-[3px]'}`} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                        {/* Phases */}
                         <div className="space-y-2 ml-1">
                           {group.phases.map(phase => {
                             if (!phase) return null;
                             const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
                             const isEnabled = phase.data.active !== false;
+                            const isExpanded = expandedPhase === phase.id;
+                            const entries: PhaseEntry[] = Array.isArray(phase.data.entries) ? phase.data.entries : [];
+                            const confirmedEntries = entries.filter(e => e.confirmed).length;
                             return (
-                              <div key={phase.id} className={`flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 transition-all ${!isEnabled ? 'opacity-50' : ''}`}>
-                                {/* Toggle */}
-                                <button className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 cursor-pointer border-none ${isEnabled ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`} onClick={() => togglePhaseActive(phase.id, !isEnabled)}>
-                                  <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${isEnabled ? 'left-[18px]' : 'left-[3px]'}`} />
-                                </button>
-                                {/* Status dot */}
-                                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${!isEnabled ? 'bg-[var(--af-bg4)]' : isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)]'}`} />
-                                {/* Name */}
-                                <div className="flex-1 min-w-0">
-                                  <div className={`text-[13px] font-medium ${!isEnabled ? 'line-through text-[var(--af-text3)]' : ''}`}>{phase.data.name}</div>
-                                  {phase.data.endDate && isDone && <div className="text-[10px] text-emerald-400">Completado: {phase.data.endDate}</div>}
+                              <div key={phase.id}>
+                                <div className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 transition-all ${!isEnabled ? 'opacity-40' : isExpanded ? 'border-[var(--af-accent)]/40' : ''}`}>
+                                  {/* Phase row */}
+                                  <div className="flex items-center gap-3">
+                                    {/* Toggle */}
+                                    <button className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 cursor-pointer border-none ${isEnabled ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`} onClick={() => togglePhaseActive(phase.id, !isEnabled)}>
+                                      <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${isEnabled ? 'left-[18px]' : 'left-[3px]'}`} />
+                                    </button>
+                                    {/* Status dot */}
+                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 cursor-pointer ${!isEnabled ? 'bg-[var(--af-bg4)]' : isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)]'}`} onClick={() => isEnabled && setForms(p => ({ ...p, expandedPhase: isExpanded ? null : phase.id }))} />
+                                    {/* Name + entry count */}
+                                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => isEnabled && setForms(p => ({ ...p, expandedPhase: isExpanded ? null : phase.id }))}>
+                                      <div className={`text-[13px] font-medium ${!isEnabled ? 'line-through text-[var(--af-text3)]' : ''}`}>{phase.data.name}</div>
+                                      {phase.data.endDate && isDone && <div className="text-[10px] text-emerald-400">Completado: {phase.data.endDate}</div>}
+                                    </div>
+                                    {/* Entry badge */}
+                                    {isEnabled && entries.length > 0 && (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${confirmedEntries === entries.length ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>{confirmedEntries}/{entries.length}</span>
+                                    )}
+                                    {/* Status select */}
+                                    {isEnabled && (
+                                      <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-[11px] text-[var(--foreground)] outline-none cursor-pointer flex-shrink-0" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
+                                        <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
+                                      </select>
+                                    )}
+                                    {/* Expand arrow */}
+                                    {isEnabled && (
+                                      <button className="text-[var(--af-text3)] cursor-pointer flex-shrink-0 p-1 hover:text-[var(--foreground)] transition-colors" onClick={() => setForms(p => ({ ...p, expandedPhase: isExpanded ? null : phase.id }))}>
+                                        <svg viewBox="0 0 24 24" className={`w-4 h-4 stroke-current fill-none transition-transform ${isExpanded ? 'rotate-180' : ''}`} strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                      </button>
+                                    )}
+                                    {/* Delete */}
+                                    <button className="text-[var(--af-text3)] hover:text-red-400 cursor-pointer flex-shrink-0 p-1" onClick={() => deletePhase(phase.id)}>
+                                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                  </div>
+                                  {/* Expanded entries */}
+                                  {isExpanded && isEnabled && (
+                                    <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                                      {/* Add entry */}
+                                      <div className="flex gap-2 mb-3">
+                                        <input className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Agregar nota o actividad..." value={forms.phaseEntryText || ''} onChange={e => setForms(p => ({ ...p, phaseEntryText: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') addPhaseEntry(phase.id); }} />
+                                        <button className="px-3 py-2 bg-[var(--af-accent)] text-background rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors flex-shrink-0" onClick={() => addPhaseEntry(phase.id)}>Agregar</button>
+                                      </div>
+                                      {/* Entries list */}
+                                      {entries.length === 0 ? (
+                                        <div className="text-center py-4 text-[var(--af-text3)] text-xs">Sin entradas — escribe la primera nota</div>
+                                      ) : (
+                                        <div className="space-y-1.5">
+                                          {entries.map(entry => (
+                                            <div key={entry.id} className={`flex items-center gap-2.5 p-2 rounded-lg transition-all ${entry.confirmed ? 'bg-emerald-500/5' : 'bg-[var(--af-bg3)]'}`}>
+                                              <button className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${entry.confirmed ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`} onClick={() => toggleEntryConfirmed(phase.id, entry.id)}>
+                                                {entry.confirmed && <span className="text-white text-[10px] font-bold">✓</span>}
+                                              </button>
+                                              <div className="flex-1 min-w-0">
+                                                <div className={`text-[12px] ${entry.confirmed ? 'line-through text-[var(--af-text3)]' : ''}`}>{entry.text}</div>
+                                                {entry.createdAt && <div className="text-[9px] text-[var(--af-text3)] mt-0.5">{typeof entry.createdAt === 'string' ? entry.createdAt.split('T')[0] : ''}</div>}
+                                              </div>
+                                              <button className="text-[var(--af-text3)] hover:text-red-400 cursor-pointer flex-shrink-0 p-0.5" onClick={() => deletePhaseEntry(phase.id, entry.id)}>
+                                                <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                              </button>
+                                            </div>
+                                          ))}
+                                          <div className="text-[10px] text-[var(--muted-foreground)] text-right mt-1">{confirmedEntries} de {entries.length} confirmadas</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                                {/* Status select */}
-                                {isEnabled && (
-                                  <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-[11px] text-[var(--foreground)] outline-none cursor-pointer flex-shrink-0" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
-                                    <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
-                                  </select>
-                                )}
-                                {/* Delete */}
-                                <button className="text-[var(--af-text3)] hover:text-red-400 cursor-pointer flex-shrink-0 p-1" onClick={() => deletePhase(phase.id)}>
-                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
                               </div>
                             );
                           })}
