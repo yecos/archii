@@ -1,45 +1,23 @@
 'use client';
-
 import React from 'react';
-import { useAppStore } from '@/stores/app-store';
-import { PHOTO_CATS } from '@/lib/constants';
+import { useApp } from '@/contexts/AppContext';
+import { PHOTO_CATS } from '@/lib/types';
 
 export default function GalleryScreen() {
-  const galleryPhotos = useAppStore(s => s.galleryPhotos);
-  const galleryFilterProject = useAppStore(s => s.galleryFilterProject);
-  const galleryFilterCat = useAppStore(s => s.galleryFilterCat);
-  const setGalleryFilterProject = useAppStore(s => s.setGalleryFilterProject);
-  const setGalleryFilterCat = useAppStore(s => s.setGalleryFilterCat);
-  const projects = useAppStore(s => s.projects);
-  const setEditingId = useAppStore(s => s.setEditingId);
-  const setForms = useAppStore(s => s.setForms);
-  const openModal = useAppStore(s => s.openModal);
-  const setLightboxPhoto = useAppStore(s => s.setLightboxPhoto);
-  const setLightboxIndex = useAppStore(s => s.setLightboxIndex);
-  const showToast = useAppStore(s => s.showToast);
+  const {
+    projects, galleryFilterProject, setGalleryFilterProject,
+    galleryFilterCat, setGalleryFilterCat,
+    setEditingId, setForms, openModal,
+    getFilteredGalleryPhotos, openLightbox, deleteGalleryPhoto,
+  } = useApp();
 
-  // Local computed: filtered gallery photos
-  const getFilteredGalleryPhotos = () => {
-    let photos = galleryPhotos;
-    if (galleryFilterProject !== 'all') photos = photos.filter(p => p.data.projectId === galleryFilterProject);
-    if (galleryFilterCat !== 'all') photos = photos.filter(p => p.data.categoryName === galleryFilterCat);
-    return photos;
-  };
-
-  // TODO: connect to deleteGalleryPhoto (defined in page.tsx)
-  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await (window as any).firebase.firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch {} };
-
-  // TODO: connect to openLightbox (defined in page.tsx)
-  const openLightbox = (photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); };
-
-  const filteredPhotos = getFilteredGalleryPhotos();
-
-  return (<div className="animate-fadeIn p-4 sm:p-6 space-y-4">
+  return (
+    <div className="animate-fadeIn p-4 sm:p-6 space-y-4">
   {/* Header */}
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <h2 className="text-lg font-semibold">📸 Galería de proyectos</h2>
-      <p className="text-sm text-[var(--muted-foreground)]">{filteredPhotos.length} foto{filteredPhotos.length !== 1 ? 's' : ''}</p>
+      <p className="text-sm text-[var(--muted-foreground)]">{getFilteredGalleryPhotos().length} foto{getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
     </div>
     <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); openModal('gallery'); }}>
       <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -60,19 +38,19 @@ export default function GalleryScreen() {
   </div>
 
   {/* Photo Grid */}
-  {filteredPhotos.length === 0 ? (
+  {getFilteredGalleryPhotos().length === 0 ? (
     <div className="text-center py-16">
       <div className="text-4xl mb-3">🖼️</div>
       <div className="text-[var(--muted-foreground)]">No hay fotos en la galería</div>
       <div className="text-xs text-[var(--muted-foreground)] mt-1">Agrega fotos de tus proyectos para documentar el progreso</div>
     </div>
   ) : (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
-      {filteredPhotos.map((photo, idx) => {
+    <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))' }}>
+      {getFilteredGalleryPhotos().map((photo, idx) => {
         const proj = projects.find(p => p.id === photo.data.projectId);
         return (
           <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>
-            <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover" loading="lazy" />
+            <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover opacity-0 transition-opacity duration-300" loading="lazy" onLoad={e => { (e.target as HTMLImageElement).style.opacity = '1' }} />
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <div className="absolute bottom-0 left-0 right-0 p-2">
@@ -95,5 +73,6 @@ export default function GalleryScreen() {
       })}
     </div>
   )}
-</div>);
+</div>
+  );
 }
