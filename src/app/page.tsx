@@ -3557,7 +3557,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                   {aiChatHistory.map((msg, i) => (
                     <div key={i} className={`max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
                       {msg.role === 'assistant' && (<div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[10px] text-[var(--af-text3)] font-medium">ArchiFlow IA</span></div>)}
-                      <div className={`px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[var(--af-accent)] text-[var(--af-accent2)] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>{msg.content}</div>
+                      <div className={`px-4 py-3 text-[14px] font-medium leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[var(--af-accent)] text-[#1a1a1a] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>{msg.content}</div>
                     </div>
                   ))}
                   {aiLoading && (<div className="self-start"><div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[10px] text-[var(--af-text3)] font-medium">ArchiFlow IA</span></div><div className="bg-[var(--af-bg3)] px-4 py-3 rounded-2xl rounded-bl-sm"><div className="flex gap-1.5"><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'0ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'150ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'300ms'}}/></div></div></div>)}
@@ -3595,7 +3595,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                               <div className="text-[10px] text-[var(--muted-foreground)] truncate">{m.replyTo.text}</div>
                             </div>)}
                             {/* Message content */}
-                            {msgType === 'TEXT' && m.text && (<div className={`px-3 py-2.5 text-[13px] leading-relaxed relative ${isMe ? 'bg-[var(--af-accent)] text-[var(--af-accent2)] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>
+                            {msgType === 'TEXT' && m.text && (<div className={`px-3.5 py-2.5 text-[14px] font-medium leading-relaxed relative ${isMe ? 'bg-[var(--af-accent)] text-[#1a1a1a] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>
                               {m.text.split('\n').map((l: string, i: number) => <span key={i}>{l}<br /></span>)}
                               {/* Read receipt */}
                               {isMe && m.readBy && (<div className="absolute -bottom-1 right-1 text-[9px]">{m.readBy[authUser?.uid] ? (Object.keys(m.readBy).length > 1 ? '✓✓' : '✓') : '⏳'}</div>)}
@@ -3659,7 +3659,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                     {isRecording ? (<div className="w-3 h-3 bg-white rounded-sm" />) : (<svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={audioPreviewUrl ? 'var(--background)' : 'none'} stroke={audioPreviewUrl ? 'none' : 'currentColor'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>)}
                   </button>
                   <button className="w-9 h-9 rounded-full bg-[var(--af-accent)] flex items-center justify-center cursor-pointer border-none flex-shrink-0 active:scale-95 transition-transform disabled:opacity-50" onClick={() => { if (chatTab === 'ai') { sendAIChat(); } else { sendAll(); } }} disabled={chatTab === 'ai' ? aiLoading || !(forms.chatInput?.trim()) : false} title="Enviar">
-                    {chatTab === 'ai' && aiLoading ? (<div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />) : (<svg viewBox="0 0 24 24" className="w-4 h-4 stroke-background fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>)}
+                    {chatTab === 'ai' && aiLoading ? (<div className="w-4 h-4 border-2 border-[#1a1a1a]/30 border-t-[#1a1a1a] rounded-full animate-spin" />) : (<svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[#1a1a1a] fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>)}
                   </button>
                 </div>
               </div>
