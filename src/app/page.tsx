@@ -2006,7 +2006,7 @@ export default function Home() {
           <div className="w-8 h-8 bg-[var(--af-accent)] rounded-lg flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
-          <div><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v1.0</div></div>
+          <div><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v1.2</div></div>
         </div>
         {/* Profile - TOP */}
         <div className="px-3 pt-3 pb-2 border-b border-[var(--border)]" onClick={() => navigateTo('profile')}>
@@ -2330,17 +2330,36 @@ export default function Home() {
               </div>
 
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
                 {[
-                  { val: projects.length, lbl: 'Proyectos totales', icon: '📁', color: 'border-l-blue-500' },
+                  { val: projects.length, lbl: 'Proyectos', icon: '📁', color: 'border-l-blue-500' },
                   { val: executionProjects.length, lbl: 'En ejecución', icon: '🏗️', color: 'border-l-amber-500' },
-                  { val: pendingCount, lbl: 'Tareas pendientes', icon: '📋', color: 'border-l-orange-500' },
+                  { val: pendingCount, lbl: 'Pendientes', icon: '📋', color: 'border-l-orange-500' },
                   { val: tasks.filter(t => t.data.status === 'Completado').length, lbl: 'Completadas', icon: '✅', color: 'border-l-emerald-500' },
+                  { val: fmtCOP(totalBudget), lbl: 'Presupuesto total', icon: '💰', color: 'border-l-purple-500' },
                 ].map((m, i) => (
                   <div key={i} className={`bg-[var(--card)] border border-[var(--border)] border-l-4 ${m.color} rounded-xl p-3.5 md:p-4 flex items-center gap-3`}>
                     <div className="text-xl md:text-2xl">{m.icon}</div>
                     <div><div className="text-xl md:text-2xl font-bold">{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>
                   </div>
+                ))}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { icon: '➕', label: 'Proyecto', action: () => { setEditingId(null); openModal('project'); } },
+                  { icon: '📋', label: 'Tarea', action: () => { setForms(p => ({ ...p, taskTitle: '', taskProject: projects[0]?.id || '', taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); } },
+                  { icon: '📅', label: 'Reunión', action: () => openModal('meeting') },
+                  { icon: '💰', label: 'Gasto', action: () => openModal('expense') },
+                  { icon: '📦', label: 'Producto', action: () => navigateTo('inventory') },
+                  { icon: '📸', label: 'Foto', action: () => navigateTo('gallery') },
+                  { icon: '👥', label: 'Equipo', action: () => navigateTo('team') },
+                  { icon: '📊', label: 'Informe', action: () => navigateTo('profile') },
+                ].map((a, i) => (
+                  <button key={i} className="flex items-center gap-1.5 px-3 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-[12px] text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] hover:border-[var(--af-accent)]/30 transition-all whitespace-nowrap flex-shrink-0" onClick={a.action}>
+                    <span>{a.icon}</span>{a.label}
+                  </button>
                 ))}
               </div>
 
@@ -2481,6 +2500,61 @@ export default function Home() {
                           <div className="text-[12px] text-[var(--muted-foreground)] truncate">{m.type === 'AUDIO' ? '🎤 Nota de voz' : m.type === 'IMAGE' ? '📷 Foto' : m.type === 'FILE' ? `📎 ${m.fileName || 'Archivo'}` : (m.text || '').substring(0, 60)}</div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 5: Construction Phases */}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">🏗️ Fases de obra</div>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">{executionProjects.length} proyecto(s) activo(s)</span>
+                  </div>
+                  {executionProjects.length === 0 ? (
+                    <div className="text-center py-8 text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">🏗️</div>No hay proyectos en ejecución</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {executionProjects.slice(0, 5).map(p => {
+                        const prog = p.data.progress || 0;
+                        // Map progress to default phases
+                        const phases = DEFAULT_PHASES.map((phase, i) => {
+                          const phaseStart = Math.round((i / DEFAULT_PHASES.length) * 100);
+                          const phaseEnd = Math.round(((i + 1) / DEFAULT_PHASES.length) * 100);
+                          const isComplete = prog >= phaseEnd;
+                          const isCurrent = prog >= phaseStart && prog < phaseEnd;
+                          const isLast = i === DEFAULT_PHASES.length - 1;
+                          if (isLast && prog >= 100) return { name: phase, status: 'complete' };
+                          return { name: phase, status: isComplete ? 'complete' : isCurrent ? 'current' : 'pending' };
+                        });
+                        const currentPhase = phases.find(ph => ph.status === 'current')?.name || (prog >= 100 ? 'Entregado' : 'Sin iniciar');
+                        return (
+                          <div key={p.id} className="cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg p-3 transition-colors" onClick={() => openProject(p.id)}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-[13px] font-semibold">{p.data.name}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-[var(--muted-foreground)]">{prog}%</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prog >= 80 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>{currentPhase}</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              {phases.map((ph, i) => (
+                                <div key={i} className="flex-1 group relative">
+                                  <div className={`h-2 rounded-full transition-all ${ph.status === 'complete' ? 'bg-emerald-500' : ph.status === 'current' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+                                  {/* Tooltip on hover */}
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--foreground)] text-[var(--background)] text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">{ph.name}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex justify-between mt-1">
+                              {phases.map((ph, i) => (
+                                <div key={i} className={`text-[8px] text-center flex-1 truncate ${ph.status === 'current' ? 'text-[var(--af-accent)] font-semibold' : 'text-[var(--af-text3)]'}`}>{ph.name.substring(0, 4)}</div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -4917,7 +4991,7 @@ export default function Home() {
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
               <div className="text-[15px] font-semibold mb-4">ℹ️ Acerca de</div>
               <div className="space-y-2 text-sm text-[var(--muted-foreground)]">
-                <div className="flex justify-between"><span>ArchiFlow</span><span className="font-mono text-xs">v1.1.0</span></div>
+                <div className="flex justify-between"><span>ArchiFlow</span><span className="font-mono text-xs">v1.2.0</span></div>
                 <div className="flex justify-between"><span>Plataforma</span><span>Next.js + Firebase</span></div>
                 <div className="flex justify-between"><span>PWA</span><span>{isStandalone ? 'Instalada' : 'No instalada'}</span></div>
                 <div className="flex justify-between"><span>Notificaciones</span><span>{notifPermission === 'granted' ? 'Activadas' : 'Inactivas'}</span></div>
