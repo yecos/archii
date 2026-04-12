@@ -1,6 +1,15 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useUIStore } from '@/stores/ui-store';
+import { useAppStore } from '@/stores/app-store';
+
+/* ===== Extracted Screens ===== */
+import CalendarScreen from '@/screens/CalendarScreen';
+import GalleryScreen from '@/screens/GalleryScreen';
+import SuppliersScreen from '@/screens/SuppliersScreen';
+import TeamScreen from '@/screens/TeamScreen';
+import PortalScreen from '@/screens/PortalScreen';
+import ObraScreen from '@/screens/ObraScreen';
 
 /* ===== TYPES ===== */
 interface User { uid: string; displayName: string; email: string; photoURL?: string }
@@ -19,6 +28,8 @@ interface InvProduct { id: string; data: { name: string; sku: string; categoryId
 interface InvCategory { id: string; data: { name: string; color: string; description: string; createdAt: any } }
 interface InvMovement { id: string; data: { productId: string; type: 'Entrada' | 'Salida'; quantity: number; reason: string; reference: string; date: string; createdAt: any; createdBy: string } }
 interface InvTransfer { id: string; data: { productId: string; productName: string; fromWarehouse: string; toWarehouse: string; quantity: number; status: string; date: string; notes: string; createdAt: any; createdBy: string; completedAt?: any } }
+interface WorkLogEntry { id: string; data: { date: string; weather: string; temperature: string; activities: string[]; observations: string; photos: string[]; plannedProgress: number; actualProgress: number; personnelCount: number; equipment: string; createdBy: string; creatorName: string; signatures: { uid: string; name: string; role: string; signedAt: any }[]; createdAt: any } }
+interface Acta { id: string; data: { projectId: string; title: string; number: string; date: string; time: string; location: string; participants: string[]; topics: { title: string; discussion: string; decision: string }[]; agreements: { description: string; responsible: string; dueDate: string; taskId?: string; completed: boolean }[]; nextMeetingDate: string; notes: string; tasksGenerated: boolean; createdBy: string; createdAt: any } }
 
 /* ===== HELPERS ===== */
 const fmtCOP = (n: number) => { if (!n) return '$0'; if (n >= 1e6) return '$' + (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'; return '$' + Number(n).toLocaleString('es-CO'); };
@@ -107,6 +118,17 @@ export default function Home() {
   const [invTransfers, setInvTransfers] = useState<any[]>([]);
   const [invTransferFilterStatus, setInvTransferFilterStatus] = useState<string>('all');
   const [invWarehouseFilter, setInvWarehouseFilter] = useState<string>('all');
+
+  // Work Logs state
+  const [workLogs, setWorkLogs] = useState<any[]>([]);
+  const [workLogForm, setWorkLogForm] = useState<any>({});
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
+
+  // Actas state
+  const [actas, setActas] = useState<any[]>([]);
+  const [expandedActa, setExpandedActa] = useState<string | null>(null);
+  const [selectedActa, setSelectedActa] = useState<any>(null);
+  const [actaFilterProject, setActaFilterProject] = useState<string>('all');
 
   // Admin state
   const [adminTab, setAdminTab] = useState<'timeline' | 'dashboard' | 'permissions' | 'team'>('timeline');
@@ -551,6 +573,26 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const db = (window as any).firebase.firestore();
     const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser]);
+
+  // Load work logs for selected project
+  useEffect(() => {
+    if (!ready || !selectedProjectId) return;
+    const db = (window as any).firebase.firestore();
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('workLogs').orderBy('date', 'desc').onSnapshot(snap => {
+      setWorkLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => { unsub(); setWorkLogs([]); };
+  }, [ready, selectedProjectId]);
+
+  // Load actas
+  useEffect(() => {
+    if (!ready || !authUser) return;
+    const db = (window as any).firebase.firestore();
+    const unsub = db.collection('actas').orderBy('date', 'desc').onSnapshot(snap => {
+      setActas(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
   }, [ready, authUser]);
@@ -3725,383 +3767,25 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
           </div>)}
 
           {/* ===== GLOBAL OBRA ===== */}
-          {screen === 'obra' && (<div className="animate-fadeIn">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="text-[15px] font-semibold mb-3">Seguimiento de obra</div>
-              <div className="text-center py-12 text-[var(--af-text3)]">
-                <div className="text-3xl mb-2">🏗️</div>
-                <div className="text-sm mb-3">Selecciona un proyecto en ejecución para ver su seguimiento</div>
-                {projects.filter(p => p.data.status === 'Ejecucion').length > 0 ? (
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    {projects.filter(p => p.data.status === 'Ejecucion').map(p => (<button key={p.id} className="text-xs px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] hover:border-[var(--input)] transition-all" onClick={() => { setSelectedProjectId(p.id); setForms(p => ({ ...p, detailTab: 'Obra' })); navigateTo('projectDetail', p.id); }}>{p.data.name}</button>))}
-                  </div>
-                ) : <div className="text-xs mt-2">No hay proyectos en ejecución</div>}
-              </div>
-            </div>
-          </div>)}
+          {/* ===== OBRA ===== */}
+          {screen === 'obra' && <ObraScreen />}
 
           {/* ===== SUPPLIERS ===== */}
-          {screen === 'suppliers' && (<div className="animate-fadeIn">
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="text-sm text-[var(--muted-foreground)]">{suppliers.length} proveedores</div>
-              <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('supplier'); }}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proveedor
-              </button>
-            </div>
-            {suppliers.length === 0 ? (
-              <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🏪</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proveedores</div><div className="text-[13px]">Agrega tu primer proveedor</div></div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {suppliers.map(s => (
-                  <div key={s.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="w-11 h-11 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg flex items-center justify-center text-lg">🏪</div>
-                      <div className="flex gap-1.5">
-                        <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(s.id); setForms(p => ({ ...p, supName: s.data.name, supCategory: s.data.category, supPhone: s.data.phone, supEmail: s.data.email, supAddress: s.data.address, supWebsite: s.data.website, supNotes: s.data.notes, supRating: String(s.data.rating) })); openModal('supplier'); }}>✏️</button>
-                        <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => deleteSupplier(s.id)}>🗑</button>
-                      </div>
-                    </div>
-                    <div className="text-sm font-semibold mb-0.5">{s.data.name}</div>
-                    <div className="text-[11px] text-[var(--af-text3)] mb-2">{s.data.category}</div>
-                    <div className="text-[11px] text-[var(--af-accent)] mb-2">{'★'.repeat(s.data.rating || 5)}{'☆'.repeat(5 - (s.data.rating || 5))}</div>
-                    <div className="text-xs text-[var(--muted-foreground)] space-y-0.5">
-                      {s.data.phone && <div>📞 {s.data.phone}</div>}
-                      {s.data.email && <div>✉️ {s.data.email}</div>}
-                      {s.data.address && <div>📍 {s.data.address}</div>}
-                      {s.data.website && <div>🌐 {s.data.website}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>)}
+          {screen === 'suppliers' && <SuppliersScreen />}
 
           {/* ===== TEAM MANAGEMENT ===== */}
-          {screen === 'team' && (<div className="animate-fadeIn">
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.length} miembros en el equipo</div>
-            </div>
-            {/* Role Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
-              {USER_ROLES.slice(0, 4).map(role => {
-                const count = teamUsers.filter(u => u.data.role === role).length;
-                return (
-                  <div key={role} className={`border rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
-                    <div className="text-lg mb-0.5">{ROLE_ICONS[role]}</div>
-                    <div className="text-lg font-bold">{count}</div>
-                    <div className="text-[10px] font-medium">{role}s</div>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Team Members List */}
-            <div className="space-y-2">
-              {teamUsers.map(user => {
-                const role = user.data.role || 'Miembro';
-                const isMe = user.id === authUser?.uid;
-                const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro';
-                const canChangeRole = myRole === 'Admin' || myRole === 'Director';
-                const userTasks = tasks.filter(t => t.data.assigneeId === user.id);
-                const userPending = userTasks.filter(t => t.data.status !== 'Completado').length;
-                return (
-                  <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold border-2 ${avatarColor(user.id)} flex-shrink-0`} style={user.data.photoURL ? { backgroundImage: `url(${user.data.photoURL})`, backgroundSize: 'cover' } : {}}>
-                        {user.data.photoURL ? '' : getInitials(user.data.name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[14px] font-semibold">{user.data.name}</span>
-                          {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">Tú</span>}
-                          <span className={`text-[9px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>{ROLE_ICONS[role]} {role}</span>
-                        </div>
-                        <div className="text-[11px] text-[var(--muted-foreground)] truncate">{user.data.email}</div>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-[10px] text-[var(--af-text3)]">{userTasks.length} tareas</span>
-                          <span className="text-[10px] text-[var(--af-text3)]">{userPending} pendientes</span>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        {canChangeRole && !isMe ? (
-                          <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => updateUserRole(user.id, e.target.value)}>
-                            {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
-                          </select>
-                        ) : isMe ? (
-                          <span className="text-[10px] text-[var(--af-text3)]">Tu rol</span>
-                        ) : (
-                          <span className="text-[10px] text-[var(--af-text3)]">{role}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>)}
+          {screen === 'team' && <TeamScreen />}
 
           {/* ===== CALENDAR ===== */}
-          {screen === 'calendar' && (() => {
-            const today = new Date();
-            const firstDay = new Date(calYear, calMonth, 1);
-            const lastDay = new Date(calYear, calMonth + 1, 0);
-            const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
-            const daysInMonth = lastDay.getDate();
-            const calTasks = tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado' && (calFilterProject === 'all' || t.data.projectId === calFilterProject));
-            const todayStr = today.toISOString().split('T')[0];
-            const getTasksForDay = (day: number) => {
-              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              return calTasks.filter(t => t.data.dueDate === dateStr);
-            };
-            const selectedDayTasks = calSelectedDate ? calTasks.filter(t => t.data.dueDate === calSelectedDate) : [];
-            const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else { setCalMonth(m => m - 1); } setCalSelectedDate(null); };
-            const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else { setCalMonth(m => m + 1); } setCalSelectedDate(null); };
-
-            // Build calendar grid
-            const cells: (number | null)[] = [];
-            for (let i = 0; i < startDow; i++) cells.push(null);
-            for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-            while (cells.length % 7 !== 0) cells.push(null);
-
-            return (<div className="animate-fadeIn">
-              {/* Calendar Header */}
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={prevMonth}>
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-                  </button>
-                  <div className="text-[15px] font-semibold min-w-[120px] sm:min-w-[160px] text-center">{MESES[calMonth]} {calYear}</div>
-                  <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={nextMonth}>
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={calFilterProject} onChange={e => setCalFilterProject(e.target.value)}>
-                    <option value="all">Todos los proyectos</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
-                  </select>
-                  <button className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); setCalSelectedDate(today.toISOString().split('T')[0]); }}>Hoy</button>
-                </div>
-              </div>
-
-              {/* Stats row */}
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{meetings.filter(m => m.data.date && m.data.date.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} este mes</span></div>
-                <button className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); setCalSelectedDate(today.toISOString().split('T')[0]); }}>Hoy</button>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="bg-red-500/10 rounded-lg p-2.5 text-center">
-                  <div className="text-base font-bold text-red-400">{calTasks.filter(t => t.data.priority === 'Alta').length}</div>
-                  <div className="text-[9px] text-red-400/70">Urgentes</div>
-                </div>
-                <div className="bg-amber-500/10 rounded-lg p-2.5 text-center">
-                  <div className="text-base font-bold text-amber-400">{calTasks.filter(t => { const d = t.data.dueDate; return d && new Date(d) < today; }).length}</div>
-                  <div className="text-[9px] text-amber-400/70">Vencidas</div>
-                </div>
-                <div className="bg-blue-500/10 rounded-lg p-2.5 text-center">
-                  <div className="text-base font-bold text-blue-400">{calTasks.filter(t => { const d = t.data.dueDate; if (!d) return false; const diff = Math.ceil((new Date(d).getTime() - today.getTime()) / 86400000); return diff >= 0 && diff <= 7; }).length}</div>
-                  <div className="text-[9px] text-blue-400/70">Esta semana</div>
-                </div>
-              </div>
-
-              {/* Calendar Grid */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-                {/* Day headers */}
-                <div className="grid grid-cols-7 border-b border-[var(--border)]">
-                  {DIAS_SEMANA.map(d => (
-                    <div key={d} className="py-2.5 text-center text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{d}</div>
-                  ))}
-                </div>
-                {/* Days grid */}
-                <div className="grid grid-cols-7">
-                  {cells.map((day, idx) => {
-                    if (day === null) return <div key={`e-${idx}`} className="min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] bg-[var(--af-bg3)]/30" />;
-                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const isToday = day === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
-                    const isSelected = calSelectedDate === dateStr;
-                    const dayTasks = getTasksForDay(day);
-                    const isPast = new Date(dateStr) < new Date(today.toISOString().split('T')[0]);
-                    return (
-                      <div key={day} className={`min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] p-1 sm:p-1.5 cursor-pointer transition-colors ${isSelected ? 'bg-[var(--af-accent)]/10' : 'hover:bg-[var(--af-bg3)]'} ${isPast && !isToday ? 'opacity-70' : ''}`} onClick={() => setCalSelectedDate(dateStr)}>
-                        <div className={`text-[11px] sm:text-[13px] font-medium mb-0.5 ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--af-accent)] text-background flex items-center justify-center' : 'text-[var(--foreground)]'}`}>
-                          {day}
-                        </div>
-                        <div className="space-y-0.5">
-                          {dayTasks.slice(0, 3).map(t => {
-                            const proj = projects.find(p => p.id === t.data.projectId);
-                            const isOverdue = new Date(t.data.dueDate) < today;
-                            return (
-                              <div key={t.id} className={`text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate ${t.data.priority === 'Alta' ? 'bg-red-500/15 text-red-400' : t.data.priority === 'Media' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'}`} title={t.data.title}>
-                                {isOverdue ? '⚡ ' : ''}{t.data.title}
-                              </div>
-                            );
-                          })}
-                          {dayTasks.length > 3 && <div className="text-[8px] text-[var(--muted-foreground)] pl-1">+{dayTasks.length - 3} más</div>}
-                          {meetings.filter(m => m.data.date === dateStr).map(m => <div key={m.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📅 ${m.data.title} (${m.data.time})`}>📅 {m.data.time}</div>)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Selected day detail */}
-              {calSelectedDate && (
-                <div className="mt-4 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[14px] font-semibold">
-                      {(() => { const parts = calSelectedDate.split('-'); return `${parseInt(parts[2])} de ${MESES[parseInt(parts[1]) - 1]} ${parts[0]}`; })()}
-                    </div>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedDayTasks.length === 0 ? 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]' : 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]'}`}>
-                      {selectedDayTasks.length} tarea{selectedDayTasks.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  {selectedDayTasks.length === 0 ? (
-                    <div className="text-center py-6 text-[var(--af-text3)]"><div className="text-2xl mb-1">📅</div><div className="text-sm">Sin tareas pendientes para este día</div></div>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedDayTasks.sort((a, b) => {
-                        const pOrder = { Alta: 0, Media: 1, Baja: 2 };
-                        return (pOrder[a.data.priority as keyof typeof pOrder] || 1) - (pOrder[b.data.priority as keyof typeof pOrder] || 1);
-                      }).map(t => {
-                        const proj = projects.find(p => p.id === t.data.projectId);
-                        const isOverdue = new Date(t.data.dueDate) < today;
-                        return (
-                          <div key={t.id} className={`border rounded-lg p-3 ${isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-[var(--border)] bg-[var(--af-bg3)]'}`}>
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="text-[13px] font-medium">{t.data.title}</div>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
-                              {proj && <span>📁 {proj.data.name}</span>}
-                              <span>👤 {getUserName(t.data.assigneeId)}</span>
-                              <span className={`px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Reuniones del día seleccionado */}
-                  {(() => {
-                    const dayMeetings = meetings.filter(m => m.data.date === calSelectedDate);
-                    if (dayMeetings.length === 0) return null;
-                    return (
-                      <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="text-[12px] font-semibold text-purple-400">📅 Reuniones ({dayMeetings.length})</div>
-                          <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Nueva</button>
-                        </div>
-                        <div className="space-y-2">
-                          {dayMeetings.sort((a, b) => (a.data.time || '').localeCompare(b.data.time || '')).map(m => {
-                            const meetProj = projects.find(p => p.id === m.data.projectId);
-                            return (
-                              <div key={m.id} className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <div className="text-[13px] font-medium">{m.data.title}</div>
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <button className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)]" onClick={() => openEditMeeting(m)}>✏️</button>
-                                    <button className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteMeeting(m.id)}>✕</button>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
-                                  <span>🕐 {m.data.time || '09:00'} · {m.data.duration || 60} min</span>
-                                  {meetProj && <span>📁 {meetProj.data.name}</span>}
-                                </div>
-                                {m.data.attendees && m.data.attendees.length > 0 && (
-                                  <div className="text-[10px] text-[var(--af-text3)] mt-1">👥 {Array.isArray(m.data.attendees) ? m.data.attendees.join(', ') : m.data.attendees}</div>
-                                )}
-                                {m.data.description && <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5 leading-relaxed">{m.data.description}</div>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>);
-          })()}
+          {screen === 'calendar' && <CalendarScreen />}
 
           {/* ===== GLOBAL PORTAL ===== */}
-          {screen === 'portal' && (<div className="animate-fadeIn">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="text-[15px] font-semibold mb-3">Portal del cliente</div>
-              <div className="text-center py-12 text-[var(--af-text3)]">
-                <div className="text-3xl mb-2">👥</div>
-                <div className="text-sm mb-3">Comparte actualizaciones con tus clientes desde cada proyecto</div>
-                {projects.length > 0 && (<div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  {projects.map(p => (<button key={p.id} className="text-xs px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] hover:border-[var(--input)] transition-all" onClick={() => { setSelectedProjectId(p.id); setForms(p => ({ ...p, detailTab: 'Portal' })); navigateTo('projectDetail', p.id); }}>{p.data.name}</button>))}
-                </div>)}
-              </div>
-            </div>
-          </div>)}
+          {screen === 'portal' && <PortalScreen />}
 
 
-              {/* ===== GALLERY ===== */}
-          {screen === 'gallery' && (<div className="animate-fadeIn p-4 sm:p-6 space-y-4">
-  {/* Header */}
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-    <div>
-      <h2 className="text-lg font-semibold">📸 Galería de proyectos</h2>
-      <p className="text-sm text-[var(--muted-foreground)]">{getFilteredGalleryPhotos().length} foto{getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
-    </div>
-    <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); openModal('gallery'); }}>
-      <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Agregar foto
-    </button>
-  </div>
+          {screen === 'gallery' && <GalleryScreen />}
 
-  {/* Filters */}
-  <div className="flex flex-col sm:flex-row gap-2">
-    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={galleryFilterProject} onChange={e => setGalleryFilterProject(e.target.value)}>
-      <option value="all">Todos los proyectos</option>
-      {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
-    </select>
-    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={galleryFilterCat} onChange={e => setGalleryFilterCat(e.target.value)}>
-      <option value="all">Todas las categorías</option>
-      {PHOTO_CATS.map(c => <option key={c} value={c}>{c}</option>)}
-    </select>
-  </div>
 
-  {/* Photo Grid */}
-  {getFilteredGalleryPhotos().length === 0 ? (
-    <div className="text-center py-16">
-      <div className="text-4xl mb-3">🖼️</div>
-      <div className="text-[var(--muted-foreground)]">No hay fotos en la galería</div>
-      <div className="text-xs text-[var(--muted-foreground)] mt-1">Agrega fotos de tus proyectos para documentar el progreso</div>
-    </div>
-  ) : (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
-      {getFilteredGalleryPhotos().map((photo, idx) => {
-        const proj = projects.find(p => p.id === photo.data.projectId);
-        return (
-          <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>
-            <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover" loading="lazy" />
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-              <div className="absolute bottom-0 left-0 right-0 p-2">
-                {photo.data.caption && <div className="text-xs text-white font-medium truncate">{photo.data.caption}</div>}
-                <div className="flex items-center gap-1 mt-0.5">
-                  {proj && <span className="text-[10px] text-white/70 truncate">{proj.data.name}</span>}
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 text-white/90">{photo.data.categoryName}</span>
-                </div>
-              </div>
-              <div className="absolute top-1.5 right-1.5 flex gap-1">
-                <button className="w-6 h-6 rounded-full bg-red-500/80 text-white flex items-center justify-center text-xs hover:bg-red-500 transition-colors" onClick={e => { e.stopPropagation(); deleteGalleryPhoto(photo.id); }}>✕</button>
-              </div>
-            </div>
-            {/* Category badge always visible */}
-            <div className="absolute top-1.5 left-1.5">
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-black/40 text-white/90 backdrop-blur-sm">{photo.data.categoryName}</span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  )}
-</div>)}
 
 
           {/* ===== INVENTORY SECTION ===== */}

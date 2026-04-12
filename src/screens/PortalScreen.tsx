@@ -1,0 +1,30 @@
+'use client';
+
+import React from 'react';
+import { useAppStore } from '@/stores/app-store';
+
+export default function PortalScreen() {
+  const projects = useAppStore(s => s.projects);
+  const setSelectedProjectId = useAppStore(s => s.setSelectedProjectId);
+  const setForms = useAppStore(s => s.setForms);
+  const setScreen = useAppStore(s => s.setScreen);
+
+  // Replicate navigateTo logic for projectDetail
+  const navigateTo = (screen: string, projId?: string | null) => {
+    if (projId) setSelectedProjectId(projId);
+    setScreen(screen);
+  };
+
+  return (<div className="animate-fadeIn">
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="text-[15px] font-semibold mb-3">Portal del cliente</div>
+      <div className="text-center py-12 text-[var(--af-text3)]">
+        <div className="text-3xl mb-2">👥</div>
+        <div className="text-sm mb-3">Comparte actualizaciones con tus clientes desde cada proyecto</div>
+        {projects.length > 0 && (<div className="mt-4 flex flex-wrap gap-2 justify-center">
+          {projects.map(p => (<button key={p.id} className="text-xs px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] hover:border-[var(--input)] transition-all" onClick={() => { setSelectedProjectId(p.id); setForms(p => ({ ...p, detailTab: 'Portal' })); navigateTo('projectDetail', p.id); }}>{p.data.name}</button>))}
+        </div>)}
+      </div>
+    </div>
+  </div>);
+}
