@@ -10,7 +10,7 @@ interface Task { id: string; data: { title: string; projectId: string; assigneeI
 interface Expense { id: string; data: { concept: string; projectId: string; category: string; amount: number; date: string; createdAt: any } }
 interface Supplier { id: string; data: { name: string; category: string; phone: string; email: string; address: string; website: string; notes: string; rating: number; createdAt: any } }
 interface Approval { id: string; data: { title: string; description: string; status: string; createdAt: any } }
-interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; createdAt: any } }
+interface WorkPhase { id: string; data: { name: string; description: string; status: string; order: number; startDate: string; endDate: string; group: string; active: boolean; createdAt: any } }
 interface ProjectFile { id: string; name: string; type: string; size: number; url: string; createdAt: any }
 interface OneDriveFile { id: string; name: string; size: number; mimeType: string; webUrl: string; createdDateTime: string; '@microsoft.graph.downloadUrl'?: string }
 interface GalleryPhoto { id: string; data: { projectId: string; categoryName: string; caption: string; imageData: string; createdAt: any; createdBy: string } }
@@ -30,7 +30,12 @@ const taskStColor = (s: string) => ({ 'Por hacer': 'bg-[var(--af-bg4)] text-[var
 const avatarColors = ['bg-emerald-500/15 text-emerald-400 border-emerald-500/30', 'bg-blue-500/15 text-blue-400 border-blue-500/30', 'bg-purple-500/15 text-purple-400 border-purple-500/30', 'bg-amber-500/15 text-amber-400 border-amber-500/30'];
 const avatarColor = (id: string) => { let h = 0; for (let i = 0; i < (id || '').length; i++) h = id.charCodeAt(i) + ((h << 5) - h); return avatarColors[Math.abs(h) % avatarColors.length]; };
 
-const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
+const PROJECT_PHASES = [
+  { group: 'Diseño', phases: ['Conceptualización', 'Anteproyecto', 'Proyecto', 'Interiorismo'] },
+  { group: 'Construcción', phases: ['Preliminares', 'Demoliciones', 'Excavaciones', 'Fundaciones', 'Estructura', 'Redes', 'Obra gris', 'Acabados', 'Carpintería', 'Mobiliario'] },
+] as const;
+const PHASE_GROUP_ICONS: Record<string, string> = { 'Diseño': '📐', 'Construcción': '🏗️' };
+const ALL_PHASE_NAMES = PROJECT_PHASES.flatMap(g => g.phases);
 const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos'];
 const SUPPLIER_CATS = ['Materiales', 'Mobiliario', 'Iluminación', 'Acabados', 'Eléctrico', 'Plomería', 'Otro'];
 const PHOTO_CATS = ['Fachada', 'Interior', 'Obra', 'Planos', 'Renders', 'Otro'];
@@ -1481,17 +1486,63 @@ export default function Home() {
   };
 
   const initDefaultPhases = async () => {
-    if (workPhases.length > 0) return;
+    if (workPhases.length > 0) {
+      if (!confirm('Ya hay fases configuradas. ¿Reemplazar todas?')) return;
+      // Delete existing phases
+      const db = (window as any).firebase.firestore();
+      const batch = db.batch();
+      for (const ph of workPhases) { batch.delete(db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(ph.id)); }
+      await batch.commit();
+    }
     const db = (window as any).firebase.firestore();
     const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
-    for (let i = 0; i < DEFAULT_PHASES.length; i++) {
-      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
+    let order = 0;
+    for (const group of PROJECT_PHASES) {
+      for (const phaseName of group.phases) {
+        await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: phaseName, description: '', status: 'Pendiente', order: order++, startDate: '', endDate: '', group: group.group, active: true, createdAt: ts });
+      }
     }
-    showToast('Fases inicializadas');
+    showToast('Fases configuradas — desactiva las que no apliquen');
+  };
+
+  const togglePhaseActive = async (phaseId: string, active: boolean) => {
+    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ active }); } catch {}
+  };
+
+  const deletePhase = async (phaseId: string) => {
+    if (!confirm('¿Eliminar esta fase?')) return;
+    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).delete(); showToast('Fase eliminada'); } catch {}
+  };
+
+  const addCustomPhase = async () => {
+    const name = forms.customPhaseName || '';
+    const group = forms.customPhaseGroup || 'Construcción';
+    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    try {
+      const db = (window as any).firebase.firestore();
+      const ts = (window as any).firebase.firestore.FieldValue.serverTimestamp();
+      const maxOrder = workPhases.length > 0 ? Math.max(...workPhases.map(p => p.data.order || 0)) + 1 : 0;
+      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name, description: '', status: 'Pendiente', order: maxOrder, startDate: '', endDate: '', group, active: true, createdAt: ts });
+      setForms(p => ({ ...p, customPhaseName: '', customPhaseGroup: 'Construcción' }));
+      showToast('Fase agregada');
+    } catch { showToast('Error', 'error'); }
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
-    try { await (window as any).firebase.firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch {}
+    try {
+      const db = (window as any).firebase.firestore();
+      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status, endDate: status === 'Completado' ? new Date().toISOString().split('T')[0] : '' });
+      // Auto-calculate project progress from active phases
+      setTimeout(() => {
+        const phases = workPhases.map(p => p.id === phaseId ? { ...p, data: { ...p.data, status } } : p);
+        const activePhases = phases.filter(p => p.data.active !== false);
+        if (activePhases.length > 0) {
+          const completed = activePhases.filter(p => p.data.status === 'Completado').length;
+          const newProgress = Math.round((completed / activePhases.length) * 100);
+          db.collection('projects').doc(selectedProjectId!).update({ progress: newProgress });
+        }
+      }, 500);
+    } catch {}
   };
 
   const saveApproval = async () => {
@@ -2505,7 +2556,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Row 5: Construction Phases */}
+              {/* Row 5: Construction Phases Overview */}
               <div className="grid grid-cols-1 gap-4">
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
@@ -2515,42 +2566,42 @@ export default function Home() {
                   {executionProjects.length === 0 ? (
                     <div className="text-center py-8 text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">🏗️</div>No hay proyectos en ejecución</div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {executionProjects.slice(0, 5).map(p => {
                         const prog = p.data.progress || 0;
-                        // Map progress to default phases
-                        const phases = DEFAULT_PHASES.map((phase, i) => {
-                          const phaseStart = Math.round((i / DEFAULT_PHASES.length) * 100);
-                          const phaseEnd = Math.round(((i + 1) / DEFAULT_PHASES.length) * 100);
-                          const isComplete = prog >= phaseEnd;
-                          const isCurrent = prog >= phaseStart && prog < phaseEnd;
-                          const isLast = i === DEFAULT_PHASES.length - 1;
-                          if (isLast && prog >= 100) return { name: phase, status: 'complete' };
-                          return { name: phase, status: isComplete ? 'complete' : isCurrent ? 'current' : 'pending' };
-                        });
-                        const currentPhase = phases.find(ph => ph.status === 'current')?.name || (prog >= 100 ? 'Entregado' : 'Sin iniciar');
+                        const hasDesign = p.data.status !== undefined;
                         return (
-                          <div key={p.id} className="cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg p-3 transition-colors" onClick={() => openProject(p.id)}>
-                            <div className="flex items-center justify-between mb-2">
+                          <div key={p.id} className="cursor-pointer hover:bg-[var(--af-bg3)] rounded-xl p-3.5 transition-colors" onClick={() => openProject(p.id)}>
+                            <div className="flex items-center justify-between mb-2.5">
                               <div className="text-[13px] font-semibold">{p.data.name}</div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-[var(--muted-foreground)]">{prog}%</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prog >= 80 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>{currentPhase}</span>
+                                <div className="h-1.5 w-24 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
+                                </div>
+                                <span className="text-[12px] font-semibold text-[var(--af-accent)] w-10 text-right">{prog}%</span>
                               </div>
                             </div>
-                            <div className="flex gap-1">
-                              {phases.map((ph, i) => (
-                                <div key={i} className="flex-1 group relative">
-                                  <div className={`h-2 rounded-full transition-all ${ph.status === 'complete' ? 'bg-emerald-500' : ph.status === 'current' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
-                                  {/* Tooltip on hover */}
-                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--foreground)] text-[var(--background)] text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">{ph.name}</div>
+                            {/* Mini phase groups */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-[var(--af-bg3)] rounded-lg p-2">
+                                <div className="text-[10px] text-[var(--muted-foreground)] mb-1">📐 Diseño</div>
+                                <div className="flex gap-0.5">
+                                  {['Concept.', 'Antep.', 'Proy.', 'Inter.'].map((lbl, i) => (
+                                    <div key={i} className={`flex-1 h-1.5 rounded-full ${prog > (i + 1) * 10 ? 'bg-emerald-500' : prog > i * 10 ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} title={lbl} />
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                            <div className="flex justify-between mt-1">
-                              {phases.map((ph, i) => (
-                                <div key={i} className={`text-[8px] text-center flex-1 truncate ${ph.status === 'current' ? 'text-[var(--af-accent)] font-semibold' : 'text-[var(--af-text3)]'}`}>{ph.name.substring(0, 4)}</div>
-                              ))}
+                                <div className="flex justify-between mt-0.5">
+                                  {['Con.', 'Ant.', 'Proy.', 'Int.'].map((l, i) => <div key={i} className="text-[7px] text-[var(--af-text3)] text-center flex-1 truncate">{l}</div>)}
+                                </div>
+                              </div>
+                              <div className="bg-[var(--af-bg3)] rounded-lg p-2">
+                                <div className="text-[10px] text-[var(--muted-foreground)] mb-1">🏗️ Construcción</div>
+                                <div className="flex gap-0.5">
+                                  {Array.from({ length: 10 }, (_, i) => (
+                                    <div key={i} className={`flex-1 h-1.5 rounded-full ${prog > ((i + 1) / 14 * 100) ? 'bg-emerald-500' : prog > (i / 14 * 100) ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} title={ALL_PHASE_NAMES[i + 4] || ''} />
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );
@@ -2802,35 +2853,90 @@ export default function Home() {
             </div>)}
 
             {/* Tab: Obra */}
-            {forms.detailTab === 'Obra' && (<div>
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">{workPhases.length} fases de obra</div>
-                {workPhases.length === 0 && <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={initDefaultPhases}>Inicializar fases</button>}
-              </div>
-              {workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> :
-              <div className="relative pl-6">
-                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--input)]" />
-                {workPhases.map(phase => {
-                  const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
-                  return (<div key={phase.id} className="relative mb-5">
-                    <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
-                    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
-                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <div className="text-sm font-semibold">{phase.data.name}</div>
-                        <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none cursor-pointer" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
-                          <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
-                        </select>
-                      </div>
-                      {phase.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{phase.data.description}</div>}
-                      <div className="flex items-center gap-3 text-[11px] text-[var(--af-text3)]">
-                        {phase.data.startDate && <span>Inicio: {phase.data.startDate}</span>}
-                        {phase.data.endDate && <span>Fin: {phase.data.endDate}</span>}
-                      </div>
+            {forms.detailTab === 'Obra' && (() => {
+              const activePhases = workPhases.filter(p => p.data.active !== false);
+              const completedPhases = activePhases.filter(p => p.data.status === 'Completado');
+              const phaseProgress = activePhases.length > 0 ? Math.round((completedPhases.length / activePhases.length) * 100) : 0;
+              const groupedPhases = PROJECT_PHASES.map(g => ({
+                ...g,
+                phases: g.phases.map(name => workPhases.find(p => p.data.name === name)).filter(Boolean),
+              }));
+              return (<div>
+                {/* Phase progress summary */}
+                <div className="bg-gradient-to-r from-[var(--af-accent)]/10 to-transparent border border-[var(--af-accent)]/20 rounded-xl p-4 mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[15px] font-semibold">Avance por fases</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-[var(--af-accent)]">{phaseProgress}%</span>
+                      <span className="text-[11px] text-[var(--muted-foreground)]">{completedPhases.length}/{activePhases.length} fases</span>
                     </div>
-                  </div>);
-                })}
-              </div>}
-            </div>)}
+                  </div>
+                  <div className="h-3 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${phaseProgress >= 80 ? 'bg-emerald-500' : phaseProgress >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: phaseProgress + '%' }} />
+                  </div>
+                  <button className="mt-2 text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => { if (selectedProjectId) { (window as any).firebase.firestore().collection('projects').doc(selectedProjectId).update({ progress: phaseProgress }); showToast('Progreso sincronizado'); } }}>Sincronizar con progreso del proyecto</button>
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={initDefaultPhases}>{workPhases.length > 0 ? '🔄 Resetear fases' : '⚡ Inicializar fases'}</button>
+                  <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openModal('customPhase')}>+ Fase personalizada</button>
+                  {workPhases.length > 0 && <span className="text-[11px] text-[var(--muted-foreground)] ml-auto">{activePhases.length} activas de {workPhases.length} totales</span>}
+                </div>
+                {/* Phases grouped */}
+                {workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Configura las fases del proyecto</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Puedes activar/desactivar según el tipo de obra</div></div> :
+                <div className="space-y-6">
+                  {groupedPhases.map(group => {
+                    const groupActive = group.phases.filter(p => p && p.data.active !== false);
+                    const groupCompleted = groupActive.filter(p => p && p.data.status === 'Completado');
+                    const groupProg = groupActive.length > 0 ? Math.round((groupCompleted.length / groupActive.length) * 100) : 0;
+                    return (
+                      <div key={group.group}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{PHASE_GROUP_ICONS[group.group] || '📋'}</span>
+                            <span className="text-[14px] font-semibold">{group.group}</span>
+                            <span className="text-[11px] text-[var(--muted-foreground)]">{groupProg}%</span>
+                          </div>
+                          <div className="h-1.5 w-20 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: groupProg + '%' }} /></div>
+                        </div>
+                        <div className="space-y-2 ml-1">
+                          {group.phases.map(phase => {
+                            if (!phase) return null;
+                            const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
+                            const isEnabled = phase.data.active !== false;
+                            return (
+                              <div key={phase.id} className={`flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 transition-all ${!isEnabled ? 'opacity-50' : ''}`}>
+                                {/* Toggle */}
+                                <button className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 cursor-pointer border-none ${isEnabled ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`} onClick={() => togglePhaseActive(phase.id, !isEnabled)}>
+                                  <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${isEnabled ? 'left-[18px]' : 'left-[3px]'}`} />
+                                </button>
+                                {/* Status dot */}
+                                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${!isEnabled ? 'bg-[var(--af-bg4)]' : isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)]'}`} />
+                                {/* Name */}
+                                <div className="flex-1 min-w-0">
+                                  <div className={`text-[13px] font-medium ${!isEnabled ? 'line-through text-[var(--af-text3)]' : ''}`}>{phase.data.name}</div>
+                                  {phase.data.endDate && isDone && <div className="text-[10px] text-emerald-400">Completado: {phase.data.endDate}</div>}
+                                </div>
+                                {/* Status select */}
+                                {isEnabled && (
+                                  <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-[11px] text-[var(--foreground)] outline-none cursor-pointer flex-shrink-0" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
+                                    <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
+                                  </select>
+                                )}
+                                {/* Delete */}
+                                <button className="text-[var(--af-text3)] hover:text-red-400 cursor-pointer flex-shrink-0 p-1" onClick={() => deletePhase(phase.id)}>
+                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>}
+              </div>);
+            })()}
 
             {/* Tab: Portal */}
             {forms.detailTab === 'Portal' && (<div>
@@ -2848,15 +2954,26 @@ export default function Home() {
               {/* Work phases for client */}
               {workPhases.length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
                 <div className="text-[15px] font-semibold mb-3">Fases del proyecto</div>
-                <div className="space-y-2">
-                  {workPhases.map(ph => (
-                    <div key={ph.id} className="flex items-center gap-3 py-1.5">
-                      <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
-                      <span className="text-sm flex-1">{ph.data.name}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
-                    </div>
-                  ))}
-                </div>
+                {(() => {
+                  const activePhases = workPhases.filter(p => p.data.active !== false);
+                  const portalGroups = PROJECT_PHASES.map(g => ({ ...g, phases: g.phases.map(n => activePhases.find(p => p.data.name === n)).filter(Boolean) })).filter(g => g.phases.length > 0);
+                  return (<div className="space-y-3">
+                    {portalGroups.map(g => (
+                      <div key={g.group}>
+                        <div className="text-[11px] font-semibold text-[var(--muted-foreground)] mb-1.5 uppercase tracking-wider">{PHASE_GROUP_ICONS[g.group]} {g.group}</div>
+                        <div className="space-y-1.5">
+                          {g.phases.map(ph => (
+                            <div key={ph.id} className="flex items-center gap-3 py-1.5">
+                              <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+                              <span className="text-sm flex-1">{ph.data.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>);
+                })()}
               </div>)}
               {/* Files gallery */}
               {projectFiles.filter(f => f.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
@@ -5572,6 +5689,32 @@ export default function Home() {
           </div>
         </div>
       </div>)}
+
+      {modals.customPhase && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) closeModal('customPhase'); }}>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[15px] font-semibold">Agregar fase personalizada</div>
+              <button className="text-[var(--af-text3)] cursor-pointer hover:text-[var(--foreground)]" onClick={() => closeModal('customPhase')}>✕</button>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Grupo</label>
+              <div className="flex gap-2">
+                {PROJECT_PHASES.map(g => (
+                  <button key={g.group} className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border transition-all ${(forms.customPhaseGroup || 'Construcción') === g.group ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border-[var(--border)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, customPhaseGroup: g.group }))}>
+                    {PHASE_GROUP_ICONS[g.group]} {g.group}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre de la fase *</label>
+              <input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Paisajismo" value={forms.customPhaseName || ''} onChange={e => setForms(p => ({ ...p, customPhaseName: e.target.value }))} />
+            </div>
+            <button className="w-full bg-[var(--af-accent)] text-background border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors" onClick={addCustomPhase}>Agregar fase</button>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox Viewer */}
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
