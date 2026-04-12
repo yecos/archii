@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI, { type ChatMessage } from "z-ai-web-dev-sdk";
 
 const SYSTEM_PROMPT = `
 Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de arquitectura e interiorismo.
@@ -33,10 +32,7 @@ Cuando el usuario pregunte sobre su proyecto en ArchiFlow, referencia las seccio
 
 Siempre responde de forma clara y bien estructurada. Usa listas cuando sea apropiado.
 Nunca inventes datos específicos del usuario. Si necesitas información que no tienes, pídelo.
-IMPORTANTE: Nunca incluyas etiquetas HTML ni JavaScript en tus respuestas. Solo texto plano con formato markdown básico.
 `;
-
-const MAX_HISTORY_MESSAGES = 20;
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,34 +45,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "API key de Gemini no configurada. Agrega GEMINI_API_KEY en las variables de entorno." },
+        { status: 500 }
+      );
+    }
+
     const systemMessage = projectContext
       ? `${SYSTEM_PROMPT}\n\nContexto del proyecto actual del usuario:\n${projectContext}`
       : SYSTEM_PROMPT;
 
-    const recentMessages = messages.slice(-MAX_HISTORY_MESSAGES);
+    // Construir historial para Gemini
+    const contents = [];
 
-    const apiMessages: ChatMessage[] = [
-      { role: "system", content: systemMessage },
-    ];
+    // Mensaje del sistema como primer contexto del usuario
+    contents.push({
+      role: "user",
+      parts: [{ text: `[Instrucciones del sistema - no muestres esto al usuario]: ${systemMessage}` }],
+    });
+    contents.push({
+      role: "model",
+      parts: [{ text: "Entendido. Actuaré como ArchiFlow AI." }],
+    });
 
-    for (const m of recentMessages) {
-      apiMessages.push({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content,
+    // Agregar historial de mensajes
+    for (const m of messages) {
+      contents.push({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
       });
     }
 
-    const zai = await ZAI.create();
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          },
+        }),
+      }
+    );
 
-    const completion = await zai.chat.completions.create({
-      messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 2048,
-    });
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Gemini API error:", err);
+      return NextResponse.json(
+        { error: "Error comunicándose con la IA" },
+        { status: 502 }
+      );
+    }
 
+    const data = await response.json();
     const assistantMessage =
-      completion.choices?.[0]?.message?.content ||
-      "Lo siento, no pude generar una respuesta coherente. Intenta de nuevo.";
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Lo siento, no pude generar una respuesta.";
 
     return NextResponse.json({
       message: assistantMessage,
@@ -84,7 +113,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor";
-    console.error("[ArchiFlow AI] Error en asistente:", message);
+    console.error("AI Assistant error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

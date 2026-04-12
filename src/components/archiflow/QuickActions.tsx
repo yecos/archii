@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/ui-store';
 
 interface QuickActionsProps {
   isOpen: boolean;
   onClose: () => void;
+  projectContext?: string;
   onOpenChat: () => void;
 }
 
@@ -20,7 +20,6 @@ interface SuggestionResult {
   reason?: string;
   description?: string;
   impact?: string;
-  dependencies?: string;
 }
 
 const ACTION_BUTTONS = [
@@ -77,12 +76,10 @@ const ACTION_BUTTONS = [
   },
 ];
 
-export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActionsProps) {
+export default function QuickActions({ isOpen, onClose, projectContext, onOpenChat }: QuickActionsProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionResult[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const projectContext = useUIStore((s) => s.aiProjectContext);
 
   if (!isOpen) return null;
 
@@ -90,7 +87,6 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
     setLoadingId(action.id);
     setActiveId(action.id);
     setSuggestions([]);
-    setError(null);
 
     try {
       const response = await fetch('/api/ai-suggestions', {
@@ -102,25 +98,12 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
         }),
       });
 
+      if (!response.ok) throw new Error('Error obteniendo sugerencias');
+
       const data = await response.json();
-
-      if (!response.ok) {
-        if (data.setupRequired) {
-          setError(`${data.error}\n${data.help}`);
-        } else {
-          setError(data.error || 'Error obteniendo sugerencias');
-        }
-        return;
-      }
-
-      const result = data.suggestions || [];
-      setSuggestions(result);
-      if (result.length === 0) {
-        setError('No se generaron sugerencias. Intenta de nuevo.');
-      }
-    } catch (err) {
-      console.error('[ArchiFlow AI] Error en sugerencias:', err);
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+      setSuggestions(data.suggestions || []);
+    } catch {
+      setSuggestions([{ text: 'No se pudieron obtener sugerencias. Intenta de nuevo.' }]);
     } finally {
       setLoadingId(null);
     }
@@ -188,15 +171,6 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
             </button>
           ))}
         </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="px-3 pb-3">
-            <div className="px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 leading-relaxed whitespace-pre-wrap">
-              {error}
-            </div>
-          </div>
-        )}
 
         {/* Suggestions Results */}
         {suggestions.length > 0 && (

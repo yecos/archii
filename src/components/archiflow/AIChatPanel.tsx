@@ -2,21 +2,18 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/ui-store';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  isError?: boolean;
-  isSetupRequired?: boolean;
-  helpText?: string;
 }
 
 interface AIChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  projectContext?: string;
 }
 
 const QUICK_PROMPTS = [
@@ -26,38 +23,7 @@ const QUICK_PROMPTS = [
   'Mejores prácticas para supervisión',
 ];
 
-/** Sanitiza HTML generado por la IA — elimina scripts, events handlers, y estilos peligrosos */
-function sanitizeHTML(html: string): string {
-  return html
-    // Eliminar etiquetas script y su contenido
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    // Eliminar atributos de evento (onclick, onerror, onload, etc.)
-    .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    // Eliminar javascript: en href/src
-    .replace(/(href|src)\s*=\s*["']?javascript:[^"'>]*/gi, '$1="#"')
-    // Eliminar etiquetas style con contenido
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    // Eliminar etiquetas iframe/embed/object
-    .replace(/<(iframe|embed|object|form|input|select|textarea)\b[^>]*>/gi, '')
-    // Eliminar etiquetas meta/link
-    .replace(/<(meta|link|base)\b[^>]*>/gi, '')
-    // Mantener solo etiquetas seguras
-    .replace(/<(?!\/?(br|p|div|span|strong|b|em|i|u|s|ul|ol|li|code|pre|blockquote|h[1-6]|a|table|tr|td|th|thead|tbody|hr))\b[^>]*>/gi, '');
-}
-
-const formatMessage = (content: string): string => {
-  const html = content
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-black/20 rounded-lg p-3 my-2 overflow-x-auto text-xs"><code>$2</code></pre>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="bg-black/20 px-1.5 py-0.5 rounded text-xs">$1</code>')
-    .replace(/^• (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/\n/g, '<br/>');
-
-  return sanitizeHTML(html);
-};
-
-export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
+export default function AIChatPanel({ isOpen, onClose, projectContext }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -70,7 +36,6 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const projectContext = useUIStore((s) => s.aiProjectContext);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -107,42 +72,19 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
         body: JSON.stringify({
           messages: [
             ...messages
-              .filter((m) => m.id !== 'welcome' && !m.isError)
-              .slice(-20) // Limitar historial a 20 mensajes
+              .filter((m) => m.id !== 'welcome')
               .map((m) => ({ role: m.role, content: m.content })),
             { role: userMessage.role, content: userMessage.content },
           ],
-          projectContext: projectContext || undefined,
+          projectContext,
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        // Si es error de configuración, mostrar ayuda detallada
-        if (data.setupRequired) {
-          const errorMessage: Message = {
-            id: `msg-${Date.now() + 1}`,
-            role: 'assistant',
-            content: `⚠️ ${data.error}\n\n${data.help}`,
-            timestamp: new Date(),
-            isError: true,
-            isSetupRequired: true,
-            helpText: data.help,
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        } else {
-          const errorMessage: Message = {
-            id: `msg-${Date.now() + 1}`,
-            role: 'assistant',
-            content: `⚠️ ${data.error || 'Error desconocido'}`,
-            timestamp: new Date(),
-            isError: true,
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        }
-        return;
+        throw new Error('Error en la respuesta del asistente');
       }
+
+      const data = await response.json();
 
       const assistantMessage: Message = {
         id: `msg-${Date.now() + 1}`,
@@ -153,13 +95,11 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('[ArchiFlow AI] Error en chat:', error);
       const errorMessage: Message = {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
-        content: '⚠️ Error de conexión. Verifica tu internet e intenta de nuevo.',
+        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.',
         timestamp: new Date(),
-        isError: true,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -172,6 +112,16 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       e.preventDefault();
       sendMessage(input);
     }
+  };
+
+  const formatMessage = (content: string) => {
+    return content
+      .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-black/20 rounded-lg p-3 my-2 overflow-x-auto text-xs"><code>$2</code></pre>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code class="bg-black/20 px-1.5 py-0.5 rounded text-xs">$1</code>')
+      .replace(/^• (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/\n/g, '<br/>');
   };
 
   if (!isOpen) return null;
@@ -230,16 +180,10 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
                   'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
                   msg.role === 'user'
                     ? 'bg-[var(--af-accent)] text-black rounded-br-md'
-                    : msg.isError
-                    ? 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-bl-md'
                     : 'bg-[var(--af-bg3)] text-foreground rounded-bl-md'
                 )}
               >
-                {msg.role === 'assistant' && !msg.isError ? (
-                  <div dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }} />
-                ) : (
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
-                )}
+                <div dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }} />
               </div>
             </div>
           ))}

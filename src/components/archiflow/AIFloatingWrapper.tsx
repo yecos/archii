@@ -6,7 +6,11 @@ import AIChatPanel from './AIChatPanel';
 import QuickActions from './QuickActions';
 import { useUIStore } from '@/stores/ui-store';
 
-export default function AIFloatingWrapper() {
+interface AIFloatingWrapperProps {
+  projectContext?: string;
+}
+
+export default function AIFloatingWrapper({ projectContext }: AIFloatingWrapperProps) {
   const [chatOpen, setChatOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -47,18 +51,20 @@ export default function AIFloatingWrapper() {
       <AIChatPanel
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
+        projectContext={projectContext}
       />
 
       {/* Quick Actions */}
       <QuickActions
         isOpen={quickOpen}
         onClose={() => setQuickOpen(false)}
+        projectContext={projectContext}
         onOpenChat={handleChatOpen}
       />
 
-      {/* Floating Buttons - hidden on chat screen, positioned higher on desktop */}
+      {/* Floating Buttons - hidden on chat screen to avoid overlap */}
       {!hideFABs && (
-      <div className="fixed bottom-20 md:bottom-20 right-4 md:right-6 z-[90] flex flex-col items-end gap-3">
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[90] flex flex-col items-end gap-3">
         {/* Tooltip */}
         {tooltip && !chatOpen && !quickOpen && (
           <div className="animate-slideUp mb-1 px-3 py-2 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] shadow-lg text-xs text-muted-foreground max-w-[200px]">

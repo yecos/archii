@@ -32,10 +32,6 @@ interface UIState {
   // Current screen (for mobile optimization)
   currentScreen: string;
   setCurrentScreen: (screen: string) => void;
-
-  // AI Project Context (passed from page.tsx when a project is selected)
-  aiProjectContext: string;
-  setAIProjectContext: (context: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -76,8 +72,4 @@ export const useUIStore = create<UIState>((set) => ({
   // Current screen (for mobile optimization)
   currentScreen: 'dashboard',
   setCurrentScreen: (screen) => set({ currentScreen: screen }),
-
-  // AI Project Context
-  aiProjectContext: '',
-  setAIProjectContext: (context) => set({ aiProjectContext: context }),
 }));
