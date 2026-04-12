@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, fmtTimer, getWeekStart } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
-import * as fbActions from '@/lib/firestore-actions';
+import { getFirebase } from '@/lib/firebase-service';
 
 export default function TimeTrackingScreen() {
   const {
@@ -139,7 +139,7 @@ export default function TimeTrackingScreen() {
                             <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.startTime} - {e.data.endTime}</td>
                             <td className="px-4 py-2.5 text-right font-semibold">{fmtDuration(e.data.duration)}</td>
                             <td className="px-4 py-2.5 text-center">{e.data.billable ? '✅' : '—'}</td>
-                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, showToast)}>🗑</button></td>
+                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => { if (confirm('Eliminar registro?')) { getFirebase().firestore().collection('timeEntries').doc(e.id).delete().then(() => showToast('Registro eliminado')); } }}>🗑</button></td>
                           </tr>);
                         })}
                       </tbody>

@@ -10,7 +10,6 @@ import type { Project, Task } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
-import * as fbActions from '@/lib/firestore-actions';
 import { getFirebase } from '@/lib/firebase-service';
 
 import DashboardScreen from '@/screens/DashboardScreen';

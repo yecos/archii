@@ -9,7 +9,7 @@ import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 
 import { getFirebase } from '@/lib/firebase-service';
-import * as fbActions from '@/lib/firestore-actions';
+
 
 import { useFirestoreData } from '@/hooks/useFirestoreData';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -2288,17 +2288,27 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const dateStr = startTime.toISOString().split('T')[0];
     const startStr = startTime.toTimeString().substring(0, 5);
     const endStr = endTime.toTimeString().substring(0, 5);
-    await fbActions.saveTimeEntry({
-      teProject: timeSession.projectId,
-      tePhase: timeSession.phaseName,
-      teDescription: timeSession.description,
-      teStartTime: startStr,
-      teEndTime: endStr,
-      teDuration: durationMin,
-      teBillable: true,
-      teRate: Number(forms.teRate) || 50000,
-      teDate: dateStr,
-    }, null, showToast, authUser);
+    try {
+      const fb = getFirebase();
+      const db = fb.firestore();
+      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const proj = projects.find(p => p.id === timeSession.projectId);
+      await db.collection('timeEntries').add({
+        projectId: timeSession.projectId,
+        phaseName: timeSession.phaseName,
+        description: timeSession.description,
+        startTime: startStr,
+        endTime: endStr,
+        duration: durationMin,
+        billable: true,
+        rate: Number(forms.teRate) || 50000,
+        date: dateStr,
+        userName: authUser?.displayName || authUser?.email || userName,
+        userId: authUser?.uid,
+        createdAt: ts,
+      });
+      showToast('Registro guardado');
+    } catch (err: any) { console.error(err); showToast('Error al guardar registro', 'error'); }
     setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
     setTimeTimerMs(0);
   };
@@ -2307,17 +2317,26 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const dur = Number(forms.teManualDuration) || 0;
     if (dur < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
     if (!forms.teProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    fbActions.saveTimeEntry({
-      teProject: forms.teProject,
-      tePhase: forms.tePhase || '',
-      teDescription: forms.teDescription || '',
-      teStartTime: forms.teStartTime || '08:00',
-      teEndTime: forms.teEndTime || '17:00',
-      teDuration: dur,
-      teBillable: forms.teBillable !== false,
-      teRate: Number(forms.teRate) || 50000,
-      teDate: forms.teDate || new Date().toISOString().split('T')[0],
-    }, editingId, showToast, authUser);
+    try {
+      const fb = getFirebase();
+      const db = fb.firestore();
+      const ts = fb.firestore.FieldValue.serverTimestamp();
+      await db.collection('timeEntries').add({
+        projectId: forms.teProject,
+        phaseName: forms.tePhase || '',
+        description: forms.teDescription || '',
+        startTime: forms.teStartTime || '08:00',
+        endTime: forms.teEndTime || '17:00',
+        duration: dur,
+        billable: forms.teBillable !== false,
+        rate: Number(forms.teRate) || 50000,
+        date: forms.teDate || new Date().toISOString().split('T')[0],
+        userName: authUser?.displayName || authUser?.email || userName,
+        userId: authUser?.uid,
+        createdAt: ts,
+      });
+      showToast('Registro guardado');
+    } catch (err: any) { console.error(err); showToast('Error al guardar registro', 'error'); }
     closeModal('timeEntry');
   };
 
@@ -2352,18 +2371,29 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
     const tax = Number(forms.invTax) || 19;
     const total = subtotal + (subtotal * tax / 100);
-    fbActions.saveInvoice({
-      invProject: forms.invProject,
-      invNumber: forms.invNumber || '',
-      invStatus: forms.invStatus || 'Borrador',
-      invItems: invoiceItems,
-      invSubtotal: subtotal,
-      invTax: tax,
-      invTotal: total,
-      invNotes: forms.invNotes || '',
-      invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
-      invDueDate: forms.invDueDate || '',
-    }, editingId, showToast, authUser);
+    try {
+      const fb = getFirebase();
+      const db = fb.firestore();
+      const ts = fb.firestore.FieldValue.serverTimestamp();
+      const proj = projects.find(p => p.id === forms.invProject);
+      await db.collection('invoices').add({
+        projectId: forms.invProject,
+        projectName: proj?.data.name || '',
+        clientName: proj?.data.client || '',
+        number: forms.invNumber || '',
+        status: forms.invStatus || 'Borrador',
+        items: invoiceItems,
+        subtotal,
+        tax,
+        total,
+        notes: forms.invNotes || '',
+        issueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
+        dueDate: forms.invDueDate || '',
+        createdAt: ts,
+        createdBy: authUser?.uid,
+      });
+      showToast('Factura creada');
+    } catch (err: any) { console.error(err); showToast('Error al crear factura', 'error'); }
     setInvoiceTab('list');
   };
 
@@ -2378,7 +2408,22 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const mentionedUser = teamUsers.find(u => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
       if (mentionedUser) mentions.push(mentionedUser.id);
     }
-    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser);
+    try {
+      const fb = getFirebase();
+      const db = fb.firestore();
+      const ts = fb.firestore.FieldValue.serverTimestamp();
+      await db.collection('comments').add({
+        taskId,
+        projectId,
+        userId: authUser?.uid,
+        userName: authUser?.displayName || authUser?.email || userName,
+        text: commentText.trim(),
+        mentions,
+        parentId: replyingTo || null,
+        createdAt: ts,
+      });
+      showToast('Comentario enviado');
+    } catch (err: any) { console.error(err); showToast('Error al enviar comentario', 'error'); }
     setCommentText('');
     setReplyingTo(null);
   };

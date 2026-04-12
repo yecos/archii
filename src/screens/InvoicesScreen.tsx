@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
-import * as fbActions from '@/lib/firestore-actions';
+import { getFirebase } from '@/lib/firebase-service';
 
 export default function InvoicesScreen() {
   const {
@@ -63,10 +63,10 @@ export default function InvoicesScreen() {
                       <div className="text-[10px] text-[var(--muted-foreground)]">{inv.data.issueDate}{inv.data.dueDate ? ' → ' + inv.data.dueDate : ''}</div>
                     </div>
                     <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                      {inv.data.status === 'Borrador' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast)}>Enviar</button>}
-                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast)}>Pagar</button>}
-                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast)}>Vencer</button>}
-                      <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.deleteInvoice(inv.id, showToast)}>🗑</button>
+                      {inv.data.status === 'Borrador' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" onClick={() => { getFirebase().firestore().collection('invoices').doc(inv.id).update({ status: 'Enviada' }); showToast('Factura enviada'); }}>Enviar</button>}
+                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => { getFirebase().firestore().collection('invoices').doc(inv.id).update({ status: 'Pagada' }); showToast('Factura pagada'); }}>Pagar</button>}
+                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => { getFirebase().firestore().collection('invoices').doc(inv.id).update({ status: 'Vencida' }); showToast('Factura vencida'); }}>Vencer</button>}
+                      <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => { if (confirm('Eliminar factura?')) { getFirebase().firestore().collection('invoices').doc(inv.id).delete().then(() => showToast('Factura eliminada')); } }}>🗑</button>
                     </div>
                   </div>);
                 })}
