@@ -2305,37 +2305,188 @@ export default function Home() {
         <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`} style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}>
 
           {/* ===== DASHBOARD ===== */}
-          {screen === 'dashboard' && (<div className="animate-fadeIn space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[{ val: projects.length, lbl: 'Proyectos totales', color: '' }, { val: projects.filter(p => p.data.status === 'Ejecucion').length, lbl: 'En ejecución', color: '' }, { val: pendingCount, lbl: 'Tareas pendientes', color: '' }, { val: tasks.filter(t => t.data.status === 'Completado').length, lbl: 'Completadas', color: 'text-emerald-400' }].map((m, i) => (
-                <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5"><div className={`text-2xl md:text-[28px] font-semibold ${m.color}`}>{m.val}</div><div className="text-xs text-[var(--muted-foreground)]">{m.lbl}</div></div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">Proyectos recientes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button></div>
-                {projects.length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div> : projects.slice(0, 3).map(p => {
-                  const prog = p.data.progress || 0;
-                  return (<div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer" onClick={() => openProject(p.id)}>
-                    <div className="flex justify-between mb-2"><div className="text-sm font-semibold">{p.data.name}</div><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(p.data.status)}`}>{p.data.status}</span></div>
-                    <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-                    <div className="flex justify-between mt-1.5"><span className="text-[11px] text-[var(--af-text3)]">{prog}%</span>{p.data.endDate && <span className="text-[11px] text-[var(--af-text3)]">{fmtDate(p.data.endDate)}</span>}</div>
-                  </div>);
-                })}
+          {screen === 'dashboard' && (() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayMeetings = meetings.filter(m => m.data.date === todayStr);
+            const upcomingMeetings = meetings.filter(m => m.data.date >= todayStr).sort((a,b) => (a.data.date > b.data.date ? 1 : a.data.date < b.data.date ? -1 : (a.data.time || '').localeCompare(b.data.time || ''))).slice(0, 4);
+            const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
+            const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
+            const overdueTasks = tasks.filter(t => t.data.dueDate && t.data.dueDate < todayStr && t.data.status !== 'Completado');
+            const lowStockItems = invProducts.filter(p => (p.data.stock || 0) <= (p.data.minStock || 0));
+            const activeMembers = teamUsers.length;
+            const recentMsgs = (messages.length > 0 ? messages.slice(-3).reverse() : []);
+            const myTasks = tasks.filter(t => t.data.assigneeId === authUser?.uid && t.data.status !== 'Completado');
+            const executionProjects = projects.filter(p => p.data.status === 'Ejecucion');
+
+            return (<div className="animate-fadeIn space-y-5">
+              {/* Welcome banner */}
+              <div className="bg-gradient-to-r from-[var(--af-accent)]/15 via-[var(--af-accent)]/5 to-transparent border border-[var(--af-accent)]/20 rounded-xl p-4 md:p-5 flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 flex-shrink-0 ${avatarColor(authUser?.uid)}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base md:text-lg font-semibold">Bienvenido, {userName.split(' ')[0]} 👋</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-0.5">{todayMeetings.length > 0 ? `📅 ${todayMeetings.length} reunión(es) hoy` : overdueTasks.length > 0 ? `⚠️ ${overdueTasks.length} tarea(s) vencida(s)` : `${myTasks.length} tarea(s) pendiente(s) · ${executionProjects.length} proyecto(s) activo(s)`}</div>
+                </div>
+                {overdueTasks.length > 0 && <div className="px-3 py-1.5 bg-red-500/15 text-red-400 rounded-full text-[11px] font-semibold hidden sm:block">{overdueTasks.length} vencida(s)</div>}
               </div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">Tareas urgentes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('tasks')}>Ver todas</button></div>
-                {tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin tareas urgentes</div> : tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').slice(0, 4).map(t => {
-                  const proj = projects.find(p => p.id === t.data.projectId);
-                  return (<div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0">
-                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-                    <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer hover:border-[var(--af-accent)]" onClick={() => toggleTask(t.id, t.data.status)} />
-                    <div className="flex-1 min-w-0"><div className="text-[13.5px] font-medium">{t.data.title}</div><div className="text-[11px] text-[var(--af-text3)] mt-0.5">{proj?.data.name || '—'}{t.data.assigneeId ? ' · ' + getUserName(t.data.assigneeId) : ''}</div></div>
-                  </div>);
-                })}
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {[
+                  { val: projects.length, lbl: 'Proyectos totales', icon: '📁', color: 'border-l-blue-500' },
+                  { val: executionProjects.length, lbl: 'En ejecución', icon: '🏗️', color: 'border-l-amber-500' },
+                  { val: pendingCount, lbl: 'Tareas pendientes', icon: '📋', color: 'border-l-orange-500' },
+                  { val: tasks.filter(t => t.data.status === 'Completado').length, lbl: 'Completadas', icon: '✅', color: 'border-l-emerald-500' },
+                ].map((m, i) => (
+                  <div key={i} className={`bg-[var(--card)] border border-[var(--border)] border-l-4 ${m.color} rounded-xl p-3.5 md:p-4 flex items-center gap-3`}>
+                    <div className="text-xl md:text-2xl">{m.icon}</div>
+                    <div><div className="text-xl md:text-2xl font-bold">{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>)}
+
+              {/* Row 2: Budget + Upcoming Meetings */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Budget Widget */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">💰 Resumen financiero</div>
+                    <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('budget')}>Ver todos</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-[var(--af-bg3)] rounded-lg p-3"><div className="text-[11px] text-[var(--muted-foreground)]">Presupuesto total</div><div className="text-lg font-bold text-[var(--af-accent)] mt-1">{fmtCOP(totalBudget)}</div></div>
+                    <div className="bg-[var(--af-bg3)] rounded-lg p-3"><div className="text-[11px] text-[var(--muted-foreground)]">Gastado</div><div className={`text-lg font-bold mt-1 ${totalSpent > totalBudget && totalBudget > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{fmtCOP(totalSpent)}</div></div>
+                  </div>
+                  {totalBudget > 0 && (
+                    <div>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-[var(--muted-foreground)]">Utilizado</span><span className="font-semibold">{Math.round((totalSpent / totalBudget) * 100)}%</span></div>
+                      <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all ${totalSpent > totalBudget ? 'bg-red-500' : totalSpent > totalBudget * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: Math.min(100, (totalSpent / totalBudget) * 100) + '%' }} /></div>
+                    </div>
+                  )}
+                  {expenses.length > 0 && <div className="mt-3 space-y-1.5">{expenses.slice(0, 3).map(e => (
+                    <div key={e.id} className="flex items-center justify-between text-[12px]"><span className="truncate flex-1 mr-2">{e.data.concept}</span><span className="text-[var(--af-accent)] font-medium flex-shrink-0">{fmtCOP(e.data.amount)}</span></div>
+                  ))}</div>}
+                </div>
+
+                {/* Upcoming Meetings Widget */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">📅 Próximas reuniones</div>
+                    <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('calendar')}>Ver calendario</button>
+                  </div>
+                  {upcomingMeetings.length === 0 ? (
+                    <div className="text-center py-6 text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">📅</div>Sin reuniones programadas</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {upcomingMeetings.map(m => {
+                        const proj = projects.find(p => p.id === m.data.projectId);
+                        const isToday = m.data.date === todayStr;
+                        return (<div key={m.id} className={`flex items-start gap-3 p-2.5 rounded-lg ${isToday ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-[var(--af-bg3)]'} cursor-pointer`} onClick={() => navigateTo('calendar')}>
+                          <div className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-[10px] font-semibold ${isToday ? 'bg-blue-500/20 text-blue-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                            <div className="text-base leading-none">{new Date(m.data.date + 'T12:00:00').getDate()}</div>
+                            <div>{MESES[new Date(m.data.date + 'T12:00:00').getMonth()]?.substring(0, 3)}</div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-medium truncate">{m.data.title}</div>
+                            <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{m.data.time || 'Sin hora'}{m.data.duration ? ` · ${m.data.duration} min` : ''}{proj ? ` · ${proj.data.name}` : ''}</div>
+                          </div>
+                          {isToday && <span className="text-[10px] px-1.5 py-0.5 bg-blue-500 text-white rounded-full font-semibold flex-shrink-0">Hoy</span>}
+                        </div>);
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Recent Projects + Urgent Tasks */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">📁 Proyectos recientes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button></div>
+                  {projects.length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div> : projects.slice(0, 3).map(p => {
+                    const prog = p.data.progress || 0;
+                    return (<div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openProject(p.id)}>
+                      <div className="flex justify-between mb-2"><div className="text-sm font-semibold">{p.data.name}</div><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(p.data.status)}`}>{p.data.status}</span></div>
+                      <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
+                      <div className="flex justify-between mt-1.5"><span className="text-[11px] text-[var(--af-text3)]">{prog}%</span>{p.data.endDate && <span className="text-[11px] text-[var(--af-text3)]">{fmtDate(p.data.endDate)}</span>}</div>
+                    </div>);
+                  })}
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">🔴 Tareas urgentes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('tasks')}>Ver todas</button></div>
+                  {tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">🎉 Sin tareas urgentes</div> : tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').slice(0, 4).map(t => {
+                    const proj = projects.find(p => p.id === t.data.projectId);
+                    const isOverdue = t.data.dueDate && t.data.dueDate < todayStr;
+                    return (<div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-red-500'}`} />
+                      <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer hover:border-[var(--af-accent)]" onClick={() => toggleTask(t.id, t.data.status)} />
+                      <div className="flex-1 min-w-0"><div className="text-[13.5px] font-medium">{t.data.title}</div><div className="text-[11px] text-[var(--af-text3)] mt-0.5">{proj?.data.name || '—'}{t.data.assigneeId ? ' · ' + getUserName(t.data.assigneeId) : ''}</div></div>
+                      {isOverdue && <span className="text-[10px] px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded-full flex-shrink-0">Vencida</span>}
+                    </div>);
+                  })}
+                </div>
+              </div>
+
+              {/* Row 4: Inventory Alerts + Team + Recent Chat */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Low Stock Alerts */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">📦 Alertas inventario</div>
+                    {lowStockItems.length > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/15 text-amber-400 rounded-full font-semibold">{lowStockItems.length}</span>}
+                  </div>
+                  {lowStockItems.length === 0 ? (
+                    <div className="text-center py-6 text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">✅</div>Stock OK</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {lowStockItems.slice(0, 4).map(p => (
+                        <div key={p.id} className="flex items-center gap-2.5 p-2 bg-amber-500/5 rounded-lg cursor-pointer" onClick={() => navigateTo('inventory')}>
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-xs font-bold text-amber-400 flex-shrink-0">{p.data.stock || 0}</div>
+                          <div className="flex-1 min-w-0"><div className="text-[12px] font-medium truncate">{p.data.name}</div><div className="text-[10px] text-[var(--muted-foreground)]">Mín: {p.data.minStock || 0}</div></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Team */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">👥 Equipo</div>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">{activeMembers} miembro(s)</span>
+                  </div>
+                  <div className="space-y-2">
+                    {teamUsers.slice(0, 5).map(u => {
+                      const memberTasks = tasks.filter(t => t.data.assigneeId === u.id && t.data.status !== 'Completado').length;
+                      return (<div key={u.id} className="flex items-center gap-2.5 p-1.5 cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg transition-colors" onClick={() => navigateTo('team')}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${avatarColor(u.id)}`} style={u.data.photoURL ? { backgroundImage: `url(${u.data.photoURL})`, backgroundSize: 'cover' } : {}}>{u.data.photoURL ? '' : getInitials(u.data.name)}</div>
+                        <div className="flex-1 min-w-0"><div className="text-[12px] font-medium truncate">{u.data.name}</div><div className="text-[10px] text-[var(--muted-foreground)]">{u.data.role || 'Miembro'}</div></div>
+                        {memberTasks > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded-full">{memberTasks}</span>}
+                      </div>);
+                    })}
+                  </div>
+                </div>
+
+                {/* Recent Chat */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[15px] font-semibold flex items-center gap-2">💬 Chat reciente</div>
+                    <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('chat')}>Ir al chat</button>
+                  </div>
+                  {recentMsgs.length === 0 ? (
+                    <div className="text-center py-6 text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">💬</div>Sin mensajes</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentMsgs.map(m => (
+                        <div key={m.id} className="p-2 bg-[var(--af-bg3)] rounded-lg">
+                          <div className="flex items-center justify-between mb-0.5"><span className="text-[11px] font-semibold text-[var(--af-accent)]">{m.userName || 'Usuario'}</span>{m.createdAt && <span className="text-[10px] text-[var(--af-text3)]">{fmtDate(m.createdAt)}</span>}</div>
+                          <div className="text-[12px] text-[var(--muted-foreground)] truncate">{m.type === 'AUDIO' ? '🎤 Nota de voz' : m.type === 'IMAGE' ? '📷 Foto' : m.type === 'FILE' ? `📎 ${m.fileName || 'Archivo'}` : (m.text || '').substring(0, 60)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>);
+          })()}
 
           {/* ===== PROJECTS ===== */}
           {screen === 'projects' && (<div className="animate-fadeIn">
@@ -4646,8 +4797,32 @@ export default function Home() {
 
           {/* ===== SETTINGS SCREEN ===== */}
           {screen === 'settings' && (<div className="animate-fadeIn space-y-5">
+            {/* Account */}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-              <div className="text-[15px] font-semibold mb-4">Apariencia</div>
+              <div className="text-[15px] font-semibold mb-4">👤 Cuenta</div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2 flex-shrink-0 ${avatarColor(authUser?.uid)}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold">{userName}</div>
+                  <div className="text-sm text-[var(--muted-foreground)]">{authUser?.email}</div>
+                  <div className="text-xs text-[var(--af-text3)] mt-0.5">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; return `${ROLE_ICONS[isEmailAdmin ? 'Admin' : myRole] || '👤'} ${isEmailAdmin ? 'Admin' : myRole}`; })()}</div>
+                </div>
+              </div>
+              {/* Edit name */}
+              {forms.editingName ? (
+                <div className="flex gap-2 items-center mb-3">
+                  <input className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" value={forms.editNameVal || userName} onChange={e => setForms(p => ({ ...p, editNameVal: e.target.value }))} onKeyDown={e => e.key === 'Enter' && updateUserName()} autoFocus />
+                  <button className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={updateUserName}>Guardar</button>
+                  <button className="px-3 py-2 bg-[var(--af-bg3)] text-[var(--muted-foreground)] rounded-lg text-xs cursor-pointer border-none" onClick={() => setForms(p => ({ ...p, editingName: false }))}>X</button>
+                </div>
+              ) : (
+                <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline mb-3 block" onClick={() => setForms(p => ({ ...p, editingName: true, editNameVal: userName }))}>✏️ Cambiar nombre</button>
+              )}
+            </div>
+
+            {/* Appearance */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">🎨 Apariencia</div>
               <div className="flex items-center justify-between py-3 border-b border-[var(--border)]">
                 <div>
                   <div className="text-sm font-medium">Modo oscuro</div>
@@ -4657,9 +4832,23 @@ export default function Home() {
                   <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-all ${darkMode ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <div className="text-sm font-medium">Atajos de teclado</div>
+                  <div className="text-xs text-[var(--muted-foreground)]">Usa Ctrl+D para cambiar tema</div>
+                </div>
+                <div className="text-[10px] px-2 py-1 bg-[var(--af-bg3)] rounded text-[var(--muted-foreground)]">Ctrl+D</div>
+              </div>
             </div>
+
+            {/* Notifications */}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-              <div className="text-[15px] font-semibold mb-4">Notificaciones</div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[15px] font-semibold">🔔 Notificaciones</div>
+                {notifPermission === 'default' && <button onClick={requestNotifPermission} className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg cursor-pointer border-none hover:bg-blue-600 transition-colors">Activar</button>}
+                {notifPermission === 'granted' && <span className="text-[10px] px-2 py-1 bg-emerald-500/15 text-emerald-400 rounded-full">Activadas</span>}
+                {notifPermission === 'denied' && <span className="text-[10px] px-2 py-1 bg-red-500/15 text-red-400 rounded-full">Bloqueadas</span>}
+              </div>
               <div className="space-y-3">
                 {Object.entries(notifPrefs).map(([key, val]) => (
                   <div key={key} className="flex items-center justify-between py-2">
@@ -4670,14 +4859,68 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-              <div className="text-[15px] font-semibold mb-4">Sonido de notificaciones</div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm">Tono de alerta</div>
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
+                <div>
+                  <div className="text-sm font-medium">🔊 Sonido de alerta</div>
+                  <div className="text-xs text-[var(--muted-foreground)]">Tono diferente por tipo de notificación</div>
+                </div>
                 <button onClick={() => setNotifSound(!notifSound)} className={`w-10 h-6 rounded-full transition-colors relative ${notifSound ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]'}`}>
                   <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${notifSound ? 'left-5' : 'left-1'}`} />
                 </button>
+              </div>
+            </div>
+
+            {/* OneDrive */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">☁️ OneDrive</div>
+              {msConnected ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm"><span className="text-emerald-400">✓</span> Conectado con Microsoft</div>
+                  <button className="text-xs text-red-400 hover:text-red-300 cursor-pointer hover:underline" onClick={disconnectMicrosoft}>Desconectar cuenta</button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm text-[var(--muted-foreground)]">No conectado</div>
+                  <button className="text-xs bg-[#0078d4] text-white px-3 py-1.5 rounded-lg cursor-pointer border-none hover:bg-[#106ebe] transition-colors" onClick={() => doMicrosoftLogin()}>Conectar OneDrive</button>
+                </div>
+              )}
+            </div>
+
+            {/* Data & Cache */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">💾 Datos y almacenamiento</div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Limpiar caché local</div>
+                    <div className="text-xs text-[var(--muted-foreground)]">Libera espacio de almacenamiento del navegador</div>
+                  </div>
+                  <button onClick={() => { if (confirm('¿Limpiar caché? La app se recargará.')) { localStorage.clear(); caches.keys().then(names => names.forEach(n => caches.delete(n))); window.location.reload(); } }} className="text-xs px-3 py-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] rounded-lg cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors">Limpiar</button>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
+                  <div>
+                    <div className="text-sm font-medium">Exportar datos (CSV)</div>
+                    <div className="text-xs text-[var(--muted-foreground)]">Descarga proyectos, tareas y gastos</div>
+                  </div>
+                  <button onClick={() => {
+                    const data = { projects: projects.map(p => ({ id: p.id, ...p.data })), tasks: tasks.map(t => ({ id: t.id, ...t.data })), expenses: expenses.map(e => ({ id: e.id, ...e.data })) };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `archiflow-data-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
+                    showToast('Datos exportados');
+                  }} className="text-xs px-3 py-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] rounded-lg cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors">Exportar</button>
+                </div>
+              </div>
+            </div>
+
+            {/* About */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="text-[15px] font-semibold mb-4">ℹ️ Acerca de</div>
+              <div className="space-y-2 text-sm text-[var(--muted-foreground)]">
+                <div className="flex justify-between"><span>ArchiFlow</span><span className="font-mono text-xs">v1.1.0</span></div>
+                <div className="flex justify-between"><span>Plataforma</span><span>Next.js + Firebase</span></div>
+                <div className="flex justify-between"><span>PWA</span><span>{isStandalone ? 'Instalada' : 'No instalada'}</span></div>
+                <div className="flex justify-between"><span>Notificaciones</span><span>{notifPermission === 'granted' ? 'Activadas' : 'Inactivas'}</span></div>
               </div>
             </div>
           </div>)}
@@ -4911,19 +5154,23 @@ export default function Home() {
       </div>
 
       {/* Bottom Nav (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
           { id: 'dashboard', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>, label: 'Inicio' },
-          { id: 'projects', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, label: 'Proyectos' },
-          { id: 'tasks', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, label: 'Tareas' },
+          { id: 'projects', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, label: 'Proyectos', badge: projects.length > 0 ? projects.length : undefined },
+          { id: 'tasks', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, label: 'Tareas', badge: pendingCount > 0 ? pendingCount : undefined },
           { id: 'chat', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, label: 'Chat' },
           { id: '_more', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'Más' },
-        ].map(item => (
-          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-colors ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : screen === item.id ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
-            {item.icon}
-            <span className="text-[10px] leading-tight">{item.label}</span>
-          </button>
-        ))}
+        ].map(item => {
+          const isActive = item.id !== '_more' && screen === item.id;
+          const badge = item.badge;
+          return (
+          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-all relative ${item.id === '_more' ? (sidebarOpen ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]') : isActive ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, null)}>
+            {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[var(--af-accent)] rounded-full" />}
+            <div className="relative">{item.icon}{badge && <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center text-[8px] font-bold bg-[var(--af-accent)] text-background rounded-full px-0.5">{badge > 99 ? '99' : badge}</span>}</div>
+            <span className={`text-[10px] leading-tight ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
+          </button>);
+        })}
       </nav>
 
       {/* ===== MODALS ===== */}
