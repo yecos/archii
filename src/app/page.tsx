@@ -3388,7 +3388,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                   { key: 'direct' as const, label: 'Directos', icon: '@' },
                   { key: 'ai' as const, label: 'IA', icon: '✨' },
                 ]).map(tab => (
-                  <button key={tab.key} className={`flex-1 py-3 text-[12px] font-semibold cursor-pointer border-none transition-colors ${chatTab === tab.key ? 'text-[var(--af-accent)] border-b-2 border-b-[var(--af-accent)] bg-[var(--af-accent)]/5' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--af-bg3)]'}`} onClick={() => setChatTab(tab.key)}>
+                  <button key={tab.key} className={`flex-1 py-3 text-[13px] font-bold cursor-pointer border-none transition-colors ${chatTab === tab.key ? 'text-[var(--af-accent)] border-b-2 border-b-[var(--af-accent)] bg-[var(--af-accent)]/8' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--af-bg3)]'}`} onClick={() => setChatTab(tab.key)}>
                     <span className="mr-1">{tab.icon}</span>{tab.label}
                   </button>
                 ))}
@@ -3408,7 +3408,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-lg flex-shrink-0 shadow-md">💬</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between"><div className="text-[13px] font-semibold">Chat General</div></div>
-                    <div className="text-[11px] text-[var(--af-text3)] truncate">Canal de todo el equipo</div>
+                    <div className="text-[12px] text-[var(--muted-foreground)] truncate">Canal de todo el equipo</div>
                   </div>
                 </div>
                 {/* Project chats */}
@@ -3418,7 +3418,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm" style={{ background: `linear-gradient(135deg, ${p.data.status === 'Ejecucion' ? '#f59e0b, #ef4444' : p.data.status === 'Diseno' ? '#3b82f6, #8b5cf6' : p.data.status === 'Terminado' ? '#10b981, #06b6d4' : 'var(--af-bg4), var(--border)'})` }}>🏗️</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2"><div className="text-[13px] font-medium truncate">{p.data.name}</div><span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span></div>
-                      <div className="text-[11px] text-[var(--af-text3)] truncate">{p.data.client || 'Canal del equipo'}</div>
+                      <div className="text-[12px] text-[var(--muted-foreground)] truncate">{p.data.client || 'Canal del equipo'}</div>
                     </div>
                   </div>
                 ))}
@@ -3430,7 +3430,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                   <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Nuevo mensaje directo
                 </button>
-                {dmChats.length === 0 ? <div className="p-6 text-center text-[var(--af-text3)] text-sm"><div className="text-2xl mb-2">💬</div>Sin conversaciones</div> :
+                {dmChats.length === 0 ? <div className="p-6 text-center text-[var(--muted-foreground)] text-[13px]"><div className="text-2xl mb-2">💬</div>Sin conversaciones</div> :
                 dmChats.filter(dm => { const myUid = authUser?.uid; const otherId = dm.data.participants?.find((p: string) => p !== myUid) || ''; const otherName = dm.data.participantNames?.[otherId] || ''; return !forms.chatSearch || otherName.toLowerCase().includes((forms.chatSearch || '').toLowerCase()); }).map(dm => {
                   const myUid = authUser?.uid;
                   const otherId = dm.data.participants?.find((p: string) => p !== myUid) || '';
@@ -3445,8 +3445,8 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                         {isOtherOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[var(--card)]" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between"><div className="text-[13px] font-medium">{otherName}</div><span className="text-[10px] text-[var(--af-text3)]">{lastMsg?.createdAt?.toDate ? lastMsg.createdAt.toDate().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div>
-                        {lastMsg && <div className="text-[11px] text-[var(--af-text3)] truncate">{lastMsg.userName ? lastMsg.userName + ': ' : ''}{lastMsg.type === 'IMAGE' ? '📷 Foto' : lastMsg.type === 'AUDIO' ? '🎤 Nota de voz' : lastMsg.type === 'FILE' ? '📎 Archivo' : lastMsg.text || ''}</div>}
+                        <div className="flex items-center justify-between"><div className="text-[13px] font-medium">{otherName}</div><span className="text-[11px] text-[var(--muted-foreground)]">{lastMsg?.createdAt?.toDate ? lastMsg.createdAt.toDate().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div>
+                        {lastMsg && <div className="text-[12px] text-[var(--muted-foreground)] truncate">{lastMsg.userName ? lastMsg.userName + ': ' : ''}{lastMsg.type === 'IMAGE' ? '📷 Foto' : lastMsg.type === 'AUDIO' ? '🎤 Nota de voz' : lastMsg.type === 'FILE' ? '📎 Archivo' : lastMsg.text || ''}</div>}
                       </div>
                     </div>
                   );
@@ -3458,15 +3458,15 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                 <div className="text-center mb-4">
                   <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-3xl mb-3 shadow-lg">✨</div>
                   <div className="text-[14px] font-semibold">ArchiFlow IA</div>
-                  <div className="text-[11px] text-[var(--af-text3)] mt-1">Asistente inteligente para arquitectura y construccion</div>
+                  <div className="text-[12px] text-[var(--muted-foreground)] mt-1">Asistente inteligente para arquitectura y construccion</div>
                 </div>
                 <div className="space-y-2">
                   {['¿Cuáles son los acabados más usados en interiorismo?', '¿Cómo calculo el presupuesto de una obra?', '¿Qué fases sigue un proyecto de arquitectura?', '¿Cómo optimizo la gestión de inventario?'].map((suggestion, i) => (
-                    <button key={i} className="w-full text-left text-[12px] text-[var(--muted-foreground)] p-2.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/30 hover:text-[var(--foreground)] transition-all" onClick={() => { setForms(p => ({ ...p, chatInput: suggestion })); setChatMobileShow(true); setChatTab('ai'); }}>{suggestion}</button>
+                    <button key={i} className="w-full text-left text-[13px] text-[var(--muted-foreground)] p-2.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/30 hover:text-[var(--foreground)] transition-all" onClick={() => { setForms(p => ({ ...p, chatInput: suggestion })); setChatMobileShow(true); setChatTab('ai'); }}>{suggestion}</button>
                   ))}
                 </div>
                 {aiChatHistory.length > 0 && (<div className="mt-4 border-t border-[var(--border)] pt-3">
-                  <div className="text-[11px] text-[var(--af-text3)] mb-2">Historial reciente ({aiChatHistory.length} mensajes)</div>
+                  <div className="text-[12px] text-[var(--muted-foreground)] mb-2">Historial reciente ({aiChatHistory.length} mensajes)</div>
                   <button className="text-[11px] text-red-400 cursor-pointer hover:underline bg-transparent border-none" onClick={() => { if (confirm('¿Limpiar historial de la IA?')) setAiChatHistory([]); }}>Limpiar historial</button>
                 </div>)}
               </div>)}
@@ -3476,7 +3476,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
                   <div className="p-4 border-b border-[var(--border)]">
                     <div className="text-[15px] font-semibold">Nuevo mensaje directo</div>
-                    <div className="text-[12px] text-[var(--af-text3)]">Selecciona un miembro del equipo</div>
+                    <div className="text-[12px] text-[var(--muted-foreground)]">Selecciona un miembro del equipo</div>
                   </div>
                   <div className="max-h-64 overflow-y-auto p-2">
                     {teamUsers.filter(u => u.id !== authUser?.uid).map(u => (
@@ -3487,7 +3487,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-[13px] font-medium">{u.data.name}</div>
-                          <div className="text-[11px] text-[var(--af-text3)]">{u.data.role || 'Miembro'}</div>
+                          <div className="text-[12px] text-[var(--muted-foreground)]">{u.data.role || 'Miembro'}</div>
                         </div>
                       </button>
                     ))}
@@ -3521,7 +3521,7 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                     </div>);
                   })() : (<div>
                     <div className="text-sm font-semibold truncate">{chatProjectId === '__general__' ? '💬 Chat General' : projects.find(p => p.id === chatProjectId)?.data.name || 'Selecciona un proyecto'}</div>
-                    <div className="text-[10px] text-[var(--muted-foreground)]">{chatProjectId === '__general__' ? 'Canal de todo el equipo' : chatProjectId ? 'Canal del equipo' : ''}</div>
+                    <div className="text-[12px] text-[var(--muted-foreground)]">{chatProjectId === '__general__' ? 'Canal de todo el equipo' : chatProjectId ? 'Canal del equipo' : ''}</div>
                   </div>)}
                 </div>
                 {/* Search messages */}
@@ -3553,19 +3553,19 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
                 {/* AI Chat Messages */}
                 {chatTab === 'ai' && (<div className="flex flex-col gap-3">
-                  {aiChatHistory.length === 0 && (<div className="text-center py-10"><div className="text-4xl mb-3">✨</div><div className="text-[14px] font-semibold mb-1">ArchiFlow IA</div><div className="text-[12px] text-[var(--af-text3)]">Pregúntame sobre arquitectura, presupuestos, materiales o gestión de proyectos</div></div>)}
+                  {aiChatHistory.length === 0 && (<div className="text-center py-10"><div className="text-4xl mb-3">✨</div><div className="text-[15px] font-semibold mb-1">ArchiFlow IA</div><div className="text-[13px] text-[var(--muted-foreground)]">Pregúntame sobre arquitectura, presupuestos, materiales o gestión de proyectos</div></div>)}
                   {aiChatHistory.map((msg, i) => (
                     <div key={i} className={`max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
-                      {msg.role === 'assistant' && (<div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[10px] text-[var(--af-text3)] font-medium">ArchiFlow IA</span></div>)}
+                      {msg.role === 'assistant' && (<div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[11px] text-[var(--muted-foreground)] font-semibold">ArchiFlow IA</span></div>)}
                       <div className={`px-4 py-3 text-[14px] font-medium leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[var(--af-accent)] text-[#1a1a1a] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>{msg.content}</div>
                     </div>
                   ))}
-                  {aiLoading && (<div className="self-start"><div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[10px] text-[var(--af-text3)] font-medium">ArchiFlow IA</span></div><div className="bg-[var(--af-bg3)] px-4 py-3 rounded-2xl rounded-bl-sm"><div className="flex gap-1.5"><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'0ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'150ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'300ms'}}/></div></div></div>)}
+                  {aiLoading && (<div className="self-start"><div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-[10px]">✨</div><span className="text-[11px] text-[var(--muted-foreground)] font-semibold">ArchiFlow IA</span></div><div className="bg-[var(--af-bg3)] px-4 py-3 rounded-2xl rounded-bl-sm"><div className="flex gap-1.5"><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'0ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'150ms'}}/><div className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{animationDelay:'300ms'}}/></div></div></div>)}
                 </div>)}
 
                 {/* Regular chat messages */}
                 {chatTab !== 'ai' && (<>
-                  {messages.length === 0 ? <div className="text-center py-10 text-[var(--af-text3)] text-[13px]"><div className="text-3xl mb-2">💬</div>Sin mensajes. ¡Saluda al equipo!</div> :
+                  {messages.length === 0 ? <div className="text-center py-10 text-[var(--muted-foreground)] text-[14px]"><div className="text-3xl mb-2">💬</div>Sin mensajes. ¡Saluda al equipo!</div> :
                   (() => {
                     let lastDate = '';
                     return messages.filter(m => !chatSearchMsg || (m.text || '').toLowerCase().includes(chatSearchMsg.toLowerCase()) || (m.userName || '').toLowerCase().includes(chatSearchMsg.toLowerCase())).map(m => {
@@ -3581,18 +3581,18 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                       const senderPhoto = m.userPhoto || otherUser?.data?.photoURL || '';
                       return (<div key={m.id}>
                         {/* Date separator */}
-                        {showDate && (<div className="flex items-center gap-3 my-3"><div className="flex-1 h-px bg-[var(--border)]" /><span className="text-[10px] text-[var(--af-text3)] flex-shrink-0">{dateStr === new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long' }) ? 'Hoy' : dateStr}</span><div className="flex-1 h-px bg-[var(--border)]" /></div>)}
+                        {showDate && (<div className="flex items-center gap-3 my-3"><div className="flex-1 h-px bg-[var(--border)]" /><span className="text-[11px] text-[var(--muted-foreground)] font-medium flex-shrink-0">{dateStr === new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long' }) ? 'Hoy' : dateStr}</span><div className="flex-1 h-px bg-[var(--border)]" /></div>)}
                         <div className={`group max-w-[80%] ${isMe ? 'self-end' : 'self-start'} flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`} onContextMenu={(e) => { e.preventDefault(); setReactionPickerMsg(reactionPickerMsg === m.id ? null : m.id); }} onClick={() => { if (reactionPickerMsg && reactionPickerMsg !== m.id) setReactionPickerMsg(null); }}>
                           {/* Avatar for other users */}
                           {!isMe && chatTab !== 'ai' && (<div className="flex-shrink-0 mt-auto">
                             {senderPhoto ? <img src={senderPhoto} className="w-7 h-7 rounded-full object-cover" alt="" /> : <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold ${avatarColor(m.uid || '')}`}>{getInitials(m.userName || '?')}</div>}
                           </div>)}
                           <div className="min-w-0">
-                            <div className={`text-[10px] text-[var(--af-text3)] mb-0.5 ${isMe ? 'text-right' : ''}`}>{isMe ? '' : (m.userName || 'Equipo')} · {ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className={`text-[11px] mb-0.5 font-medium text-[var(--muted-foreground)] ${isMe ? 'text-right' : ''}`}>{isMe ? '' : (m.userName || 'Equipo')} · {ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
                             {/* Reply reference */}
                             {m.replyTo && (<div className={`mb-1 px-2.5 py-1.5 rounded-lg border-l-2 ${isMe ? 'bg-[var(--af-accent)]/10 border-[var(--af-accent)]' : 'bg-[var(--af-bg4)] border-[var(--muted-foreground)]'}`}>
-                              <div className="text-[10px] font-semibold">{m.replyTo.userName}</div>
-                              <div className="text-[10px] text-[var(--muted-foreground)] truncate">{m.replyTo.text}</div>
+                              <div className="text-[11px] font-semibold">{m.replyTo.userName}</div>
+                              <div className="text-[11px] text-[var(--muted-foreground)] truncate">{m.replyTo.text}</div>
                             </div>)}
                             {/* Message content */}
                             {msgType === 'TEXT' && m.text && (<div className={`px-3.5 py-2.5 text-[14px] font-medium leading-relaxed relative ${isMe ? 'bg-[var(--af-accent)] text-[#1a1a1a] border border-[var(--af-accent)]/20 rounded-2xl rounded-br-sm' : 'bg-[var(--af-bg3)] text-[var(--foreground)] rounded-2xl rounded-bl-sm'}`}>
@@ -3605,20 +3605,20 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
                               <button className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer border-none transition-transform active:scale-95" style={{ background: playingAudio === m.id ? 'var(--af-accent)' : 'var(--af-bg4)' }} onClick={() => toggleAudioPlay(m.id)}>
                                 {playingAudio === m.id ? (<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>) : (<svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>)}
                               </button>
-                              <div className="flex-1 min-w-0"><div className="flex gap-0.5 items-end h-5">{Array.from({ length: 28 }).map((_, i) => (<div key={i} className="w-[3px] rounded-full transition-all duration-100" style={{ height: (i % 3 === 0 ? '6px' : i % 3 === 1 ? '12px' : '18px'), backgroundColor: playingAudio === m.id && ((i / 28) * 100 <= audioProgress) ? 'var(--af-accent)' : 'var(--border)' }} />))}</div><div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{m.audioDuration ? fmtRecTime(m.audioDuration) : '0:00'}</div></div>
-                              <div className="text-[9px]">🎙️</div>
+                              <div className="flex-1 min-w-0"><div className="flex gap-0.5 items-end h-5">{Array.from({ length: 28 }).map((_, i) => (<div key={i} className="w-[3px] rounded-full transition-all duration-100" style={{ height: (i % 3 === 0 ? '6px' : i % 3 === 1 ? '12px' : '18px'), backgroundColor: playingAudio === m.id && ((i / 28) * 100 <= audioProgress) ? 'var(--af-accent)' : 'var(--border)' }} />))}</div><div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{m.audioDuration ? fmtRecTime(m.audioDuration) : '0:00'}</div></div>
+                              <div className="text-[11px]">🎙️</div>
                             </div>)}
-                            {msgType === 'IMAGE' && m.fileData && (<div className={`rounded-2xl overflow-hidden ${isMe ? 'border border-[var(--af-accent)]/20' : 'border border-[var(--border)]'}`}><img src={m.fileData} alt={m.fileName || 'Imagen'} className="max-w-full max-h-[300px] object-cover cursor-pointer" onClick={() => { if (m.fileData) { const w = window.open(''); if (w) w.document.write(`<img src="${m.fileData}" style="max-width:100vw;max-height:100vh;" />`); } }} />{m.fileName && <div className="text-[10px] text-[var(--muted-foreground)] px-2 py-1 bg-[var(--af-bg3)]">{m.fileName}{m.fileSize ? ` · ${fmtFileSize(m.fileSize)}` : ''}</div>}</div>)}
+                            {msgType === 'IMAGE' && m.fileData && (<div className={`rounded-2xl overflow-hidden ${isMe ? 'border border-[var(--af-accent)]/20' : 'border border-[var(--border)]'}`}><img src={m.fileData} alt={m.fileName || 'Imagen'} className="max-w-full max-h-[300px] object-cover cursor-pointer" onClick={() => { if (m.fileData) { const w = window.open(''); if (w) w.document.write(`<img src="${m.fileData}" style="max-width:100vw;max-height:100vh;" />`); } }} />{m.fileName && <div className="text-[11px] text-[var(--muted-foreground)] px-2 py-1 bg-[var(--af-bg3)]">{m.fileName}{m.fileSize ? ` · ${fmtFileSize(m.fileSize)}` : ''}</div>}</div>)}
                             {msgType === 'FILE' && m.fileData && (<div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${isMe ? 'bg-[var(--af-accent)] border border-[var(--af-accent)]/20' : 'bg-[var(--af-bg3)] border border-[var(--border)]'}`}>
                               <div className="text-2xl flex-shrink-0">{fileIcon(m.fileType || '')}</div>
-                              <div className="flex-1 min-w-0"><div className="text-[13px] font-medium truncate">{m.fileName || 'Archivo'}</div>{m.fileSize && <div className="text-[10px] text-[var(--muted-foreground)]">{fmtFileSize(m.fileSize)}</div>}</div>
+                              <div className="flex-1 min-w-0"><div className="text-[13px] font-semibold truncate">{m.fileName || 'Archivo'}</div>{m.fileSize && <div className="text-[11px] text-[var(--muted-foreground)]">{fmtFileSize(m.fileSize)}</div>}</div>
                               <a href={m.fileData} download={m.fileName || 'archivo'} className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--af-bg4)] hover:bg-[var(--af-accent)]/10 transition-colors flex-shrink-0" title="Descargar"><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                             </div>)}
                             {/* Reactions */}
                             {hasReactions && (<div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : ''}`}>
                               {Object.entries(reactions).filter(([, users]) => (users as string[]).length > 0).map(([emoji, users]) => (
                                 <button key={emoji} className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[12px] cursor-pointer border transition-all ${users.includes(authUser?.uid) ? 'bg-[var(--af-accent)]/15 border-[var(--af-accent)]/30' : 'bg-[var(--af-bg4)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={(e) => { e.stopPropagation(); toggleReaction(m.id, emoji); }}>
-                                  <span>{emoji}</span><span className="text-[10px] text-[var(--muted-foreground)]">{(users as string[]).length > 1 ? (users as string[]).length : ''}</span>
+                                  <span>{emoji}</span><span className="text-[11px] text-[var(--muted-foreground)] font-medium">{(users as string[]).length > 1 ? (users as string[]).length : ''}</span>
                                 </button>
                               ))}
                             </div>)}
@@ -3641,10 +3641,10 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
               </div>
 
               {/* Recording indicator */}
-              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><button className="ml-auto text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={cancelRecording}>Cancelar</button></div>)}
+              {isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-red-500/5 flex items-center gap-3"><div className="flex items-end gap-[3px]">{[recVolume * 28 + 4, recVolume * 22 + 6, recVolume * 32 + 3, recVolume * 18 + 5].map((h, i) => (<div key={i} className="w-[3px] bg-red-500 rounded-full animate-pulse" style={{ height: `${Math.max(h, 4)}px` }} />))}</div><span className="text-[13px] text-red-500 font-mono font-medium">{fmtRecTime(recDuration)}</span><button className="ml-auto text-[12px] px-3 py-1.5 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent font-medium" onClick={cancelRecording}>Cancelar</button></div>)}
 
               {/* Audio preview */}
-              {audioPreviewUrl && !isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-accent)]/5 flex items-center gap-3"><div className="text-[20px]">🎙️</div><div className="flex-1 min-w-0"><div className="text-[12px] font-medium text-[var(--muted-foreground)]">Nota de voz</div><div className="text-[10px] text-[var(--af-text3)]">{fmtRecTime(audioPreviewDuration)}</div></div><button className="text-[11px] px-3 py-1 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent" onClick={() => { setAudioPreviewUrl(null); audioPreviewBlobRef.current = null; }}>Descartar</button><button className="text-[11px] px-3 py-1 rounded-full bg-[var(--af-accent)] text-background font-semibold cursor-pointer border-none" onClick={sendVoiceNote}>Enviar</button></div>)}
+              {audioPreviewUrl && !isRecording && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-accent)]/5 flex items-center gap-3"><div className="text-[20px]">🎙️</div><div className="flex-1 min-w-0"><div className="text-[13px] font-medium text-[var(--foreground)]">Nota de voz</div><div className="text-[11px] text-[var(--muted-foreground)]">{fmtRecTime(audioPreviewDuration)}</div></div><button className="text-[12px] px-3 py-1.5 rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 cursor-pointer bg-transparent font-medium" onClick={() => { setAudioPreviewUrl(null); audioPreviewBlobRef.current = null; }}>Descartar</button><button className="text-[12px] px-4 py-1.5 rounded-full bg-[var(--af-accent)] text-[#1a1a1a] font-semibold cursor-pointer border-none" onClick={sendVoiceNote}>Enviar</button></div>)}
 
               {/* Pending files */}
               {pendingFiles.length > 0 && (<div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-bg3)]"><div className="flex gap-2 overflow-x-auto pb-1">{pendingFiles.map(f => (<div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden">{f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}<button className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center cursor-pointer border-none leading-none" onClick={() => removePendingFile(f.id)}>✕</button><div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-0.5 py-px">{f.name}</div></div>))}</div></div>)}
