@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">{\n  \"sha\": \"8198d695d9681769005502a57181aeec3e8334ac\",\n  \"url\": \"https://api.github.com/repos/yecos/apparq/git/trees/8198d695d9681769005502a57181aeec3e8334ac\",\n  \"tree\": [\n    {\n      \"path\": \"app\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"168a0896057754a53c5f29a5fc7651b0e6c99671\",\n      \"url\": \"https://api.github.com/repos/yecos/apparq/git/trees/168a0896057754a53c5f29a5fc7651b0e6c99671\"\n    },\n    {\n      \"path\": \"components\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"cbf06d212e5b5bb6c0717dd5a4914587bd7b933b\",\n      \"url\": \"https://api.github.com/repos/yecos/apparq/git/trees/cbf06d212e5b5bb6c0717dd5a4914587bd7b933b\"\n    },\n    {\n      \"path\": \"hooks\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"2c634c310a5e1fc8254359d1fd357a1a8fdfec3a\",\n      \"url\": \"https://api.github.com/repos/yecos/apparq/git/trees/2c634c310a5e1fc8254359d1fd357a1a8fdfec3a\"\n    },\n    {\n      \"path\": \"lib\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"2efe67290932fad6dee1c9cecfb517f252201b40\",\n      \"url\": \"https://api.github.com/repos/yecos/apparq/git/trees/2efe67290932fad6dee1c9cecfb517f252201b40\"\n    }\n  ],\n  \"truncated\": false\n}\n</pre></body></html>",
+    "publishedTime": "Fri, 10 Apr 2026 02:10:05 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/yecos/apparq/git/trees/8198d695d9681769005502a57181aeec3e8334ac",
+    "usage": {
+      "tokens": 529
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 529
+    }
+  },
+  "status": 20000
+}

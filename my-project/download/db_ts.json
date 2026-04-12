@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import { PrismaClient } from '@prisma/client'\n\nconst globalForPrisma = globalThis as unknown as {\n  prisma: PrismaClient | undefined\n}\n\nexport const db =\n  globalForPrisma.prisma ??\n  new PrismaClient({\n    log: ['query'],\n  })\n\nif (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/yecos/apparq/main/src/lib/db.ts",
+    "usage": {
+      "tokens": 124
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 124
+    }
+  },
+  "status": 20000
+}
