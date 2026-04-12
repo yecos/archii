@@ -8,7 +8,7 @@
  * (/api/whatsapp/webhook, /api/whatsapp/notify) via dynamic import.
  */
 
-const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v25.0';
+const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
 // ─── Environment Variables ───

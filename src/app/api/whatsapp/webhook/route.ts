@@ -7,6 +7,8 @@ import {
 } from "@/lib/whatsapp-service";
 import {
   getWelcomeMessage,
+  generateLinkCode,
+  verifyLinkCode,
   getLinkedSuccess,
   processCommand,
 } from "@/lib/whatsapp-commands";
@@ -140,7 +142,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
     return getWelcomeMessage();
   }
 
-  // Parece un email (contiene @) → vincular directamente
+  // Parece un email (contiene @)
   if (msg.includes("@")) {
     const email = msg.replace(/[^a-zA-Z0-9@._-]/g, "").toLowerCase();
 
@@ -158,58 +160,68 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
     }
 
     const userData = userSnap.docs[0].data();
-    const userName = userData.name || userData.displayName || email.split("@")[0];
 
-    // Verificar si ya esta vinculado a OTRO numero
-    const existingLink = await db
-      .collection("whatsappLinks")
-      .where("userId", "==", userSnap.docs[0].id)
-      .where("active", "==", true)
-      .limit(1)
-      .get();
+    // Generar codigo
+    const code = generateLinkCode(email);
 
-    if (!existingLink.empty) {
-      const existingPhone = existingLink.docs[0].data().whatsappPhone;
-      if (existingPhone === message.from) {
-        return {
-          text: `Este numero ya esta vinculado a tu cuenta. Escribe *menu* para ver las opciones.`
-        };
-      }
-      return {
-        text: `El email ${email} ya esta vinculado a otro numero de WhatsApp.`
-      };
+    // Enviar codigo por WhatsApp
+    const sendResult = await sendWhatsAppMessage(
+      message.from,
+      `Tu codigo de verificacion:\n\n*${code}*\n\nEste codigo expira en 5 minutos.\n\nResponde con el codigo para completar la vinculacion.`
+    );
+
+    if (!sendResult.success) {
+      console.error("[ArchiFlow WhatsApp] Error enviando codigo:", sendResult.error);
+      return { text: 'Error al enviar el codigo. Intenta de nuevo en unos minutos.' };
     }
 
-    // Verificar si este numero ya esta vinculado a otra cuenta
-    const existingPhoneLink = await db
-      .collection("whatsappLinks")
-      .where("whatsappPhone", "==", message.from)
-      .where("active", "==", true)
-      .limit(1)
-      .get();
+    // Guardar estado temporal en Firestore
+    await db.collection("whatsappPending").doc(message.from).set({
+      email,
+      userId: userSnap.docs[0].id,
+      userName: userData.name || userData.displayName || email.split("@")[0],
+      createdAt: FieldValue.serverTimestamp(),
+      step: "waiting_code",
+    });
 
-    if (!existingPhoneLink.empty) {
-      return {
-        text: `Este numero de WhatsApp ya esta vinculado a una cuenta.`
-      };
+    return {
+      text: `Email encontrado: ${email}\n\nRevisa tu WhatsApp, te enviamos un codigo de verificacion.`
+    };
+  }
+
+  // Parece un codigo de 6 digitos
+  if (/^\d{6}$/.test(msg)) {
+    const pendingSnap = await db.collection("whatsappPending").doc(message.from).get();
+
+    if (!pendingSnap.exists) {
+      return { text: "No hay una vinculacion en curso. Escribe tu email para comenzar." };
     }
 
-    // Vincular directamente
-    try {
+    const pending = pendingSnap.data();
+
+    if (pending.step !== "waiting_code") {
+      return { text: "Escribe tu email para comenzar la vinculacion." };
+    }
+
+    // Verificar codigo
+    if (verifyLinkCode(pending.email, msg)) {
+      // Crear vinculo directamente en Firestore
       await db.collection('whatsappLinks').add({
         whatsappPhone: message.from,
-        userId: userSnap.docs[0].id,
-        userEmail: email,
-        userName: userName,
+        userId: pending.userId,
+        userEmail: pending.email,
+        userName: pending.userName,
         active: true,
         linkedAt: FieldValue.serverTimestamp(),
       });
 
-      console.log("[ArchiFlow WhatsApp] Cuenta vinculada:", email, "→", message.from);
-      return getLinkedSuccess(userName);
-    } catch (err: any) {
-      console.error("[ArchiFlow WhatsApp] Error vinculando:", err.message);
-      return { text: "Error al vincular la cuenta. Intenta de nuevo." };
+      await db.collection("whatsappPending").doc(message.from).delete();
+      return getLinkedSuccess(pending.userName);
+    } else {
+      await db.collection("whatsappPending").doc(message.from).delete();
+      return {
+        text: "Codigo incorrecto o expirado. Escribe tu email de nuevo para recibir un nuevo codigo."
+      };
     }
   }
 

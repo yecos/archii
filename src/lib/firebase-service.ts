@@ -5,27 +5,13 @@
  *
  * Exporta una función `getFirebase()` que devuelve la instancia de Firebase
  * cargada por el script en layout.tsx, con tipado y manejo de errores.
- *
- * IMPORTANTE: NO importamos de 'firebase/auth' ni ningún paquete 'firebase'
- * porque Turbopack puede incluir el SDK modular en el bundle del cliente,
- * causando conflictos con el SDK compat cargado via <script> en layout.tsx.
- * Todos los tipos se definen localmente.
  */
 
+import type { User as FirebaseUser } from 'firebase/auth';
+
 /* ---- Firebase compat types (usado via script tag en layout.tsx) ---- */
-
-/** Tipo de usuario Firebase (compat) */
-interface FirebaseUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-  providerData: any[];
-  [key: string]: any;
-}
-
 interface FirebaseApp {
-  auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any>; GoogleAuthProvider: any; OAuthProvider: any; signInWithEmailAndPassword(email: string, pass: string): Promise<any>; createUserWithEmailAndPassword(email: string, pass: string): Promise<any>; signInWithPopup(provider: any): Promise<any>; signInAnonymously(): Promise<any>; };
+  auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any> };
   firestore(): FirestoreDB;
   storage(): any;
   apps: any[];
@@ -97,14 +83,9 @@ let _fb: FirebaseApp | null = null;
  */
 export function getFirebase(): FirebaseApp {
   if (_fb) return _fb;
-  // Acceso seguro a window.firebase (SDK compat via CDN)
-  const w = typeof window !== 'undefined' ? window : null;
-  if (!w) {
-    throw new Error('[ArchiFlow] No estamos en el navegador.');
-  }
-  const fb = (w as any).firebase as FirebaseApp | undefined;
+  const fb = (window as any).firebase as FirebaseApp | undefined;
   if (!fb || !fb.apps || fb.apps.length === 0) {
-    throw new Error('[ArchiFlow] Firebase no está inicializado. Verifica que los scripts en layout.tsx cargaron correctamente.');
+    throw new Error('[ArchiFlow] Firebase no está inicializado. Verifica que el script en layout.tsx cargó correctamente.');
   }
   _fb = fb;
   return _fb;
@@ -141,4 +122,4 @@ export function getStorage() {
 }
 
 /* ---- Re-export types for use in hooks/components ---- */
-export type { FirebaseApp, FirebaseUser, FirestoreDB, CollectionRef, DocRef, QuerySnapshot, QueryDocSnapshot, BatchWriter };
+export type { FirebaseApp, FirestoreDB, CollectionRef, DocRef, QuerySnapshot, QueryDocSnapshot, BatchWriter };

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI, { type ChatMessage } from "z-ai-web-dev-sdk";
 
 const SYSTEM_PROMPT = `
 Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de arquitectura e interiorismo.
@@ -33,10 +32,41 @@ Cuando el usuario pregunte sobre su proyecto en ArchiFlow, referencia las seccio
 
 Siempre responde de forma clara y bien estructurada. Usa listas cuando sea apropiado.
 Nunca inventes datos específicos del usuario. Si necesitas información que no tienes, pídelo.
-IMPORTANTE: Nunca incluyas etiquetas HTML ni JavaScript en tus respuestas. Solo texto plano con formato markdown básico.
 `;
 
-const MAX_HISTORY_MESSAGES = 20;
+async function callGemini(messages: { role: string; content: string }[]) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY no configurada");
+
+  const geminiMessages = messages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: geminiMessages,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, no pude generar una respuesta.";
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,30 +83,15 @@ export async function POST(request: NextRequest) {
       ? `${SYSTEM_PROMPT}\n\nContexto del proyecto actual del usuario:\n${projectContext}`
       : SYSTEM_PROMPT;
 
-    const recentMessages = messages.slice(-MAX_HISTORY_MESSAGES);
-
-    const apiMessages: ChatMessage[] = [
+    const allMessages = [
       { role: "system", content: systemMessage },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
     ];
 
-    for (const m of recentMessages) {
-      apiMessages.push({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content,
-      });
-    }
-
-    const zai = await ZAI.create();
-
-    const completion = await zai.chat.completions.create({
-      messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 2048,
-    });
-
-    const assistantMessage =
-      completion.choices?.[0]?.message?.content ||
-      "Lo siento, no pude generar una respuesta coherente. Intenta de nuevo.";
+    const assistantMessage = await callGemini(allMessages);
 
     return NextResponse.json({
       message: assistantMessage,
@@ -84,7 +99,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor";
-    console.error("[ArchiFlow AI] Error en asistente:", message);
+    console.error("AI Assistant error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
