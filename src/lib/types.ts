@@ -62,3 +62,41 @@ export interface Acta {
     createdAt: any;
   };
 }
+
+// ===== UI & STATE TYPES =====
+
+export interface NotifEntry {
+  id: string;
+  title: string;
+  body: string;
+  icon: string;
+  type: string;
+  read: boolean;
+  timestamp: Date;
+  screen: string | null;
+  itemId: string | null;
+}
+
+export interface Toast {
+  msg: string;
+  type: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  uid: string;
+  userName: string;
+  userPhoto?: string;
+  text?: string;
+  type: string;
+  imageData?: string;
+  fileName?: string;
+  fileUrl?: string;
+  fileSize?: number;
+  audioUrl?: string;
+  audioDuration?: number;
+  createdAt: any;
+  reactions?: Record<string, string[]>;
+  replyTo?: { id: string; userName: string; text: string };
+  projectId: string;
+}

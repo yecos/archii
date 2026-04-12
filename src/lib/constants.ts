@@ -57,38 +57,14 @@ export const WEATHER_OPTIONS = [
 // Signature roles for work logs
 export const SIGNATURE_ROLES = ['Supervisor de obra', 'Interventor', 'Residente'];
 
-// Avatar colors
-export const avatarColors = [
-  'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  'bg-amber-500/15 text-amber-400 border-amber-500/30',
-];
+// Reactions
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '😮', '😢', '💯', '🚀'];
 
-// ===== COLOR HELPERS =====
-
-export const statusColor = (s: string) => ({
-  Concepto: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]',
-  Diseno: 'bg-blue-500/10 text-blue-400',
-  Ejecucion: 'bg-amber-500/10 text-amber-400',
-  Terminado: 'bg-emerald-500/10 text-emerald-400',
-}[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-
-export const prioColor = (p: string) => ({
-  Alta: 'bg-red-500/10 text-red-400',
-  Media: 'bg-amber-500/10 text-amber-400',
-  Baja: 'bg-emerald-500/10 text-emerald-400',
-}[p] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-
-export const taskStColor = (s: string) => ({
-  'Por hacer': 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]',
-  'En progreso': 'bg-blue-500/10 text-blue-400',
-  Revision: 'bg-amber-500/10 text-amber-400',
-  Completado: 'bg-emerald-500/10 text-emerald-400',
-}[s] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]');
-
-export const avatarColor = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < (id || '').length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
-  return avatarColors[Math.abs(h) % avatarColors.length];
-};
+// Re-export color helpers from helpers.ts (canonical location)
+export {
+  avatarColors,
+  avatarColor,
+  statusColor,
+  prioColor,
+  taskStColor,
+} from './helpers';
