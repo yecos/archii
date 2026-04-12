@@ -17,4 +17,10 @@ const adminApp = getApps().length ? getApp() : initializeApp({
 export const adminDb = getFirestore(adminApp);
 export const adminAuth = getAuth(adminApp);
 export { FieldValue };
+
+// Alias used by other modules (whatsapp, etc.)
+export function getAdminDb() {
+  return adminDb;
+}
+
 export default adminApp;
