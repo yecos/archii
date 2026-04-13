@@ -211,7 +211,7 @@ function AppContent() {
           <div className="flex-1 min-w-0">
             <div className="text-base font-medium truncate af-heading-responsive">{localScreenTitles[screen] || screenTitles[screen] || ''}</div>
             <div className="text-xs text-[var(--muted-foreground)] hidden md:block">
-              {screen === 'dashboard' ? `Bienvenido, ${userName.split(' ')[0]}` : screen === 'projectDetail' ? currentProject?.data.status || '' : ''}
+              {screen === 'dashboard' ? `Bienvenido, ${(userName || '').split(' ')[0]}` : screen === 'projectDetail' ? currentProject?.data.status || '' : ''}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
