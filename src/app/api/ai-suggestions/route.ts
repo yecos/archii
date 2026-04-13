@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/ai-suggestions
  * AI Suggestions endpoint for ArchiFlow.
- * Placeholder — returns empty suggestions.
- * The actual AI integration runs client-side via the floating AI assistant.
  */
 
 export async function POST(request: NextRequest) {
@@ -19,7 +17,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Placeholder — return empty suggestions
     return NextResponse.json({
       suggestions: [],
       type,
