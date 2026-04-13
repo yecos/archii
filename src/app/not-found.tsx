@@ -1,3 +1,5 @@
+'use client';
+
 export default function NotFound() {
   return (
     <div
@@ -104,40 +106,7 @@ export default function NotFound() {
         {/* Home Button */}
         <a
           href="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.75rem',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: '#fff',
-            background: 'var(--af-accent)',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            fontFamily: "'DM Sans', sans-serif",
-            lineHeight: 1,
-            textDecoration: 'none',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--af-accent2)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--af-accent)';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-          onMouseDown={(e) => {
-            e.currentTarget.style.transform = 'scale(0.97)';
-          }}
-          onMouseUp={(e) => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
+          className="af-notfound-btn"
         >
           {/* Arrow left icon */}
           <svg
@@ -156,6 +125,35 @@ export default function NotFound() {
           Volver al inicio
         </a>
       </div>
+
+      <style>{`
+        .af-notfound-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.75rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #fff;
+          background: var(--af-accent);
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: 'DM Sans', sans-serif;
+          line-height: 1;
+          text-decoration: none;
+        }
+        .af-notfound-btn:hover {
+          background: var(--af-accent2);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .af-notfound-btn:active {
+          transform: scale(0.97);
+        }
+      `}</style>
     </div>
   );
 }
