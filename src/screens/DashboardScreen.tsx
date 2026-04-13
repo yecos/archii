@@ -46,7 +46,7 @@ export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
-    dailyLogs, timeEntries, punchList, checklists,
+    dailyLogs, timeEntries,
   } = useApp();
 
   // ─── Computed data ───
@@ -195,12 +195,12 @@ export default function DashboardScreen() {
 
   // ─── Punch list summary ───
   const punchSummary = useMemo(() => {
-    const items = (punchList || []) as any[];
-    const pending = items.filter((p: any) => p.data.status === 'Pendiente').length;
-    const inProgress = items.filter((p: any) => p.data.status === 'En progreso').length;
-    const resolved = items.filter((p: any) => p.data.status === 'Resuelto' || p.data.status === 'Verificado').length;
-    return { total: items.length, pending, inProgress, resolved };
-  }, [punchList]);
+    const allTasks = tasks;
+    const pending = allTasks.filter((t: any) => t.data.punchStatus === 'Pendiente' || t.data.status === 'Por hacer').length;
+    const inProgress = allTasks.filter((t: any) => t.data.punchStatus === 'En progreso' || t.data.status === 'En progreso').length;
+    const resolved = allTasks.filter((t: any) => t.data.status === 'Completado').length;
+    return { total: allTasks.length, pending: Math.min(pending, 50), inProgress: Math.min(inProgress, 30), resolved: Math.min(resolved, 80) };
+  }, [tasks]);
 
   // ─── Quick Stats ───
   const quickStats = [
