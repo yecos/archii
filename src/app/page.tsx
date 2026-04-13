@@ -1,6 +1,8 @@
 'use client';
 
-import HomeContent from './HomeContent';
+import dynamic from 'next/dynamic';
+
+const HomeContent = dynamic(() => import('./HomeContent'), { ssr: false });
 
 export default function Page() {
   return <HomeContent />;

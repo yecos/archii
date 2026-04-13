@@ -2303,7 +2303,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         billable: true,
         rate: Number(forms.teRate) || 50000,
         date: dateStr,
-        userName: authUser?.displayName || authUser?.email || userName,
+        userName: authUser?.displayName || authUser?.email || '',
         userId: authUser?.uid,
         createdAt: ts,
       });
@@ -2331,7 +2331,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         billable: forms.teBillable !== false,
         rate: Number(forms.teRate) || 50000,
         date: forms.teDate || new Date().toISOString().split('T')[0],
-        userName: authUser?.displayName || authUser?.email || userName,
+        userName: authUser?.displayName || authUser?.email || '',
         userId: authUser?.uid,
         createdAt: ts,
       });
@@ -2416,7 +2416,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         taskId,
         projectId,
         userId: authUser?.uid,
-        userName: authUser?.displayName || authUser?.email || userName,
+        userName: authUser?.displayName || authUser?.email || '',
         text: commentText.trim(),
         mentions,
         parentId: replyingTo || null,
