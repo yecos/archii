@@ -246,17 +246,12 @@ function AppContent() {
   );
 }
 
-/* ─── Entry point ─── */
+/* ─── Entry point — page.tsx handles lazy loading ─── */
 
-function Home() {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return <LoadingScreen />;
+export default function Home() {
   return (
     <AppProvider>
       <AppContent />
     </AppProvider>
   );
 }
-
-export default Home;
