@@ -2,7 +2,7 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Columns3, BarChart3, BookOpen, ListChecks, Hammer, StickyNote } from 'lucide-react';
 
 interface SidebarProps {
   screen: string;
@@ -47,6 +47,13 @@ export default function Sidebar({
     { id: 'team', label: 'Equipo', icon: <Users size={18} className="stroke-current" />, badge: teamUsers.length },
     { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <Globe size={18} className="stroke-current" /> },
+    { divider: true },
+    { id: 'kanbanAvanzado', label: 'Tablero Kanban', icon: <Columns3 size={18} className="stroke-current" /> },
+    { id: 'gantt', label: 'Diagrama Gantt', icon: <BarChart3 size={18} className="stroke-current" /> },
+    { id: 'bitacora', label: 'Bitácora de Obra', icon: <BookOpen size={18} className="stroke-current" /> },
+    { id: 'checklists', label: 'Checklists de Obra', icon: <ListChecks size={18} className="stroke-current" /> },
+    { id: 'punchList', label: 'Punch List', icon: <Hammer size={18} className="stroke-current" /> },
+    { id: 'notas', label: 'Notas Rápidas', icon: <StickyNote size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'companies', label: 'Empresas', icon: <Building2 size={18} className="stroke-current" /> },
     { id: 'install', label: 'Instalar App', icon: <Download size={18} className="stroke-current" /> },
