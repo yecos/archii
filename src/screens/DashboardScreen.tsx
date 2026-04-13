@@ -4,19 +4,20 @@ import { useApp } from '@/contexts/AppContext';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 
 const CHART_COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899'];
 
-function CustomTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
-      <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>
+      {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
           <span className="text-[var(--muted-foreground)]">{p.name}:</span>
-          <span className="font-semibold">{p.value}</span>
+          <span className="font-semibold">{typeof p.value === 'number' && p.value > 9999 ? fmtCOP(p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -26,8 +27,17 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
-    activeTasks, completedTasks, unreadCount, notifHistory,
+    activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
+    dailyLogs, timeEntries,
   } = useApp();
+
+  // ─── Computed data ───
+  const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
+  const totalInvoiced = useMemo(() => invoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [invoices]);
+  const overdueTasks = useMemo(() => tasks.filter((t: any) => {
+    if (t.data.status === 'Completado' || !t.data.dueDate) return false;
+    return new Date(t.data.dueDate) < new Date();
+  }), [tasks]);
 
   // Burndown chart data
   const burndownData = useMemo(() => {
@@ -40,87 +50,160 @@ export default function DashboardScreen() {
       const d = new Date(today);
       d.setDate(today.getDate() + mondayOffset + i);
       const dayStr = d.toISOString().split('T')[0];
-      const done = tasks.filter(t => {
+      const done = tasks.filter((t: any) => {
         if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
         try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === dayStr : false; } catch { return false; }
       }).length;
-      const isToday = i === (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-      const isFuture = i > (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-      // Calcular remaining acumulativo
       let doneSoFar = 0;
       for (let j = 0; j <= i; j++) {
         const dj = new Date(today);
         dj.setDate(today.getDate() + mondayOffset + j);
         const djStr = dj.toISOString().split('T')[0];
-        doneSoFar += tasks.filter(t => {
+        doneSoFar += tasks.filter((t: any) => {
           if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
           try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === djStr : false; } catch { return false; }
         }).length;
       }
-      return { name: label, pendientes: Math.max(total - doneSoFar, 0), completadas: done, isToday, isFuture };
+      return { name: label, pendientes: Math.max(total - doneSoFar, 0), completadas: done };
     });
   }, [tasks, pendingCount, completedTasks]);
 
-  // Task status distribution for pie chart
+  // Task status distribution
   const taskStatusData = useMemo(() => {
     const statuses: Record<string, number> = {};
-    tasks.forEach(t => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
+    tasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
     return Object.entries(statuses).map(([name, value]) => ({ name, value }));
   }, [tasks]);
 
+  // Expenses by category
+  const expenseByCategory = useMemo(() => {
+    const cats: Record<string, number> = {};
+    expenses.forEach((e: any) => { cats[e.data.category] = (cats[e.data.category] || 0) + (Number(e.data.amount) || 0); });
+    return Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value })).slice(0, 5);
+  }, [expenses]);
+
+  // Recent activity (merge tasks completed + expenses + logs, sort by date)
+  const recentActivity = useMemo(() => {
+    const items: { id: string; type: string; title: string; subtitle: string; time: any; icon: string; color: string }[] = [];
+
+    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 5).forEach((t: any) => {
+      items.push({
+        id: t.id, type: 'task', title: t.data.title,
+        subtitle: `Tarea completada · ${projects.find((p: any) => p.id === t.data.projectId)?.data?.name || ''}`,
+        time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500',
+      });
+    });
+
+    expenses.slice(0, 5).forEach((e: any) => {
+      items.push({
+        id: e.id, type: 'expense', title: e.data.concept,
+        subtitle: `${fmtCOP(Number(e.data.amount))} · ${e.data.category}`,
+        time: e.data.createdAt, icon: '$', color: 'bg-[var(--af-accent)]',
+      });
+    });
+
+    dailyLogs.slice(0, 3).forEach((l: any) => {
+      items.push({
+        id: l.id, type: 'log', title: `Bitácora ${l.data.date}`,
+        subtitle: `${(l.data.activities || []).length} actividades`,
+        time: l.data.createdAt, icon: '📝', color: 'bg-blue-500',
+      });
+    });
+
+    items.sort((a, b) => {
+      const ta = a.time?.toDate?.() || new Date(a.time) || new Date(0);
+      const tb = b.time?.toDate?.() || new Date(b.time) || new Date(0);
+      return tb.getTime() - ta.getTime();
+    });
+
+    return items.slice(0, 8);
+  }, [tasks, expenses, dailyLogs, projects]);
+
   return (
-    <div className="animate-fadeIn space-y-6">
-      {/* Skeleton while loading */}
+    <div className="animate-fadeIn space-y-5">
       {loading && <SkeletonDashboard />}
       {!loading && (<>
-      {/* Row 1: KPI Cards */}
+
+      {/* ─── Row 1: KPI Cards ─── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { val: projects.length, lbl: 'Proyectos totales', icon: '📁', bg: 'bg-blue-500/10', iconColor: 'text-blue-400' },
-          { val: projects.filter(p => p.data.status === 'Ejecucion').length, lbl: 'En ejecucion', icon: '🏗️', bg: 'bg-amber-500/10', iconColor: 'text-amber-400' },
-          { val: pendingCount, lbl: 'Tareas pendientes', icon: '⏳', bg: 'bg-orange-500/10', iconColor: 'text-orange-400' },
-          { val: tasks.filter(t => t.data.status === 'Completado').length, lbl: 'Completadas', icon: '✅', bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400' },
+          { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
+          { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
+          { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
+          { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
         ].map((m, i) => (
-          <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5 hover:border-[var(--af-accent)]/30 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center text-[14px] ${m.iconColor}`}>{m.icon}</div>
+          <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5 hover:border-[var(--af-accent)]/30 transition-colors cursor-default">
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
+              {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
             </div>
-            <div className="text-2xl md:text-[28px] font-bold">{m.val}</div>
-            <div className="text-xs text-[var(--muted-foreground)] mt-1">{m.lbl}</div>
+            <div className="text-xl md:text-2xl font-bold leading-tight">{m.val}</div>
+            <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5">{m.lbl}</div>
+            <div className="text-[10px] text-[var(--af-text3)] mt-0.5">{m.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* Row 2: Projects + Tasks */}
+      {/* ─── Row 2: Projects + Activity ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Projects */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">Proyectos recientes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button></div>
-          {projects.length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div> : projects.slice(0, 3).map(p => {
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[15px] font-semibold">Proyectos recientes</div>
+            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
+          </div>
+          {projects.length === 0 ? (
+            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
+          ) : projects.slice(0, 4).map((p: any) => {
             const prog = p.data.progress || 0;
-            return (<div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openProject(p.id)}>
-              <div className="flex justify-between mb-2"><div className="text-sm font-semibold">{p.data.name}</div><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(p.data.status)}`}>{p.data.status}</span></div>
-              <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-              <div className="flex justify-between mt-1.5"><span className="text-[11px] text-[var(--af-text3)]">{prog}%</span>{p.data.endDate && <span className="text-[11px] text-[var(--af-text3)]">{fmtDate(p.data.endDate)}</span>}</div>
-            </div>);
+            return (
+              <div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openProject(p.id)}>
+                <div className="flex justify-between mb-2">
+                  <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
+                </div>
+                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  <span className="text-[11px] text-[var(--muted-foreground)]">{prog}% completado</span>
+                  {p.data.endDate && <span className="text-[11px] text-[var(--af-text3)]">{fmtDate(p.data.endDate)}</span>}
+                </div>
+              </div>
+            );
           })}
         </div>
+
+        {/* Activity Feed */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4"><div className="text-[15px] font-semibold">Tareas urgentes</div><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('tasks')}>Ver todas</button></div>
-          {tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin tareas urgentes</div> : tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').slice(0, 4).map(t => {
-            const proj = projects.find(p => p.id === t.data.projectId);
-            return (<div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0">
-              <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-              <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer hover:border-[var(--af-accent)]" onClick={() => toggleTask(t.id, t.data.status)} />
-              <div className="flex-1 min-w-0"><div className="text-[13.5px] font-medium">{t.data.title}</div><div className="text-[11px] text-[var(--af-text3)] mt-0.5">{proj?.data.name || '—'}{t.data.assigneeId ? ' · ' + getUserName(t.data.assigneeId) : ''}</div></div>
-            </div>);
-          })}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[15px] font-semibold">Actividad reciente</div>
+            <TrendingUp size={16} className="text-[var(--af-text3)]" />
+          </div>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin actividad reciente</div>
+          ) : (
+            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+              {recentActivity.map(item => (
+                <div key={item.id + item.type} className="flex items-start gap-3 group">
+                  <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium truncate">{item.title}</div>
+                    <div className="text-[11px] text-[var(--af-text3)] truncate">{item.subtitle}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Row 3: Charts Row */}
+      {/* ─── Row 3: Mini widgets ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Sprint Progress Ring */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 col-span-1">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
           <div className="flex items-center justify-center">
             <div className="relative w-[100px] h-[100px]">
@@ -139,37 +222,45 @@ export default function DashboardScreen() {
           </div>
         </div>
 
-        {/* Asistencia del Dia */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 col-span-1">
-          <div className="text-[15px] font-semibold mb-3">Asistencia del Dia</div>
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center"><span className="text-emerald-400 text-[14px]">✓</span></div>
-              <div className="flex-1"><div className="text-[13px] font-medium">Activos hoy</div><div className="text-[11px] text-[var(--muted-foreground)]">Con tareas en progreso</div></div>
-              <span className="text-[18px] font-bold text-emerald-400">{[...new Set(tasks.filter(t => t.data.status === 'En progreso' || t.data.status === 'Revision').map(t => t.data.assigneeId).filter(Boolean))].length}</span>
+        {/* Financial Summary */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-[13px]">Facturado</span>
+              </div>
+              <span className="text-[13px] font-semibold">{fmtCOP(totalInvoiced)}</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center"><span className="text-amber-400 text-[14px]">⏳</span></div>
-              <div className="flex-1"><div className="text-[13px] font-medium">Con asignaciones</div><div className="text-[11px] text-[var(--muted-foreground)]">Tareas pendientes</div></div>
-              <span className="text-[18px] font-bold text-amber-400">{[...new Set(tasks.filter(t => t.data.status === 'Por hacer' && t.data.assigneeId).map(t => t.data.assigneeId))].length}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-400" />
+                <span className="text-[13px]">Gastado</span>
+              </div>
+              <span className="text-[13px] font-semibold text-red-400">{fmtCOP(totalExpenses)}</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[var(--af-bg3)] flex items-center justify-center"><span className="text-[var(--muted-foreground)] text-[14px]">●</span></div>
-              <div className="flex-1"><div className="text-[13px] font-medium">Sin asignar</div><div className="text-[11px] text-[var(--muted-foreground)]">Tareas sin responsable</div></div>
-              <span className="text-[18px] font-bold">{tasks.filter(t => !t.data.assigneeId && t.data.status !== 'Completado').length}</span>
+            <div className="border-t border-[var(--border)] pt-2 flex items-center justify-between">
+              <span className="text-[12px] text-[var(--muted-foreground)]">Balance</span>
+              <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {fmtCOP(totalInvoiced - totalExpenses)}
+              </span>
             </div>
           </div>
+          <button className="w-full mt-3 text-xs text-[var(--af-accent)] cursor-pointer hover:underline text-center" onClick={() => navigateTo('invoices')}>
+            Ver facturas →
+          </button>
         </div>
 
-        {/* Notificaciones */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 col-span-1">
+        {/* Notifications */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-semibold">Notificaciones</div>
             {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </div>
           <div className="flex flex-col gap-2 max-h-[130px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
             {notifHistory.length === 0 ? <div className="text-center py-4 text-[var(--af-text3)] text-[12px]">Sin notificaciones</div> :
-            notifHistory.slice(0, 5).map(n => (
+            notifHistory.slice(0, 5).map((n: any) => (
               <div key={n.id} className={`flex items-start gap-2 p-2 rounded-lg ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}>
                 <span className="text-[14px] mt-0.5 flex-shrink-0">{n.icon || '🔔'}</span>
                 <div className="flex-1 min-w-0">
@@ -183,22 +274,22 @@ export default function DashboardScreen() {
         </div>
 
         {/* Task Distribution Pie */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 col-span-1">
-          <div className="text-[15px] font-semibold mb-3">Distribucion Tareas</div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="text-[15px] font-semibold mb-3">Distribución Tareas</div>
           {taskStatusData.length === 0 ? (
             <div className="text-center py-6 text-[var(--af-text3)] text-[12px]">Sin datos</div>
           ) : (
             <ResponsiveContainer width="100%" height={100}>
               <PieChart>
                 <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={3} dataKey="value" stroke="none">
-                  {taskStatusData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  {taskStatusData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<ChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           )}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-            {taskStatusData.map((d, i) => (
+            {taskStatusData.map((d: any, i: number) => (
               <div key={i} className="flex items-center gap-1 text-[10px]">
                 <div className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                 <span className="text-[var(--muted-foreground)]">{d.name}</span>
@@ -209,22 +300,42 @@ export default function DashboardScreen() {
         </div>
       </div>
 
-      {/* Row 4: Burndown Chart */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-        <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
-            <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[4, 4, 0, 0]} barSize={20} />
-            <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
-          </BarChart>
-        </ResponsiveContainer>
-        <div className="flex justify-between mt-2">
-          <span className="text-[10px] text-[var(--muted-foreground)]">{pendingCount} pendientes</span>
-          <span className="text-[10px] text-emerald-400">{completedTasks.length} completadas</span>
+      {/* ─── Row 4: Charts ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Burndown Chart */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+              <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[4, 4, 0, 0]} barSize={20} />
+              <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Expense by Category */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[15px] font-semibold">Gastos por Categoría</div>
+            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('budget')}>Ver presupuesto →</button>
+          </div>
+          {expenseByCategory.length === 0 ? (
+            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin gastos registrados</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={expenseByCategory} layout="vertical" margin={{ top: 0, right: 20, left: 60, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={55} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="value" name="Gasto" fill="#c8a96e" radius={[0, 4, 4, 0]} barSize={18} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

@@ -1689,6 +1689,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
+  const changeTaskStatus = async (id: string, newStatus: string) => {
+    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+  };
+
   const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
@@ -2921,6 +2925,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     updateProjectProgress,
     updateUserName,
     toggleTask,
+    changeTaskStatus,
     deleteTask,
     sendMessage,
     startRecording,
