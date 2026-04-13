@@ -1144,7 +1144,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const doMicrosoftLogin = async () => {
     try {
       const provider = new (getFirebase().auth).OAuthProvider('microsoft.com');
-      provider.setCustomParameters({ prompt: 'select_account' });
+      // Solicitar permisos para OneDrive y Microsoft Graph
+      provider.addScope('Files.ReadWrite.All');
+      provider.addScope('Sites.ReadWrite.All');
+      provider.addScope('User.Read');
+      provider.setCustomParameters({ prompt: 'consent' });
       const result = await getFirebase().auth().signInWithPopup(provider);
       // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
@@ -1156,7 +1160,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         localStorage.setItem('msAccessToken', credential.accessToken);
         localStorage.setItem('msConnected', 'true');
         if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
-        showToast('Conectado con Microsoft');
+        showToast('Conectado con Microsoft y OneDrive');
+      } else {
+        showToast('Autenticado con Microsoft, pero sin acceso a OneDrive', 'warning');
       }
     } catch (e: any) {
       if (e.code !== 'auth/popup-closed-by-user') {
@@ -1168,6 +1174,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           'auth/invalid-credential': 'Credenciales de Microsoft inválidas',
           'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console',
           'auth/internal-error': 'Error interno — verifica la configuración del proveedor Microsoft en Firebase Console',
+          'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método de login (Google o Email). Firebase unificará las cuentas.',
         };
         const msg = msgs[e.code] || `${e.code || 'Error'}: ${e.message || 'Verifica Firebase Console > Authentication > Sign-in method > Microsoft'}`;
         if (msg) showToast(`Microsoft: ${msg}`, 'error');
