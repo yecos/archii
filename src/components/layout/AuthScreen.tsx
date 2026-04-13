@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AuthScreenProps {
   forms: Record<string, any>;
@@ -12,6 +12,47 @@ interface AuthScreenProps {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* ── Firebase health check ── */
+function useFirebaseStatus() {
+  const [status, setStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [detail, setDetail] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const w = window as any;
+        if (!w.firebase || !w.firebase.apps || w.firebase.apps.length === 0) {
+          setStatus('error');
+          setDetail('Firebase no se cargó. Los scripts en layout.tsx no cargaron.');
+          return;
+        }
+        const auth = w.firebase.auth();
+        if (!auth) {
+          setStatus('error');
+          setDetail('Firebase Auth no está disponible.');
+          return;
+        }
+        if (!auth.GoogleAuthProvider) {
+          setStatus('error');
+          setDetail('Firebase Auth no tiene GoogleAuthProvider. Falta el script firebase-auth-compat.js.');
+          return;
+        }
+        if (!auth.OAuthProvider) {
+          setStatus('error');
+          setDetail('Firebase Auth no tiene OAuthProvider. Falta el script firebase-auth-compat.js.');
+          return;
+        }
+        setStatus('ok');
+        setDetail(`Firebase OK — App: ${w.firebase.apps[0]?.options?.projectId || '?'}`);
+      } catch (e: any) {
+        setStatus('error');
+        setDetail(e.message || 'Error desconocido');
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return { status, detail };
+}
 
 function validateLoginForm(forms: Record<string, any>) {
   const errors: Record<string, string> = {};
@@ -72,20 +113,17 @@ function inputClasses(hasError: boolean) {
 export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin }: AuthScreenProps) {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
-  const [inlineError, setInlineError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const fbStatus = useFirebaseStatus();
 
   const handleLoginClick = async () => {
     const errors = validateLoginForm(forms);
     setLoginErrors(errors);
-    setInlineError('');
     if (Object.keys(errors).length > 0) return;
     setAuthLoading(true);
     try {
       await doLogin();
     } finally {
-      // Keep loading for a moment — if login succeeds, the screen will disappear
-      // If it fails, show the error
       setTimeout(() => setAuthLoading(false), 2000);
     }
   };
@@ -100,7 +138,6 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
   const handleRegisterClick = async () => {
     const errors = validateRegisterForm(forms);
     setRegisterErrors(errors);
-    setInlineError('');
     if (Object.keys(errors).length > 0) return;
     setAuthLoading(true);
     try {
@@ -118,7 +155,6 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
   };
 
   const handleGoogleClick = async () => {
-    setInlineError('');
     setAuthLoading(true);
     try {
       await doGoogleLogin();
@@ -128,7 +164,6 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
   };
 
   const handleMicrosoftClick = async () => {
-    setInlineError('');
     setAuthLoading(true);
     try {
       await doMicrosoftLogin();
@@ -164,6 +199,11 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex items-center justify-center p-6">
+      {/* Firebase status indicator — bottom left, small */}
+      <div className="fixed bottom-2 left-2 z-[60] text-[10px] px-2 py-1 rounded bg-black/60 text-white/70 font-mono">
+        Firebase: {fbStatus.status === 'checking' ? '⏳ cargando...' : fbStatus.status === 'ok' ? '✅ OK' : `❌ ${fbStatus.detail}`}
+      </div>
+
       <div className="bg-[var(--card)] border border-[var(--input)] rounded-2xl p-8 w-full max-w-[400px]">
         <div className="flex items-center gap-3 mb-7">
           <div className="w-10 h-10 bg-[var(--af-accent)] rounded-lg flex items-center justify-center">
@@ -172,14 +212,12 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
           <span style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl">ArchiFlow</span>
         </div>
 
-        {/* Inline error banner */}
-        {inlineError && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400 flex items-start gap-2">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 mt-0.5 flex-shrink-0 stroke-current fill-none" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            <span>{inlineError}</span>
-            <button className="ml-auto flex-shrink-0 bg-transparent border-none cursor-pointer text-red-400 hover:text-red-300" onClick={() => setInlineError('')}>
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        {/* Firebase error banner */}
+        {fbStatus.status === 'error' && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-sm text-red-400">
+            <div className="font-medium mb-1">Firebase no pudo cargar</div>
+            <div className="text-xs opacity-80">{fbStatus.detail}</div>
+            <div className="text-xs opacity-60 mt-1">Abre la consola del navegador (F12) para ver más detalles.</div>
           </div>
         )}
 
@@ -221,20 +259,20 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
             {loginErrors.loginPass && <p className="text-xs mt-1 text-[var(--destructive)]">{loginErrors.loginPass}</p>}
           </div>
           <button
-            className={`w-full bg-[var(--af-accent)] text-background border-none rounded-lg py-3 text-sm font-semibold transition-colors ${hasLoginErrors || authLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--af-accent2)]'}`}
+            className={`w-full bg-[var(--af-accent)] text-background border-none rounded-lg py-3 text-sm font-semibold transition-colors ${hasLoginErrors || authLoading || fbStatus.status !== 'ok' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--af-accent2)]'}`}
             onClick={handleLoginClick}
-            disabled={authLoading}
+            disabled={authLoading || fbStatus.status !== 'ok'}
           >{authLoading ? 'Ingresando...' : 'Ingresar'}</button>
           <div className="flex items-center gap-3 my-4 text-xs text-[var(--af-text3)]"><div className="flex-1 h-px bg-[var(--border)]" />o<div className="flex-1 h-px bg-[var(--border)]" /></div>
-          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleGoogleClick} disabled={authLoading}>
+          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleGoogleClick} disabled={authLoading || fbStatus.status !== 'ok'}>
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
             Continuar con Google
           </button>
-          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleMicrosoftClick} disabled={authLoading}>
+          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleMicrosoftClick} disabled={authLoading || fbStatus.status !== 'ok'}>
             <svg viewBox="0 0 21 21" className="w-[18px] h-[18px]"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
             Continuar con Microsoft
           </button>
-          <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿No tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => { setForms(p => ({ ...p, showRegister: true })); setInlineError(''); }}>Regístrate</a></div>
+          <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿No tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, showRegister: true }))}>Regístrate</a></div>
         </>) : (<>
           <div className="text-xl font-semibold mb-1">Crear cuenta</div>
           <div className="text-sm text-[var(--muted-foreground)] mb-7">Únete a tu equipo en ArchiFlow</div>
@@ -280,20 +318,20 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
             {registerErrors.regPass && <p className="text-xs mt-1 text-[var(--destructive)]">{registerErrors.regPass}</p>}
           </div>
           <button
-            className={`w-full bg-[var(--af-accent)] text-background border-none rounded-lg py-3 text-sm font-semibold transition-colors ${hasRegisterErrors || authLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--af-accent2)]'}`}
+            className={`w-full bg-[var(--af-accent)] text-background border-none rounded-lg py-3 text-sm font-semibold transition-colors ${hasRegisterErrors || authLoading || fbStatus.status !== 'ok' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--af-accent2)]'}`}
             onClick={handleRegisterClick}
-            disabled={authLoading}
+            disabled={authLoading || fbStatus.status !== 'ok'}
           >{authLoading ? 'Creando cuenta...' : 'Crear cuenta'}</button>
           <div className="flex items-center gap-3 my-4 text-xs text-[var(--af-text3)]"><div className="flex-1 h-px bg-[var(--border)]" />o<div className="flex-1 h-px bg-[var(--border)]" /></div>
-          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleGoogleClick} disabled={authLoading}>
+          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleGoogleClick} disabled={authLoading || fbStatus.status !== 'ok'}>
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
             Registrarse con Google
           </button>
-          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleMicrosoftClick} disabled={authLoading}>
+          <button className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg py-2.5 text-sm font-medium text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center justify-center gap-2.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleMicrosoftClick} disabled={authLoading || fbStatus.status !== 'ok'}>
             <svg viewBox="0 0 21 21" className="w-[18px] h-[18px]"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
             Registrarse con Microsoft
           </button>
-          <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿Ya tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => { setForms(p => ({ ...p, showRegister: false })); setInlineError(''); }}>Ingresar</a></div>
+          <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿Ya tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, showRegister: false }))}>Ingresar</a></div>
         </>)}
       </div>
     </div>
