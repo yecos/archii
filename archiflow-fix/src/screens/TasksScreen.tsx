@@ -2,8 +2,8 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
-import { fmtDate, getInitials, prioColor, taskStColor, avatarColor, fmtDuration } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, ChevronDown } from 'lucide-react';
+import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 
 const KANBAN_COLS = [
@@ -57,10 +57,21 @@ function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUse
 }
 
 export default function TasksScreen() {
-  const {
-    changeTaskStatus, deleteTask, forms, getUserName, loading, openEditTask,
-    openModal, projects, setForms, tasks, toggleTask, timeEntries, showToast, teamUsers,
-  } = useApp();
+  const app = useApp() as any;
+  const changeTaskStatus = app.changeTaskStatus || (() => {});
+  const deleteTask = app.deleteTask || (() => {});
+  const forms = app.forms || {};
+  const getUserName = app.getUserName || ((uid: string) => uid);
+  const loading = app.loading || false;
+  const openEditTask = app.openEditTask || (() => {});
+  const openModal = app.openModal || (() => {});
+  const projects = app.projects || [];
+  const setForms = app.setForms || (() => {});
+  const tasks = app.tasks || [];
+  const toggleTask = app.toggleTask || (() => {});
+  const timeEntries = app.timeEntries || [];
+  const showToast = app.showToast || (() => {});
+  const teamUsers = app.teamUsers || [];
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);

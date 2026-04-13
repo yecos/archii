@@ -1,75 +1,20 @@
-============================================================
-ARCHIFLOW - ARCHIVO DE CORRECCION COMPLETA
-============================================================
+============================================
+ARCHIFLOW - FIX TAREAS ROTAS + MODALES CENTRADOS
+============================================
 
-QUE INCLUYE ESTE ZIP:
-- Crear/editar tareas (con multiples responsables)
-- Crear/editar proyectos
-- TopBar corregido (error "p is not a function")
-- ErrorBoundary mejorado
-- AppContext.tsx completo con soporte multi-responsables
-- Todas las pantallas y componentes principales
+CONTENIDO (3 archivos):
+  src/screens/TasksScreen.tsx     - Pantalla de tareas (anti-crash)
+  src/contexts/AppContext.tsx      - Context completo (multi-responsables)
+  src/app/globals.css             - CSS con modales centrados en desktop
 
-============================================================
-COMO INSTALAR (Windows PowerShell):
-============================================================
+COMO INSTALAR:
+  1. Descarga el ZIP
+  2. Descomprime en la RAIZ del proyecto (donde esta package.json)
+  3. Los 3 archivos se copian a sus carpetas correctas
+  4. git add . && git commit -m "fix" && git push
 
-1. DESCARGA el ZIP y descomprimelo en la RAIZ de tu proyecto
-   (la misma carpeta donde esta package.json)
-
-2. Los archivos se copiaran a las carpetas correctas automaticamente.
-   Estructura:
-   src/
-     app/HomeContent.tsx
-     components/
-       common/FormField.tsx
-       common/ErrorBoundary.tsx
-       layout/TopBar.tsx
-       layout/Sidebar.tsx
-       layout/BottomNav.tsx
-       layout/NotifPanel.tsx
-       layout/LoadingScreen.tsx
-       layout/AuthScreen.tsx
-       layout/InstallBanner.tsx
-       features/LightboxViewer.tsx
-       modals/TaskModal.tsx
-       modals/ProjectModal.tsx
-     contexts/AppContext.tsx
-     screens/TasksScreen.tsx
-     screens/ProjectsScreen.tsx
-     screens/DashboardScreen.tsx
-     screens/ProjectDetailScreen.tsx
-     screens/ChatScreen.tsx
-     screens/BudgetScreen.tsx
-     screens/ProfileScreen.tsx
-
-3. IMPORTANTE: NO necesitas editar AppContext.tsx manualmente.
-   Este ZIP ya incluye el AppContext.tsx COMPLETO y corregido.
-
-4. Haz git add, git commit, git push:
-   git add .
-   git commit -m "fix: tareas, proyectos, multi-responsables"
-   git push
-
-============================================================
-LO QUE SE ARREGLA:
-============================================================
-- Error "p is not a function" en TopBar
-- Modales de tarea no se abrian
-- Modales de proyecto no se abrian
-- Nuevo: multiples responsables por tarea (checkboxes + chips)
-- WhatsApp se envia a TODOS los responsables
-- Compatible con tareas existentes (1 responsable)
-
-============================================================
-NOTA IMPORTANTE:
-============================================================
-Este ZIP NO contiene:
-- src/lib/helpers.ts (no se modifico)
-- src/lib/export-excel.ts (no se modifico)
-- src/components/ui/* (no se modificaron)
-- Los demas modals (ExpenseModal, SupplierModal, etc.)
-- Las demas pantallas (FilesScreen, InventoryScreen, etc.)
-- Los archivos API en src/app/api/
-
-Estos archivos NO fueron cambiados y no necesitan reemplazo.
+QUE SE ARREGLA:
+  - Error/crash en pantalla de tareas
+  - Modales ahora se centran en desktop
+  - Múltiples responsables por tarea
+  - Proteccion anti-crash: si algo falla en el context no rompe todo
