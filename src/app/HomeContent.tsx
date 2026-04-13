@@ -50,7 +50,7 @@ const DrawerModal = ({ open, onClose, children, maxWidth = 480 }: { open: boolea
   <Drawer.Root open={open} onOpenChange={(o: boolean) => { if (!o) onClose(); }} handleOnly={false} dismissible={true}>
     <Drawer.Portal>
       <Drawer.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
-      <Drawer.Content className="bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl mx-auto z-[101] flex flex-col max-h-[85dvh] sm:max-h-[85vh]" style={{ maxWidth: maxWidth ? `${maxWidth}px` : undefined, width: '95vw' }}>
+      <Drawer.Content className="fixed inset-x-0 bottom-0 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-700 rounded-t-2xl z-[101] flex flex-col max-h-[85dvh] sm:max-h-[85vh]" style={{ maxWidth: maxWidth ? `${maxWidth}px` : undefined, width: '95vw' }}>
         <Drawer.Title className="sr-only">Modal</Drawer.Title>
         <Drawer.Description className="sr-only">Formulario</Drawer.Description>
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
