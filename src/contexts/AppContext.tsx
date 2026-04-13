@@ -2442,7 +2442,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // ===== CONTEXT VALUE =====
   const userName = authUser?.displayName || authUser?.email?.split('@')[0] || 'Usuario';
-  const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().substring(0, 2);
+  const initials = getInitials(userName);
+  const screenTitles = SCREEN_TITLES;
 
   const ctx = {
     screen,
