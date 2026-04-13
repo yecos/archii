@@ -1614,7 +1614,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
-      else { await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 }); showToast('Proyecto creado'); }
+      else {
+        await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
+        showToast('Proyecto creado');
+        // Si hay sesion de OneDrive activa, crear carpeta del proyecto
+        if (msConnected && msAccessToken) {
+          ensureProjectFolder(name).then(folderId => {
+            if (folderId) {
+              console.log('[ArchiFlow] Carpeta OneDrive creada para:', name);
+            } else {
+              console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name);
+            }
+          });
+        }
+      }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
     } catch { showToast('Error al guardar', 'error'); }
   };
