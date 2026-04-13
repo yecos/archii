@@ -6,6 +6,7 @@ import LoadingScreen from '@/components/layout/LoadingScreen';
 import AuthScreen from '@/components/layout/AuthScreen';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toaster } from 'sonner';
+import { Home as HomeIcon, X, Menu, ChevronLeft, ChevronRight, Bell, Sun, Moon, Plus, Check, CheckCircle, XCircle, Clock, Volume2, Camera, RefreshCw, AlertTriangle, Download, Image as ImageIcon, ClipboardList, ArrowLeftRight, Package, MessageCircle, Calendar, Folder, Mail, Loader, UserPlus, LayoutGrid, MoreHorizontal } from 'lucide-react';
 
 // Keep imports for render-only types used in JSX
 import type { Project, Task } from '@/lib/types';
@@ -173,7 +174,7 @@ function AppContent() {
           <div className="max-w-lg mx-auto bg-[var(--card)] border border-[var(--af-accent)]/30 rounded-2xl p-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 bg-[var(--af-accent)] rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" className="w-6 h-6 stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <HomeIcon size={24} className="stroke-background" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[15px] font-semibold">Instalar ArchiFlow</div>
@@ -188,7 +189,7 @@ function AppContent() {
                 </div>
               </div>
               <button className="w-9 h-9 flex items-center justify-center text-[var(--af-text3)] cursor-pointer hover:text-[var(--foreground)] flex-shrink-0" onClick={dismissInstallBanner}>
-                <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <X size={16} className="stroke-current" />
               </button>
             </div>
           </div>
@@ -220,11 +221,11 @@ function AppContent() {
         {/* Top Bar */}
         <header className="h-[60px] bg-[var(--card)] border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
           <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex" onClick={() => setSidebarOpen(true)}>
-            <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-[var(--muted-foreground)] fill-none" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <Menu size={18} className="stroke-[var(--muted-foreground)]" />
           </button>
           {screen === 'projectDetail' ? (
             <button className="flex items-center gap-1.5 text-[var(--af-accent)] text-sm font-medium cursor-pointer hover:underline mr-2" onClick={() => navigateTo('projects')}>
-              <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <ChevronLeft size={16} className="stroke-current" />
               Proyectos
             </button>
           ) : null}
@@ -241,10 +242,7 @@ function AppContent() {
               onClick={() => setShowNotifPanel(!showNotifPanel)}
               title="Notificaciones"
             >
-              <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-[var(--muted-foreground)] fill-none" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 01-3.46 0"/>
-              </svg>
+              <Bell size={18} className="stroke-[var(--muted-foreground)]" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full px-1">
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -257,26 +255,26 @@ function AppContent() {
             {/* Theme toggle */}
             <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all" onClick={toggleTheme} title={(darkMode ? 'Cambiar a modo día' : 'Cambiar a modo noche') + ' (Ctrl+D)'}>
               {darkMode ? (
-                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-[var(--muted-foreground)] fill-none" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <Sun size={18} className="stroke-[var(--muted-foreground)]" />
               ) : (
-                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-[var(--muted-foreground)] fill-none" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <Moon size={18} className="stroke-[var(--muted-foreground)]" />
               )}
             </button>
             {screen === 'projects' && (
               <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); openModal('project'); }}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Plus size={14} className="stroke-current" strokeWidth={2.5} />
                 Nuevo proyecto
               </button>
             )}
             {screen === 'tasks' && (
               <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Plus size={14} className="stroke-current" strokeWidth={2.5} />
                 Nueva tarea
               </button>
             )}
             {screen === 'suppliers' && (
               <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); openModal('supplier'); }}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Plus size={14} className="stroke-current" strokeWidth={2.5} />
                 Nuevo proveedor
               </button>
             )}
@@ -287,7 +285,7 @@ function AppContent() {
         {/* Auto Notification Permission Banner */}
         {showNotifBanner && (
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[var(--af-accent)]/10 via-[var(--af-accent)]/5 to-transparent border-b border-[var(--af-accent)]/20 animate-fadeIn">
-            <div className="text-xl flex-shrink-0">🔔</div>
+            <Bell size={20} className="stroke-[var(--af-accent)] flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-medium">Activar notificaciones</div>
               <div className="text-[11px] text-[var(--muted-foreground)]">Recibe alertas de chat, tareas, reuniones, inventario y más — incluso cuando la app esté cerrada</div>
@@ -296,7 +294,7 @@ function AppContent() {
               Activar ahora
             </button>
             <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer flex-shrink-0 border-none bg-transparent" onClick={dismissNotifBanner}>
-              <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <X size={16} className="stroke-current" />
             </button>
           </div>
         )}
@@ -343,20 +341,20 @@ function AppContent() {
                 {/* Category filter tabs */}
                 <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1">
                   {[
-                    { key: 'all', label: 'Todo', emoji: '🔔' },
-                    { key: 'chat', label: 'Chat', emoji: '💬' },
-                    { key: 'task', label: 'Tareas', emoji: '📋' },
-                    { key: 'meeting', label: 'Reuniones', emoji: '📅' },
-                    { key: 'inventory', label: 'Inventario', emoji: '📦' },
-                    { key: 'project', label: 'Proyectos', emoji: '📁' },
-                    { key: 'approval', label: 'Aprob.', emoji: '✅' },
-                    { key: 'reminder', label: 'Record.', emoji: '⏰' },
+                    { key: 'all', label: 'Todo', Icon: Bell },
+                    { key: 'chat', label: 'Chat', Icon: MessageCircle },
+                    { key: 'task', label: 'Tareas', Icon: ClipboardList },
+                    { key: 'meeting', label: 'Reuniones', Icon: Calendar },
+                    { key: 'inventory', label: 'Inventario', Icon: Package },
+                    { key: 'project', label: 'Proyectos', Icon: Folder },
+                    { key: 'approval', label: 'Aprob.', Icon: CheckCircle },
+                    { key: 'reminder', label: 'Record.', Icon: Clock },
                   ].map(f => (
                     <button
                       key={f.key}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${notifFilterCat === f.key ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                       onClick={() => setNotifFilterCat(f.key)}
-                    >{f.emoji} {f.label}</button>
+                    ><f.Icon size={12} /> {f.label}</button>
                   ))}
                 </div>
               </div>
@@ -365,7 +363,7 @@ function AppContent() {
               {notifPermission !== 'granted' && (
                 <div className="p-4 bg-amber-500/5 border-b border-[var(--border)] flex-shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="text-xl">🔔</div>
+                    <Bell size={20} className="stroke-[var(--af-accent)]" />
                     <div className="flex-1">
                       <div className="text-[13px] font-medium">Activar notificaciones del sistema</div>
                       <div className="text-[11px] text-[var(--muted-foreground)]">Para recibir alertas incluso con la app cerrada</div>
@@ -383,7 +381,7 @@ function AppContent() {
                   const filtered = notifFilterCat === 'all' ? notifHistory : notifHistory.filter(n => n.type === notifFilterCat);
                   if (filtered.length === 0) return (
                     <div className="p-8 text-center">
-                      <div className="text-3xl mb-2">🔔</div>
+                      <Bell size={28} className="stroke-[var(--muted-foreground)] mb-2" />
                       <div className="text-sm text-[var(--muted-foreground)]">{notifFilterCat === 'all' ? 'Sin notificaciones' : 'Sin notificaciones de esta categoría'}</div>
                       <div className="text-[11px] text-[var(--af-text3)] mt-1">Las alertas aparecerán aquí</div>
                     </div>
@@ -400,7 +398,7 @@ function AppContent() {
                         }
                       }}
                     >
-                      <div className="text-base flex-shrink-0 mt-0.5">{n.icon || '🔔'}</div>
+                      <div className="flex-shrink-0 mt-0.5"><Bell size={16} className="stroke-[var(--muted-foreground)]" /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <div className={`text-[13px] leading-snug ${!n.read ? 'font-semibold' : 'font-medium'}`}>{n.title}</div>
@@ -430,20 +428,20 @@ function AppContent() {
                 <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Configurar alertas</div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { key: 'chat', label: '💬 Chat' },
-                    { key: 'tasks', label: '📋 Tareas' },
-                    { key: 'meetings', label: '📅 Reuniones' },
-                    { key: 'approvals', label: '✅ Aprobaciones' },
-                    { key: 'inventory', label: '📦 Inventario' },
-                    { key: 'projects', label: '📁 Proyectos' },
+                    { key: 'chat', label: 'Chat', Icon: MessageCircle },
+                    { key: 'tasks', label: 'Tareas', Icon: ClipboardList },
+                    { key: 'meetings', label: 'Reuniones', Icon: Calendar },
+                    { key: 'approvals', label: 'Aprobaciones', Icon: CheckCircle },
+                    { key: 'inventory', label: 'Inventario', Icon: Package },
+                    { key: 'projects', label: 'Proyectos', Icon: Folder },
                   ].map(p => (
                     <button
                       key={p.key}
                       className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notifPrefs[p.key] ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
                       onClick={() => toggleNotifPref(p.key)}
                     >
-                      {p.label}
-                      {notifPrefs[p.key] && <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                      <p.Icon size={11} /> {p.label}
+                      {notifPrefs[p.key] && <Check size={10} className="stroke-current" strokeWidth={3} />}
                     </button>
                   ))}
                 </div>
@@ -452,9 +450,9 @@ function AppContent() {
                     <button
                       className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notifSound ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
                       onClick={() => setNotifSound(!notifSound)}
-                    >🔊 Sonido</button>
+                    ><Volume2 size={12} className="inline mr-0.5" /> Sonido</button>
                     <span className="text-[10px] text-[var(--af-text3)]">
-                      {notifPermission === 'granted' ? '✅ OS activas' : notifPermission === 'denied' ? '❌ OS bloqueadas' : '⏳ Sin activar OS'}
+                      {notifPermission === 'granted' ? <><CheckCircle size={10} className="inline mr-0.5 text-emerald-400" /> OS activas</> : notifPermission === 'denied' ? <><XCircle size={10} className="inline mr-0.5 text-red-400" /> OS bloqueadas</> : <><Loader size={10} className="inline mr-0.5 animate-spin" /> Sin activar OS</>}
                     </span>
                   </div>
                   <span className="text-[10px] text-[var(--af-text3)]">
@@ -508,11 +506,11 @@ function AppContent() {
       {/* Bottom Nav (Mobile) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-lg border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {[
-          { id: 'dashboard', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>, label: 'Inicio' },
-          { id: 'projects', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>, label: 'Proyectos' },
-          { id: 'tasks', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, label: 'Tareas' },
-          { id: 'chat', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, label: 'Chat' },
-          { id: '_more', icon: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'Más' },
+          { id: 'dashboard', icon: <LayoutGrid size={20} />, label: 'Inicio' },
+          { id: 'projects', icon: <Folder size={20} />, label: 'Proyectos' },
+          { id: 'tasks', icon: <ClipboardList size={20} />, label: 'Tareas' },
+          { id: 'chat', icon: <MessageCircle size={20} />, label: 'Chat' },
+          { id: '_more', icon: <MoreHorizontal size={20} />, label: 'Más' },
         ].map(item => {
           const isActive = item.id === '_more' ? sidebarOpen : screen === item.id;
           return (
@@ -723,7 +721,7 @@ function AppContent() {
       {/* Gallery Photo Modal */}
       {modals.gallery && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('gallery')}>
   <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
-    <div className="text-lg font-semibold mb-5">{editingId ? 'Editar foto' : '📸 Agregar foto'}</div>
+    <div className="text-lg font-semibold mb-5"><span className="flex items-center gap-2">{editingId ? 'Editar foto' : <><Camera size={18} className="stroke-[var(--af-accent)]" /> Agregar foto</>}</span></div>
     
     {/* Image preview / upload area */}
     <div className="mb-4">
@@ -731,11 +729,11 @@ function AppContent() {
       {forms.galleryImageData ? (
         <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
           <img src={forms.galleryImageData} alt="Preview" className="w-full max-h-[200px] object-contain bg-[var(--af-bg3)]" />
-          <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center text-sm hover:bg-black/70 transition-colors" onClick={() => setForms(p => ({ ...p, galleryImageData: '' }))}>✕</button>
+          <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center text-sm hover:bg-black/70 transition-colors" onClick={() => setForms(p => ({ ...p, galleryImageData: '' }))}><X size={14} /></button>
         </div>
       ) : (
         <label className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--af-accent)]/50 transition-colors bg-[var(--af-bg3)]">
-          <svg viewBox="0 0 24 24" className="w-8 h-8 text-[var(--muted-foreground)]" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <ImageIcon size={32} className="stroke-[var(--muted-foreground)]" />
           <span className="text-sm text-[var(--muted-foreground)]">Toca para seleccionar una imagen</span>
           <span className="text-[10px] text-[var(--muted-foreground)]">JPG, PNG, WebP — máx. 5 MB</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageSelect} />
@@ -772,7 +770,7 @@ function AppContent() {
       {/* Inventory Product Modal */}
       {modals.invProduct && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invProduct')}>
         <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[520px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
-          <div className="text-lg font-semibold mb-5">{editingId ? 'Editar producto' : '📦 Nuevo producto'}</div>
+          <div className="text-lg font-semibold mb-5"><span className="flex items-center gap-2">{editingId ? 'Editar producto' : <><Package size={18} className="stroke-[var(--af-accent)]" /> Nuevo producto</>}</span></div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="col-span-2"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre *</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Ej: Cemento Portland" value={forms.invProdName || ''} onChange={e => setForms(p => ({ ...p, invProdName: e.target.value }))} /></div>
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">SKU</label><input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" placeholder="CMP-001" value={forms.invProdSku || ''} onChange={e => setForms(p => ({ ...p, invProdSku: e.target.value }))} /></div>
@@ -799,11 +797,11 @@ function AppContent() {
             {forms.invProdImage ? (
               <div className="relative rounded-xl overflow-hidden border border-[var(--border)] inline-block">
                 <img src={forms.invProdImage} alt="Preview" className="w-full max-h-[140px] object-contain bg-[var(--af-bg3)]" />
-                <button className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center text-xs hover:bg-black/70 transition-colors cursor-pointer" onClick={() => setForms(p => ({ ...p, invProdImage: '' }))}>✕</button>
+                <button className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center text-xs hover:bg-black/70 transition-colors cursor-pointer" onClick={() => setForms(p => ({ ...p, invProdImage: '' }))}><X size={12} /></button>
               </div>
             ) : (
               <label className="flex flex-col items-center justify-center gap-1.5 p-5 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--af-accent)]/50 transition-colors bg-[var(--af-bg3)]">
-                <svg viewBox="0 0 24 24" className="w-6 h-6 text-[var(--muted-foreground)]" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <ImageIcon size={24} className="stroke-[var(--muted-foreground)]" />
                 <span className="text-xs text-[var(--muted-foreground)]">Toca para agregar foto</span>
                 <span className="text-[10px] text-[var(--muted-foreground)]">JPG, PNG — máx 3 MB</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleInvProductImageSelect} />
@@ -839,7 +837,7 @@ function AppContent() {
       {/* Inventory Movement Modal */}
       {modals.invMovement && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invMovement')}>
         <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
-          <div className="text-lg font-semibold mb-5">📋 Registrar movimiento</div>
+          <div className="text-lg font-semibold mb-5 flex items-center gap-2"><ClipboardList size={18} className="stroke-[var(--af-accent)]" /> Registrar movimiento</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Tipo *</label>
             <div className="grid grid-cols-2 gap-2">
               <button className={`py-2.5 rounded-lg text-sm font-medium cursor-pointer border transition-all ${forms.invMovType === 'Entrada' ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-[var(--af-bg3)] border-[var(--border)] text-[var(--muted-foreground)]'}`} onClick={() => setForms(p => ({ ...p, invMovType: 'Entrada' }))}>↓ Entrada</button>
@@ -862,7 +860,7 @@ function AppContent() {
             <div className={`rounded-lg p-3 mb-3 text-sm border ${forms.invMovType === 'Salida' && qty > curStock ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}>
               <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Stock en {wh}:</span><span className="font-medium">{curStock} {prod.data.unit}</span></div>
               {qty > 0 && (<div className="flex justify-between mt-1"><span className="text-[var(--muted-foreground)]">Después:</span><span className={`font-bold ${forms.invMovType === 'Salida' && qty > curStock ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{forms.invMovType === 'Entrada' ? curStock + qty : Math.max(0, curStock - qty)} {prod.data.unit}</span></div>)}
-              {forms.invMovType === 'Salida' && qty > curStock && (<div className="text-red-400 text-xs mt-1">⚠ Excede stock disponible en {wh}</div>)}
+              {forms.invMovType === 'Salida' && qty > curStock && (<div className="text-red-400 text-xs mt-1"><AlertTriangle size={12} className="inline mr-0.5" /> Excede stock disponible en {wh}</div>)}
             </div>
           ); })()}
           <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
@@ -875,7 +873,7 @@ function AppContent() {
       {/* Inventory Transfer Modal */}
       {modals.invTransfer && (<div className="fixed inset-0 bg-black/70 z-[100] flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn" onClick={() => closeModal('invTransfer')}>
         <div className="bg-[var(--card)] border sm:border border-[var(--input)] sm:rounded-2xl rounded-t-2xl p-5 sm:p-6 w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto animate-slideUp sm:animate-slideIn" onClick={e => e.stopPropagation()}>
-          <div className="text-lg font-semibold mb-5">🔄 Nueva transferencia</div>
+          <div className="text-lg font-semibold mb-5 flex items-center gap-2"><ArrowLeftRight size={18} className="stroke-[var(--af-accent)]" /> Nueva transferencia</div>
           <div className="mb-3"><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Producto *</label><select className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invTrProduct || ''} onChange={e => setForms(p => ({ ...p, invTrProduct: e.target.value }))}><option value="">Seleccionar producto</option>{invProducts.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}</select></div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div><label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Desde (origen) *</label><select className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invTrFrom || ''} onChange={e => setForms(p => ({ ...p, invTrFrom: e.target.value }))}><option value="">Seleccionar</option>{INV_WAREHOUSES.map(w => <option key={w} value={w} disabled={w === forms.invTrTo}>{w}</option>)}</select></div>
@@ -889,9 +887,9 @@ function AppContent() {
           {/* Live preview */}
           {forms.invTrProduct && forms.invTrFrom && (() => { const prod = invProducts.find(p => p.id === forms.invTrProduct); if (!prod) return null; const fromStock = getWarehouseStock(prod, forms.invTrFrom); const toStock = getWarehouseStock(prod, forms.invTrTo); const qty = Number(forms.invTrQty || 0); return (
             <div className={`rounded-lg p-3 mb-3 text-sm border space-y-1 ${qty > fromStock ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Stock en {forms.invTrFrom}:</span><span className="font-medium">{fromStock} → {qty > fromStock ? '❌' : fromStock - qty} {prod.data.unit}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Stock en {forms.invTrFrom}:</span><span className="font-medium">{fromStock} → {qty > fromStock ? <XCircle size={14} className="inline text-red-400" /> : fromStock - qty} {prod.data.unit}</span></div>
               <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Stock en {forms.invTrTo}:</span><span className="font-medium">{toStock} → {toStock + qty} {prod.data.unit}</span></div>
-              {qty > fromStock && (<div className="text-red-400 text-xs">⚠ Stock insuficiente en origen</div>)}
+              {qty > fromStock && (<div className="text-red-400 text-xs flex items-center gap-0.5"><AlertTriangle size={12} /> Stock insuficiente en origen</div>)}
             </div>
           ); })()}
           <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
@@ -928,12 +926,12 @@ function AppContent() {
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
   <div className="relative w-full h-full flex flex-col items-center justify-center p-4" onClick={e => e.stopPropagation()}>
     {/* Close button */}
-    <button className="absolute top-3 right-3 pt-[env(safe-area-inset-top,0px)] z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={closeLightbox}>✕</button>
+    <button className="absolute top-3 right-3 pt-[env(safe-area-inset-top,0px)] z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={closeLightbox}><X size={20} /></button>
     {/* OneDrive photo lightbox */}
     {lightboxPhoto.thumbnailLarge || lightboxPhoto.thumbnailUrl ? (
       <>
         {/* Download button */}
-        <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => downloadOneDriveFile(lightboxPhoto.id, lightboxPhoto.name)} title="Descargar">⬇️</button>
+        <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => downloadOneDriveFile(lightboxPhoto.id, lightboxPhoto.name)} title="Descargar"><Download size={18} /></button>
         {/* Image */}
         <img src={lightboxPhoto.thumbnailLarge || lightboxPhoto.webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={lightboxPhoto.name || ''} />
         {/* Navigation */}
@@ -942,14 +940,14 @@ function AppContent() {
             const prev = (lightboxIndex - 1 + odGalleryPhotos.length) % odGalleryPhotos.length;
             setLightboxIndex(prev); setLightboxPhoto(odGalleryPhotos[prev]);
           }}>
-            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <ChevronLeft size={20} className="stroke-current" />
           </button>
           <span className="text-white/60 text-sm">{lightboxIndex + 1} / {odGalleryPhotos.length}</span>
           <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
             const next = (lightboxIndex + 1) % odGalleryPhotos.length;
             setLightboxIndex(next); setLightboxPhoto(odGalleryPhotos[next]);
           }}>
-            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <ChevronRight size={20} className="stroke-current" />
           </button>
         </div>
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50 text-[11px] mt-2">{lightboxPhoto.name || ''}</div>
@@ -969,11 +967,11 @@ function AppContent() {
         {/* Navigation */}
         <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
           <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxPrev}>
-            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <ChevronLeft size={20} className="stroke-current" />
           </button>
           <span className="text-white/60 text-sm">{lightboxIndex + 1} / {getFilteredGalleryPhotos().length}</span>
           <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={lightboxNext}>
-            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <ChevronRight size={20} className="stroke-current" />
           </button>
         </div>
       </>
