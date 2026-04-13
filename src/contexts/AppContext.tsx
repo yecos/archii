@@ -501,10 +501,33 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!ready) return;
     const fb = getFirebase();
     const auth = fb.auth();
+
+    // Handle redirect results (for signInWithRedirect fallback)
+    auth.getRedirectResult().then((result: any) => {
+      if (result?.credential) {
+        console.log('[ArchiFlow Auth] Redirect sign-in successful:', result.user?.email);
+        // Handle Microsoft redirect tokens
+        if (result.credential.accessToken) {
+          setMsAccessToken(result.credential.accessToken);
+          setMsConnected(true);
+          setMsRefreshToken(result.credential.refreshToken || null);
+          setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+          localStorage.setItem('msAccessToken', result.credential.accessToken);
+          localStorage.setItem('msConnected', 'true');
+          if (result.credential.refreshToken) localStorage.setItem('msRefreshToken', result.credential.refreshToken);
+        }
+      }
+    }).catch((err: any) => {
+      if (err.code !== 'auth/no-pending-redirect') {
+        console.error('[ArchiFlow Auth] Redirect result error:', err.code, err.message);
+        // Show error after a short delay so Toaster is rendered
+        setTimeout(() => showToast(`Error de autenticación: ${err.code || err.message}`, 'error'), 500);
+      }
+    });
+
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthUser(user || null);
       if (user) {
-        await fb.auth().currentUser;
         const db = fb.firestore();
         // Save user profile
         const ref = db.collection('users').doc(user.uid);
@@ -1127,58 +1150,139 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const doLogin = async () => {
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
-    try { await getFirebase().auth().signInWithEmailAndPassword(email, pass); } catch (e: any) { showToast(e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : e.code === 'auth/user-not-found' ? 'No existe cuenta con ese correo' : 'Error al iniciar sesión', 'error'); }
+    try {
+      console.log('[ArchiFlow Auth] Attempting email/password login for:', email);
+      await getFirebase().auth().signInWithEmailAndPassword(email, pass);
+      console.log('[ArchiFlow Auth] Email/password login successful');
+    } catch (e: any) {
+      console.error('[ArchiFlow Auth] Login error:', e.code, e.message, e);
+      const msgs: Record<string, string> = {
+        'auth/invalid-credential': 'Correo o contraseña incorrectos',
+        'auth/user-not-found': 'No existe cuenta con ese correo',
+        'auth/too-many-requests': 'Demasiados intentos. Espera un momento y vuelve a intentar.',
+        'auth/user-disabled': 'Esta cuenta ha sido deshabilitada.',
+        'auth/invalid-email': 'El formato del correo no es válido.',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+      };
+      showToast(msgs[e.code] || `Error: ${e.code || e.message || 'No se pudo iniciar sesión'}`, 'error');
+    }
   };
 
   const doRegister = async () => {
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
+      console.log('[ArchiFlow Auth] Attempting registration for:', email);
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
       await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
-    } catch (e: any) { showToast(e.code === 'auth/email-already-in-use' ? 'Ese correo ya está registrado' : e.code === 'auth/weak-password' ? 'Mínimo 6 caracteres' : 'Error al registrar', 'error'); }
+      console.log('[ArchiFlow Auth] Registration successful for:', email);
+    } catch (e: any) {
+      console.error('[ArchiFlow Auth] Register error:', e.code, e.message, e);
+      const msgs: Record<string, string> = {
+        'auth/email-already-in-use': 'Ese correo ya está registrado. Intenta iniciar sesión.',
+        'auth/weak-password': 'La contraseña es muy débil. Mínimo 6 caracteres.',
+        'auth/invalid-email': 'El formato del correo no es válido.',
+        'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+        'auth/operation-not-allowed': 'Registro con email/contraseña deshabilitado. Verifica Firebase Console.',
+      };
+      showToast(msgs[e.code] || `Error al registrar: ${e.code || e.message || ''}`, 'error');
+    }
   };
 
   const doGoogleLogin = async () => {
-    try { await getFirebase().auth().signInWithPopup(new (getFirebase().auth).GoogleAuthProvider()); } catch (e: any) { showToast('Error al iniciar con Google', 'error'); }
+    try {
+      console.log('[ArchiFlow Auth] Attempting Google login...');
+      const auth = getFirebase().auth();
+      const provider = new auth.GoogleAuthProvider();
+      // Use select_account to always show account picker
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await auth.signInWithPopup(provider);
+      console.log('[ArchiFlow Auth] Google login successful:', result.user?.email);
+    } catch (e: any) {
+      console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
+      if (e.code === 'auth/popup-closed-by-user') return;
+      const msgs: Record<string, string> = {
+        'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
+        'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
+        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains.',
+        'auth/invalid-credential': 'Credenciales de Google inválidas.',
+        'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Microsoft o Email). Intenta con ese método.',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+        'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
+      };
+      // If popup fails, try redirect as fallback (better for mobile)
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
+        console.log('[ArchiFlow Auth] Popup failed, trying redirect fallback for Google...');
+        try {
+          const auth2 = getFirebase().auth();
+          const provider2 = new auth2.GoogleAuthProvider();
+          provider2.setCustomParameters({ prompt: 'select_account' });
+          await auth2.signInWithRedirect(provider2);
+          return;
+        } catch (redirectErr: any) {
+          console.error('[ArchiFlow Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
+        }
+      }
+      showToast(msgs[e.code] || `Error con Google: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
+    }
   };
 
   const doMicrosoftLogin = async () => {
     try {
-      const provider = new (getFirebase().auth).OAuthProvider('microsoft.com');
+      console.log('[ArchiFlow Auth] Attempting Microsoft login...');
+      const fbAuth = getFirebase().auth();
+      const provider = new fbAuth.OAuthProvider('microsoft.com');
       // Permisos para OneDrive y Microsoft Graph
       provider.addScope('Files.ReadWrite.All');
       provider.addScope('Sites.ReadWrite.All');
       provider.addScope('User.Read');
-      // Usar select_account (no 'consent') para evitar auth/internal-error
-      // cuando Azure AD no tiene consentimiento de admin para los scopes adicionales.
-      // El consentimiento se solicitará de forma natural si es necesario.
       provider.setCustomParameters({ prompt: 'select_account' });
 
       let result: any;
       try {
-        result = await getFirebase().auth().signInWithPopup(provider);
+        result = await fbAuth.signInWithPopup(provider);
       } catch (popupErr: any) {
         // Si falla con scopes de OneDrive, intentar login básico sin scopes extra
         if (popupErr.code === 'auth/internal-error' || popupErr.code === 'auth/oauth_error') {
-          console.warn('[ArchiFlow] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
-          const basicProvider = new (getFirebase().auth).OAuthProvider('microsoft.com');
+          console.warn('[ArchiFlow Auth] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
+          const basicProvider = new fbAuth.OAuthProvider('microsoft.com');
           basicProvider.setCustomParameters({ prompt: 'select_account' });
-          result = await getFirebase().auth().signInWithPopup(basicProvider);
+          try {
+            result = await fbAuth.signInWithPopup(basicProvider);
+          } catch (basicErr: any) {
+            // If basic popup also fails (e.g. popup blocked), try redirect
+            if (basicErr.code === 'auth/popup-blocked') {
+              console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
+              const redirectProvider = new fbAuth.OAuthProvider('microsoft.com');
+              redirectProvider.setCustomParameters({ prompt: 'select_account' });
+              await fbAuth.signInWithRedirect(redirectProvider);
+              return;
+            }
+            throw basicErr;
+          }
+        } else if (popupErr.code === 'auth/popup-blocked') {
+          // Popup blocked — try redirect immediately
+          console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
+          const redirectProvider = new fbAuth.OAuthProvider('microsoft.com');
+          redirectProvider.setCustomParameters({ prompt: 'select_account' });
+          await fbAuth.signInWithRedirect(redirectProvider);
+          return;
         } else {
           throw popupErr;
         }
       }
 
+      console.log('[ArchiFlow Auth] Microsoft login successful');
       // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
         setMsAccessToken(credential.accessToken);
         setMsConnected(true);
         setMsRefreshToken(credential.refreshToken || null);
-        setMsTokenExpiry(Date.now() + 55 * 60 * 1000); // 55 min (5 min buffer)
+        setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
         localStorage.setItem('msAccessToken', credential.accessToken);
         localStorage.setItem('msConnected', 'true');
         if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
@@ -1187,20 +1291,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Autenticado con Microsoft, pero sin acceso a OneDrive', 'warning');
       }
     } catch (e: any) {
-      if (e.code !== 'auth/popup-closed-by-user') {
-        console.error('[ArchiFlow] Microsoft login error:', e.code, e.message, e);
-        const msgs: Record<string, string> = {
-          'auth/popup-blocked': 'Ventana bloqueada — permite ventanas emergentes para este sitio',
-          'auth/popup-closed-by-user': '',
-          'auth/cancelled-popup-request': 'Se cerró el popup',
-          'auth/invalid-credential': 'Credenciales de Microsoft inválidas',
-          'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console',
-          'auth/internal-error': 'Error de autenticación Microsoft. En Azure Portal > App registrations > API permissions, asegúrate de agregar "Microsoft Graph > Delegated > Files.ReadWrite.All" y "Sites.ReadWrite.All", luego haz clic en "Grant admin consent".',
-          'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método de login (Google o Email). Firebase unificará las cuentas.',
-        };
-        const msg = msgs[e.code] || `${e.code || 'Error'}: ${e.message || 'Verifica Firebase Console > Authentication > Sign-in method > Microsoft'}`;
-        if (msg) showToast(`Microsoft: ${msg}`, 'error');
-      }
+      if (e.code === 'auth/popup-closed-by-user') return;
+      console.error('[ArchiFlow Auth] Microsoft login error:', e.code, e.message, e);
+      const msgs: Record<string, string> = {
+        'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
+        'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
+        'auth/invalid-credential': 'Credenciales de Microsoft inválidas.',
+        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains. Agrega archii-theta.vercel.app.',
+        'auth/internal-error': 'Error de autenticación Microsoft. Verifica Azure Portal > API permissions.',
+        'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Google o Email). Intenta con ese método.',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+      };
+      showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
     }
   };
 

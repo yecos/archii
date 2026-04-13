@@ -25,7 +25,7 @@ interface FirebaseUser {
 }
 
 interface FirebaseApp {
-  auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any>; GoogleAuthProvider: any; OAuthProvider: any; signInWithEmailAndPassword(email: string, pass: string): Promise<any>; createUserWithEmailAndPassword(email: string, pass: string): Promise<any>; signInWithPopup(provider: any): Promise<any>; signInAnonymously(): Promise<any>; };
+  auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any>; GoogleAuthProvider: any; OAuthProvider: any; signInWithEmailAndPassword(email: string, pass: string): Promise<any>; createUserWithEmailAndPassword(email: string, pass: string): Promise<any>; signInWithPopup(provider: any): Promise<any>; signInWithRedirect(provider: any): Promise<any>; getRedirectResult(): Promise<any>; signInAnonymously(): Promise<any>; };
   firestore(): FirestoreDB;
   storage(): any;
   apps: any[];

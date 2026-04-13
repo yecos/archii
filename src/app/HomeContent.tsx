@@ -79,15 +79,37 @@ function AppContent() {
 
   if (!ready || loading) return <LoadingScreen />;
   if (!authUser) return (
-    <AuthScreen
-      forms={forms}
-      setForms={setForms}
-      doLogin={doLogin}
-      doRegister={doRegister}
-      doGoogleLogin={doGoogleLogin}
-      doMicrosoftLogin={doMicrosoftLogin}
-      showToast={() => {}}
-    />
+    <>
+      {/* Toaster MUST be rendered here too — otherwise auth errors are invisible */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          unstyled: false,
+          classNames: {
+            toast: 'af-sonner-toast',
+            title: 'af-sonner-title',
+            description: 'af-sonner-desc',
+            actionButton: 'af-sonner-action',
+            cancelButton: 'af-sonner-cancel',
+            success: '!bg-emerald-600 !text-white !border-emerald-500',
+            error: '!bg-red-500 !text-white !border-red-400',
+            warning: '!bg-amber-500 !text-white !border-amber-400',
+          },
+        }}
+        richColors
+        closeButton
+        duration={3500}
+      />
+      <AuthScreen
+        forms={forms}
+        setForms={setForms}
+        doLogin={doLogin}
+        doRegister={doRegister}
+        doGoogleLogin={doGoogleLogin}
+        doMicrosoftLogin={doMicrosoftLogin}
+        showToast={() => {}}
+      />
+    </>
   );
 
   // Local screen title overrides (dynamic titles like projectDetail)
