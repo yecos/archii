@@ -1689,7 +1689,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const openEditTask = (t: Task) => {
     setEditingId(t.id);
-    setForms(f => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
+    const assignees: string[] = Array.isArray(t.data.assigneeIds) ? t.data.assigneeIds : (t.data.assigneeId ? [t.data.assigneeId] : []);
+    setForms(f => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
     openModal('task');
   };
 
