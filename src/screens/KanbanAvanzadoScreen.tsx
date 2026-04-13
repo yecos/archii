@@ -9,7 +9,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, X, Search, Filter, Calendar, User, GripVertical, MoreHorizontal,
-  ChevronDown, MessageSquare, Paperclip, AlertCircle, CheckCircle2, Clock, Layers, Eye,
+  ChevronDown, MessageSquare, Paperclip, AlertCircle, CheckCircle2, Clock, Layers, Eye, Download,
 } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 
