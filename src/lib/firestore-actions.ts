@@ -620,3 +620,85 @@ export async function updateUserCompany(userId: string, companyId: string, showT
     showToast('Empresa asignada');
   }, showToast);
 }
+
+/* ===== TIME ENTRIES ===== */
+
+export function saveTimeEntry(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+  return fbAction('guardar registro de tiempo', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.FieldValue.serverTimestamp();
+    const entryData = {
+      projectId: data.teProject,
+      phaseName: data.tePhase || '',
+      description: data.teDescription || '',
+      startTime: data.teStartTime || '08:00',
+      endTime: data.teEndTime || '17:00',
+      duration: Number(data.teDuration) || 0,
+      billable: data.teBillable !== false,
+      rate: Number(data.teRate) || 50000,
+      date: data.teDate || new Date().toISOString().split('T')[0],
+      total: (Number(data.teDuration) || 0) * (Number(data.teRate) || 50000) / 60,
+    };
+    if (editingId) {
+      await db.collection('timeEntries').doc(editingId).update(entryData);
+      showToast('Registro actualizado');
+    } else {
+      entryData.createdAt = ts;
+      entryData.createdBy = authUser?.uid;
+      await db.collection('timeEntries').add(entryData);
+      showToast('✅ Tiempo registrado');
+    }
+  }, showToast);
+}
+
+/* ===== INVOICES ===== */
+
+export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+  return fbAction('guardar factura', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.FieldValue.serverTimestamp();
+    const invData = {
+      projectId: data.invProject,
+      number: data.invNumber || '',
+      status: data.invStatus || 'Borrador',
+      items: data.invItems || [],
+      subtotal: Number(data.invSubtotal) || 0,
+      tax: Number(data.invTax) || 19,
+      total: Number(data.invTotal) || 0,
+      notes: data.invNotes || '',
+      issueDate: data.invIssueDate || '',
+      dueDate: data.invDueDate || '',
+    };
+    if (editingId) {
+      await db.collection('invoices').doc(editingId).update(invData);
+      showToast('Factura actualizada');
+    } else {
+      invData.createdAt = ts;
+      invData.createdBy = authUser?.uid;
+      await db.collection('invoices').add(invData);
+      showToast('✅ Factura creada');
+    }
+  }, showToast);
+}
+
+/* ===== COMMENTS ===== */
+
+export function saveComment(data: { taskId: string; projectId: string; text: string; mentions: string[]; parentId: string | null }, showToast: ToastFn, authUser: any) {
+  return fbAction('guardar comentario', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.FieldValue.serverTimestamp();
+    await db.collection('comments').add({
+      taskId: data.taskId,
+      projectId: data.projectId,
+      text: data.text,
+      mentions: data.mentions || [],
+      parentId: data.parentId || null,
+      uid: authUser?.uid,
+      userName: authUser?.displayName || authUser?.email || 'Usuario',
+      createdAt: ts,
+    });
+  });
+}
