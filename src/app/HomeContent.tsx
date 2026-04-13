@@ -38,6 +38,12 @@ import InventoryScreen from '@/screens/InventoryScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import AdminScreen from '@/screens/AdminScreen';
 import ProjectDetailScreen from '@/screens/ProjectDetailScreen';
+import KanbanAvanzadoScreen from '@/screens/KanbanAvanzadoScreen';
+import GanttScreen from '@/screens/GanttScreen';
+import BitacoraScreen from '@/screens/BitacoraScreen';
+import ChecklistsScreen from '@/screens/ChecklistsScreen';
+import PunchListScreen from '@/screens/PunchListScreen';
+import NotasScreen from '@/screens/NotasScreen';
 
 /* ─── Vaul Drawer Modal Wrapper ─── */
 const DrawerModal = ({ open, onClose, children, maxWidth = 480 }: { open: boolean; onClose: () => void; children: React.ReactNode; maxWidth?: number }) => (
@@ -45,6 +51,8 @@ const DrawerModal = ({ open, onClose, children, maxWidth = 480 }: { open: boolea
     <Drawer.Portal>
       <Drawer.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
       <Drawer.Content className="bg-[var(--card)] border-t border-[var(--border)] rounded-t-2xl mx-auto z-[101] flex flex-col max-h-[85dvh] sm:max-h-[85vh]" style={{ maxWidth: maxWidth ? `${maxWidth}px` : undefined, width: '95vw' }}>
+        <Drawer.Title className="sr-only">Modal</Drawer.Title>
+        <Drawer.Description className="sr-only">Formulario</Drawer.Description>
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <Drawer.Handle className="w-10 h-[5px] rounded-full bg-[var(--muted-foreground)]/20 active:bg-[var(--muted-foreground)]/40 transition-colors" />
         </div>
@@ -160,6 +168,8 @@ function AppContent() {
     admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
     calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App',
     companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto',
+    kanbanAvanzado: 'Tablero Kanban', gantt: 'Diagrama Gantt', bitacora: 'Bitácora de Obra',
+    checklists: 'Checklists de Obra', punchList: 'Punch List', notas: 'Notas Rápidas',
   };
 
   /* ===== RENDER ===== */
@@ -515,6 +525,12 @@ function AppContent() {
               {screen === 'timeTracking' && <TimeTrackingScreen />}
               {screen === 'invoices' && <InvoicesScreen />}
               {screen === 'reports' && <ReportsScreen />}
+              {screen === 'kanbanAvanzado' && <KanbanAvanzadoScreen />}
+              {screen === 'gantt' && <GanttScreen />}
+              {screen === 'bitacora' && <BitacoraScreen />}
+              {screen === 'checklists' && <ChecklistsScreen />}
+              {screen === 'punchList' && <PunchListScreen />}
+              {screen === 'notas' && <NotasScreen />}
             </motion.div>
           </AnimatePresence>
 
