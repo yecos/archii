@@ -13,7 +13,7 @@ export default function ProjectDetailScreen() {
     navigateToFolder, odBreadcrumbs, odCurrentFolder, odDragOver, odGalleryPhotos,
     odProjectFolder, odRenameName, odRenaming, odSearchQuery, odSearchResults,
     odSearching, odTab, odUploadFile, odUploadProgress, odUploading,
-    odViewMode, oneDriveFiles, openEditTask, openModal, openOneDriveForProject,
+    odViewMode, oneDriveFiles, openEditProject, openEditTask, openModal, openOneDriveForProject,
     projectBudget, projectExpenses, projectFiles, projectSpent, projectTasks,
     renameOneDriveFile, searchOneDriveFiles, selectedProjectId, setForms, setLightboxIndex,
     setLightboxPhoto, setOdBreadcrumbs, setOdCurrentFolder, setOdDragOver, setOdRenameName,
@@ -31,7 +31,10 @@ export default function ProjectDetailScreen() {
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
                   <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span>
+                  <div className="flex items-center gap-2">
                   <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl mt-2">{currentProject.data.name}</div>
+                  <button className="mt-2 px-2 py-1 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)] transition-colors" onClick={() => openEditProject(currentProject)} title="Editar proyecto">✏️</button>
+                </div>
                   <div className="text-sm text-[var(--muted-foreground)] mt-1">{currentProject.data.location && '📍 ' + currentProject.data.location}{currentProject.data.client ? ' · ' + currentProject.data.client : ''}</div>
                   {currentProject.data.description && <div className="text-sm text-[var(--muted-foreground)] mt-3 max-w-xl">{currentProject.data.description}</div>}
                 </div>
