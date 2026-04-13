@@ -120,6 +120,23 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Tasks view mode (list / kanban)
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
 
+  // Daily Log state
+  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
+  const [dailyLogTab, setDailyLogTab] = useState<'list' | 'create' | 'detail'>('list');
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [logForm, setLogForm] = useState<Record<string, any>>({
+    date: new Date().toISOString().split('T')[0],
+    weather: '',
+    temperature: '',
+    activities: [''],
+    laborCount: '',
+    equipment: [''],
+    materials: [''],
+    observations: '',
+    photos: [],
+    supervisor: '',
+  });
+
   // Admin state
   const [adminTab, setAdminTab] = useState<'timeline' | 'dashboard' | 'permissions' | 'team'>('timeline');
   const [adminWeekOffset, setAdminWeekOffset] = useState(0);
@@ -706,6 +723,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser]);
 
+  // Load daily logs for selected project
+  useEffect(() => {
+    if (!ready || !authUser || !selectedProjectId) return;
+    const db = getFirebase().firestore();
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot(snap => {
+      setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => { unsub(); setDailyLogs([]); };
+  }, [ready, authUser, selectedProjectId]);
+
   // Time tracker: live timer update
   useEffect(() => {
     if (!timeSession.isRunning || !timeSession.startTime) return;
@@ -1133,7 +1160,17 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     } catch (e: any) {
       if (e.code !== 'auth/popup-closed-by-user') {
-        showToast('Error al conectar con Microsoft', 'error');
+        console.error('[ArchiFlow] Microsoft login error:', e.code, e.message, e);
+        const msgs: Record<string, string> = {
+          'auth/popup-blocked': 'Ventana bloqueada — permite ventanas emergentes para este sitio',
+          'auth/popup-closed-by-user': '',
+          'auth/cancelled-popup-request': 'Se cerró el popup',
+          'auth/invalid-credential': 'Credenciales de Microsoft inválidas',
+          'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console',
+          'auth/internal-error': 'Error interno — verifica la configuración del proveedor Microsoft en Firebase Console',
+        };
+        const msg = msgs[e.code] || `${e.code || 'Error'}: ${e.message || 'Verifica Firebase Console > Authentication > Sign-in method > Microsoft'}`;
+        if (msg) showToast(`Microsoft: ${msg}`, 'error');
       }
     }
   };
@@ -1980,6 +2017,86 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+
+  // Daily Log CRUD
+  const saveDailyLog = async () => {
+    if (!selectedProjectId) { showToast('Selecciona un proyecto', 'error'); return; }
+    const lf = logForm;
+    if (!lf.date) { showToast('La fecha es obligatoria', 'error'); return; }
+    const db = getFirebase().firestore();
+    const data: Record<string, any> = {
+      projectId: selectedProjectId,
+      date: lf.date,
+      weather: lf.weather || '',
+      temperature: Number(lf.temperature) || 0,
+      activities: (lf.activities || ['']).filter((a: string) => a.trim()),
+      laborCount: Number(lf.laborCount) || 0,
+      equipment: (lf.equipment || ['']).filter((e: string) => e.trim()),
+      materials: (lf.materials || ['']).filter((m: string) => m.trim()),
+      observations: lf.observations || '',
+      photos: lf.photos || [],
+      supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
+      createdBy: authUser?.uid,
+      updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      if (selectedLogId) {
+        await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(selectedLogId).update(data);
+        showToast('Bitácora actualizada');
+      } else {
+        data.createdAt = getFirebase().firestore.FieldValue.serverTimestamp();
+        await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data);
+        showToast('Bitácora creada');
+      }
+      setDailyLogTab('list');
+      setSelectedLogId(null);
+      resetLogForm();
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al guardar', 'error'); }
+  };
+
+  const deleteDailyLog = async (logId: string) => {
+    if (!selectedProjectId) return;
+    try {
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId).delete();
+      showToast('Bitácora eliminada');
+      if (selectedLogId === logId) {
+        setDailyLogTab('list');
+        setSelectedLogId(null);
+      }
+    } catch { showToast('Error al eliminar', 'error'); }
+  };
+
+  const openEditLog = (log: any) => {
+    setSelectedLogId(log.id);
+    setLogForm({
+      date: log.data.date || '',
+      weather: log.data.weather || '',
+      temperature: log.data.temperature || '',
+      activities: log.data.activities?.length > 0 ? log.data.activities : [''],
+      laborCount: log.data.laborCount || '',
+      equipment: log.data.equipment?.length > 0 ? log.data.equipment : [''],
+      materials: log.data.materials?.length > 0 ? log.data.materials : [''],
+      observations: log.data.observations || '',
+      photos: log.data.photos || [],
+      supervisor: log.data.supervisor || '',
+    });
+    setDailyLogTab('create');
+  };
+
+  const resetLogForm = () => {
+    setLogForm({
+      date: new Date().toISOString().split('T')[0],
+      weather: '',
+      temperature: '',
+      activities: [''],
+      laborCount: '',
+      equipment: [''],
+      materials: [''],
+      observations: '',
+      photos: [],
+      supervisor: '',
+    });
+  };
 
   // ===== INVENTORY ACTIONS =====
   const getWarehouseStock = (product: any, warehouse: string) => {
@@ -2875,6 +2992,17 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     calcGanttOffset,
     navigateToRef,
     screenTitles,
+    dailyLogs,
+    dailyLogTab,
+    setDailyLogTab,
+    selectedLogId,
+    setSelectedLogId,
+    logForm,
+    setLogForm,
+    saveDailyLog,
+    deleteDailyLog,
+    openEditLog,
+    resetLogForm,
   };
 
   return <AppContext.Provider value={ctx}>{children}</AppContext.Provider>;

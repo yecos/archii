@@ -20,32 +20,56 @@ if %errorlevel% neq 0 (
 echo  📂 Carpeta: %cd%
 echo.
 
-:: Step 1: Check current status
-echo  ── Paso 1: Revisando cambios...
+:: Detect branch name
+for /f "tokens=*" %%a in ('git branch --show-current') do set "BRANCH=%%a"
+echo  🌿 Rama: %BRANCH%
 echo.
 
-git status --short
+:: Step 1: Check if local is ahead of remote
+echo  ── Paso 1: Verificando estado...
 echo.
 
-:: Check if there are changes
+:: Check if there are uncommitted changes
 git diff-index --quiet HEAD -- 2>nul
-if %errorlevel% equ 0 (
-    echo  ✅ No hay cambios pendientes. Todo está al día.
+set "has_uncommitted=%errorlevel%"
+
+:: Check if local is ahead of remote
+set "is_ahead=0"
+for /f %%a in ('git rev-list --count origin/%BRANCH%..HEAD 2^>nul') do set "is_ahead=%%a"
+
+if "%has_uncommitted%"=="0" if "%is_ahead%"=="0" (
+    echo  ✅ No hay cambios pendientes. Todo está al día con GitHub.
     echo.
-    git pull origin main
-    echo.
-    echo  🎉 ¡Tu repo ya está sincronizado!
     pause
     exit /b 0
 )
 
-:: Step 2: Detect what changed and suggest commit message
-echo  ── Paso 2: Detectando cambios para el commit...
+if "%has_uncommitted%"=="0" (
+    echo  ⚠️  Hay %is_ahead% commit(s) sin subir a GitHub.
+    echo  📋 Ejecutando push directo...
+    echo.
+    git push origin %BRANCH%
+    if %errorlevel% neq 0 (
+        echo  ❌ Error al hacer push. Intenta manualmente:
+        echo     git push origin %BRANCH%
+        pause
+        exit /b 1
+    )
+    goto :verify
+)
+
+:: Step 2: Show changed files
+echo  Archivos modificados:
+echo.
+git status --short
+echo.
+
+:: Step 3: Detect what changed for smart commit message
+echo  ── Paso 2: Generando mensaje de commit...
 echo.
 
 set "commit_msg="
 
-:: Check specific files for smart commit messages
 git diff --name-only HEAD > "%temp%\archiflow_files.txt"
 
 findstr /i "ChatScreen" "%temp%\archiflow_files.txt" >nul 2>&1
@@ -60,13 +84,13 @@ if %errorlevel% equ 0 (
     )
 )
 
-findstr /i "TasksScreen\|TaskScreen\|tasks" "%temp%\archiflow_files.txt" >nul 2>&1
+findstr /i "TasksScreen\|TaskScreen" "%temp%\archiflow_files.txt" >nul 2>&1
 if %errorlevel% equ 0 set "commit_msg=feat: mejoras en gestión de tareas"
 
 findstr /i "DashboardScreen" "%temp%\archiflow_files.txt" >nul 2>&1
 if %errorlevel% equ 0 set "commit_msg=feat: mejoras en dashboard"
 
-findstr /i "InventoryScreen\|inventario\|inv" "%temp%\archiflow_files.txt" >nul 2>&1
+findstr /i "InventoryScreen\|inventory" "%temp%\archiflow_files.txt" >nul 2>&1
 if %errorlevel% equ 0 set "commit_msg=feat: mejoras en inventario"
 
 findstr /i "GalleryScreen\|gallery" "%temp%\archiflow_files.txt" >nul 2>&1
@@ -93,7 +117,7 @@ if %errorlevel% equ 0 set "commit_msg=feat: mejoras en navegación y layout"
 findstr /i "globals.css\|tailwind\|style" "%temp%\archiflow_files.txt" >nul 2>&1
 if %errorlevel% equ 0 set "commit_msg=style: actualización de estilos"
 
-findstr /i "types.ts\|types" "%temp%\archiflow_files.txt" >nul 2>&1
+findstr /i "types.ts" "%temp%\archiflow_files.txt" >nul 2>&1
 if not defined commit_msg set "commit_msg=refactor: actualización de tipos"
 
 findstr /i "helpers\|utils" "%temp%\archiflow_files.txt" >nul 2>&1
@@ -102,87 +126,116 @@ if not defined commit_msg set "commit_msg=refactor: actualización de utilidades
 findstr /i "firebase\|firestore" "%temp%\archiflow_files.txt" >nul 2>&1
 if not defined commit_msg set "commit_msg=fix: actualización de firebase"
 
-:: If nothing matched, use generic message
 if not defined commit_msg set "commit_msg=update: actualización general del proyecto"
 
-echo  💡 Commit sugerido: "%commit_msg%"
+echo  💡 Sugerencia: "%commit_msg%"
 echo.
 
-:: Ask user for custom message or accept suggestion
-set /p "user_msg=  ✏️  Escribe tu commit (Enter para usar el sugerido): "
-
-if not "%user_msg%"=="" (
-    set "commit_msg=%user_msg%"
-)
-
+:: Ask user
+set /p "user_msg=  ✏️  Tu commit (Enter = usar sugerido): "
+if not "%user_msg%"=="" set "commit_msg=%user_msg%"
 echo.
 
-:: Step 3: Git Add
-echo  ── Paso 3: Agregando cambios...
+:: Step 4: Git Add
+echo  ── Paso 3: git add...
 git add .
-echo  ✅ Archivos agregados
-echo.
-
-:: Step 4: Git Commit
-echo  ── Paso 4: Creando commit...
-git commit -m "%commit_msg%"
 if %errorlevel% neq 0 (
-    echo  ❌ Error al crear commit. Revisa si hay archivos con problemas.
+    echo  ❌ Error al agregar archivos.
     pause
     exit /b 1
 )
-echo  ✅ Commit creado: "%commit_msg%"
+echo  ✅ Archivos agregados
 echo.
 
-:: Step 5: Git Pull (always before push!)
-echo  ── Paso 5: Sincronizando con GitHub (pull)...
+:: Step 5: Git Commit
+echo  ── Paso 4: git commit...
+git commit -m "%commit_msg%"
+if %errorlevel% neq 0 (
+    echo  ⚠️  Commit vacío o sin cambios. Verificando push pendiente...
+    echo.
+)
+echo  ✅ Commit: "%commit_msg%"
 echo.
 
-:: Try rebase first (cleaner history)
-git pull origin main --rebase 2>nul
+:: Step 6: Git Pull BEFORE push
+echo  ── Paso 5: Sincronizando con GitHub (pull antes de push)...
+echo.
+
+:: Save current commit hash for later verification
+for /f %%a in ('git rev-parse HEAD') do set "local_hash=%%a"
+
+git pull origin %BRANCH% --rebase 2>nul
 if %errorlevel% neq 0 (
     echo  ⚠️  Rebase falló, intentando merge normal...
-    git pull origin main 2>nul
+    git pull origin %BRANCH% 2>nul
     if %errorlevel% neq 0 (
         echo.
-        echo  ❌ No se pudo hacer pull. Puede haber conflictos.
-        echo  📋 Instrucciones:
-        echo     1. Revisa los archivos marcados con conflictos
-        echo     2. Edita y elige qué versión mantener
-        echo     3. Borra las líneas que dicen <<<< ==== >>>>
-        echo     4. Vuelve a ejecutar este script
+        echo  ❌ No se pudo sincronizar con GitHub.
+        echo  📋 Posibles causas:
+        echo     - No tienes conexión a internet
+        echo     - La rama "%BRANCH%" no existe en GitHub
+        echo     - Hay conflictos que resolver manualmente
+        echo.
+        echo  💡 Intenta manualmente:
+        echo     git pull origin %BRANCH%
         echo.
         pause
         exit /b 1
     )
 )
-
 echo  ✅ Sincronizado con GitHub
 echo.
 
-:: Step 6: Git Push
-echo  ── Paso 6: Subiendo a GitHub (push)...
+:: Step 7: Git Push
+echo  ── Paso 6: Subiendo a GitHub...
 echo.
 
-git push origin main
+git push origin %BRANCH%
 if %errorlevel% neq 0 (
-    echo  ❌ Error al hacer push. Verifica tu conexión o permisos.
     echo.
-    echo  💡 Si dice "rejected", intenta:
-    echo     git pull origin main --rebase
-    echo     git push origin main
+    echo  ❌❌❌ PUSH FALLÓ ❌❌❌
+    echo.
+    echo  El commit se creó localmente pero NO llegó a GitHub.
+    echo  Intenta manualmente:
+    echo     git push origin %BRANCH%
     echo.
     pause
     exit /b 1
 )
+echo  ✅ Push enviado a GitHub
+echo.
 
+:: Step 8: VERIFY that remote matches local
+:verify
+echo  ── Paso 7: Verificación final...
 echo.
-echo  ╔══════════════════════════════════════╗
-echo  ║          ✅ ¡PUSH EXITOSO!           ║
-echo  ╚══════════════════════════════════════╝
-echo.
-echo  📦 Commit: %commit_msg%
-echo  🚀 Vercel desplegará automáticamente
-echo  🌐 Revisa: https://archii-theta.vercel.app
-echo.
+
+git fetch origin %BRANCH% >nul 2>&1
+for /f %%a in ('git rev-parse HEAD') do set "current_local=%%a"
+for /f %%a in ('git rev-parse origin/%BRANCH%') do set "current_remote=%%a"
+
+if "%current_local%"=="%current_remote%" (
+    echo  ✅ Local y GitHub están sincronizados: %current_local:~0,7%
+    echo.
+    echo  ╔══════════════════════════════════════╗
+    echo  ║       ✅ ¡TODO LISTO, PUSH OK!       ║
+    echo  ╚══════════════════════════════════════╝
+    echo.
+    echo  📦 Commit: %commit_msg%
+    echo  🌿 Rama: %BRANCH%
+    echo  🚀 Vercel desplegará en 1-2 minutos
+    echo  🌐 https://archii-theta.vercel.app
+    echo.
+) else (
+    echo  ❌ ADVERTENCIA: Local y GitHub NO coinciden!
+    echo     Local:  %current_local:~0,7%
+    echo     Remote: %current_remote:~0,7%
+    echo.
+    echo  💡 Ejecuta el script de nuevo para resolver.
+    echo.
+)
+
+:: Cleanup
+del "%temp%\archiflow_files.txt" >nul 2>&1
+
 pause
