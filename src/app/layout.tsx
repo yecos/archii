@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
-import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 
 export const metadata: Metadata = {
   title: "ArchiFlow — Gestión de Proyectos",
@@ -39,22 +37,17 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap"
           rel="stylesheet"
         />
-        {/* Favicon */}
         <link rel="icon" type="image/png" sizes="32x32" href="/icon-96.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icon-48.png" />
-        {/* Apple Touch Icons */}
         <link rel="apple-touch-icon" href="/icon-152.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
         <link rel="apple-touch-icon" sizes="120x120" href="/icon-128.png" />
-        {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="ArchiFlow" />
-        {/* PWA Icons */}
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-        {/* Theme init - prevent FOUC */}
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
@@ -84,7 +77,6 @@ export default function RootLayout({
             } catch(e) {}
           }
         ` }} />
-        {/* Register Service Worker */}
         <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -93,10 +85,6 @@ export default function RootLayout({
           }
         ` }} />
         {children}
-        {/* AI Assistant - Floating wrapper (chat + quick actions) */}
-        <AIFloatingWrapper />
-        {/* Keyboard Shortcuts - Global initialization */}
-        <KeyboardShortcutsInitializer />
       </body>
     </html>
   );

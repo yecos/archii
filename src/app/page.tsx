@@ -1,62 +1,40 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-/**
- * page.tsx — Lazy-loading wrapper
- * HomeContent.tsx contiene toda la lógica pesada de Firebase.
- * Este wrapper la carga dinámicamente con useEffect + import()
- * para evitar que Turbopack intente hacer SSR del componente.
- * 
- * IMPORTANTE: No importar NADA de Firebase aquí.
- */
-
-export default function Home() {
-  const [HomeContent, setHomeContent] = useState<React.ComponentType | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+export default function Page() {
+  const [Module, setModule] = useState<React.ComponentType | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-
-    const loadModule = async () => {
-      try {
-        setError(null);
-        const mod = await import('./HomeContent');
-        if (!cancelled) {
-          setHomeContent(() => mod.default);
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          console.error('[ArchiFlow] Error cargando HomeContent:', e);
-          setError(e?.message || String(e));
-        }
-      }
-    };
-
-    loadModule();
+    import('./HomeContent')
+      .then(mod => { if (!cancelled) setModule(() => mod.default); })
+      .catch(err => { if (!cancelled) setError(String(err)); });
     return () => { cancelled = true; };
-  }, [retryCount]);
+  }, []);
 
   if (error) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#0e0f11', color: '#f0f0ee', fontFamily: "'DM Sans', sans-serif", padding: '20px', textAlign: 'center' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: 'rgba(200,169,110,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', fontSize: '28px' }}>⚠️</div>
-        <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '10px', color: '#c8a96e' }}>Error al cargar</h2>
-        <p style={{ fontSize: '13px', color: '#9a9b9e', maxWidth: '400px', marginBottom: '20px', lineHeight: '1.5' }}>{error}</p>
-        <button onClick={() => { setRetryCount(c => c + 1); }} style={{ padding: '10px 24px', borderRadius: '12px', border: '1px solid rgba(200,169,110,0.3)', background: 'rgba(200,169,110,0.1)', color: '#c8a96e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Reintentar</button>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', backgroundColor:'#0e0f11', color:'#f0f0ee', fontFamily:"'DM Sans',sans-serif", textAlign:'center', padding:20 }}>
+        <div>
+          <div style={{ fontSize:48, marginBottom:16 }}>⚠️</div>
+          <div style={{ fontSize:16, marginBottom:8, color:'#c8a96e' }}>Error al cargar ArchiFlow</div>
+          <div style={{ fontSize:13, color:'#9a9b9e', maxWidth:400 }}>{error}</div>
+          <button onClick={() => window.location.reload()} style={{ marginTop:20, padding:'10px 24px', borderRadius:12, border:'1px solid rgba(200,169,110,0.3)', background:'rgba(200,169,110,0.1)', color:'#c8a96e', fontSize:14, cursor:'pointer' }}>Recargar</button>
+        </div>
       </div>
     );
   }
 
-  if (!HomeContent) {
+  if (!Module) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#0e0f11', color: '#f0f0ee', fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ width: '48px', height: '48px', border: '3px solid rgba(200,169,110,0.2)', borderTopColor: '#c8a96e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', backgroundColor:'#0e0f11', color:'#f0f0ee', fontFamily:"'DM Sans',sans-serif" }}>
+        <div style={{ width:48, height:48, border:'3px solid rgba(200,169,110,0.2)', borderTopColor:'#c8a96e', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{ marginTop: '16px', fontSize: '14px', color: '#9a9b9e' }}>Cargando ArchiFlow...</p>
+        <p style={{ marginLeft:16, fontSize:14, color:'#9a9b9e' }}>Cargando ArchiFlow...</p>
       </div>
     );
   }
 
-  return <HomeContent />;
+  return <Module />;
 }
