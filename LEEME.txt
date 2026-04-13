@@ -1,0 +1,59 @@
+═══════════════════════════════════════════════════════════════
+  ArchiFlow — ARCHIVOS FALTANTES (Fase 4 Refactoring)
+═══════════════════════════════════════════════════════════════
+
+PROBLEMA: Tu repo no tiene las carpetas de componentes creadas
+en la Fase 4 (refactoring). HomeContent.tsx las importa pero
+no existen, por eso falla el build con "Module not found".
+
+CONTENIDO (24 archivos):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+src/components/modals/        (13 modales extraídos)
+  ├── ApprovalModal.tsx
+  ├── CompanyModal.tsx
+  ├── ExpenseModal.tsx
+  ├── GalleryModal.tsx
+  ├── InvCategoryModal.tsx
+  ├── InvMovementModal.tsx
+  ├── InvProductModal.tsx
+  ├── InvTransferModal.tsx
+  ├── MeetingModal.tsx
+  ├── ProjectModal.tsx
+  ├── SupplierModal.tsx
+  ├── TaskModal.tsx
+  └── TimeEntryModal.tsx
+
+src/components/layout/        (componentes de layout)
+  ├── AuthScreen.tsx
+  ├── BottomNav.tsx
+  ├── InstallBanner.tsx
+  ├── LoadingScreen.tsx
+  ├── NotifPanel.tsx
+  ├── Sidebar.tsx
+  └── TopBar.tsx
+
+src/components/common/        (componentes comunes)
+  ├── ErrorBoundary.tsx
+  └── FormField.tsx
+
+src/components/features/      (funcionalidades)
+  └── LightboxViewer.tsx
+
+src/app/
+  ├── HomeContent.tsx         (versión refactoring - 274 líneas)
+  └── api/ai-suggestions/route.ts (sin z-ai-web-dev-sdk)
+
+INSTRUCCIONES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Extrae este ZIP en la RAÍZ de tu proyecto (sobrescribe)
+2. Verifica que las carpetas se crearon:
+   - src/components/modals/
+   - src/components/layout/
+   - src/components/common/
+   - src/components/features/
+3. Si tienes un archivo viejo api/ai-suggestions/route.ts que
+   importa "z-ai-web-dev-sdk", BÓRRALO (este ZIP lo reemplaza)
+4. git add .
+5. git commit -m "feat: agregar componentes Fase 4 - modals, layout, common, features"
+6. git push origin main

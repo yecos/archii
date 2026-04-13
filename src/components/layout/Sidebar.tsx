@@ -2,7 +2,7 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Columns3, BarChart3, BookOpen, ListChecks, Hammer, StickyNote } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check } from 'lucide-react';
 
 interface SidebarProps {
   screen: string;
@@ -48,13 +48,6 @@ export default function Sidebar({
     { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <Globe size={18} className="stroke-current" /> },
     { divider: true },
-    { id: 'kanbanAvanzado', label: 'Tablero Kanban', icon: <Columns3 size={18} className="stroke-current" /> },
-    { id: 'gantt', label: 'Diagrama Gantt', icon: <BarChart3 size={18} className="stroke-current" /> },
-    { id: 'bitacora', label: 'Bitácora de Obra', icon: <BookOpen size={18} className="stroke-current" /> },
-    { id: 'checklists', label: 'Checklists de Obra', icon: <ListChecks size={18} className="stroke-current" /> },
-    { id: 'punchList', label: 'Punch List', icon: <Hammer size={18} className="stroke-current" /> },
-    { id: 'notas', label: 'Notas Rápidas', icon: <StickyNote size={18} className="stroke-current" /> },
-    { divider: true },
     { id: 'companies', label: 'Empresas', icon: <Building2 size={18} className="stroke-current" /> },
     { id: 'install', label: 'Instalar App', icon: <Download size={18} className="stroke-current" /> },
   ];
@@ -73,7 +66,7 @@ export default function Sidebar({
           <div className="w-8 h-8 bg-[var(--af-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
             <Home size={20} strokeWidth={2} className="stroke-background" />
           </div>
-          <div className={`transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg">ArchiFlow</div><div className="text-[10px] text-[var(--af-text3)]">v2.0</div></div>
+          <div className={`transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg flex items-center gap-1.5">ArchiFlow <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/15 text-[var(--af-accent)]" style={{ fontFamily: 'system-ui, sans-serif' }}>2.0</span></div><div className="text-[10px] text-[var(--af-text3)]">Premium</div></div>
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
