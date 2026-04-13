@@ -455,3 +455,12 @@ html {
 [data-vaul-drawer] {
   touch-action: none;
 }
+
+/* ─── Typewriter Cursor Blink ─── */
+@keyframes af-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.animate-af-blink {
+  animation: af-blink 0.8s ease-in-out infinite;
+}
