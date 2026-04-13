@@ -233,61 +233,6 @@
 /* File input */
 input[type="file"] { display: none; }
 
-/* ─── Date & Time Inputs ─── */
-:root {
-  color-scheme: light;
-}
-.dark {
-  color-scheme: dark;
-}
-
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"] {
-  color-scheme: inherit;
-  min-height: 38px;
-  touch-action: manipulation !important;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.7;
-  filter: invert(0.3);
-  transition: opacity 0.2s;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="time"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-  filter: invert(0);
-}
-
-.dark input[type="date"]::-webkit-calendar-picker-indicator,
-.dark input[type="time"]::-webkit-calendar-picker-indicator,
-.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7) brightness(1.2);
-}
-
-.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
-.dark input[type="time"]::-webkit-calendar-picker-indicator:hover {
-  filter: invert(0.85) brightness(1.3);
-}
-
-/* Firefox date/time */
-input[type="date"]::-moz-calendar-picker-indicator,
-input[type="time"]::-moz-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.7;
-  filter: invert(0.3);
-}
-
-.dark input[type="date"]::-moz-calendar-picker-indicator,
-.dark input[type="time"]::-moz-calendar-picker-indicator {
-  filter: invert(0.7) brightness(1.2);
-}
-
 /* Mobile modal full screen */
 @media (max-width: 640px) {
   .af-modal-mobile {
@@ -509,6 +454,12 @@ html {
 }
 [data-vaul-drawer] {
   touch-action: none;
+}
+/* Allow native UI controls (date pickers, dropdowns) inside Vaul drawers */
+[data-vaul-drawer] input,
+[data-vaul-drawer] select,
+[data-vaul-drawer] textarea {
+  touch-action: manipulation;
 }
 
 /* ─── Typewriter Cursor Blink ─── */

@@ -1147,12 +1147,30 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const doMicrosoftLogin = async () => {
     try {
       const provider = new (getFirebase().auth).OAuthProvider('microsoft.com');
-      // Solicitar permisos para OneDrive y Microsoft Graph
+      // Permisos para OneDrive y Microsoft Graph
       provider.addScope('Files.ReadWrite.All');
       provider.addScope('Sites.ReadWrite.All');
       provider.addScope('User.Read');
-      provider.setCustomParameters({ prompt: 'consent' });
-      const result = await getFirebase().auth().signInWithPopup(provider);
+      // Usar select_account (no 'consent') para evitar auth/internal-error
+      // cuando Azure AD no tiene consentimiento de admin para los scopes adicionales.
+      // El consentimiento se solicitará de forma natural si es necesario.
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      let result: any;
+      try {
+        result = await getFirebase().auth().signInWithPopup(provider);
+      } catch (popupErr: any) {
+        // Si falla con scopes de OneDrive, intentar login básico sin scopes extra
+        if (popupErr.code === 'auth/internal-error' || popupErr.code === 'auth/oauth_error') {
+          console.warn('[ArchiFlow] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
+          const basicProvider = new (getFirebase().auth).OAuthProvider('microsoft.com');
+          basicProvider.setCustomParameters({ prompt: 'select_account' });
+          result = await getFirebase().auth().signInWithPopup(basicProvider);
+        } else {
+          throw popupErr;
+        }
+      }
+
       // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
@@ -1176,7 +1194,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           'auth/cancelled-popup-request': 'Se cerró el popup',
           'auth/invalid-credential': 'Credenciales de Microsoft inválidas',
           'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console',
-          'auth/internal-error': 'Error interno — verifica la configuración del proveedor Microsoft en Firebase Console',
+          'auth/internal-error': 'Error de autenticación Microsoft. En Azure Portal > App registrations > API permissions, asegúrate de agregar "Microsoft Graph > Delegated > Files.ReadWrite.All" y "Sites.ReadWrite.All", luego haz clic en "Grant admin consent".',
           'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método de login (Google o Email). Firebase unificará las cuentas.',
         };
         const msg = msgs[e.code] || `${e.code || 'Error'}: ${e.message || 'Verifica Firebase Console > Authentication > Sign-in method > Microsoft'}`;
