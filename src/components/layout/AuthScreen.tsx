@@ -18,37 +18,75 @@ function useFirebaseStatus() {
   const [status, setStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [detail, setDetail] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => {
+    let attempts = 0;
+    const maxAttempts = 10;
+    const check = () => {
+      attempts++;
       try {
         const w = window as any;
-        if (!w.firebase || !w.firebase.apps || w.firebase.apps.length === 0) {
+        // Check raw script tags loaded
+        const scripts = document.querySelectorAll('script[src*="firebase"]');
+        const loadedScripts = Array.from(scripts).filter((s: any) => s.src && !s.hasAttribute('async'));
+        
+        if (!w.firebase) {
+          if (attempts < maxAttempts) {
+            setTimeout(check, 500);
+            return;
+          }
           setStatus('error');
-          setDetail('Firebase no se cargó. Los scripts en layout.tsx no cargaron.');
+          setDetail(`Firebase SDK no cargó. Scripts encontrados: ${loadedScripts.length}.`);
+          return;
+        }
+        if (!w.firebase.apps || w.firebase.apps.length === 0) {
+          if (attempts < maxAttempts) {
+            setTimeout(check, 500);
+            return;
+          }
+          setStatus('error');
+          setDetail('Firebase App no inicializado. Firebase existe pero no hay apps.');
           return;
         }
         const auth = w.firebase.auth();
         if (!auth) {
+          if (attempts < maxAttempts) {
+            setTimeout(check, 500);
+            return;
+          }
           setStatus('error');
-          setDetail('Firebase Auth no está disponible.');
+          setDetail('firebase.auth() es null o undefined.');
           return;
         }
         if (!auth.GoogleAuthProvider) {
+          if (attempts < maxAttempts) {
+            setTimeout(check, 500);
+            return;
+          }
           setStatus('error');
-          setDetail('Firebase Auth no tiene GoogleAuthProvider. Falta el script firebase-auth-compat.js.');
+          setDetail('GoogleAuthProvider no disponible — firebase-auth-compat.js no cargó. Verifica la consola (F12 > Network) para errores de carga del script.');
           return;
         }
         if (!auth.OAuthProvider) {
+          if (attempts < maxAttempts) {
+            setTimeout(check, 500);
+            return;
+          }
           setStatus('error');
-          setDetail('Firebase Auth no tiene OAuthProvider. Falta el script firebase-auth-compat.js.');
+          setDetail('OAuthProvider no disponible — firebase-auth-compat.js no cargó completamente.');
           return;
         }
         setStatus('ok');
-        setDetail(`Firebase OK — App: ${w.firebase.apps[0]?.options?.projectId || '?'}`);
+        setDetail(`Firebase OK — ${w.firebase.apps[0]?.options?.projectId || '?'}`);
       } catch (e: any) {
+        if (attempts < maxAttempts) {
+          setTimeout(check, 500);
+          return;
+        }
         setStatus('error');
-        setDetail(e.message || 'Error desconocido');
+        setDetail(e.message || 'Error desconocido al verificar Firebase');
       }
-    }, 1500);
+    };
+    // Start checking after 1 second, retry every 500ms
+    const t = setTimeout(check, 1000);
     return () => clearTimeout(t);
   }, []);
   return { status, detail };

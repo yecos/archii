@@ -25,6 +25,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/* ── Firebase SDK URLs ── */
+const FB_APP = "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js";
+const FB_AUTH = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js";
+const FB_FS = "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,6 +40,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="anonymous" />
         <link
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap"
           rel="stylesheet"
@@ -54,36 +60,44 @@ export default function RootLayout({
         {/* PWA Icons */}
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+
+        {/* ── Firebase SDK — synchronous scripts, MUST be first in <head> ── */}
+        {/* Using native <script> (not Next.js <Script>) to guarantee synchronous loading */}
+        {/* These run BEFORE React hydrates, so firebase is always available */}
+        <script src={FB_APP} />
+        <script src={FB_AUTH} />
+        <script src={FB_FS} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
+              firebase.initializeApp({
+                apiKey: "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0",
+                authDomain: "archiflow-c2855.firebaseapp.com",
+                projectId: "archiflow-c2855",
+                storageBucket: "archiflow-c2855.firebasestorage.app",
+                messagingSenderId: "247246043394",
+                appId: "1:247246043394:web:408e1365957eea4ee2aa1b"
+              });
+              try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
+            }
+            window.__AF_FB = true;
+            console.log('[ArchiFlow] Firebase ready:', firebase.apps[0]?.options?.projectId);
+          } catch(err) {
+            console.error('[ArchiFlow] Firebase init failed:', err);
+            window.__AF_FB = false;
+          }
+        ` }} />
+
         {/* Theme init - prevent FOUC */}
-        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            try {
-              var theme = localStorage.getItem('archiflow-theme') || 'dark';
-              if (theme === 'dark') document.documentElement.classList.add('dark');
-              else document.documentElement.classList.remove('dark');
-            } catch(e) { document.documentElement.classList.add('dark'); }
-          })();
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('archiflow-theme') || 'dark';
+            if (t === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+          } catch(e) { document.documentElement.classList.add('dark'); }
         ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
-        <Script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" strategy="beforeInteractive" />
-        <Script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" strategy="beforeInteractive" />
-        <Script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" strategy="beforeInteractive" />
-        <Script id="firebase-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
-          if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
-            firebase.initializeApp({
-              apiKey: "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0",
-              authDomain: "archiflow-c2855.firebaseapp.com",
-              projectId: "archiflow-c2855",
-              storageBucket: "archiflow-c2855.firebasestorage.app",
-              messagingSenderId: "247246043394",
-              appId: "1:247246043394:web:408e1365957eea4ee2aa1b"
-            });
-            try {
-              firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function() {});
-            } catch(e) {}
-          }
-        ` }} />
         {/* Register Service Worker */}
         <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
@@ -93,7 +107,7 @@ export default function RootLayout({
           }
         ` }} />
         {children}
-        {/* AI Assistant - Floating wrapper (lee contexto del store) */}
+        {/* AI Assistant - Floating wrapper */}
         <AIFloatingWrapper />
         {/* Keyboard Shortcuts - Global initialization */}
         <KeyboardShortcutsInitializer />
