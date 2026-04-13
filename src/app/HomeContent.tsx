@@ -246,7 +246,7 @@ function AppContent() {
   );
 }
 
-/* ─── Lazy-loading entry point ─── */
+/* ─── Entry point ─── */
 
 function Home() {
   const [mounted, setMounted] = React.useState(false);
@@ -259,7 +259,4 @@ function Home() {
   );
 }
 
-export default dynamic(() => Promise.resolve(Home), {
-  ssr: false,
-  loading: () => <LoadingScreen />,
-});
+export default Home;
