@@ -1,14 +1,90 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, getWeekStart } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
+
+const COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'];
+
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+      {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
+          <span className="text-[var(--muted-foreground)]">{p.name}:</span>
+          <span className="font-semibold">{typeof p.value === 'number' && p.value > 9999 ? fmtCOP(p.value) : p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChartLegend({ payload }: any) {
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-2">
+      {payload?.map((entry: any, i: number) => (
+        <div key={i} className="flex items-center gap-1.5 text-[10px]">
+          <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
+          <span className="text-[var(--muted-foreground)]">{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function ReportsScreen() {
   const {
     expenses, forms, invoices, projects, setForms,
     showToast, tasks, teamUsers, timeEntries,
   } = useApp();
+
+  // Computed data for charts
+  const categoryData = useMemo(() => {
+    const catSpend: Record<string, number> = {};
+    expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
+    return Object.entries(catSpend).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+  }, [expenses]);
+
+  const budgetVsRealData = useMemo(() => {
+    return projects.filter(p => p.data.budget > 0).sort((a, b) => b.data.budget - a.data.budget).slice(0, 6).map(p => {
+      const spent = expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0);
+      const name = p.data.name.length > 12 ? p.data.name.slice(0, 12) + '...' : p.data.name;
+      return { name, presupuesto: p.data.budget, gastado: spent };
+    });
+  }, [projects, expenses]);
+
+  const taskStatusData = useMemo(() => {
+    const statuses: Record<string, number> = {};
+    tasks.forEach(t => { statuses[t.data.status || 'Sin estado'] = (statuses[t.data.status || 'Sin estado'] || 0) + 1; });
+    return Object.entries(statuses).map(([name, value]) => ({ name, value }));
+  }, [tasks]);
+
+  const taskPriorityData = useMemo(() => {
+    const prios: Record<string, number> = {};
+    tasks.forEach(t => { const p = t.data.priority || 'Otro'; prios[p] = (prios[p] || 0) + 1; });
+    return Object.entries(prios).map(([name, value]) => ({ name, value }));
+  }, [tasks]);
+
+  const hoursByProjectData = useMemo(() => {
+    const byProject: Record<string, number> = {};
+    timeEntries.forEach(e => { byProject[e.data.projectId] = (byProject[e.data.projectId] || 0) + (e.data.duration || 0); });
+    const maxHrs = Math.max(...Object.values(byProject), 1);
+    return Object.entries(byProject).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([pid, mins]) => {
+      const proj = projects.find(p => p.id === pid);
+      const name = (proj?.data.name || pid).length > 15 ? (proj?.data.name || pid).slice(0, 15) + '...' : (proj?.data.name || pid);
+      return { name, horas: Math.round(mins / 60 * 10) / 10 };
+    });
+  }, [timeEntries, projects]);
+
+  const roleDistData = useMemo(() => {
+    const roles: Record<string, number> = {};
+    teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; roles[r] = (roles[r] || 0) + 1; });
+    return Object.entries(roles).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+  }, [teamUsers]);
 
   return (
 <div className="animate-fadeIn space-y-4">
@@ -43,19 +119,15 @@ export default function ReportsScreen() {
           </button>
         </div>
 
-        {/* General Report (existing) */}
+        {/* General Report */}
         {(!forms.reportTab || forms.reportTab === 'General') && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(() => {
             const totalBudget = projects.reduce((s, p) => s + (p.data.budget || 0), 0);
             const totalSpent = expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
-            const projByStatus: Record<string, number> = {};
-            projects.forEach(p => { const st = p.data.status || 'Otro'; projByStatus[st] = (projByStatus[st] || 0) + 1; });
             const taskCompleted = tasks.filter(t => t.data.status === 'Completado').length;
             const taskInProgress = tasks.filter(t => t.data.status === 'En progreso').length;
             const taskPending = tasks.filter(t => t.data.status === 'Pendiente' || t.data.status === 'Por hacer').length;
             const taskOverdue = tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
-            const taskByPrio: Record<string, number> = {};
-            tasks.forEach(t => { const pr = t.data.priority || 'Otro'; taskByPrio[pr] = (taskByPrio[pr] || 0) + 1; });
             const catSpend: Record<string, number> = {};
             expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
             const topCats = Object.entries(catSpend).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -74,10 +146,22 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado Total</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilización</div></div>
+                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizacion</div></div>
                 </div>
-                {Object.keys(projByStatus).length > 0 && <div className="space-y-2 mb-4"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por estado</div>{Object.entries(projByStatus).map(([st, cnt]) => (<div key={st} className="flex items-center gap-2"><span className="text-sm w-5">{statusIcon[st] || '📌'}</span><span className="text-sm text-[var(--foreground)] flex-1">{st}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
-                {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos más</div>}</div>}
+                {/* Projects by Status - Pie Chart */}
+                {taskStatusData.length > 0 && <div className="mb-4">
+                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Distribucion de Tareas</div>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={3} dataKey="value" stroke="none">
+                        {taskStatusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<ChartLegend />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>}
+                {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos mas</div>}</div>}
               </div>
               {/* Card 2: Tareas y Productividad */}
               <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
@@ -90,7 +174,19 @@ export default function ReportsScreen() {
                 </div>
                 {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
                 {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
-                {Object.keys(taskByPrio).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Por prioridad</div>{Object.entries(taskByPrio).map(([pr, cnt]) => (<div key={pr} className="flex items-center gap-2"><span className="text-sm w-5">{prioIcon[pr] || '📌'}</span><span className="text-sm text-[var(--foreground)] flex-1">{pr}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
+                {/* Task priority Pie Chart */}
+                {taskPriorityData.length > 0 && <div>
+                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Por prioridad</div>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <PieChart>
+                      <Pie data={taskPriorityData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value" stroke="none">
+                        {taskPriorityData.map((_, i) => <Cell key={i} fill={['#ef4444', '#f59e0b', '#10b981', '#6366f1'][i % 4]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<ChartLegend />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>}
               </div>
               {/* Card 3: Presupuesto */}
               <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
@@ -100,8 +196,7 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div></div>
                 </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilización del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
-                {/* Budget by project */}
+                <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilizacion del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
                 {projects.length > 0 && projects.some(p => p.data.budget > 0) && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Presupuesto por proyecto</div>{projects.filter(p => p.data.budget > 0).sort((a, b) => b.data.budget - a.data.budget).slice(0, 5).map(p => {
                   const spent = expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0);
                   const pct = p.data.budget > 0 ? Math.round((spent / p.data.budget) * 100) : 0;
@@ -115,7 +210,18 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div></div>
                 </div>
-                {Object.keys(membersByRole).length > 0 && <div className="space-y-2 mb-4"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Miembros por rol</div>{Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (<div key={role} className="flex items-center gap-2"><span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span><span className="text-sm text-[var(--foreground)] flex-1">{role}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>))}</div>}
+                {roleDistData.length > 0 && <div className="mb-4">
+                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Roles</div>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <PieChart>
+                      <Pie data={roleDistData} cx="50%" cy="50%" innerRadius={25} outerRadius={45} paddingAngle={3} dataKey="value" stroke="none">
+                        {roleDistData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<ChartLegend />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>}
                 {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>{Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {const member = teamUsers.find(u => u.id === uid); return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>);})}</div>}
               </div>
             </div>;
@@ -132,9 +238,6 @@ export default function ReportsScreen() {
             const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
             const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
             const totalBillable = timeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
-            const catSpend: Record<string, number> = {};
-            expenses.forEach(e => { const c = e.data.category || 'Otro'; catSpend[c] = (catSpend[c] || 0) + e.data.amount; });
-            const projBudget: { name: string; budget: number; spent: number }[] = projects.filter(p => p.data.budget > 0).map(p => ({ name: p.data.name, budget: p.data.budget, spent: expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0) }));
             return (<>
               <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Resumen Financiero</h3>
@@ -149,39 +252,42 @@ export default function ReportsScreen() {
                 {totalOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-red-400 text-lg">⚠️</span><span className="text-sm text-red-400 font-medium">Facturas vencidas por {fmtCOP(totalOverdue)}</span></div>}
                 {totalBudget > 0 && totalSpent > totalBudget * 0.9 && <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-amber-400 text-lg">⚠️</span><span className="text-sm text-amber-400 font-medium">Gasto al {Math.round(totalSpent / totalBudget * 100)}% del presupuesto</span></div>}
               </div>}
-              {/* Budget vs Real by project */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              {/* Budget vs Real - Recharts BarChart */}
+              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Presupuesto vs Real por Proyecto</h3>
-                {projBudget.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin proyectos con presupuesto</div> : (
-                  <div className="space-y-3">
-                    {projBudget.map(p => {
-                      const pct = p.budget > 0 ? Math.round((p.spent / p.budget) * 100) : 0;
-                      const overBudget = p.spent > p.budget;
-                      return (<div key={p.name}>
-                        <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.name}</span><span className={overBudget ? 'text-red-400 font-medium' : 'text-[var(--muted-foreground)]'}>{fmtCOP(p.spent)} / {fmtCOP(p.budget)} ({pct}%)</span></div>
-                        <div className="w-full bg-[var(--af-bg3)] rounded-full h-2.5"><div className={`rounded-full h-2.5 transition-all ${overBudget ? 'bg-red-400' : pct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(pct, 100)}%` }} /></div>
-                        {overBudget && <div className="text-[10px] text-red-400 mt-0.5">Excedido por {fmtCOP(p.spent - p.budget)}</div>}
-                      </div>);
-                    })}
-                  </div>
+                {budgetVsRealData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin proyectos con presupuesto</div> : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={budgetVsRealData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+                      <Legend content={<ChartLegend />} />
+                      <Bar dataKey="presupuesto" name="Presupuesto" fill="#c8a96e" radius={[4, 4, 0, 0]} barSize={18} />
+                      <Bar dataKey="gastado" name="Gastado" fill={totalSpent > totalBudget * 0.9 ? '#ef4444' : '#10b981'} radius={[4, 4, 0, 0]} barSize={18} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
               </div>
-              {/* Gastos por categoría */}
+              {/* Gastos por categoria - Recharts PieChart */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <h3 className="text-[15px] font-semibold mb-4">Gastos por Categoría</h3>
-                {Object.keys(catSpend).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin gastos</div> : (
-                  <div className="space-y-2">
-                    {Object.entries(catSpend).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => {
-                      const pct = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
-                      return (<div key={cat}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">{cat}</span><span className="text-[var(--muted-foreground)]">{fmtCOP(amt)} ({pct}%)</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${pct}%` }} /></div></div>);
-                    })}
-                  </div>
+                <h3 className="text-[15px] font-semibold mb-4">Gastos por Categoria</h3>
+                {categoryData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin gastos</div> : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
+                        {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<ChartLegend />} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 )}
               </div>
               {/* Rentabilidad */}
-              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <h3 className="text-[15px] font-semibold mb-4">Métricas de Rentabilidad</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+                <h3 className="text-[15px] font-semibold mb-4">Metricas de Rentabilidad</h3>
+                <div className="grid grid-cols-2 gap-3">
                   {(() => {
                     const margin = totalInvoiced > 0 ? Math.round(((totalInvoiced - totalSpent) / totalInvoiced) * 100) : 0;
                     const collectionRate = totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0;
@@ -208,8 +314,6 @@ export default function ReportsScreen() {
             const totalBillable = timeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
             const thisWeek = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); return d >= getWeekStart(); });
             const weekHrs = thisWeek.reduce((s, e) => s + (e.data.duration || 0), 0);
-            const byProject: Record<string, { hrs: number; billable: number }> = {};
-            timeEntries.forEach(e => { if (!byProject[e.data.projectId]) byProject[e.data.projectId] = { hrs: 0, billable: 0 }; byProject[e.data.projectId].hrs += e.data.duration || 0; if (e.data.billable) byProject[e.data.projectId].billable += (e.data.duration || 0) * (e.data.rate || 0) / 60; });
             const byUser: Record<string, number> = {};
             timeEntries.forEach(e => { byUser[e.data.userId] = (byUser[e.data.userId] || 0) + (e.data.duration || 0); });
             return (<>
@@ -222,13 +326,19 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtDuration(weekHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Esta semana</div></div>
                 </div>
               </div>
+              {/* Hours by project - Recharts BarChart */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Horas por Proyecto</h3>
-                {Object.keys(byProject).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
-                  <div className="space-y-2">{Object.entries(byProject).sort((a, b) => b[1].hrs - a[1].hrs).map(([pid, data]) => {
-                    const proj = projects.find(p => p.id === pid);
-                    return (<div key={pid}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{proj?.data.name || pid}</span><span className="text-[var(--muted-foreground)]">{fmtDuration(data.hrs)} · {fmtCOP(data.billable)}</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(data.hrs / Math.max(...Object.values(byProject).map(v => v.hrs))) * 100}%` }} /></div></div>);
-                  })}</div>
+                {hoursByProjectData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={hoursByProjectData} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} unit="h" />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={90} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+                      <Bar dataKey="horas" name="Horas" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
@@ -256,16 +366,21 @@ export default function ReportsScreen() {
             timeEntries.forEach(e => { hoursPerMember[e.data.userId] = (hoursPerMember[e.data.userId] || 0) + (e.data.duration || 0); });
             return (<>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <h3 className="text-[15px] font-semibold mb-4">Distribución por Roles</h3>
-                {Object.keys(membersByRole).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div> : (
-                  <div className="space-y-2">{Object.entries(membersByRole).sort((a, b) => b[1] - a[1]).map(([role, cnt]) => (
-                    <div key={role} className="flex items-center gap-2"><span className="text-sm w-5">{ROLE_ICONS[role] || '👤'}</span><div className="flex-1"><div className="flex justify-between text-xs mb-1"><span>{role}</span><span className="text-[var(--muted-foreground)]">{cnt}</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(cnt / teamUsers.length) * 100}%` }} /></div></div></div>
-                  ))}</div>
+                <h3 className="text-[15px] font-semibold mb-4">Distribucion por Roles</h3>
+                {roleDistData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div> : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={roleDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={75} paddingAngle={3} dataKey="value" stroke="none">
+                        {roleDistData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend content={<ChartLegend />} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 )}
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Productividad por Miembro</h3>
-                {/* Mobile: Team productivity card view */}
                 <div className="md:hidden space-y-2">
                   {teamUsers.sort((a, b) => (tasksPerMember[b.id]?.total || 0) - (tasksPerMember[a.id]?.total || 0)).map(u => {
                     const stats = tasksPerMember[u.id] || { total: 0, done: 0, overdue: 0 };
@@ -286,7 +401,6 @@ export default function ReportsScreen() {
                     );
                   })}
                 </div>
-                {/* Desktop: Team productivity table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)] text-xs"><th className="text-left py-2 pr-3">Miembro</th><th className="text-center py-2 px-2">Tareas</th><th className="text-center py-2 px-2">Listas</th><th className="text-center py-2 px-2">Vencidas</th><th className="text-center py-2 pl-2">Horas</th></tr></thead>
