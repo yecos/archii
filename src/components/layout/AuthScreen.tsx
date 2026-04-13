@@ -26,7 +26,7 @@ function useFirebaseStatus() {
         const w = window as any;
         // Check raw script tags loaded
         const scripts = document.querySelectorAll('script[src*="firebase"]');
-        const loadedScripts = Array.from(scripts).filter((s: any) => s.src && !s.hasAttribute('async'));
+        const loadedScripts = Array.from(scripts).filter((s: any) => s.src);
         
         if (!w.firebase) {
           if (attempts < maxAttempts) {
@@ -34,7 +34,7 @@ function useFirebaseStatus() {
             return;
           }
           setStatus('error');
-          setDetail(`Firebase SDK no cargó. Scripts encontrados: ${loadedScripts.length}.`);
+          setDetail(`Firebase SDK no cargó. Scripts en DOM: ${loadedScripts.length}.`);
           return;
         }
         if (!w.firebase.apps || w.firebase.apps.length === 0) {
@@ -43,35 +43,30 @@ function useFirebaseStatus() {
             return;
           }
           setStatus('error');
-          setDetail('Firebase App no inicializado. Firebase existe pero no hay apps.');
+          setDetail('Firebase App no inicializado.');
           return;
         }
-        const auth = w.firebase.auth();
-        if (!auth) {
+        // IMPORTANT: GoogleAuthProvider is on the namespace firebase.auth (no parentheses!)
+        // NOT on the instance firebase.auth()
+        const authNS = w.firebase.auth; // namespace — has GoogleAuthProvider, OAuthProvider
+        const authInstance = w.firebase.auth(); // instance — has signInWithPopup, currentUser
+        
+        if (!authNS || !authNS.GoogleAuthProvider) {
           if (attempts < maxAttempts) {
             setTimeout(check, 500);
             return;
           }
           setStatus('error');
-          setDetail('firebase.auth() es null o undefined.');
+          setDetail('GoogleAuthProvider no disponible — firebase-auth-compat.js no cargó.');
           return;
         }
-        if (!auth.GoogleAuthProvider) {
+        if (!authNS.OAuthProvider) {
           if (attempts < maxAttempts) {
             setTimeout(check, 500);
             return;
           }
           setStatus('error');
-          setDetail('GoogleAuthProvider no disponible — firebase-auth-compat.js no cargó. Verifica la consola (F12 > Network) para errores de carga del script.');
-          return;
-        }
-        if (!auth.OAuthProvider) {
-          if (attempts < maxAttempts) {
-            setTimeout(check, 500);
-            return;
-          }
-          setStatus('error');
-          setDetail('OAuthProvider no disponible — firebase-auth-compat.js no cargó completamente.');
+          setDetail('OAuthProvider no disponible.');
           return;
         }
         setStatus('ok');

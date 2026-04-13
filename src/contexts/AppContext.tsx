@@ -1195,11 +1195,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const doGoogleLogin = async () => {
     try {
       console.log('[ArchiFlow Auth] Attempting Google login...');
-      const auth = getFirebase().auth();
-      const provider = new auth.GoogleAuthProvider();
-      // Use select_account to always show account picker
+      const fb = getFirebase();
+      // IMPORTANT: GoogleAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
+      const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await auth.signInWithPopup(provider);
+      const result = await fb.auth().signInWithPopup(provider);
       console.log('[ArchiFlow Auth] Google login successful:', result.user?.email);
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
@@ -1217,10 +1217,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
         console.log('[ArchiFlow Auth] Popup failed, trying redirect fallback for Google...');
         try {
-          const auth2 = getFirebase().auth();
-          const provider2 = new auth2.GoogleAuthProvider();
+          const fb2 = getFirebase();
+          const provider2 = new fb2.auth.GoogleAuthProvider();
           provider2.setCustomParameters({ prompt: 'select_account' });
-          await auth2.signInWithRedirect(provider2);
+          await fb2.auth().signInWithRedirect(provider2);
           return;
         } catch (redirectErr: any) {
           console.error('[ArchiFlow Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
@@ -1233,8 +1233,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const doMicrosoftLogin = async () => {
     try {
       console.log('[ArchiFlow Auth] Attempting Microsoft login...');
-      const fbAuth = getFirebase().auth();
-      const provider = new fbAuth.OAuthProvider('microsoft.com');
+      const fb = getFirebase();
+      // IMPORTANT: OAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
+      const authNS = fb.auth;
+      const authInstance = fb.auth();
+      const provider = new authNS.OAuthProvider('microsoft.com');
       // Permisos para OneDrive y Microsoft Graph
       provider.addScope('Files.ReadWrite.All');
       provider.addScope('Sites.ReadWrite.All');
@@ -1243,22 +1246,22 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
       let result: any;
       try {
-        result = await fbAuth.signInWithPopup(provider);
+        result = await authInstance.signInWithPopup(provider);
       } catch (popupErr: any) {
         // Si falla con scopes de OneDrive, intentar login básico sin scopes extra
         if (popupErr.code === 'auth/internal-error' || popupErr.code === 'auth/oauth_error') {
           console.warn('[ArchiFlow Auth] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
-          const basicProvider = new fbAuth.OAuthProvider('microsoft.com');
+          const basicProvider = new authNS.OAuthProvider('microsoft.com');
           basicProvider.setCustomParameters({ prompt: 'select_account' });
           try {
-            result = await fbAuth.signInWithPopup(basicProvider);
+            result = await authInstance.signInWithPopup(basicProvider);
           } catch (basicErr: any) {
             // If basic popup also fails (e.g. popup blocked), try redirect
             if (basicErr.code === 'auth/popup-blocked') {
               console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
-              const redirectProvider = new fbAuth.OAuthProvider('microsoft.com');
+              const redirectProvider = new authNS.OAuthProvider('microsoft.com');
               redirectProvider.setCustomParameters({ prompt: 'select_account' });
-              await fbAuth.signInWithRedirect(redirectProvider);
+              await authInstance.signInWithRedirect(redirectProvider);
               return;
             }
             throw basicErr;
@@ -1266,9 +1269,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         } else if (popupErr.code === 'auth/popup-blocked') {
           // Popup blocked — try redirect immediately
           console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
-          const redirectProvider = new fbAuth.OAuthProvider('microsoft.com');
+          const redirectProvider = new authNS.OAuthProvider('microsoft.com');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
-          await fbAuth.signInWithRedirect(redirectProvider);
+          await authInstance.signInWithRedirect(redirectProvider);
           return;
         } else {
           throw popupErr;
