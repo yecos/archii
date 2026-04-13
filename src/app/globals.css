@@ -155,6 +155,28 @@
   }
 }
 
+/* === FLUID TYPOGRAPHY === */
+.af-text-page { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; line-height: 1.2; }
+.af-text-subtitle { font-size: clamp(1.125rem, 3vw, 1.5rem); font-weight: 600; line-height: 1.3; }
+.af-text-body { font-size: clamp(0.875rem, 2vw, 0.9375rem); line-height: 1.5; }
+.af-text-small { font-size: clamp(0.75rem, 1.5vw, 0.8125rem); line-height: 1.4; }
+.af-text-label { font-size: clamp(0.6875rem, 1.2vw, 0.75rem); line-height: 1.3; }
+
+/* Responsive text utility classes */
+.af-text-responsive { font-size: clamp(0.75rem, 1.5vw, 0.875rem); }
+.af-heading-responsive { font-size: clamp(1.25rem, 3.5vw, 1.75rem); font-weight: 700; }
+
+/* === SKELETON LOADER === */
+
+/* === RESPONSIVE CONTAINERS === */
+.af-container { width: 100%; max-width: 1280px; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
+@media (min-width: 640px) { .af-container { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media (min-width: 1024px) { .af-container { padding-left: 2rem; padding-right: 2rem; } }
+
+/* Safe area for bottom navigation */
+.af-with-bottom-nav { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 768px) { .af-with-bottom-nav { padding-bottom: 0; } }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -182,15 +204,30 @@
 .animate-slideUp { animation: slideUp 0.3s ease; }
 .animate-spin { animation: spin 0.7s linear infinite; }
 
-/* Toast */
-.af-toast {
-  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-  padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
-  z-index: 9999; transition: opacity 0.3s; pointer-events: none;
-  white-space: nowrap; max-width: 90vw; text-align: center;
+/* Toast (Sonner overrides) */
+[data-sonner-toaster][data-theme] {
+  --normal-bg: var(--card) !important;
+  --normal-text: var(--popover-foreground) !important;
+  --normal-border: var(--border) !important;
 }
-@media (min-width: 768px) {
-  .af-toast { top: auto; bottom: 16px; left: auto; transform: none; right: 16px; }
+.af-sonner-toast {
+  font-family: inherit !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  max-width: 420px !important;
+  font-size: 13px !important;
+  padding: 12px 16px !important;
+}
+.af-sonner-title {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+@media (max-width: 640px) {
+  [data-sonner-toaster] {
+    top: max(env(safe-area-inset-top, 8px), 8px) !important;
+  }
 }
 
 /* File input */
@@ -216,9 +253,17 @@ input[type="file"] { display: none; }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-top { padding-top: env(safe-area-inset-top, 0px); }
 
-/* Better touch targets on mobile */
+/* Better touch targets on mobile (44px minimum per Apple HIG) */
 @media (max-width: 768px) {
   button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Exception: small inline buttons in cards use 36px minimum */
+  button[class*="text-"], button[class*="px-"] {
     min-height: 36px;
     min-width: 36px;
   }
@@ -245,8 +290,7 @@ select {
   padding-right: 32px;
 }
 
-/* Chat input sticky bar for mobile */
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Chat input sticky bar for mobile — safe-bottom already defined above */
 
 /* Mobile chat: keep input visible when keyboard opens */
 @media (max-width: 768px) {
@@ -269,6 +313,32 @@ select {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Global smooth scroll on all overflow containers for iOS */
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch feedback for mobile — press effect on buttons */
+@media (max-width: 768px) {
+  button:not(:disabled), a:not(:disabled), [role="button"]:not(:disabled), select:not(:disabled) {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+  }
+  button:active:not(:disabled), a:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+}
+
+/* Toast safe-area on mobile */
+@media (max-width: 768px) {
+  .af-toast {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
 /* Fix mobile viewport height for fixed elements */
 @supports (height: 100dvh) {
   body {
@@ -278,4 +348,50 @@ select {
 }
 html {
   height: -webkit-fill-available;
+}
+
+/* Responsive content constraints */
+.af-content-max {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Improved skeleton animation */
+@keyframes af-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.af-skeleton {
+  background: linear-gradient(90deg, var(--af-bg4) 25%, var(--af-bg3) 50%, var(--af-bg4) 75%);
+  background-size: 200% 100%;
+  animation: af-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Responsive text truncation */
+.af-truncate-mobile {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .af-truncate-mobile {
+    max-width: 120px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .af-truncate-mobile {
+    max-width: 180px;
+  }
+}
+
+@media (min-width: 768px) {
+  .af-truncate-mobile {
+    max-width: 280px;
+  }
 }

@@ -1,5 +1,6 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
@@ -41,7 +42,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatMobileShow, setChatMobileShow] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
+  // Toast state removido — ahora usa Sonner directamente
 
   // Microsoft / OneDrive state
   const [msAccessToken, setMsAccessToken] = useState<string | null>(null);
@@ -322,10 +323,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     showToast(next ? 'Modo nocturno activado' : 'Modo diurno activado');
   };
 
-  // Toast helper
+  // Toast helper (usa Sonner por debajo)
   const showToast = useCallback((msg: string, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    const opts = { duration: 3500 };
+    if (type === 'error') toast.error(msg, opts);
+    else if (type === 'warning') toast.warning(msg, opts);
+    else toast.success(msg, opts);
   }, []);
 
   // ===== NOTIFICATION ENGINE v2 =====
@@ -2666,7 +2669,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setEditingId,
     ready,
     loading,
-    toast,
     messages,
     setMessages,
     chatProjectId,

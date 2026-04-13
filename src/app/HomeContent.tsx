@@ -4,12 +4,14 @@ import AppProvider, { useApp } from '@/contexts/AppContext';
 import LoadingScreen from '@/components/layout/LoadingScreen';
 import AuthScreen from '@/components/layout/AuthScreen';
 import Sidebar from '@/components/layout/Sidebar';
+import { Toaster } from 'sonner';
 
 // Keep imports for render-only types used in JSX
 import type { Project, Task } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
+import * as fbActions from '@/lib/firestore-actions';
 import { getFirebase } from '@/lib/firebase-service';
 
 import DashboardScreen from '@/screens/DashboardScreen';
@@ -48,7 +50,6 @@ function AppContent() {
     doLogin, doRegister, doGoogleLogin, doMicrosoftLogin,
     forms, setForms,
     modals, editingId, setEditingId,
-    toast,
     messages, setMessages, chatProjectId, setChatProjectId,
     workPhases, projectFiles, approvals, chatMobileShow, setChatMobileShow,
     calMonth, setCalMonth, calYear, setCalYear, calSelectedDate, setCalSelectedDate,
@@ -144,8 +145,26 @@ function AppContent() {
   /* ===== RENDER ===== */
   return (
     <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>
-      {/* Toast */}
-      {toast && <div className={`af-toast ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-600'} text-white`}>{toast.msg}</div>}
+      {/* Sonner Toaster — premium toast system */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          unstyled: false,
+          classNames: {
+            toast: 'af-sonner-toast',
+            title: 'af-sonner-title',
+            description: 'af-sonner-desc',
+            actionButton: 'af-sonner-action',
+            cancelButton: 'af-sonner-cancel',
+            success: '!bg-emerald-600 !text-white !border-emerald-500',
+            error: '!bg-red-500 !text-white !border-red-400',
+            warning: '!bg-amber-500 !text-white !border-amber-400',
+          },
+        }}
+        richColors
+        closeButton
+        duration={3500}
+      />
 
       {/* Install Banner (Android/Chrome Desktop) */}
       {showInstallBanner && installPrompt && !isStandalone && (
@@ -211,7 +230,7 @@ function AppContent() {
           <div className="flex-1 min-w-0">
             <div className="text-base font-medium truncate af-heading-responsive">{localScreenTitles[screen] || screenTitles[screen] || ''}</div>
             <div className="text-xs text-[var(--muted-foreground)] hidden md:block">
-              {screen === 'dashboard' ? `Bienvenido, ${(userName || '').split(' ')[0]}` : screen === 'projectDetail' ? currentProject?.data.status || '' : ''}
+              {screen === 'dashboard' ? `Bienvenido, ${userName.split(' ')[0]}` : screen === 'projectDetail' ? currentProject?.data.status || '' : ''}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
