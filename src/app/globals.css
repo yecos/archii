@@ -395,3 +395,36 @@ html {
     max-width: 280px;
   }
 }
+
+/* ─── Vaul Drawer ─── */
+[data-vaul-overlay] {
+  animation: vaul-overlay-in 200ms ease-out;
+}
+[data-vaul-overlay][data-state="closed"] {
+  animation: vaul-overlay-out 200ms ease-in;
+}
+@keyframes vaul-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes vaul-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+[data-vaul-content] {
+  animation: vaul-drawer-in 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-vaul-content][data-state="closed"] {
+  animation: vaul-drawer-out 250ms ease-in;
+}
+@keyframes vaul-drawer-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes vaul-drawer-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+[data-vaul-drawer] {
+  touch-action: none;
+}
