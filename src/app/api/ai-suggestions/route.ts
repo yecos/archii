@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * POST /api/ai-suggestions
- * AI Suggestions endpoint for ArchiFlow.
- */
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
