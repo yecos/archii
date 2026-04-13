@@ -12,9 +12,10 @@ import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioCo
 import { getFirebase } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 
-import { useFirestoreData } from '@/hooks/useFirestoreData';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+// Custom hooks available for future extraction:
+// import { useFirestoreData } from '@/hooks/useFirestoreData';
+// import { useNotifications } from '@/hooks/useNotifications';
+// import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 
@@ -604,7 +605,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }, () => {});
     }
     return () => { unsub(); setMessages([]); };
-  }, [ready, chatProjectId, chatDmUser]);
+  }, [ready, chatProjectId, chatDmUser, authUser]);
 
   // Load work phases
   useEffect(() => {
