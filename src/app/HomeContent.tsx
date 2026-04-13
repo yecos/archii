@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import AppProvider, { useApp } from '@/contexts/AppContext';
 import LoadingScreen from '@/components/layout/LoadingScreen';
 import AuthScreen from '@/components/layout/AuthScreen';
@@ -468,62 +469,38 @@ function AppContent() {
         {/* Content */}
         <main id="main-content" className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`} style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}>
 
-          {/* DASHBOARD */}
-          {screen === 'dashboard' && <DashboardScreen />}
-
-          {/* PROJECTS */}
-          {screen === 'projects' && <ProjectsScreen />}
-
-          {/* ===== PROJECT DETAIL ===== */}
-          {screen === 'projectDetail' && <ProjectDetailScreen />}
-
-          {/* ===== TASKS ===== */}
-          {screen === 'tasks' && <TasksScreen />}
-
-          {/* ===== CHAT ===== */}
-          {screen === 'chat' && <ChatScreen />}
-
-          {/* ===== GLOBAL BUDGET ===== */}
-          {screen === 'budget' && <BudgetScreen />}
-
-          {/* ===== GLOBAL FILES ===== */}
-          {screen === 'files' && <FilesScreen />}
-
-          {/* GLOBAL OBRA */}
-          {screen === 'obra' && <ObraScreen />}
-
-          {/* SUPPLIERS */}
-          {screen === 'suppliers' && <SuppliersScreen />}
-
-          {/* TEAM MANAGEMENT */}
-          {screen === 'team' && <TeamScreen />}
-
-          {/* COMPANIES */}
-          {screen === 'companies' && <CompaniesScreen />}
-
-          {/* ===== CALENDAR ===== */}
-          {screen === 'calendar' && <CalendarScreen />}
-
-
-          {/* GLOBAL PORTAL */}
-          {screen === 'portal' && <PortalScreen />}
-
-
-              {/* GALLERY */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={screen}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              {screen === 'dashboard' && <DashboardScreen />}
+              {screen === 'projects' && <ProjectsScreen />}
+              {screen === 'projectDetail' && <ProjectDetailScreen />}
+              {screen === 'tasks' && <TasksScreen />}
+              {screen === 'chat' && <ChatScreen />}
+              {screen === 'budget' && <BudgetScreen />}
+              {screen === 'files' && <FilesScreen />}
+              {screen === 'obra' && <ObraScreen />}
+              {screen === 'suppliers' && <SuppliersScreen />}
+              {screen === 'team' && <TeamScreen />}
+              {screen === 'companies' && <CompaniesScreen />}
+              {screen === 'calendar' && <CalendarScreen />}
+              {screen === 'portal' && <PortalScreen />}
               {screen === 'gallery' && <GalleryScreen />}
-
-
-          {/* ===== INVENTORY SECTION ===== */}
-          {screen === 'inventory' && <InventoryScreen />}
-
-          {/* ===== ADMIN PANEL ===== */}
-          {screen === 'admin' && <AdminScreen />}
-
-              {/* ===== PROFILE ===== */}
-          {screen === 'profile' && <ProfileScreen />}
-
-          {/* ===== INSTALL APP GUIDE ===== */}
-          {screen === 'install' && <InstallScreen />}
+              {screen === 'inventory' && <InventoryScreen />}
+              {screen === 'admin' && <AdminScreen />}
+              {screen === 'profile' && <ProfileScreen />}
+              {screen === 'install' && <InstallScreen />}
+              {screen === 'timeTracking' && <TimeTrackingScreen />}
+              {screen === 'invoices' && <InvoicesScreen />}
+              {screen === 'reports' && <ReportsScreen />}
+            </motion.div>
+          </AnimatePresence>
 
         </main>
       </div>
@@ -946,14 +923,6 @@ function AppContent() {
       </div>)}
 
       {/* ===== REPORTES ===== */}
-
-      {/* ===== TIME TRACKING ===== */}
-      {screen === 'timeTracking' && <TimeTrackingScreen />}
-      
-
-      {/* ===== INVOICES ===== */}
-      {screen === 'invoices' && <InvoicesScreen />}
-      {screen === 'reports' && <ReportsScreen />}
 
       {/* Lightbox Viewer */}
       {lightboxPhoto && (<div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={closeLightbox}>
