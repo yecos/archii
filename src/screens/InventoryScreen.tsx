@@ -2,6 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
+import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
 import { INV_WAREHOUSES, TRANSFER_STATUSES } from '@/lib/types';
 
 export default function InventoryScreen() {
@@ -27,6 +28,16 @@ export default function InventoryScreen() {
                 </button>
               ))}
             </div>
+
+            {/* Loading skeleton */}
+            {!invProducts.length && !invCategories.length && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => <SkeletonKPI key={i} />)}
+                </div>
+                <SkeletonTableRow cols={5} />
+              </div>
+            )}
 
             {/* ===== Dashboard Tab ===== */}
             {invTab === 'dashboard' && (<div className="space-y-4">

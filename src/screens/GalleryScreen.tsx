@@ -1,11 +1,12 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonGallery } from '@/components/ui/SkeletonLoaders';
 import { PHOTO_CATS } from '@/lib/types';
 
 export default function GalleryScreen() {
   const {
-    projects, galleryFilterProject, setGalleryFilterProject,
+    projects, galleryFilterProject, setGalleryFilterProject, galleryLoading,
     galleryFilterCat, setGalleryFilterCat,
     setEditingId, setForms, openModal,
     getFilteredGalleryPhotos, openLightbox, deleteGalleryPhoto,
@@ -37,8 +38,11 @@ export default function GalleryScreen() {
     </select>
   </div>
 
+  {/* Loading skeleton */}
+  {galleryLoading && <SkeletonGallery />}
+
   {/* Photo Grid */}
-  {getFilteredGalleryPhotos().length === 0 ? (
+  {!galleryLoading && getFilteredGalleryPhotos().length === 0 ? (
     <div className="text-center py-16">
       <div className="text-4xl mb-3">🖼️</div>
       <div className="text-[var(--muted-foreground)]">No hay fotos en la galería</div>

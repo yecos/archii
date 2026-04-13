@@ -1,14 +1,20 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 
 export default function FilesScreen() {
   const {
-    navigateTo, projects, setForms, setSelectedProjectId,
+    navigateTo, projects, setForms, setSelectedProjectId, loading,
   } = useApp();
 
   return (
 <div className="animate-fadeIn">
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
             <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
               <div className="text-[15px] font-semibold mb-3">Planos y archivos</div>
               <div className="text-center py-12 text-[var(--af-text3)]">

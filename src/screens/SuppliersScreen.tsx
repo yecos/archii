@@ -1,10 +1,11 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 
 export default function SuppliersScreen() {
   const {
-    suppliers, setEditingId, setForms, openModal, deleteSupplier,
+    suppliers, setEditingId, setForms, openModal, deleteSupplier, loading,
   } = useApp();
 
   return (
@@ -15,7 +16,12 @@ export default function SuppliersScreen() {
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proveedor
         </button>
       </div>
-      {suppliers.length === 0 ? (
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+      {!loading && suppliers.length === 0 ? (
         <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🏪</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proveedores</div><div className="text-[13px]">Agrega tu primer proveedor</div></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

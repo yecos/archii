@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 
 export default function TasksScreen() {
@@ -20,20 +21,7 @@ export default function TasksScreen() {
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva tarea
               </button>
             </div>
-            {loading && (
-              <div className="space-y-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 animate-pulse">
-                    <div className="w-4 h-4 rounded-full bg-[var(--af-bg4)]" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 w-3/4 bg-[var(--af-bg4)] rounded" />
-                      <div className="h-2 w-1/2 bg-[var(--af-bg4)] rounded" />
-                    </div>
-                    <div className="h-5 w-16 bg-[var(--af-bg4)] rounded-full" />
-                  </div>
-                ))}
-              </div>
-            )}
+            {loading && <SkeletonTasks />}
             {!loading && (forms.taskView || 'list') === 'list' ? (
               tasks.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">✅</div><div className="text-[15px] font-medium text-[var(--muted-foreground)]">Sin tareas</div></div> :
               ['Alta', 'Media', 'Baja'].map(prio => {

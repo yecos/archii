@@ -358,17 +358,44 @@ html {
   width: 100%;
 }
 
-/* Improved skeleton animation */
+/* ─── Premium Skeleton Shimmer ─── */
 @keyframes af-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% { background-position: -400% 0; }
+  100% { background-position: 400% 0; }
 }
 
 .af-skeleton {
-  background: linear-gradient(90deg, var(--af-bg4) 25%, var(--af-bg3) 50%, var(--af-bg4) 75%);
-  background-size: 200% 100%;
-  animation: af-shimmer 1.5s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    var(--af-bg4) 0%,
+    var(--af-bg3) 20%,
+    hsl(var(--af-accent-h, 42) 30% 85% / 0.12) 40%,
+    var(--af-bg3) 60%,
+    var(--af-bg4) 100%
+  );
+  background-size: 400% 100%;
+  animation: af-shimmer 2s ease-in-out infinite;
   border-radius: 0.5rem;
+}
+
+.af-skeleton--circle {
+  border-radius: 9999px;
+}
+
+.af-skeleton--pill {
+  border-radius: 9999px;
+}
+
+[data-theme="dark"] .af-skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--af-accent-h, 42) 10% 16%) 0%,
+    hsl(var(--af-accent-h, 42) 10% 20%) 20%,
+    hsl(var(--af-accent-h, 42) 25% 25% / 0.2) 40%,
+    hsl(var(--af-accent-h, 42) 10% 20%) 60%,
+    hsl(var(--af-accent-h, 42) 10% 16%) 100%
+  );
+  background-size: 400% 100%;
 }
 
 /* Responsive text truncation */

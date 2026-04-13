@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonProjects } from '@/components/ui/SkeletonLoaders';
 import { statusColor, fmtCOP } from '@/lib/helpers';
 
 export default function ProjectsScreen() {
@@ -36,25 +37,7 @@ export default function ProjectsScreen() {
           ))}
         </div>
       )}
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3 animate-pulse">
-              <div className="h-3 w-24 bg-[var(--af-bg4)] rounded" />
-              <div className="h-5 w-3/4 bg-[var(--af-bg4)] rounded" />
-              <div className="flex gap-2">
-                <div className="h-2 w-16 bg-[var(--af-bg4)] rounded" />
-                <div className="h-2 w-20 bg-[var(--af-bg4)] rounded" />
-              </div>
-              <div className="flex gap-3 mt-2">
-                <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
-                <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
-                <div className="h-2 w-12 bg-[var(--af-bg4)] rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {loading && <SkeletonProjects />}
       {!loading && (() => {
         const projs = visibleProjects().filter(p => !forms.projFilter || p.data.status === forms.projFilter).filter(p => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
         return projs.length === 0 ? (

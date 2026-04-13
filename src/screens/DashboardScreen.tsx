@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
@@ -70,37 +71,7 @@ export default function DashboardScreen() {
   return (
     <div className="animate-fadeIn space-y-6">
       {/* Skeleton while loading */}
-      {loading && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5">
-                <div className="af-skeleton h-3 w-24 mb-3" />
-                <div className="af-skeleton h-7 w-12 mb-1" />
-                <div className="af-skeleton h-3 w-16" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="af-skeleton h-4 w-32 mb-4" />
-              {[1,2,3].map(i => <div key={i} className="af-skeleton h-12 w-full mb-2 rounded-lg" />)}
-            </div>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-              <div className="af-skeleton h-4 w-32 mb-4" />
-              {[1,2,3].map(i => <div key={i} className="af-skeleton h-12 w-full mb-2 rounded-lg" />)}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="af-skeleton h-4 w-24 mb-3" />
-                <div className="af-skeleton h-16 w-full rounded-lg" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {loading && <SkeletonDashboard />}
       {!loading && (<>
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
