@@ -1,19 +1,56 @@
-ArchiFlow — Corrección Date Picker + OneDrive
-===============================================
+ArchiFlow — Corrección Chat + IA Real
+========================================
 
 ARCHIVOS MODIFICADOS:
-  src/app/globals.css
-  src/contexts/AppContext.tsx
+  src/screens/ChatScreen.tsx           → Fix navegación del chat
+  src/app/api/ai-assistant/route.ts    → IA real conectada
 
 INSTRUCCIONES:
   1. Reemplaza estos 2 archivos en tu repositorio local
   2. Haz git add, commit y push
   3. Vercel desplegará automáticamente
 
-FIX 1 — Date Picker (calendario no aparece en modales):
-  - globals.css: Se agregó touch-action: manipulation en inputs, select y textarea
-    dentro de [data-vaul-drawer] para permitir el popup del calendario nativo
+========================================
+FIX 1 — Chat: No puedo retroceder de conversaciones
+========================================
+  - Sidebar del chat ahora tiene md:flex para que SIEMPRE sea visible en desktop/tablet
+  - Botón "volver" ahora es lg:hidden (se ve en móvil Y tablet, se oculta solo en desktop grande)
 
-FIX 2 — OneDrive (Error interno del proveedor Microsoft):
-  - AppContext.tsx: Se revirtió prompt de 'consent' a 'select_account' y se agregó
-    fallback automático (login básico sin scopes si falla con scopes de OneDrive)
+========================================
+FIX 2 — IA Real Conectada
+========================================
+  El asistente IA ahora usa una API real compatible con OpenAI.
+
+  CONFIGURACIÓN EN VERCEL (Environment Variables):
+
+  OPCIÓN A — Google Gemini (GRATIS hasta 15 peticiones/min):
+    OPENAI_API_KEY = [tu clave de Google AI Studio]
+    OPENAI_BASE_URL = https://generativelanguage.googleapis.com/v1beta/openai
+    AI_MODEL = gemini-2.0-flash
+
+  OPCIÓN B — OpenAI (desde $0.15/1M tokens):
+    OPENAI_API_KEY = sk-[tu clave]
+    OPENAI_BASE_URL = https://api.openai.com/v1
+    AI_MODEL = gpt-4o-mini
+
+  OPCIÓN C — DeepSeek (muy económico):
+    OPENAI_API_KEY = [tu clave]
+    OPENAI_BASE_URL = https://api.deepseek.com/v1
+    AI_MODEL = deepseek-chat
+
+  CÓMO CONFIGURAR:
+    1. Ve a vercel.com → tu proyecto → Settings → Environment Variables
+    2. Agrega OPENAI_API_KEY (obligatorio)
+    3. Agrega OPENAI_BASE_URL y AI_MODEL (opcional, hay defaults)
+    4. Guarda y re-despliega
+
+  NOTA: Si no configuras la API key, el asistente mostrará instrucciones
+  claras dentro de la app sobre cómo hacerlo.
+
+========================================
+¿DÓNDE ESTÁ EL BOTÓN DE IA?
+========================================
+  - Es el botón dorado flotante abajo a la derecha (icono de "?")
+  - También hay un botón "+" para acciones rápidas al lado
+  - Ambos aparecen después de 2 segundos de carga
+  - Se ocultan en la pantalla de Chat para no tapar el teclado

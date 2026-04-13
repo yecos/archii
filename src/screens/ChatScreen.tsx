@@ -140,7 +140,7 @@ export default function ChatScreen() {
     <div className="animate-fadeIn flex flex-col md:h-full pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-0" style={{ minHeight: 0, flex: 1 }}>
 
       {/* ===== SIDEBAR ===== */}
-      <div className={`${chatMobileShow ? 'hidden' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent`}>
+      <div className={`${chatMobileShow ? 'hidden md:flex' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent`}>
         {/* Search */}
         <div className="p-3 border-b border-[var(--border)]">
           <div className="relative">
@@ -224,7 +224,7 @@ export default function ChatScreen() {
       <div className={`${chatMobileShow ? 'flex' : 'hidden'} md:flex flex-col flex-1 min-h-0 overflow-hidden bg-background`}>
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--border)] flex-shrink-0 backdrop-blur-xl bg-[var(--card)]/80 z-10">
-          <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)] transition-colors md:hidden" onClick={() => { setChatMobileShow(false); setShowEmojiPicker(false); }}>
+          <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)] transition-colors lg:hidden" onClick={() => { setChatMobileShow(false); setShowEmojiPicker(false); }}>
             <svg viewBox="0 0 24 24" className="w-5 h-5" style={{stroke:'currentColor',fill:'none'}} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div className="flex-1 min-w-0">
