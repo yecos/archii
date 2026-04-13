@@ -90,6 +90,7 @@ function AppContent() {
     />
   );
 
+  // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
     dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes',
     budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario',
@@ -99,8 +100,8 @@ function AppContent() {
   };
 
   return (
-    <ErrorBoundary>
     <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>
+      {/* Sonner Toaster — premium toast system */}
       <Toaster
         position="top-center"
         toastOptions={{
@@ -145,6 +146,7 @@ function AppContent() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />
 
+        {/* Notification Permission Banner — small inline */}
         {showNotifBanner && (
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[var(--af-accent)]/10 via-[var(--af-accent)]/5 to-transparent border-b border-[var(--af-accent)]/20 animate-fadeIn">
             <Bell size={20} className="stroke-[var(--af-accent)] flex-shrink-0" />
@@ -161,6 +163,7 @@ function AppContent() {
           </div>
         )}
 
+        {/* In-App Notification Toasts — small inline */}
         <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
           {inAppNotifs.map(n => (
             <div key={n.id} className="pointer-events-auto bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-2xl flex items-start gap-3 animate-slideUp cursor-pointer hover:border-[var(--af-accent)]/30 transition-all" style={{ width: '340px', maxWidth: 'calc(100vw - 32px)' }} onClick={() => { markNotifRead(n.id); if (n.screen) navigateTo(n.screen, n.itemId); }}>
@@ -178,6 +181,7 @@ function AppContent() {
 
         <NotifPanel />
 
+        {/* Main content with screen rendering */}
         <main
           id="main-content"
           className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}
@@ -192,6 +196,7 @@ function AppContent() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="flex-1 flex flex-col min-h-0"
             >
+              <ErrorBoundary>
               {screen === 'dashboard' && <DashboardScreen />}
               {screen === 'projects' && <ProjectsScreen />}
               {screen === 'projectDetail' && <ProjectDetailScreen />}
@@ -213,6 +218,7 @@ function AppContent() {
               {screen === 'timeTracking' && <TimeTrackingScreen />}
               {screen === 'invoices' && <InvoicesScreen />}
               {screen === 'reports' && <ReportsScreen />}
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>
@@ -220,6 +226,7 @@ function AppContent() {
 
       <BottomNav />
 
+      {/* ===== Modals — each self-contained ===== */}
       <ProjectModal open={!!modals.project} onClose={() => closeModal('project')} />
       <TaskModal open={!!modals.task} onClose={() => closeModal('task')} />
       <ExpenseModal open={!!modals.expense} onClose={() => closeModal('expense')} />
@@ -236,9 +243,10 @@ function AppContent() {
 
       <LightboxViewer />
     </div>
-    </ErrorBoundary>
   );
 }
+
+/* ─── Entry point — page.tsx handles lazy loading via dynamic() ─── */
 
 export default function Home() {
   return (

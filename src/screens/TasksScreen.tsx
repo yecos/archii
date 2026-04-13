@@ -2,8 +2,8 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
-import { fmtDate, getInitials, prioColor, taskStColor, avatarColor, fmtDuration } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, ChevronDown } from 'lucide-react';
+import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 
 const KANBAN_COLS = [
@@ -13,11 +13,65 @@ const KANBAN_COLS = [
   { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 ];
 
+function getAssigneeIds(t: any): string[] {
+  if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
+  if (t.data.assigneeId) return [t.data.assigneeId];
+  return [];
+}
+
+function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
+  const ids = getAssigneeIds(task);
+  if (ids.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-[10px] text-[var(--af-text3)]">
+        <User size={10} /> Sin asignar
+      </div>
+    );
+  }
+  const isSmall = size === 'sm';
+  return (
+    <div className="flex items-center gap-1">
+      <div className="flex -space-x-1">
+        {ids.slice(0, 3).map((uid: string) => (
+          <span
+            key={uid}
+            className={`${isSmall ? 'w-4 h-4 text-[7px]' : 'w-5 h-5 text-[8px]'} rounded-full font-semibold flex items-center justify-center ring-1 ring-[var(--card)] ${avatarColor(uid)}`}
+            title={getUserName(uid)}
+          >
+            {getInitials(getUserName(uid))}
+          </span>
+        ))}
+      </div>
+      {ids.length > 3 && (
+        <span className={`text-[var(--af-text3)] ${isSmall ? 'text-[10px]' : 'text-[11px]'}`}>
+          +{ids.length - 3}
+        </span>
+      )}
+      {ids.length <= 3 && (
+        <span className={`text-[var(--af-text3)] truncate ${isSmall ? 'text-[10px] max-w-[80px]' : 'text-[11px] max-w-[100px]'}`}>
+          {ids.map((uid: string) => getUserName(uid)).join(', ')}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function TasksScreen() {
-  const {
-    changeTaskStatus, deleteTask, forms, getUserName, loading, openEditTask,
-    openModal, projects, setForms, tasks, toggleTask, timeEntries, showToast,
-  } = useApp();
+  const app = useApp() as any;
+  const changeTaskStatus = app.changeTaskStatus || (() => {});
+  const deleteTask = app.deleteTask || (() => {});
+  const forms = app.forms || {};
+  const getUserName = app.getUserName || ((uid: string) => uid);
+  const loading = app.loading || false;
+  const openEditTask = app.openEditTask || (() => {});
+  const openModal = app.openModal || (() => {});
+  const projects = app.projects || [];
+  const setForms = app.setForms || (() => {});
+  const tasks = app.tasks || [];
+  const toggleTask = app.toggleTask || (() => {});
+  const timeEntries = app.timeEntries || [];
+  const showToast = app.showToast || (() => {});
+  const teamUsers = app.teamUsers || [];
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -26,6 +80,8 @@ export default function TasksScreen() {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const dragCounterRef = useRef<Record<string, number>>({});
+
+  const taskFilterProject = forms.taskFilterProject || '';
 
   const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
     setDragTaskId(taskId);
@@ -74,26 +130,26 @@ export default function TasksScreen() {
 
   // Multi-filter
   const filteredTasks = useMemo(() => {
-    let result = taskFilterProject ? tasks.filter(t => t.data.projectId === taskFilterProject) : tasks;
+    let result = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(t => t.data.title.toLowerCase().includes(q));
+      result = result.filter((t: any) => t.data.title.toLowerCase().includes(q));
     }
-    if (filterPriority) result = result.filter(t => t.data.priority === filterPriority);
-    if (filterAssignee) result = result.filter(t => t.data.assigneeId === filterAssignee);
+    if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
+    if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
     return result;
   }, [tasks, taskFilterProject, searchQuery, filterPriority, filterAssignee]);
-
-  const taskFilterProject = forms.taskFilterProject || '';
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
-    tasks.forEach(t => {
-      if (t.data.assigneeId) {
-        const name = getUserName(t.data.assigneeId);
-        map.set(t.data.assigneeId, { id: t.data.assigneeId, name });
-      }
+    tasks.forEach((t: any) => {
+      getAssigneeIds(t).forEach((uid: string) => {
+        if (uid) {
+          const name = getUserName(uid);
+          map.set(uid, { id: uid, name });
+        }
+      });
     });
     return Array.from(map.values());
   }, [tasks, getUserName]);
@@ -101,9 +157,9 @@ export default function TasksScreen() {
   // Stats
   const taskStats = useMemo(() => ({
     total: filteredTasks.length,
-    completed: filteredTasks.filter(t => t.data.status === 'Completado').length,
-    inProgress: filteredTasks.filter(t => t.data.status === 'En progreso').length,
-    overdue: filteredTasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length,
+    completed: filteredTasks.filter((t: any) => t.data.status === 'Completado').length,
+    inProgress: filteredTasks.filter((t: any) => t.data.status === 'En progreso').length,
+    overdue: filteredTasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length,
   }), [filteredTasks]);
 
   const viewMode = forms.taskView || 'list';
@@ -117,13 +173,13 @@ export default function TasksScreen() {
           <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms(p => ({ ...p, taskView: 'list' }))}
+              onClick={() => setForms((p: any) => ({ ...p, taskView: 'list' }))}
             >
               <LayoutList size={14} /> Lista
             </button>
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'kanban' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms(p => ({ ...p, taskView: 'kanban' }))}
+              onClick={() => setForms((p: any) => ({ ...p, taskView: 'kanban' }))}
             >
               <KanbanSquare size={14} /> Kanban
             </button>
@@ -133,10 +189,10 @@ export default function TasksScreen() {
           <select
             className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
             value={taskFilterProject}
-            onChange={e => setForms(p => ({ ...p, taskFilterProject: e.target.value }))}
+            onChange={e => setForms((p: any) => ({ ...p, taskFilterProject: e.target.value }))}
           >
             <option value="">Todos los proyectos</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
           </select>
 
           {/* Search */}
@@ -184,7 +240,7 @@ export default function TasksScreen() {
           {/* New task */}
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-            onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}
+            onClick={() => { setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}
           >
             <Plus size={15} /> Nueva tarea
           </button>
@@ -248,7 +304,7 @@ export default function TasksScreen() {
       {loading && <SkeletonTasks />}
 
       {!loading && viewMode === 'list' ? (
-        /* ─── LIST VIEW ─── */
+        /* LIST VIEW */
         filteredTasks.length === 0 ? (
           <div className="text-center py-16 text-[var(--af-text3)]">
             <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
@@ -263,7 +319,7 @@ export default function TasksScreen() {
           </div>
         ) : (
           ['Alta', 'Media', 'Baja'].map(prio => {
-            const group = filteredTasks.filter(t => t.data.priority === prio);
+            const group = filteredTasks.filter((t: any) => t.data.priority === prio);
             if (!group.length) return null;
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
@@ -274,8 +330,8 @@ export default function TasksScreen() {
                   Prioridad {prio}
                   <span className="text-[var(--af-text3)] ml-1">({group.length})</span>
                 </div>
-                {group.map(t => {
-                  const proj = projects.find(p => p.id === t.data.projectId);
+                {group.map((t: any) => {
+                  const proj = projects.find((p: any) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                   return (
                     <div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
@@ -295,14 +351,7 @@ export default function TasksScreen() {
                               {fmtDate(t.data.dueDate)}
                             </span>
                           )}
-                          {t.data.assigneeId && (
-                            <span className="flex items-center gap-1">
-                              <span className={`w-4 h-4 rounded-full text-[7px] font-semibold flex items-center justify-center ${avatarColor(t.data.assigneeId)}`}>
-                                {getInitials(getUserName(t.data.assigneeId))}
-                              </span>
-                              {getUserName(t.data.assigneeId)}
-                            </span>
-                          )}
+                          <AssigneeAvatars task={t} getUserName={getUserName} />
                         </div>
                       </div>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${taskStColor(t.data.status)}`}>{t.data.status}</span>
@@ -320,7 +369,7 @@ export default function TasksScreen() {
           })
         )
       ) : (
-        /* ─── KANBAN VIEW ─── */
+        /* KANBAN VIEW */
         filteredTasks.length === 0 ? (
           <div className="text-center py-16 text-[var(--af-text3)]">
             <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
@@ -333,7 +382,7 @@ export default function TasksScreen() {
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
             {KANBAN_COLS.map(col => {
-              const colTasks = filteredTasks.filter(t => t.data.status === col.status);
+              const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
               const isDragOver = dragOverCol === col.status;
               return (
                 <div
@@ -380,11 +429,10 @@ export default function TasksScreen() {
                         Soltar aqui
                       </div>
                     )}
-                    {colTasks.map(t => {
-                      const proj = projects.find(p => p.id === t.data.projectId);
+                    {colTasks.map((t: any) => {
+                      const proj = projects.find((p: any) => p.id === t.data.projectId);
                       const isDragging = dragTaskId === t.id;
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
-                      const taskComments = 0; // Placeholder
                       return (
                         <div
                           key={t.id}
@@ -426,20 +474,9 @@ export default function TasksScreen() {
                             </div>
                           </div>
 
-                          {/* Footer: assignee + count */}
+                          {/* Footer: assignees */}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
-                            {t.data.assigneeId ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-5 h-5 rounded-full text-[8px] font-semibold flex items-center justify-center ${avatarColor(t.data.assigneeId)}`}>
-                                  {getInitials(getUserName(t.data.assigneeId))}
-                                </span>
-                                <span className="text-[11px] text-[var(--af-text3)] truncate max-w-[90px]">{getUserName(t.data.assigneeId)}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-[10px] text-[var(--af-text3)]">
-                                <User size={10} /> Sin asignar
-                              </div>
-                            )}
+                            <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
                             <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
                               <X size={12} />
                             </button>

@@ -1669,28 +1669,30 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setIsSavingTask(true);
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
+    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
         await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
         showToast('Tarea creada');
-        // Notificar por WhatsApp al asignado
-        if (forms.taskAssignee && forms.taskProject) {
-          const proj = projects.find(p => p.id === forms.taskProject);
-          const projName = proj?.data.name || 'Proyecto';
-          notifyWhatsApp.taskAssigned(forms.taskAssignee, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {});
+        if (assignees.length > 0 && forms.taskProject) {
+          const proj = projects.find((p: any) => p.id === forms.taskProject);
+          const projName = proj?.data?.name || 'Proyecto';
+          assignees.forEach((uid: string) => {
+            notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {});
+          });
         }
       }
-      closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
+      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
     finally { setIsSavingTask(false); }
   };
 
   const openEditTask = (t: Task) => {
     setEditingId(t.id);
-    const assignees: string[] = Array.isArray(t.data.assigneeIds) ? t.data.assigneeIds : (t.data.assigneeId ? [t.data.assigneeId] : []);
-    setForms(f => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
+    const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
     openModal('task');
   };
 

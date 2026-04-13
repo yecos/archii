@@ -461,6 +461,39 @@ html {
 [data-vaul-drawer] textarea {
   touch-action: manipulation;
 }
+/* Center vaul drawer on desktop */
+@media (min-width: 640px) {
+  [data-vaul-drawer] {
+    top: 50% !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(-50%) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border) !important;
+    max-height: 85vh !important;
+  }
+  /* Hide drag handle on desktop */
+  [data-vaul-drawer] [data-vaul-handle] {
+    display: none !important;
+  }
+}
+@media (min-width: 640px) {
+  [data-vaul-content] {
+    animation: vaul-center-in 280ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+  [data-vaul-content][data-state="closed"] {
+    animation: vaul-center-out 220ms ease-in !important;
+  }
+}
+@keyframes vaul-center-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-50%) scale(0.95); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-50%) scale(1); }
+}
+@keyframes vaul-center-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(-50%) scale(1); }
+  to { opacity: 0; transform: translateX(-50%) translateY(-50%) scale(0.95); }
+}
 
 /* ─── Typewriter Cursor Blink ─── */
 @keyframes af-blink {
