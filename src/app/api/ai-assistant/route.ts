@@ -1,50 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI, { type ChatMessage } from "z-ai-web-dev-sdk";
-import { requireAuth } from "@/lib/api-auth";
 
-const SYSTEM_PROMPT = `
-Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de arquitectura e interiorismo.
-
-Tu personalidad:
-- Profesional, amable y conciso
-- Hablas en español (Colombia)
-- Usas terminología del sector arquitectónico cuando es relevante
-- Das respuestas prácticas y accionables
-
-Tu conocimiento incluye:
-- Gestión de proyectos de arquitectura
-- Presupuestos y costos de construcción
-- Materiales y acabados
-- Planificación de fases de obra (Planos, Cimentación, Estructura, Instalaciones, Acabados, Entrega)
-- Normativas y permisos de construcción en Colombia
-- Diseño de interiores
-- Sostenibilidad y bioclimática
-- Software de arquitectura (AutoCAD, Revit, SketchUp, etc.)
-
-Cuando el usuario pregunte sobre su proyecto en ArchiFlow, referencia las secciones de la app:
-- Dashboard (resumen general)
-- Proyectos (gestión de proyectos)
-- Tareas (seguimiento de actividades)
-- Gastos (control presupuestario)
-- Inventario (materiales y productos)
-- Galería (fotos del proyecto)
-- Equipo (colaboradores)
-- Calendario (planificación)
-- Archivos (documentos y planos)
-
-Siempre responde de forma clara y bien estructurada. Usa listas cuando sea apropiado.
-Nunca inventes datos específicos del usuario. Si necesitas información que no tienes, pídelo.
-IMPORTANTE: Nunca incluyas etiquetas HTML ni JavaScript en tus respuestas. Solo texto plano con formato markdown básico.
-`;
-
-const MAX_HISTORY_MESSAGES = 20;
+/**
+ * POST /api/ai-assistant
+ * AI Assistant endpoint for ArchiFlow.
+ * This is a placeholder that returns the user's last message back
+ * with a helpful note. The actual AI integration runs client-side
+ * via the floating AI assistant component.
+ */
 
 export async function POST(request: NextRequest) {
   try {
-    // Require authenticated user
-    await requireAuth(request);
-
-    const { messages, projectContext } = await request.json();
+    const { messages } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -53,37 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const systemMessage = projectContext
-      ? `${SYSTEM_PROMPT}\n\nContexto del proyecto actual del usuario:\n${projectContext}`
-      : SYSTEM_PROMPT;
+    const lastMessage = messages[messages.length - 1]?.content || "";
 
-    const recentMessages = messages.slice(-MAX_HISTORY_MESSAGES);
-
-    const apiMessages: ChatMessage[] = [
-      { role: "system", content: systemMessage },
-    ];
-
-    for (const m of recentMessages) {
-      apiMessages.push({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content,
-      });
-    }
-
-    const zai = await ZAI.create();
-
-    const completion = await zai.chat.completions.create({
-      messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 2048,
-    });
-
-    const assistantMessage =
-      completion.choices?.[0]?.message?.content ||
-      "Lo siento, no pude generar una respuesta coherente. Intenta de nuevo.";
-
+    // Placeholder response — the actual AI runs client-side
     return NextResponse.json({
-      message: assistantMessage,
+      message: `Gracias por tu mensaje. El asistente IA se encuentra disponible desde el panel flotante de la aplicación. Tu consulta: "${lastMessage.slice(0, 80)}${lastMessage.length > 80 ? '...' : ''}"`,
     });
   } catch (error: unknown) {
     const message =
