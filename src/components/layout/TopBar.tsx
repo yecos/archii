@@ -1,13 +1,14 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { avatarColor } from '@/lib/helpers';
 import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
 
 export default function TopBar() {
   const {
     screen, navigateTo, setSidebarOpen, currentProject, darkMode, toggleTheme,
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
-    initials, avatarColor, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
+    initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
   } = useApp();
 
