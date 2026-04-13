@@ -2210,6 +2210,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const isEmailAdmin = authUser ? ADMIN_EMAILS.includes(authUser.email || '') : false;
   const isAdmin = myRole === 'Admin' || myRole === 'Director' || isEmailAdmin;
 
+  // User display helpers
+  const userName = authUser?.displayName || authUser?.email?.split('@')[0] || '';
+  const initials = getInitials(userName);
+  const screenTitles = SCREEN_TITLES;
+
   const activeTasks = tasks.filter(t => t.data.status !== 'Completado');
   const completedTasks = tasks.filter(t => t.data.status === 'Completado');
   const overdueTasks = activeTasks.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
