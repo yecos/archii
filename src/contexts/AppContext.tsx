@@ -11,6 +11,10 @@ import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioCo
 import { getFirebase } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 
+import { useFirestoreData } from '@/hooks/useFirestoreData';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 
 /* ===== APP CONTEXT ===== */
@@ -176,6 +180,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [chatDmUser, setChatDmUser] = useState<string | null>(null);
+
+  // Chat reply state
+  const [chatReplyingTo, setChatReplyingTo] = useState<any>(null);
+
+  // Chat reactions
+  const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
+
+  // Typing indicator
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+
+  // Chat context menu
+  const [chatMenuMsg, setChatMenuMsg] = useState<string | null>(null);
+
+  // Chat search within conversation
+  const [chatMsgSearch, setChatMsgSearch] = useState('');
 
   // Theme state
   const [darkMode, setDarkMode] = useState(true);
@@ -1622,6 +1641,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
+      // Support reply-to
+      if (chatReplyingTo) {
+        msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid };
+      }
       if (chatProjectId === '__general__') { await db.collection('generalMessages').add(msgData); }
       else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
         const ids = [authUser.uid, chatDmUser].sort();
@@ -1631,6 +1654,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
       else { await db.collection('projects').doc(chatProjectId).collection('messages').add(msgData); }
       setForms(p => ({ ...p, chatInput: '' }));
+      setChatReplyingTo(null);
     } catch { showToast('Error al enviar', 'error'); }
   };
 
@@ -1748,6 +1772,72 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (audioPreviewBlobRef.current) { await sendVoiceNote(); return; }
     if (pendingFiles.length > 0) { await sendPendingFiles(); }
     if (forms.chatInput?.trim()) { await sendMessage(); }
+  };
+
+  // Toggle reaction on a message
+  const toggleReaction = async (msgId: string, emoji: string) => {
+    if (!authUser) return;
+    const uid = authUser.uid;
+    setMessageReactions(prev => {
+      const msgReactions = { ...prev[msgId] };
+      const users = msgReactions[emoji] || [];
+      if (users.includes(uid)) {
+        msgReactions[emoji] = users.filter((u: string) => u !== uid);
+        if (msgReactions[emoji].length === 0) delete msgReactions[emoji];
+      } else {
+        msgReactions[emoji] = [...users, uid];
+      }
+      return { ...prev, [msgId]: msgReactions };
+    });
+    try {
+      const db = getFirebase().firestore();
+      let collection: string;
+      if (chatProjectId === '__general__') collection = 'generalMessages';
+      else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
+        const ids = [authUser.uid, chatDmUser].sort();
+        collection = `directMessages/dm_${ids[0]}_${ids[1]}/messages`;
+      } else {
+        collection = `projects/${chatProjectId}/messages`;
+      }
+      const reactionRef = db.collection(collection).doc(msgId).collection('reactions').doc(emoji);
+      const snap = await reactionRef.get();
+      if (snap.exists) {
+        const data = snap.data();
+        if (data.users.includes(uid)) {
+          if (data.users.length <= 1) await reactionRef.delete();
+          else await reactionRef.update({ users: data.users.filter((u: string) => u !== uid) });
+        } else {
+          await reactionRef.update({ users: [...data.users, uid] });
+        }
+      } else {
+        await reactionRef.set({ users: [uid] });
+      }
+    } catch (err) { console.error('[ArchiFlow] Reaction error:', err); }
+  };
+
+  // Delete a chat message (only own messages)
+  const deleteMessage = async (msgId: string) => {
+    try {
+      const db = getFirebase().firestore();
+      let collection: string;
+      if (chatProjectId === '__general__') collection = 'generalMessages';
+      else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
+        const ids = [authUser.uid, chatDmUser].sort();
+        collection = `directMessages/dm_${ids[0]}_${ids[1]}/messages`;
+      } else {
+        collection = `projects/${chatProjectId}/messages`;
+      }
+      await db.collection(collection).doc(msgId).delete();
+      setChatMenuMsg(null);
+      showToast('Mensaje eliminado');
+    } catch { showToast('Error al eliminar', 'error'); }
+  };
+
+  // Copy message text to clipboard
+  const copyMessageText = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setChatMenuMsg(null);
+    showToast('Texto copiado');
   };
 
   // Audio player
@@ -2253,7 +2343,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   // Get platform info for install guide
-  const detectPlatform = () => {
+  const getPlatform = () => {
     const ua = navigator.userAgent;
     if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
     if (/Android/.test(ua)) return 'android';
@@ -2261,7 +2351,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (/Mac/.test(ua)) return 'mac';
     return 'other';
   };
-  const platform = detectPlatform();
+  const platform = getPlatform();
 
   /* ===== TIME TRACKING FUNCTIONS ===== */
   const startTimeTracking = () => {
@@ -2390,11 +2480,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return Math.max(0, Math.ceil((new Date(phaseStart).getTime() - new Date(timelineStart).getTime()) / (1000 * 60 * 60 * 24)));
   };
 
-
-  // ===== DERIVED VALUES =====
-  const userName = authUser?.displayName || authUser?.email?.split('@')[0] || '';
-  const initials = getInitials(userName || 'U');
-  const screenTitles = SCREEN_TITLES;
 
   // ===== CONTEXT VALUE =====
   const ctx = {
@@ -2570,6 +2655,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setShowEmojiPicker,
     chatDmUser,
     setChatDmUser,
+    chatReplyingTo,
+    setChatReplyingTo,
+    messageReactions,
+    setMessageReactions,
+    typingUsers,
+    setTypingUsers,
+    chatMenuMsg,
+    setChatMenuMsg,
+    chatMsgSearch,
+    setChatMsgSearch,
+    toggleReaction,
+    deleteMessage,
+    copyMessageText,
     installPrompt,
     setInstallPrompt,
     showInstallBanner,
