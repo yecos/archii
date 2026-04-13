@@ -361,17 +361,33 @@ export const DEFAULT_ROLE_PERMS: Record<string, string[]> = {
   'Portal cliente': ['Admin', 'Director', 'Cliente'],
 };
 
+/* ===== CONSTANTES FASE 5 — PREMIUM ===== */
+
+/** Estados del punch list */
+export const PUNCH_STATUSES = ['Pendiente', 'En progreso', 'Resuelto', 'Verificado'] as const;
+
+/** Condiciones climáticas para bitácora */
+export const WEATHER_CONDITIONS = ['Soleado', 'Parcialmente nublado', 'Nublado', 'Lluvia ligera', 'Lluvia fuerte', 'Tormenta', 'Viento fuerte'] as const;
+
+/** Actividades de obra para bitácora */
+export const LOG_ACTIVITIES = ['Excavación', 'Cimentación', 'Estructura', 'Mampostería', 'Instalaciones eléctricas', 'Instalaciones hidráulicas', 'Acabados', 'Pintura', 'Pisos', 'Carpintería', 'Limpieza', 'Otro'] as const;
+
 /** Navegación del sidebar */
 export const NAV_ITEMS = [
   { id: 'dashboard', icon: '📊', label: 'Dashboard' },
   { id: 'profile', icon: '👤', label: 'Mi Perfil' },
   { id: 'projects', icon: '📁', label: 'Proyectos' },
   { id: 'tasks', icon: '✅', label: 'Tareas' },
+  { id: 'kanbanAvanzado', icon: '📋', label: 'Kanban' },
+  { id: 'gantt', icon: '📊', label: 'Gantt' },
   { id: 'timeTracking', icon: '⏱️', label: 'Tiempo' },
   { id: 'chat', icon: '💬', label: 'Chat' },
   { id: 'budget', icon: '💰', label: 'Presupuestos' },
   { id: 'files', icon: '📂', label: 'Archivos' },
   { id: 'obra', label: 'Obra', icon: '🏗️' },
+  { id: 'bitacora', icon: '📓', label: 'Bitácora' },
+  { id: 'checklists', icon: '✅', label: 'Checklists' },
+  { id: 'punchList', icon: '🔨', label: 'Punch List' },
   { id: 'suppliers', icon: '🏪', label: 'Proveedores' },
   { id: 'team', icon: '👥', label: 'Equipo' },
   { id: 'companies', icon: '🏢', label: 'Empresas' },
@@ -381,6 +397,7 @@ export const NAV_ITEMS = [
   { id: 'gallery', icon: '📸', label: 'Galería' },
   { id: 'inventory', icon: '📦', label: 'Inventario' },
   { id: 'reports', icon: '📈', label: 'Reportes' },
+  { id: 'notas', icon: '📝', label: 'Notas' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
 ] as const;
 
@@ -389,11 +406,16 @@ export const SCREEN_TITLES: Record<string, string> = {
   profile: 'Mi Perfil',
   projects: 'Proyectos',
   tasks: 'Tareas',
+  kanbanAvanzado: 'Tablero Kanban',
+  gantt: 'Diagrama Gantt',
   timeTracking: 'Time Tracking',
   chat: 'Chat',
   budget: 'Presupuestos',
   files: 'Archivos',
   obra: 'Seguimiento de Obra',
+  bitacora: 'Bitácora de Obra',
+  checklists: 'Checklists de Obra',
+  punchList: 'Punch List',
   suppliers: 'Proveedores',
   team: 'Equipo',
   companies: 'Empresas',
@@ -403,5 +425,6 @@ export const SCREEN_TITLES: Record<string, string> = {
   gallery: 'Galería de Fotos',
   inventory: 'Inventario',
   reports: 'Reportes',
+  notas: 'Notas Rápidas',
   admin: 'Panel de Administración',
 };
