@@ -15,17 +15,10 @@ const config: Config = {
       },
       colors: {
         "af-accent": "var(--af-accent)",
-        "af-accent2": "var(--af-accent2)",
         "af-bg1": "var(--af-bg1)",
         "af-bg2": "var(--af-bg2)",
         "af-bg3": "var(--af-bg3)",
         "af-bg4": "var(--af-bg4)",
-        "af-text3": "var(--af-text3)",
-        card: "var(--card)",
-        border: "var(--border)",
-        "muted-foreground": "var(--muted-foreground)",
-        foreground: "var(--foreground)",
-        background: "var(--background)",
       },
       keyframes: {
         fadeIn: {
