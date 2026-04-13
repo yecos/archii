@@ -1270,7 +1270,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
       if (!res.ok) return null;
       return await res.json();
-    } catch (err) { console.error('[ArchiFlow] graphApiGet error:', err); return null; }
+    } catch { return null; }
   }, [msAccessToken, refreshMsToken]);
 
   const ensureProjectFolder = async (projectName: string) => {
@@ -1314,7 +1314,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       setOdProjectFolder(projFolderId);
       setMsLoading(false);
       return projFolderId;
-    } catch (err) { console.error('[ArchiFlow] ensureProjectFolder error:', err); setMsLoading(false); return null; }
+    } catch { setMsLoading(false); return null; }
   };
 
   const loadOneDriveFiles = async (folderId: string) => {
@@ -1612,10 +1612,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveProject = async () => {
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().FieldValue.serverTimestamp();
-      const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
       else {
         await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
@@ -1632,7 +1632,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         }
       }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
-    } catch (err) { console.error('[ArchiFlow] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
+    } catch { showToast('Error al guardar', 'error'); }
   };
 
   const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
@@ -1648,10 +1648,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     setIsSavingTask(true);
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
-      const db = getFirebase().firestore();
-      const ts = getFirebase().FieldValue.serverTimestamp();
-      const data = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: forms.taskAssignee || '', priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
         await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
@@ -1664,7 +1664,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         }
       }
       closeModal('task'); setEditingId(null); setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
-    } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
     finally { setIsSavingTask(false); }
   };
 
