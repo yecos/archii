@@ -1,10 +1,6 @@
 'use client';
 import React, { Component, ReactNode } from 'react';
 
-/* ===== Error Boundary =====
- * Captura errores de renderizado en componentes hijos.
- * Muestra una UI de fallback en vez de romper toda la app.
- */
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -13,24 +9,26 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  componentStack: string;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, componentStack: '' };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ArchiFlow] ErrorBoundary caught:', error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack || '' });
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, componentStack: '' });
   };
 
   render() {
@@ -52,11 +50,22 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             ⚠️
           </div>
           <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: 'var(--foreground, #f0f0ee)' }}>
-            Error al cargar
+            ArchiFlow — Error
           </h3>
-          <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #9a9b9e)', maxWidth: '300px', marginBottom: '16px' }}>
-            {this.state.error?.message || 'Algo salió mal. Intenta de nuevo.'}
+          <p style={{ fontSize: '13px', color: '#ef4444', maxWidth: '400px', marginBottom: '8px', fontFamily: 'monospace', wordBreak: 'break-word', background: 'rgba(239,68,68,0.08)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>
+            {this.state.error?.message || 'Error desconocido'}
           </p>
+          {this.state.componentStack && (
+            <pre style={{
+              fontSize: '10px', color: 'var(--muted-foreground, #9a9b9e)',
+              maxWidth: '500px', maxHeight: '120px', overflow: 'auto',
+              background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px',
+              textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              marginBottom: '12px',
+            }}>
+              {this.state.componentStack}
+            </pre>
+          )}
           <button
             onClick={this.handleRetry}
             style={{
