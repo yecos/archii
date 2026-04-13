@@ -1,18 +1,4 @@
-'use client';
-
-import { useEffect } from 'react';
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error('[ArchiFlow]', error);
-  }, [error]);
-
+export default function NotFound() {
   return (
     <div
       className="animate-fadeIn"
@@ -61,35 +47,33 @@ export default function Error({
           }}
         />
 
-        {/* Warning Icon */}
+        {/* 404 Display */}
         <div
           style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1.5rem',
+            fontFamily: "'DM Serif Display', serif",
+            fontSize: 'clamp(4rem, 12vw, 7rem)',
+            fontWeight: 400,
+            lineHeight: 1,
+            marginBottom: '0.25rem',
+            background: 'linear-gradient(135deg, var(--af-accent), var(--af-accent2))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
           }}
         >
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--af-accent)"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
+          404
         </div>
+
+        {/* Subtle decorative line under 404 */}
+        <div
+          style={{
+            width: '32px',
+            height: '2px',
+            background: 'linear-gradient(90deg, var(--af-accent), transparent)',
+            borderRadius: '1px',
+            marginBottom: '1.75rem',
+          }}
+        />
 
         {/* Heading */}
         <h2
@@ -101,7 +85,7 @@ export default function Error({
             lineHeight: 1.3,
           }}
         >
-          Algo salió mal
+          Página no encontrada
         </h2>
 
         {/* Description */}
@@ -109,38 +93,17 @@ export default function Error({
           style={{
             fontSize: '0.875rem',
             color: 'var(--muted-foreground)',
-            marginBottom: '0.5rem',
-            lineHeight: 1.5,
+            marginBottom: '2rem',
+            lineHeight: 1.6,
             maxWidth: '320px',
           }}
         >
-          Intenta recargar la página
+          Lo sentimos, la página que buscas no existe o fue movida.
         </p>
 
-        {/* Error message */}
-        {error.message && (
-          <p
-            style={{
-              fontSize: '0.8125rem',
-              color: 'var(--af-red)',
-              backgroundColor: 'var(--card)',
-              border: '1px solid var(--border)',
-              borderRadius: '0.5rem',
-              padding: '0.625rem 1rem',
-              marginBottom: '1.5rem',
-              maxWidth: '100%',
-              wordBreak: 'break-word',
-              fontFamily: 'monospace',
-              lineHeight: 1.5,
-            }}
-          >
-            {error.message}
-          </p>
-        )}
-
-        {/* Retry Button */}
-        <button
-          onClick={reset}
+        {/* Home Button */}
+        <a
+          href="/"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -157,6 +120,7 @@ export default function Error({
             transition: 'all 0.15s ease',
             fontFamily: "'DM Sans', sans-serif",
             lineHeight: 1,
+            textDecoration: 'none',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'var(--af-accent2)';
@@ -175,7 +139,7 @@ export default function Error({
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
         >
-          {/* Refresh icon */}
+          {/* Arrow left icon */}
           <svg
             width="16"
             height="16"
@@ -186,13 +150,11 @@ export default function Error({
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-            <path d="M16 16h5v5" />
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
           </svg>
-          Reintentar
-        </button>
+          Volver al inicio
+        </a>
       </div>
     </div>
   );
