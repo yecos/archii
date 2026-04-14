@@ -1130,3 +1130,46 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Verificacion: npx tsc --noEmit -> 0 errores TypeScript
   Items del Bloque 3: 14 items, 8 implementados nuevos, 6 ya existentes
+
+2026-04-15 17:10 | DIAGNOSTICO - Login no funciona para usuarios
+  Estado: EN CURSO
+  Objetivo: Diagnosticar por que los usuarios no pueden loguearse (Google, Microsoft, email)
+
+  Diagnostico realizado:
+  1. El codigo de autenticacion (AuthContext.tsx, AuthScreen.tsx) tiene los fixes
+     previos aplicados correctamente (commits ee16a02, c0a81a9).
+  2. El build de Next.js compila sin errores (14/14 paginas estaticas).
+  3. El sitio en Vercel devuelve DEPLOYMENT_NOT_FOUND en archii.vercel.app
+     y Authentication Required (401) en la URL interna del proyecto.
+  4. El proyecto tiene Vercel SSO Protection habilitado, lo cual bloquea
+     el acceso a TODOS los usuarios que no estan autenticados en Vercel.
+
+  Causa raiz principal: Vercel SSO/Authentication Protection esta habilitado
+    en el proyecto. Esto significa que antes de que los usuarios puedan ver
+    la pantalla de login de ArchiFlow (Firebase), deben pasar por la
+    autenticacion de Vercel (SSO). Si los usuarios no tienen acceso SSO,
+    ven una pantalla de "Authentication Required" y nunca llegan a la app.
+
+  Bug de codigo encontrado:
+  BUG-20260415-010: useRef no importado en AuthScreen.tsx
+    Severidad: CRITICA
+    Causa raiz: En AuthScreen.tsx linea 146 se usa useRef(true) para
+      mountedRef, pero useRef no esta en la lista de imports de React.
+      Esto causa ReferenceError en runtime cuando el componente intenta
+      ejecutar handleLoginClick, handleRegisterClick, handleGoogleClick
+      o handleMicrosoftClick (todas usan mountedRef.current).
+    Fix: Agregar useRef al import de React en AuthScreen.tsx.
+
+  Accion requerida por el usuario (no puede hacerse desde codigo):
+    1. Ir a Vercel Dashboard > archii > Settings > Deployment Protection
+    2. Desactivar "Vercel Authentication" o configurar SSO para los usuarios
+    3. Alternativamente, agregar un dominio personalizado sin proteccion
+
+  Archivos modificados (1):
+    * src/components/layout/AuthScreen.tsx
+      - Linea 2: Agregado 'useRef' a import de React
+        Antes: import React, { useState, useEffect } from 'react';
+        Despues: import React, { useState, useEffect, useRef } from 'react';
+
+  Verificacion: npx next build -> exitoso (14/14 paginas)
+  Push: Pendiente (esperando confirmacion del usuario sobre Vercel SSO)
