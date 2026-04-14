@@ -60,8 +60,16 @@ function useFirebaseStatus(triggerKey: number) {
           setDetail('OAuthProvider no disponible.');
           return;
         }
+        // Verify the app has a valid config (not empty strings)
+        const appOptions = w.firebase.apps[0]?.options || {};
+        if (!appOptions.apiKey || !appOptions.authDomain || !appOptions.projectId) {
+          if (attempts < maxAttempts) { scheduleCheck(500); return; }
+          setStatus('error');
+          setDetail('Firebase configurado sin credenciales. Verifica NEXT_PUBLIC_FIREBASE_* en Vercel > Settings > Environment Variables.');
+          return;
+        }
         setStatus('ok');
-        setDetail(`Firebase OK — ${w.firebase.apps[0]?.options?.projectId || '?'}`);
+        setDetail(`Firebase OK — ${appOptions.projectId}`);
       } catch (e: any) {
         if (attempts < maxAttempts) { scheduleCheck(500); return; }
         setStatus('error');
@@ -300,7 +308,6 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
               placeholder="Mínimo 6 caracteres"
               value={forms.loginPass || ''}
               onChange={e => { setForms(p => ({ ...p, loginPass: e.target.value })); clearLoginError('loginPass'); }}
-              onBlur={e => trimLoginField('loginPass', e.target.value)}
               onKeyDown={handleLoginKeyDown}
               disabled={authLoading}
             />
@@ -390,7 +397,6 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
               placeholder="Mínimo 6 caracteres"
               value={forms.regPass || ''}
               onChange={e => { setForms(p => ({ ...p, regPass: e.target.value })); clearRegisterError('regPass'); }}
-              onBlur={e => trimRegisterField('regPass', e.target.value)}
               onKeyDown={handleRegisterKeyDown}
               disabled={authLoading}
             />

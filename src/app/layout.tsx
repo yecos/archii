@@ -93,14 +93,15 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
-              firebase.initializeApp({
-                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ""}",
-                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""}",
-                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ""}",
-                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || ""}",
-                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || ""}",
-                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ""}",
-              });
+              var cfg = {
+                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0"}",
+                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "archiflow-c2855.firebaseapp.com"}",
+                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "archiflow-c2855"}",
+                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "archiflow-c2855.firebasestorage.app"}",
+                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "247246043394"}",
+                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:247246043394:web:408e1365957eea4ee2aa1b"}",
+              };
+              firebase.initializeApp(cfg);
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }
             window.__AF_FB = true;
