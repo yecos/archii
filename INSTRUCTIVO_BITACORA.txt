@@ -221,6 +221,75 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 06:00 | ETAPA 6 - Documentacion, Tipos Finales y Cleanup
+  Estado: COMPLETADA
+  Tag de respaldo: backup-pre-etapa6-docs-types-20260415
+  Objetivo: Mejorar calidad de codigo (tipado, cleanup, error handling)
+  Commits realizados: 4
+
+  Tarea 6.1 - Eliminar codigo muerto + limpiar console.log de produccion
+    Archivos modificados (6):
+      * src/hooks/useAuth.ts - ELIMINADO (190 lineas, codigo muerto nunca importado)
+      * src/contexts/AuthContext.tsx - Eliminados 13 console.log (auth flow)
+      * src/app/api/whatsapp/webhook/route.ts - Eliminados 9 console.log
+      * src/lib/whatsapp-service.ts - Eliminados 2 console.log
+      * src/contexts/NotifContext.tsx - Eliminado 1 console.log
+      * src/contexts/FirestoreContext.tsx - Eliminado 1 console.log
+    Total: 26 console.log eliminados, 43 console.error/warn preservados
+    Commit: 9c863fb
+
+  Tarea 6.2 - Tipar serverTimestamp() — eliminar 23 as any
+    Archivos modificados (8):
+      * src/lib/firebase-service.ts - Agregado helper serverTimestamp() tipado
+      * 7 contextos: FirestoreContext, AuthContext, GalleryContext, CalendarContext,
+        InventoryContext, CommentsContext, ChatContext
+    Reemplazadas 22x (getFirebase() as any).firestore.FieldValue.serverTimestamp()
+    Reemplazada 1x (fb as any).firestore.FieldValue.serverTimestamp()
+    Commit: 8d87b91
+
+  Tarea 6.3 - Error Boundaries individuales por pantalla
+    Archivos modificados (2):
+      * src/components/common/ErrorBoundary.tsx - Agregada prop 'label'
+      * src/app/HomeContent.tsx - 21 pantallas envueltas en ErrorBoundary propio
+    Un crash en cualquier pantalla NO rompe las demas
+    Commit: 3e1c6b6
+
+  Tarea 6.4+6.5+6.6 - Tipado final + cleanup
+    Archivos modificados (11):
+      * FirestoreContext.tsx - err:any → err:unknown con instanceof Error
+      * AuthContext.tsx - err:any → err:unknown con type narrowing
+      * UIContext.tsx - Cleanup de appinstalled event listener (memory leak fix)
+      * firebase-service.ts - Agregado snapToDocs<T>() helper tipado
+    Commit: 136e4ee
+
+  Resumen ETAPA 6:
+    - 4 commits: 9c863fb, 8d87b91, 3e1c6b6, 136e4ee
+    - 190 lineas de codigo muerto eliminadas (useAuth.ts)
+    - 26 console.log de produccion eliminados
+    - 25 as any eliminados (23 serverTimestamp + 2 err:any)
+    - 21 error boundaries individuales por pantalla
+    - 1 memory leak corregido (appinstalled listener)
+    - 0 errores TypeScript en todo el proceso
+    - Build exitoso
+
+  Estado del proyecto tras ETAPA 6:
+    - 6 etapas completadas del plan de refactorizacion
+    - Bundle reducido ~1,280KB gz desde ETAPA 1
+    - 0 dependencias muertas
+    - Todos los contextos tipados con useMemo/useCallback
+    - 21 pantallas con error boundaries individuales
+    - Logs de produccion limpios (solo console.error en catch blocks)
+    - Firestore helpers tipados (serverTimestamp, snapToDocs, FieldValue)
+
+  RESUMEN COMPLETO ETAPA 1-6:
+    - ETAPA 1: Limpieza y estabilidad (7 tareas) — 7 commits
+    - ETAPA 2: Descomposicion FirestoreContext (7 pasos) — 7 commits
+    - ETAPA 3: UX/Performance (6 tareas) — 5 commits
+    - ETAPA 4: Separacion useApp() en hooks de dominio (4 tareas) — 4 commits
+    - ETAPA 5: Code splitting avanzado (3 tareas) — 4 commits
+    - ETAPA 6: Documentacion y tipos (4 tareas) — 4 commits
+    Total: 31 commits, ~60+ archivos modificados, 0 errores TypeScript
+
 2026-04-15 04:00 | ETAPA 5 - Code Splitting Avanzado + Limpieza de Bundle
   Estado: COMPLETADA
   Tag de respaldo: backup-pre-etapa5-codesplit-20260415
