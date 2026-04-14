@@ -375,7 +375,7 @@ export default function ObraScreen() {
                                 <div className="grid grid-cols-3 gap-2">
                                   {log.data.photos.slice(0, 6).map((photo: string, i: number) => (
                                     <div key={i} className="aspect-square rounded-lg overflow-hidden bg-[var(--af-bg4)]">
-                                      <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                                      <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                                     </div>
                                   ))}
                                 </div>

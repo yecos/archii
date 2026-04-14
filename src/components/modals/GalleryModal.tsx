@@ -25,7 +25,7 @@ export default function GalleryModal({ open, onClose }: { open: boolean; onClose
         <FormField label="Foto" required>
           {ui.forms.galleryImageData ? (
             <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
-              <img src={ui.forms.galleryImageData} alt="Preview" className="w-full max-h-[200px] object-contain bg-[var(--af-bg3)]" />
+              <img src={ui.forms.galleryImageData} alt="Preview" className="w-full max-h-[200px] object-contain bg-[var(--af-bg3)]" loading="lazy" />
               <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center text-sm hover:bg-black/70 transition-colors" onClick={() => ui.setForms(p => ({ ...p, galleryImageData: '' }))}>
                 <X className="w-4 h-4" />
               </button>

@@ -73,7 +73,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
         <FormField label="Foto del producto">
           {forms.invProdImage ? (
             <div className="relative rounded-xl overflow-hidden border border-[var(--border)] inline-block">
-              <img src={forms.invProdImage} alt="Preview" className="w-full max-h-[140px] object-contain bg-[var(--af-bg3)]" />
+              <img src={forms.invProdImage} alt="Preview" className="w-full max-h-[140px] object-contain bg-[var(--af-bg3)]" loading="lazy" />
               <button className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center text-xs hover:bg-black/70 transition-colors cursor-pointer" onClick={() => setForms(p => ({ ...p, invProdImage: '' }))}>
                 <X className="w-3 h-3" />
               </button>

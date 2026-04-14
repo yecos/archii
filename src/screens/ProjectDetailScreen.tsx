@@ -568,7 +568,7 @@ export default function ProjectDetailScreen() {
                               {d.photos?.length > 0 && (
                                 <div className="flex gap-1.5 mt-2">
                                   {d.photos!.slice(0, 4).map((p: string, i: number) => (
-                                    <img key={i} src={p} alt="" className="w-14 h-14 rounded-lg object-cover border border-[var(--border)]" />
+                                    <img key={i} src={p} alt="" className="w-14 h-14 rounded-lg object-cover border border-[var(--border)]" loading="lazy" />
                                   ))}
                                   {d.photos!.length > 4 && <div className="w-14 h-14 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[11px] text-[var(--muted-foreground)] border border-[var(--border)]">+{d.photos!.length - 4}</div>}
                                 </div>
@@ -651,7 +651,7 @@ export default function ProjectDetailScreen() {
                           <div className="mb-4">
                             <div className="text-[11px] font-semibold uppercase text-[var(--muted-foreground)] mb-2">Fotos del Día ({d.photos!.length})</div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              {d.photos!.map((p: string, i: number) => <img key={i} src={p} alt="" className="w-full h-28 rounded-lg object-cover border border-[var(--border)] cursor-pointer hover:opacity-90 transition-opacity" />)}
+                              {d.photos!.map((p: string, i: number) => <img key={i} src={p} alt="" className="w-full h-28 rounded-lg object-cover border border-[var(--border)] cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />)}
                             </div>
                           </div>
                         )}
@@ -779,7 +779,7 @@ export default function ProjectDetailScreen() {
                         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                           {(cmt.logForm.photos || []).map((p: string, i: number) => (
                             <div key={i} className="relative flex-shrink-0 w-20 h-20">
-                              <img src={p} alt="" className="w-full h-full rounded-lg object-cover border border-[var(--border)]" />
+                              <img src={p} alt="" className="w-full h-full rounded-lg object-cover border border-[var(--border)]" loading="lazy" />
                               <button className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center cursor-pointer border-none leading-none" onClick={() => { const arr = (cmt.logForm.photos || []).filter((_: string, idx: number) => idx !== i); cmt.setLogForm((pf: Record<string, any>) => ({ ...pf, photos: arr })); }}>✕</button>
                             </div>
                           ))}

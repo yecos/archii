@@ -23,7 +23,7 @@ export default function LightboxViewer() {
             {/* Download button */}
             <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => od.downloadOneDriveFile(gallery.lightboxPhoto.id, gallery.lightboxPhoto.name)} title="Descargar"><Download size={18} /></button>
             {/* Image */}
-            <img src={gallery.lightboxPhoto.thumbnailLarge || gallery.lightboxPhoto.webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={gallery.lightboxPhoto.name || ''} />
+            <img src={gallery.lightboxPhoto.thumbnailLarge || gallery.lightboxPhoto.webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={gallery.lightboxPhoto.name || ''} loading="lazy" />
             {/* Navigation */}
             <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
               <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
@@ -53,7 +53,7 @@ export default function LightboxViewer() {
               </div>
             </div>
             {/* Image */}
-            <img src={gallery.lightboxPhoto.data.imageData} alt={gallery.lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80dvh] object-contain rounded-lg" />
+            <img src={gallery.lightboxPhoto.data.imageData} alt={gallery.lightboxPhoto.data.caption || 'Foto'} className="max-w-full max-h-[80dvh] object-contain rounded-lg" loading="lazy" />
             {/* Navigation */}
             <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
               <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={gallery.lightboxPrev}>
