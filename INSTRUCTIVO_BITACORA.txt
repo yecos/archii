@@ -312,6 +312,84 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     - Build exitoso (14/14 paginas estaticas generadas)
     - Vercel deploy automatico verificado
 
+2026-04-15 14:00 | FEATURE PACK v8 — Client Portal + FilesScreen + Mega Cleanup
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v8-cleanup-features-20260415
+  Objetivo: Completar placeholders + eliminar dead code masivo
+  Commits realizados: 1
+
+  Client Portal real:
+    - PortalScreen.tsx reescrito: vista solo-lectura para clientes
+    - 4 tabs: Resumen (progreso ring, stats), Fotos (galería con lightbox),
+      Facturas (resumen + lista), Actividad (feed unificado)
+    - Cards de proyecto con BudgetProgressBar, badges de estado, actividad reciente
+    - Welcome header con KPIs (proyectos, activos, facturas pendientes)
+
+  FilesScreen real:
+    - FilesScreen.tsx reescrito: hub global de archivos
+    - 3 fuentes: Firestore ProjectFiles, OneDrive, Galería
+    - Filtros por proyecto, categoría (Documentos/Imágenes/Planos/Otros), búsqueda, orden
+    - Grid y list view, iconos por tipo de archivo, badges de origen
+    - Lightbox integrado para imágenes
+
+  Mega Cleanup:
+    - 35 archivos UI eliminados (shadcn sin uso + TypewriterText)
+    - 22 dependencias npm eliminadas:
+      18 radix dead deps (accordion, avatar, badge, calendar, card, carousel,
+        checkbox, collapsible, command, context-menu, dropdown-menu, form,
+        hover-card, menubar, navigation-menu, popover, radio-group,
+        scroll-area, select, slider, tabs, textarea, toggle-group)
+      + framer-motion, vaul, zod, input-otp
+    - StaggerContainer + AnimatedTabs reescritos sin framer-motion
+    - HomeContent.tsx: AnimatePresence/motion.div reemplazados por CSS animate-fadeIn
+  Resultado: -5,265 lineas eliminadas, +1,676 agregadas = -3,589 netas
+  Build exitoso, 0 errores TypeScript
+
+2026-04-15 15:00 | FEATURE PACK v9 — WhatsApp Comandos + Audit Trail + Import Excel/CSV
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v9-final-features-20260415
+  Objetivo: Completar las 3 features opcionales restantes
+  Commits realizados: 1
+
+  WhatsApp Comandos Enriquecidos:
+    - 6 comandos nuevos: resumen, estado [proyecto], gastos [proyecto],
+      tareas [proyecto], equipo, ayuda
+    - Matching difuso 4-niveles para nombres de proyecto
+    - Truncado a 4096 chars (limite WhatsApp)
+    - Formato amigable con emojis, todo en español
+    - Compatibilidad con comandos legacy (botones)
+
+  Audit Trail:
+    - audit-trail.ts: logAudit() fire-and-forget en Firestore
+    - Integrado en 10 funciones CRUD de FirestoreContext
+    - extractChanges() detecta cambios significativos (status, budget, etc.)
+    - AuditLogTable.tsx: tabla filtrable en AdminScreen
+    - Diffs legibles: "Estado: En progreso → Completado"
+
+  Importar Excel/CSV:
+    - import-data.ts: importProjects, importTasks, importExpenses
+    - Soporte .xlsx/.csv, validación de columnas, parsing fechas/montos
+    - ImportDataModal.tsx: wizard 4 pasos con preview
+    - Botones importar en ProjectsScreen, TasksScreen, BudgetScreen
+    - Templates descargables para cada tipo
+
+  Resumen FEATURE PACK v9:
+    - 1 commit: a011263
+    - 11 archivos modificados, 4 creados
+    - +2,492 lineas agregadas, -82 eliminadas
+    - 0 errores TypeScript
+    - Build exitoso
+
+  *** ESTADO FINAL DEL PROYECTO ***
+  Feature Packs completados (v7 + v8 + v9):
+    - v7: 11 funcionalidades (Dark Mode, Subtareas, Alertas, Comentarios Tareas,
+      Eventos Recurrentes, Canales Notificacion, IA Sugestiones, Aprobaciones,
+      .env.example cleanup, admin email env, prisma removal)
+    - v8: Client Portal, FilesScreen, Mega Cleanup (35 UI + 22 deps)
+    - v9: WhatsApp Comandos, Audit Trail, Import Excel/CSV
+  Total: 20 funcionalidades implementadas en 3 sesiones
+  Build exitoso, Vercel deploy automatico, 0 errores TypeScript
+
 2026-04-14 15:30 | BUG FIX - Arreglar login con Google, Microsoft y correo/contraseña
   Estado: RESUELTO
   Tag de respaldo: backup-pre-fix-login-auth-20260414
