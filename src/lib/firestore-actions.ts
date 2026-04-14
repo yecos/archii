@@ -29,7 +29,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
   return fbAction('guardar proyecto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     const projData: Record<string, any> = {
       name: data.projName,
       status: data.projStatus || 'Concepto',
@@ -86,7 +86,7 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
   return fbAction('guardar tarea', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('tasks').doc(editingId).update({
         title: data.taskTitle,
@@ -134,7 +134,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
   return fbAction('enviar mensaje', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     const msg = {
       ...msgData,
       uid: authUser?.uid,
@@ -156,7 +156,7 @@ export function saveExpense(data: Record<string, any>, editingId: string | null,
   return fbAction('guardar gasto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('expenses').doc(editingId).update({
         concept: data.expConcept,
@@ -195,7 +195,7 @@ export function saveSupplier(data: Record<string, any>, editingId: string | null
   return fbAction('guardar proveedor', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('suppliers').doc(editingId).update({
         name: data.supName,
@@ -240,7 +240,7 @@ export function saveCompany(data: Record<string, any>, editingId: string | null,
   return fbAction('guardar empresa', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('companies').doc(editingId).update({
         name: data.compName,
@@ -281,7 +281,7 @@ export async function uploadProjectFile(projectId: string, file: File, showToast
   return fbAction('subir archivo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     const base64 = await fileToBase64(file);
     await db.collection('projects').doc(projectId).collection('files').add({
       name: file.name,
@@ -309,7 +309,7 @@ export async function saveWorkPhase(projectId: string, data: Record<string, any>
   return fbAction('guardar fase', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('projects').doc(projectId).collection('workPhases').doc(editingId).update({
         name: data.phaseName,
@@ -348,7 +348,7 @@ export function saveApproval(projectId: string, data: Record<string, any>, editi
   return fbAction('guardar aprobación', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('projects').doc(projectId).collection('approvals').doc(editingId).update({
         title: data.apprTitle,
@@ -391,7 +391,7 @@ export function saveMeeting(data: Record<string, any>, editingId: string | null,
   return fbAction('guardar reunión', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await db.collection('meetings').doc(editingId).update({
         title: data.meetTitle,
@@ -436,7 +436,7 @@ export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
 export async function saveGalleryPhoto(data: Record<string, any>, showToast: ToastFn, authUser: any) {
   return fbAction('guardar foto', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('galleryPhotos').add({
       projectId: data.photoProject,
       categoryName: data.photoCategory || 'Otro',
@@ -462,7 +462,7 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
 export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
   return fbAction('guardar producto', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await fb.firestore().collection('invProducts').doc(editingId).update({
         name: data.prodName,
@@ -509,7 +509,7 @@ export async function deleteInvProduct(productId: string, showToast: ToastFn) {
 export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn) {
   return fbAction('guardar categoría', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
       await fb.firestore().collection('invCategories').doc(editingId).update({
         name: data.catName,
@@ -540,7 +540,7 @@ export async function deleteInvCategory(catId: string, showToast: ToastFn) {
 export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: any) {
   return fbAction('registrar movimiento', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invMovements').add({
       productId: data.movProduct,
       type: data.movType,
@@ -567,7 +567,7 @@ export async function deleteInvMovement(movId: string, showToast: ToastFn) {
 export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: any) {
   return fbAction('registrar transferencia', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invTransfers').add({
       productId: data.transProduct,
       productName: data.transProductName || '',
@@ -596,7 +596,7 @@ export async function updateTransferStatus(transId: string, status: string, show
   return fbAction('actualizar transferencia', async () => {
     const fb = getFirebase();
     const updates: any = { status };
-    if (status === 'Completada') updates.completedAt = fb.FieldValue.serverTimestamp();
+    if (status === 'Completada') updates.completedAt = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invTransfers').doc(transId).update(updates);
     showToast(`Transferencia: ${status}`);
   }, showToast);
@@ -608,7 +608,7 @@ export async function updateProjectProgress(projectId: string, progress: number)
   return fbAction('actualizar progreso', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).update({
       progress,
-      updatedAt: getFirebase().FieldValue.serverTimestamp(),
+      updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
     });
   });
 }
@@ -628,7 +628,7 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
   return fbAction('guardar registro de tiempo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     const entryData: Record<string, any> = {
       userId: authUser?.uid,
       userName: authUser?.displayName || authUser?.email || 'Usuario',
@@ -668,7 +668,7 @@ export function saveInvoice(data: Record<string, any>, editingId: string | null,
   return fbAction('guardar factura', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     const proj = data.invProject ? await db.collection('projects').doc(data.invProject).get() : null;
     const projData = proj?.exists ? proj.data() : {};
     const invoiceData: Record<string, any> = {
@@ -702,7 +702,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: string, sho
   return fbAction('actualizar factura', async () => {
     const fb = getFirebase();
     const updates: any = { status };
-    if (status === 'Pagada') updates.paidDate = fb.FieldValue.serverTimestamp();
+    if (status === 'Pagada') updates.paidDate = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invoices').doc(invoiceId).update(updates);
     showToast(`Factura: ${status}`);
   }, showToast);
@@ -721,7 +721,7 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
 export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: any) {
   return fbAction('guardar comentario', async () => {
     const fb = getFirebase();
-    const ts = fb.FieldValue.serverTimestamp();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('comments').add({
       taskId: data.taskId || '',
       projectId: data.projectId || '',
