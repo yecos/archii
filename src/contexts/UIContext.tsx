@@ -2,9 +2,50 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-import { domToast } from '@/lib/toast-dom';
 import { useUIStore } from '@/stores/ui-store';
 import { SCREEN_TITLES } from '@/lib/types';
+
+/* ===== DOM Toast Fallback (inline — funciona siempre, sin depender de imports) ===== */
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+function showToastDOM(message: string, type: ToastType = 'info', duration = 4500) {
+  if (typeof document === 'undefined') return;
+  try {
+    let container = document.getElementById('af-dom-toast-container');
+    if (!container || !document.body.contains(container)) {
+      container = document.createElement('div');
+      container.id = 'af-dom-toast-container';
+      container.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+      document.body.appendChild(container);
+    }
+    const colors: Record<string, {bg:string;border:string;color:string;icon:string}> = {
+      success:{bg:'rgba(16,185,129,0.18)',border:'rgba(16,185,129,0.5)',color:'#34d399',icon:'✓'},
+      error:{bg:'rgba(239,68,68,0.18)',border:'rgba(239,68,68,0.5)',color:'#f87171',icon:'✕'},
+      warning:{bg:'rgba(245,158,11,0.18)',border:'rgba(245,158,11,0.5)',color:'#fbbf24',icon:'⚠'},
+      info:{bg:'rgba(59,130,246,0.18)',border:'rgba(59,130,246,0.5)',color:'#60a5fa',icon:'ℹ'},
+    };
+    const c = colors[type] || colors.info;
+    const el = document.createElement('div');
+    el.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:500;line-height:1.4;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.25);max-width:420px;opacity:0;transform:translateY(-12px) scale(0.95);transition:opacity 0.3s ease,transform 0.3s ease;white-space:nowrap;';
+    el.style.background = c.bg;
+    el.style.border = '1px solid ' + c.border;
+    el.style.color = c.color;
+    const icon = document.createElement('span');
+    icon.textContent = c.icon;
+    icon.style.cssText = 'flex-shrink:0;font-size:14px;font-weight:700;';
+    el.appendChild(icon);
+    const msg = document.createElement('span');
+    msg.textContent = message;
+    el.appendChild(msg);
+    const close = document.createElement('button');
+    close.textContent = '×';
+    close.style.cssText = 'flex-shrink:0;background:none;border:none;color:' + c.color + ';font-size:18px;cursor:pointer;padding:0 2px;opacity:0.7;margin-left:4px;';
+    close.onclick = function() { el.style.opacity='0'; el.style.transform='translateY(-12px) scale(0.95)'; setTimeout(function(){el.remove();},300); };
+    el.appendChild(close);
+    container.appendChild(el);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translateY(0) scale(1)'; }); });
+    setTimeout(function(){ el.style.opacity='0'; el.style.transform='translateY(-12px) scale(0.95)'; setTimeout(function(){ if(el.parentNode) el.remove(); },300); }, duration);
+  } catch(e) { /* silenciar errores de DOM */ }
+}
 
 /* ===== UI CONTEXT ===== */
 interface UIContextType {
@@ -154,8 +195,8 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     } catch {
       // Sonner falló — ignorar
     }
-    // Siempre mostrar toast DOM como garantía (funciona siempre, sin depender de React)
-    domToast(msg, type as 'success' | 'error' | 'warning' | 'info', 4500);
+    // Siempre mostrar toast DOM inline como garantía (funciona siempre)
+    showToastDOM(msg, type as 'success' | 'error' | 'warning' | 'info');
   }, []);
 
   const handleInstall = useCallback(async () => {
