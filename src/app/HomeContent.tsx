@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { AnimatePresence, motion } from 'framer-motion';
+
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -209,14 +209,9 @@ function AppContent() {
           className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}
           style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}
         >
-          <AnimatePresence mode="wait">
-          <motion.div
+          <div
             key={screen}
-            className="flex-1 flex flex-col min-h-0"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="flex-1 flex flex-col min-h-0 animate-fadeIn"
           >
               {screen === 'dashboard' && <ErrorBoundary label="Dashboard"><DashboardScreen /></ErrorBoundary>}
               {screen === 'projects' && <ErrorBoundary label="Proyectos"><ProjectsScreen /></ErrorBoundary>}
@@ -239,8 +234,7 @@ function AppContent() {
               {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
               {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
               {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
-          </motion.div>
-          </AnimatePresence>
+          </div>
         </main>
       </div>
 

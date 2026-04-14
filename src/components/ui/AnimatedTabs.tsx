@@ -1,5 +1,4 @@
 'use client';
-import { motion } from 'framer-motion';
 
 interface Tab {
   id: string;
@@ -21,19 +20,14 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-lg transition-colors cursor-pointer border-none bg-transparent ${
-            activeTab === tab.id ? 'text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-lg transition-all duration-200 cursor-pointer border-none ${
+            activeTab === tab.id
+              ? 'text-[var(--foreground)] font-medium bg-[var(--card)] shadow-sm'
+              : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-transparent'
           }`}
         >
           {tab.icon}
           {tab.label}
-          {activeTab === tab.id && (
-            <motion.div
-              layoutId="tab-indicator"
-              className="absolute inset-0 bg-[var(--card)] shadow-sm rounded-lg"
-              transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
-            />
-          )}
         </button>
       ))}
     </div>
