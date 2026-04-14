@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
 import AppProvider, { useApp } from '@/contexts/AppContext';
 import { Toaster } from 'sonner';
@@ -13,38 +14,36 @@ import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
 import InstallBanner from '@/components/layout/InstallBanner';
 import NotifPanel from '@/components/layout/NotifPanel';
-
-/* ─── Features ─── */
-import LightboxViewer from '@/components/features/LightboxViewer';
-
-/* ─── Modals ─── */
-import ProjectModal from '@/components/modals/ProjectModal';
-import TaskModal from '@/components/modals/TaskModal';
-import ExpenseModal from '@/components/modals/ExpenseModal';
-import SupplierModal from '@/components/modals/SupplierModal';
-import TimeEntryModal from '@/components/modals/TimeEntryModal';
-import ApprovalModal from '@/components/modals/ApprovalModal';
-import MeetingModal from '@/components/modals/MeetingModal';
-import GalleryModal from '@/components/modals/GalleryModal';
-import InvProductModal from '@/components/modals/InvProductModal';
-import InvCategoryModal from '@/components/modals/InvCategoryModal';
-import InvMovementModal from '@/components/modals/InvMovementModal';
-import InvTransferModal from '@/components/modals/InvTransferModal';
-import CompanyModal from '@/components/modals/CompanyModal';
-
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 
-/* ─── Screens — core screens loaded directly ─── */
+/* ─── Features (lazy) ─── */
+const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
+
+/* ─── Modals (lazy — solo se cargan cuando se abren) ─── */
+const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), { ssr: false });
+const TaskModal = dynamic(() => import('@/components/modals/TaskModal'), { ssr: false });
+const ExpenseModal = dynamic(() => import('@/components/modals/ExpenseModal'), { ssr: false });
+const SupplierModal = dynamic(() => import('@/components/modals/SupplierModal'), { ssr: false });
+const TimeEntryModal = dynamic(() => import('@/components/modals/TimeEntryModal'), { ssr: false });
+const ApprovalModal = dynamic(() => import('@/components/modals/ApprovalModal'), { ssr: false });
+const MeetingModal = dynamic(() => import('@/components/modals/MeetingModal'), { ssr: false });
+const GalleryModal = dynamic(() => import('@/components/modals/GalleryModal'), { ssr: false });
+const InvProductModal = dynamic(() => import('@/components/modals/InvProductModal'), { ssr: false });
+const InvCategoryModal = dynamic(() => import('@/components/modals/InvCategoryModal'), { ssr: false });
+const InvMovementModal = dynamic(() => import('@/components/modals/InvMovementModal'), { ssr: false });
+const InvTransferModal = dynamic(() => import('@/components/modals/InvTransferModal'), { ssr: false });
+const CompanyModal = dynamic(() => import('@/components/modals/CompanyModal'), { ssr: false });
+
+/* ─── Screens — eager (landing + quick navigation) ─── */
 import DashboardScreen from '@/screens/DashboardScreen';
 import ProjectsScreen from '@/screens/ProjectsScreen';
-import ProjectDetailScreen from '@/screens/ProjectDetailScreen';
-import TasksScreen from '@/screens/TasksScreen';
-import ChatScreen from '@/screens/ChatScreen';
-import BudgetScreen from '@/screens/BudgetScreen';
-import ProfileScreen from '@/screens/ProfileScreen';
 
-/* ─── Screens — lazy loaded (heavy / rarely used) ─── */
-import dynamic from 'next/dynamic';
+/* ─── Screens — lazy (code-split por demanda) ─── */
+const ProjectDetailScreen = dynamic(() => import('@/screens/ProjectDetailScreen'), { ssr: false });
+const TasksScreen = dynamic(() => import('@/screens/TasksScreen'), { ssr: false });
+const ChatScreen = dynamic(() => import('@/screens/ChatScreen'), { ssr: false });
+const BudgetScreen = dynamic(() => import('@/screens/BudgetScreen'), { ssr: false });
+const ProfileScreen = dynamic(() => import('@/screens/ProfileScreen'), { ssr: false });
 const FilesScreen = dynamic(() => import('@/screens/FilesScreen'), { ssr: false });
 const ObraScreen = dynamic(() => import('@/screens/ObraScreen'), { ssr: false });
 const SuppliersScreen = dynamic(() => import('@/screens/SuppliersScreen'), { ssr: false });
