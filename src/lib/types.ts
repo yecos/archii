@@ -6,8 +6,8 @@
 
 /* ===== INTERFACES ===== */
 
-/** Firebase Timestamp type for server timestamps */
-export type FirestoreTimestamp = ReturnType<typeof import('firebase/firestore').serverTimestamp>;
+/** Firebase Timestamp type — loaded via CDN, not npm. Represents Firestore server timestamps. */
+export type FirestoreTimestamp = { seconds: number; nanoseconds: number } | null;
 
 /** Common base fields for Firestore documents */
 export interface FirestoreBase {
