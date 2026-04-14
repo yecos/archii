@@ -4,6 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useChatContext } from './ChatContext';
 import { useFirestoreContext } from './FirestoreContext';
+import { useInventoryContext } from './InventoryContext';
 import { fmtDate } from '@/lib/helpers';
 
 /* ===== NOTIFICATION CONTEXT ===== */
@@ -52,9 +53,9 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const { messages, chatProjectId } = useChatContext();
   const {
     tasks, meetings, approvals,
-    invMovements, invTransfers, invProducts,
     projects,
   } = useFirestoreContext();
+  const { invMovements, invTransfers, invProducts } = useInventoryContext();
 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');

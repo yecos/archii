@@ -5,13 +5,14 @@ import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase } from '@/lib/firebase-service';
 import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, GalleryPhoto, TimeEntry, Invoice, Comment } from '@/lib/types';
-import { DEFAULT_PHASES, INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
+import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 import * as fbActions from '@/lib/firestore-actions';
 import { confirm } from '@/hooks/useConfirmDialog';
 import * as _gantt from '@/lib/gantt-helpers';
+import InventoryProvider from './InventoryContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -36,14 +37,6 @@ interface FirestoreContextType {
   setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
   galleryPhotos: any[];
   setGalleryPhotos: React.Dispatch<React.SetStateAction<any[]>>;
-  invProducts: any[];
-  setInvProducts: React.Dispatch<React.SetStateAction<any[]>>;
-  invCategories: any[];
-  setInvCategories: React.Dispatch<React.SetStateAction<any[]>>;
-  invMovements: any[];
-  setInvMovements: React.Dispatch<React.SetStateAction<any[]>>;
-  invTransfers: any[];
-  setInvTransfers: React.Dispatch<React.SetStateAction<any[]>>;
   timeEntries: TimeEntry[];
   setTimeEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   invoices: Invoice[];
@@ -64,14 +57,6 @@ interface FirestoreContextType {
   galleryFilterCat: string; setGalleryFilterCat: React.Dispatch<React.SetStateAction<string>>;
   lightboxPhoto: any; setLightboxPhoto: React.Dispatch<React.SetStateAction<any>>;
   lightboxIndex: number; setLightboxIndex: React.Dispatch<React.SetStateAction<number>>;
-
-  // Domain UI state — Inventory
-  invTab: string; setInvTab: React.Dispatch<React.SetStateAction<string>>;
-  invFilterCat: string; setInvFilterCat: React.Dispatch<React.SetStateAction<string>>;
-  invSearch: string; setInvSearch: React.Dispatch<React.SetStateAction<string>>;
-  invMovFilterType: string; setInvMovFilterType: React.Dispatch<React.SetStateAction<string>>;
-  invTransferFilterStatus: string; setInvTransferFilterStatus: React.Dispatch<React.SetStateAction<string>>;
-  invWarehouseFilter: string; setInvWarehouseFilter: React.Dispatch<React.SetStateAction<string>>;
 
   // Domain UI state — Time Tracking
   timeTab: string; setTimeTab: React.Dispatch<React.SetStateAction<string>>;
@@ -152,24 +137,6 @@ interface FirestoreContextType {
   openEditLog: (log: any) => void;
   resetLogForm: () => void;
 
-  // CRUD Functions — Inventory
-  getWarehouseStock: (product: any, warehouse: string) => number;
-  getTotalStock: (product: any) => number;
-  buildWarehouseStock: (product: any) => Record<string, number>;
-  saveInvProduct: () => Promise<void>;
-  deleteInvProduct: (id: string) => Promise<void>;
-  openEditInvProduct: (p: any) => void;
-  saveInvCategory: () => Promise<void>;
-  deleteInvCategory: (id: string) => Promise<void>;
-  openEditInvCategory: (c: any) => void;
-  saveInvMovement: () => Promise<void>;
-  deleteInvMovement: (id: string) => Promise<void>;
-  saveInvTransfer: () => Promise<void>;
-  deleteInvTransfer: (id: string) => Promise<void>;
-  getInvCategoryName: (catId: string) => string;
-  getInvCategoryColor: (catId: string) => string;
-  getInvProductName: (prodId: string) => string;
-
   // CRUD Functions — Meetings
   saveMeeting: () => Promise<void>;
   deleteMeeting: (id: string) => Promise<void>;
@@ -179,7 +146,6 @@ interface FirestoreContextType {
   saveGalleryPhoto: () => Promise<void>;
   deleteGalleryPhoto: (id: string) => Promise<void>;
   handleGalleryImageSelect: (e: any) => Promise<void>;
-  handleInvProductImageSelect: (e: any) => Promise<void>;
   openLightbox: (photo: any, idx: number) => void;
   closeLightbox: () => void;
   lightboxPrev: () => void;
@@ -219,12 +185,6 @@ interface FirestoreContextType {
   projectTasks: any[];
   projectBudget: number;
   projectSpent: number;
-  invTotalValue: number;
-  invLowStock: any[];
-  invTotalStock: number;
-  invPendingTransfers: number;
-  invAlerts: any[];
-
   // Gantt helpers
   GANTT_DAYS: number;
   GANTT_DAY_NAMES: string[];
@@ -259,10 +219,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<any[]>([]);
-  const [invProducts, setInvProducts] = useState<any[]>([]);
-  const [invCategories, setInvCategories] = useState<any[]>([]);
-  const [invMovements, setInvMovements] = useState<any[]>([]);
-  const [invTransfers, setInvTransfers] = useState<any[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -279,14 +235,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
   const [lightboxPhoto, setLightboxPhoto] = useState<any>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
-
-  // ===== DOMAIN UI STATE — Inventory =====
-  const [invTab, setInvTab] = useState<string>('dashboard');
-  const [invFilterCat, setInvFilterCat] = useState<string>('all');
-  const [invSearch, setInvSearch] = useState<string>('');
-  const [invMovFilterType, setInvMovFilterType] = useState<string>('all');
-  const [invTransferFilterStatus, setInvTransferFilterStatus] = useState<string>('all');
-  const [invWarehouseFilter, setInvWarehouseFilter] = useState<string>('all');
 
   // ===== DOMAIN UI STATE — Time Tracking =====
   const [timeTab, setTimeTab] = useState<string>('tracker');
@@ -450,46 +398,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load inventory products
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load inventory categories
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: any) => {
-      setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load inventory movements
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load inventory transfers
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -809,128 +717,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     setLogForm({ date: new Date().toISOString().split('T')[0], weather: '', temperature: '', activities: [''], laborCount: '', equipment: [''], materials: [''], observations: '', photos: [], supervisor: '' });
   };
 
-  // --- Inventory Helpers ---
-  const getWarehouseStock = (product: any, warehouse: string) => {
-    if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') return Number(product.data.warehouseStock[warehouse]) || 0;
-    return product.data.warehouse === warehouse ? (Number(product.data.stock) || 0) : 0;
-  };
-
-  const getTotalStock = (product: any) => {
-    if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') return Object.values(product.data.warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-    return Number(product.data.stock) || 0;
-  };
-
-  const buildWarehouseStock = (product: any) => {
-    if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') {
-      const ws = { ...product.data.warehouseStock };
-      INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
-      return ws;
-    }
-    const ws: Record<string, number> = {};
-    INV_WAREHOUSES.forEach(w => { ws[w] = w === (product.data.warehouse || 'Almacén Principal') ? (Number(product.data.stock) || 0) : 0; });
-    return ws;
-  };
-
-  // --- Inventory CRUD ---
-  const saveInvProduct = async () => {
-    const name = forms.invProdName || '';
-    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const warehouseStock: Record<string, number> = {};
-      INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
-      const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-      const data = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser?.uid };
-      if (editingId) { await db.collection('invProducts').doc(editingId).update(data); showToast('Producto actualizado'); }
-      else { await db.collection('invProducts').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
-      closeModal('invProduct'); setEditingId(null);
-      const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
-      INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
-      setForms(p => ({ ...p, ...resetForms }));
-    } catch { showToast('Error al guardar', 'error'); }
-  };
-
-  const deleteInvProduct = async (id: string) => { if (!(await confirm({ title: 'Eliminar producto', description: '¿Eliminar este producto del inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
-
-  const openEditInvProduct = (p: any) => {
-    setEditingId(p.id);
-    const ws = buildWarehouseStock(p);
-    const f: Record<string, any> = { invProdName: p.data.name, invProdSku: p.data.sku || '', invProdCat: p.data.categoryId || '', invProdUnit: p.data.unit || 'Unidad', invProdPrice: String(p.data.price || ''), invProdMinStock: String(p.data.minStock || '5'), invProdDesc: p.data.description || '', invProdImage: p.data.imageData || '', invProdWarehouse: p.data.warehouse || 'Almacén Principal' };
-    INV_WAREHOUSES.forEach(w => { f[`invProdWS_${w.replace(/\s/g, '_')}`] = String(ws[w] || 0); });
-    setForms(prev => ({ ...prev, ...f }));
-    openModal('invProduct');
-  };
-
-  const saveInvCategory = async () => {
-    const name = forms.invCatName || '';
-    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
-      if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
-      else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
-      closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
-    } catch { showToast('Error al guardar', 'error'); }
-  };
-
-  const deleteInvCategory = async (id: string) => { if (!(await confirm({ title: 'Eliminar categoría', description: '¿Eliminar categoría?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-  const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
-
-  const saveInvMovement = async () => {
-    const productId = forms.invMovProduct || '';
-    const qty = Number(forms.invMovQty) || 0;
-    const warehouse = forms.invMovWarehouse || 'Almacén Principal';
-    if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const type = forms.invMovType || 'Entrada';
-      const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
-      await db.collection('invMovements').add(data);
-      const product = invProducts.find(p => p.id === productId);
-      if (product) {
-        const ws = buildWarehouseStock(product);
-        ws[warehouse] = type === 'Entrada' ? (ws[warehouse] || 0) + qty : Math.max(0, (ws[warehouse] || 0) - qty);
-        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-        await db.collection('invProducts').doc(productId).update({ stock: newTotal, warehouseStock: ws, updatedAt: ts });
-      }
-      showToast(`${type === 'Entrada' ? 'Entrada' : 'Salida'} registrada en ${warehouse}: ${qty} uds`);
-      closeModal('invMovement'); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' }));
-    } catch { showToast('Error al registrar movimiento', 'error'); }
-  };
-
-  const deleteInvMovement = async (id: string) => { if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar movimiento?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
-
-  const saveInvTransfer = async () => {
-    const productId = forms.invTrProduct || '';
-    const qty = Number(forms.invTrQty) || 0;
-    const from = forms.invTrFrom || '';
-    const to = forms.invTrTo || '';
-    if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const product = invProducts.find(p => p.id === productId);
-      const ws = product ? buildWarehouseStock(product) : {};
-      const fromStock = ws[from] || 0;
-      if (qty > fromStock) { showToast(`Stock insuficiente en ${from}. Disponible: ${fromStock}`, 'error'); return; }
-      ws[from] = Math.max(0, fromStock - qty); ws[to] = (ws[to] || 0) + qty;
-      const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-      await db.collection('invProducts').doc(productId).update({ stock: newTotal, warehouseStock: ws, updatedAt: ts });
-      await db.collection('invTransfers').add({ productId, productName: product?.data.name || '', fromWarehouse: from, toWarehouse: to, quantity: qty, status: 'Completada', date: forms.invTrDate || new Date().toISOString().split('T')[0], notes: forms.invTrNotes || '', createdAt: ts, createdBy: authUser?.uid, completedAt: ts });
-      showToast(`Transferencia completada: ${qty} uds de ${from} → ${to}`);
-      closeModal('invTransfer'); setForms(p => ({ ...p, invTrProduct: '', invTrFrom: '', invTrTo: '', invTrQty: '', invTrDate: '', invTrNotes: '' }));
-    } catch { showToast('Error en transferencia', 'error'); }
-  };
-
-  const deleteInvTransfer = async (id: string) => { if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar registro de transferencia?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-
-  const getInvCategoryName = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.name : 'Sin categoría'; };
-  const getInvCategoryColor = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.color : '#6b7280'; };
-  const getInvProductName = (prodId: string) => { const p = invProducts.find(x => x.id === prodId); return p ? p.data.name : 'Desconocido'; };
-
   // --- Meetings ---
   const saveMeeting = async () => {
     const title = forms.meetTitle || '';
@@ -970,15 +756,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (file.size > 5 * 1024 * 1024) { showToast('La imagen no puede superar 5 MB', 'error'); return; }
     try { const base64 = await fileToBase64(file); setForms(p => ({ ...p, galleryImageData: base64 })); }
     catch { showToast('Error al procesar imagen', 'error'); }
-  };
-
-  const handleInvProductImageSelect = async (e: any) => {
-    const file = e.target?.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { showToast('Solo imágenes', 'error'); return; }
-    if (file.size > 3 * 1024 * 1024) { showToast('Máx 3 MB', 'error'); return; }
-    try { const base64 = await fileToBase64(file); setForms(p => ({ ...p, invProdImage: base64 })); }
-    catch { showToast('Error al procesar', 'error'); }
   };
 
   const openLightbox = (photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); };
@@ -1089,16 +866,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     return ms && ma && mp && mpr;
   });
 
-  const invTotalValue = invProducts.reduce((s, p) => s + (Number(p.data?.price) || 0) * getTotalStock(p), 0);
-  const invLowStock = invProducts.filter(p => getTotalStock(p) <= (Number(p.data?.minStock) || 0));
-  const invTotalStock = invProducts.reduce((s, p) => s + getTotalStock(p), 0);
-  const invPendingTransfers = invTransfers.filter(t => t.data?.status === 'Pendiente' || t.data?.status === 'En tránsito').length;
-  const invAlerts = [
-    ...(invLowStock.map(p => ({ type: 'low_stock' as const, msg: `${p.data?.name || 'Producto'}: stock ${getTotalStock(p)} (mín: ${p.data?.minStock || 0})`, severity: 'high' as const }))),
-    ...(invTransfers.filter(t => t.data?.status === 'Pendiente').map(t => ({ type: 'pending_transfer' as const, msg: `Transferencia pendiente: ${t.data?.quantity || 0} uds de ${t.data?.fromWarehouse || '?'} → ${t.data?.toWarehouse || '?'}`, severity: 'medium' as const }))),
-    ...(invProducts.filter(p => getTotalStock(p) === 0).map(p => ({ type: 'out_of_stock' as const, msg: `${p.data?.name || 'Producto'}: AGOTADO`, severity: 'critical' as const }))),
-  ];
-
   // ===== GANTT HELPERS (re-exported from @/lib/gantt-helpers) =====
   const _getGanttDays = (weekOffset: number) => _gantt.getGanttDays(weekOffset);
   const _getProjectColor = (projId: string) => _gantt.getProjectColor(projId, projects);
@@ -1111,16 +878,12 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals, meetings, setMeetings,
     galleryPhotos, setGalleryPhotos,
-    invProducts, setInvProducts, invCategories, setInvCategories,
-    invMovements, setInvMovements, invTransfers, setInvTransfers,
     timeEntries, setTimeEntries, invoices, setInvoices,
     comments, setComments, dailyLogs, setDailyLogs,
     // Calendar
     calMonth, setCalMonth, calYear, setCalYear, calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
     // Gallery
     galleryFilterProject, setGalleryFilterProject, galleryFilterCat, setGalleryFilterCat, lightboxPhoto, setLightboxPhoto, lightboxIndex, setLightboxIndex,
-    // Inventory
-    invTab, setInvTab, invFilterCat, setInvFilterCat, invSearch, setInvSearch, invMovFilterType, setInvMovFilterType, invTransferFilterStatus, setInvTransferFilterStatus, invWarehouseFilter, setInvWarehouseFilter,
     // Time Tracking
     timeTab, setTimeTab, timeFilterProject, setTimeFilterProject, timeFilterDate, setTimeFilterDate, timeSession, setTimeSession, timeTimerMs, setTimeTimerMs,
     // Invoices
@@ -1141,14 +904,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     initDefaultPhases, updatePhaseStatus,
     saveApproval, updateApproval, deleteApproval,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
-    getWarehouseStock, getTotalStock, buildWarehouseStock,
-    saveInvProduct, deleteInvProduct, openEditInvProduct,
-    saveInvCategory, deleteInvCategory, openEditInvCategory,
-    saveInvMovement, deleteInvMovement,
-    saveInvTransfer, deleteInvTransfer,
-    getInvCategoryName, getInvCategoryColor, getInvProductName,
     saveMeeting, deleteMeeting, openEditMeeting,
-    saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect, handleInvProductImageSelect,
+    saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect,
     openLightbox, closeLightbox, lightboxPrev, lightboxNext, getFilteredGalleryPhotos,
     startTimeTracking, stopTimeTracking, saveManualTimeEntry,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
@@ -1156,7 +913,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     // Computed
     currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
-    invTotalValue, invLowStock, invTotalStock, invPendingTransfers, invAlerts,
     // Gantt (re-exported from @/lib/gantt-helpers)
     GANTT_DAYS: _gantt.GANTT_DAYS, GANTT_DAY_NAMES: _gantt.GANTT_DAY_NAMES,
     GANTT_STATUS_CFG: _gantt.GANTT_STATUS_CFG, GANTT_PRIO_CFG: _gantt.GANTT_PRIO_CFG,
@@ -1166,7 +922,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}>{children}</FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><InventoryProvider>{children}</InventoryProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {

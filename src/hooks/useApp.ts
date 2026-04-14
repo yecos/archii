@@ -3,6 +3,7 @@ import { useUIContext } from '@/contexts/UIContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOneDriveContext } from '@/contexts/OneDriveContext';
 import { useFirestoreContext } from '@/contexts/FirestoreContext';
+import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -16,6 +17,7 @@ export function useApp() {
   const auth = useAuthContext();
   const od = useOneDriveContext();
   const fs = useFirestoreContext();
+  const inv = useInventoryContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -177,14 +179,14 @@ export function useApp() {
     setMeetings: fs.setMeetings,
     galleryPhotos: fs.galleryPhotos,
     setGalleryPhotos: fs.setGalleryPhotos,
-    invProducts: fs.invProducts,
-    setInvProducts: fs.setInvProducts,
-    invCategories: fs.invCategories,
-    setInvCategories: fs.setInvCategories,
-    invMovements: fs.invMovements,
-    setInvMovements: fs.setInvMovements,
-    invTransfers: fs.invTransfers,
-    setInvTransfers: fs.setInvTransfers,
+    invProducts: inv.invProducts,
+    setInvProducts: inv.setInvProducts,
+    invCategories: inv.invCategories,
+    setInvCategories: inv.setInvCategories,
+    invMovements: inv.invMovements,
+    setInvMovements: inv.setInvMovements,
+    invTransfers: inv.invTransfers,
+    setInvTransfers: inv.setInvTransfers,
     timeEntries: fs.timeEntries,
     setTimeEntries: fs.setTimeEntries,
     invoices: fs.invoices,
@@ -215,18 +217,18 @@ export function useApp() {
     setLightboxIndex: fs.setLightboxIndex,
 
     // Domain UI — Inventory
-    invTab: fs.invTab,
-    setInvTab: fs.setInvTab,
-    invFilterCat: fs.invFilterCat,
-    setInvFilterCat: fs.setInvFilterCat,
-    invSearch: fs.invSearch,
-    setInvSearch: fs.setInvSearch,
-    invMovFilterType: fs.invMovFilterType,
-    setInvMovFilterType: fs.setInvMovFilterType,
-    invTransferFilterStatus: fs.invTransferFilterStatus,
-    setInvTransferFilterStatus: fs.setInvTransferFilterStatus,
-    invWarehouseFilter: fs.invWarehouseFilter,
-    setInvWarehouseFilter: fs.setInvWarehouseFilter,
+    invTab: inv.invTab,
+    setInvTab: inv.setInvTab,
+    invFilterCat: inv.invFilterCat,
+    setInvFilterCat: inv.setInvFilterCat,
+    invSearch: inv.invSearch,
+    setInvSearch: inv.setInvSearch,
+    invMovFilterType: inv.invMovFilterType,
+    setInvMovFilterType: inv.setInvMovFilterType,
+    invTransferFilterStatus: inv.invTransferFilterStatus,
+    setInvTransferFilterStatus: inv.setInvTransferFilterStatus,
+    invWarehouseFilter: inv.invWarehouseFilter,
+    setInvWarehouseFilter: inv.setInvWarehouseFilter,
 
     // Domain UI — Time Tracking
     timeTab: fs.timeTab,
@@ -310,22 +312,22 @@ export function useApp() {
     deleteDailyLog: fs.deleteDailyLog,
     openEditLog: fs.openEditLog,
     resetLogForm: fs.resetLogForm,
-    getWarehouseStock: fs.getWarehouseStock,
-    getTotalStock: fs.getTotalStock,
-    buildWarehouseStock: fs.buildWarehouseStock,
-    saveInvProduct: fs.saveInvProduct,
-    deleteInvProduct: fs.deleteInvProduct,
-    openEditInvProduct: fs.openEditInvProduct,
-    saveInvCategory: fs.saveInvCategory,
-    deleteInvCategory: fs.deleteInvCategory,
-    openEditInvCategory: fs.openEditInvCategory,
-    saveInvMovement: fs.saveInvMovement,
-    deleteInvMovement: fs.deleteInvMovement,
-    saveInvTransfer: fs.saveInvTransfer,
-    deleteInvTransfer: fs.deleteInvTransfer,
-    getInvCategoryName: fs.getInvCategoryName,
-    getInvCategoryColor: fs.getInvCategoryColor,
-    getInvProductName: fs.getInvProductName,
+    getWarehouseStock: inv.getWarehouseStock,
+    getTotalStock: inv.getTotalStock,
+    buildWarehouseStock: inv.buildWarehouseStock,
+    saveInvProduct: inv.saveInvProduct,
+    deleteInvProduct: inv.deleteInvProduct,
+    openEditInvProduct: inv.openEditInvProduct,
+    saveInvCategory: inv.saveInvCategory,
+    deleteInvCategory: inv.deleteInvCategory,
+    openEditInvCategory: inv.openEditInvCategory,
+    saveInvMovement: inv.saveInvMovement,
+    deleteInvMovement: inv.deleteInvMovement,
+    saveInvTransfer: inv.saveInvTransfer,
+    deleteInvTransfer: inv.deleteInvTransfer,
+    getInvCategoryName: inv.getInvCategoryName,
+    getInvCategoryColor: inv.getInvCategoryColor,
+    getInvProductName: inv.getInvProductName,
     saveMeeting: fs.saveMeeting,
     deleteMeeting: fs.deleteMeeting,
     openEditMeeting: fs.openEditMeeting,
@@ -333,7 +335,7 @@ export function useApp() {
     saveGalleryPhoto: fs.saveGalleryPhoto,
     deleteGalleryPhoto: fs.deleteGalleryPhoto,
     handleGalleryImageSelect: fs.handleGalleryImageSelect,
-    handleInvProductImageSelect: fs.handleInvProductImageSelect,
+    handleInvProductImageSelect: inv.handleInvProductImageSelect,
     openLightbox: fs.openLightbox,
     closeLightbox: fs.closeLightbox,
     lightboxPrev: fs.lightboxPrev,
@@ -362,11 +364,11 @@ export function useApp() {
     projectTasks: fs.projectTasks,
     projectBudget: fs.projectBudget,
     projectSpent: fs.projectSpent,
-    invTotalValue: fs.invTotalValue,
-    invLowStock: fs.invLowStock,
-    invTotalStock: fs.invTotalStock,
-    invPendingTransfers: fs.invPendingTransfers,
-    invAlerts: fs.invAlerts,
+    invTotalValue: inv.invTotalValue,
+    invLowStock: inv.invLowStock,
+    invTotalStock: inv.invTotalStock,
+    invPendingTransfers: inv.invPendingTransfers,
+    invAlerts: inv.invAlerts,
 
     // Gantt
     GANTT_DAYS: fs.GANTT_DAYS,
