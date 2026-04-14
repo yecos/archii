@@ -38,6 +38,7 @@ interface FirestoreContextType {
   setProjectFiles: React.Dispatch<React.SetStateAction<ProjectFile[]>>;
   approvals: Approval[];
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
+  allApprovals: Approval[];
   // Domain UI state — Admin
   adminTab: string; setAdminTab: React.Dispatch<React.SetStateAction<string>>;
   adminWeekOffset: number; setAdminWeekOffset: React.Dispatch<React.SetStateAction<number>>;
@@ -87,7 +88,10 @@ interface FirestoreContextType {
   updatePhaseStatus: (phaseId: string, status: string) => Promise<void>;
 
   // CRUD Functions — Approvals
+  createApproval: (data?: { type?: string; projectId?: string; amount?: number; title?: string; description?: string }) => Promise<void>;
   saveApproval: () => Promise<void>;
+  approveApproval: (id: string, comments?: string) => Promise<void>;
+  rejectApproval: (id: string, comments?: string) => Promise<void>;
   updateApproval: (id: string, status: string) => Promise<void>;
   deleteApproval: (id: string) => Promise<void>;
 
@@ -100,6 +104,7 @@ interface FirestoreContextType {
   // Computed values
   currentProject: any;
   pendingCount: number;
+  pendingApprovals: Approval[];
   activeTasks: any[];
   completedTasks: any[];
   overdueTasks: any[];
@@ -141,6 +146,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [allApprovals, setAllApprovals] = useState<Approval[]>([]);
   // ===== DOMAIN UI STATE — Admin =====
   const [adminTab, setAdminTab] = useState<string>('timeline');
   const [adminWeekOffset, setAdminWeekOffset] = useState<number>(0);
@@ -251,7 +257,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     return () => { unsub(); setProjectFiles([]); };
   }, [ready, selectedProjectId]);
 
-  // Load approvals
+  // Load approvals (per-project)
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
@@ -260,6 +266,16 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
+
+  // Load ALL approvals (top-level listener for admin/dashboard)
+  useEffect(() => {
+    if (!ready || !authUser) return;
+    const db = getFirebase().firestore();
+    const unsub = db.collectionGroup('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setAllApprovals(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando allApprovals:', err); });
+    return () => { unsub(); setAllApprovals([]); };
+  }, [ready, authUser]);
 
   // AI project context
   const currentProject = useMemo(() => projects.find((p: any) => p.id === selectedProjectId), [projects, selectedProjectId]);
@@ -488,32 +504,97 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, [selectedProjectId]);
 
   // --- Approvals ---
-  const saveApproval = useCallback(async () => {
-    const title = forms.appTitle || '';
+  const createApproval = useCallback(async (data?: { type?: string; projectId?: string; amount?: number; title?: string; description?: string }) => {
+    const targetProjectId = data?.projectId || selectedProjectId;
+    if (!targetProjectId) { showToast('Selecciona un proyecto primero', 'error'); return; }
+    const title = data?.title || forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
+    const appType = data?.type || forms.appType || 'general';
+    const proj = projects.find(p => p.id === targetProjectId);
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: serverTimestamp(), createdBy: authUser?.uid });
-      showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
-      const projName = currentProject?.data.name || 'Proyecto';
+      const ts = serverTimestamp();
+      await getFirebase().firestore().collection('projects').doc(targetProjectId).collection('approvals').add({
+        title,
+        description: data?.description || forms.appDesc || '',
+        status: 'Pendiente',
+        type: appType,
+        requestedBy: authUser?.uid || '',
+        requestedByName: authUser?.displayName || authUser?.email || 'Usuario',
+        projectId: targetProjectId,
+        projectName: proj?.data?.name || 'Proyecto',
+        amount: data?.amount || (Number(forms.appAmount) || undefined),
+        createdAt: ts,
+        createdBy: authUser?.uid || '',
+        updatedAt: ts,
+      });
+      showToast('Solicitud de aprobación creada');
+      closeModal('approval');
+      setForms(p => ({ ...p, appTitle: '', appDesc: '', appType: 'general', appAmount: '', appProject: '' }));
+      const projName = proj?.data?.name || 'Proyecto';
       notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al crear aprobación', 'error'); }
+  }, [forms, selectedProjectId, projects, authUser, showToast, closeModal, setForms]);
+
+  const saveApproval = useCallback(async () => {
+    await createApproval();
+  }, [createApproval]);
+
+  const approveApproval = useCallback(async (id: string, comments?: string) => {
+    try {
+      const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
+      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      if (!projectId) return;
+      const ts = serverTimestamp();
+      const updateData: Record<string, any> = { status: 'Aprobada', reviewedBy: authUser?.uid || '', reviewedByName: authUser?.displayName || authUser?.email || 'Admin', reviewedAt: ts, updatedAt: ts };
+      if (comments) updateData.comments = comments;
+      await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update(updateData);
+      showToast('✅ Aprobación aceptada');
+      const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
+      if ((approval?.data as any)?.requestedBy) {
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Aprobada', authUser?.displayName || undefined).catch(() => {});
+      }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  }, [forms, selectedProjectId, currentProject, authUser, showToast, closeModal, setForms]);
+  }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);
+
+  const rejectApproval = useCallback(async (id: string, comments?: string) => {
+    try {
+      const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
+      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      if (!projectId) return;
+      const ts = serverTimestamp();
+      const updateData: Record<string, any> = { status: 'Rechazada', reviewedBy: authUser?.uid || '', reviewedByName: authUser?.displayName || authUser?.email || 'Admin', reviewedAt: ts, updatedAt: ts };
+      if (comments) updateData.comments = comments;
+      await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update(updateData);
+      showToast('❌ Aprobación rechazada');
+      if ((approval?.data as any)?.requestedBy) {
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Rechazada', authUser?.displayName || undefined).catch(() => {});
+      }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+  }, [allApprovals, approvals, selectedProjectId, authUser, showToast]);
 
   const updateApproval = useCallback(async (id: string, status: string) => {
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
+      const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
+      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      if (!projectId) return;
+      await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update({ status, updatedAt: serverTimestamp() });
       showToast('Estado actualizado');
-      const approval = approvals.find(a => a.id === id);
-      if ((approval?.data as any)?.createdBy) {
-        const projName = currentProject?.data.name || 'Proyecto';
-        notifyWhatsApp.approvalResolved((approval?.data as any).createdBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(() => {});
+      const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
+      if ((approval?.data as any)?.requestedBy) {
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(() => {});
       }
-    } catch (err) { console.error("[ArchiFlow]", err); }
-  }, [selectedProjectId, approvals, currentProject, authUser, showToast]);
+    } catch (err) { console.error('[ArchiFlow]', err); }
+  }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);
 
-  const deleteApproval = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
+  const deleteApproval = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
+    const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
+    const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+    if (!projectId) return;
+    await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).delete(); showToast('Eliminada');
+  } catch (err) { console.error('[ArchiFlow]', err); } }, [confirm, allApprovals, approvals, selectedProjectId]);
 
   // ===== COMPUTED VALUES =====
+  const pendingApprovals = useMemo(() => allApprovals.filter(a => a.data?.status === 'Pendiente'), [allApprovals]);
   const activeTasks = useMemo(() => tasks.filter(t => t.data?.status !== 'Completado'), [tasks]);
   const completedTasks = useMemo(() => tasks.filter(t => t.data?.status === 'Completado'), [tasks]);
   const overdueTasks = useMemo(() => activeTasks.filter(t => t.data?.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString())), [activeTasks]);
@@ -538,7 +619,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     projects, setProjects, tasks, setTasks, expenses, setExpenses,
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
-    approvals, setApprovals,
+    approvals, setApprovals, allApprovals,
     // Admin
     adminTab, setAdminTab, adminWeekOffset, setAdminWeekOffset, adminTaskSearch, setAdminTaskSearch, adminFilterAssignee, setAdminFilterAssignee, adminFilterProject, setAdminFilterProject, adminFilterPriority, setAdminFilterPriority, adminTooltipTask, setAdminTooltipTask, adminTooltipPos, setAdminTooltipPos, adminPermSection, setAdminPermSection, rolePerms, setRolePerms, toggleRolePerm,
     // CRUD
@@ -549,10 +630,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     saveCompany,
     uploadFile, deleteFile,
     initDefaultPhases, updatePhaseStatus,
-    saveApproval, updateApproval, deleteApproval,
+    createApproval, saveApproval, approveApproval, rejectApproval, updateApproval, deleteApproval,
     updateUserName, fileToBase64,
     // Computed
-    currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
+    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
     // Gantt (re-exported from @/lib/gantt-helpers)
     GANTT_DAYS: _gantt.GANTT_DAYS, GANTT_DAY_NAMES: _gantt.GANTT_DAY_NAMES,
@@ -563,7 +644,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   }), [
     // Collection state
-    projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals,
+    projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals, allApprovals,
     // Admin state
     adminTab, adminWeekOffset, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority, adminTooltipTask, adminTooltipPos, adminPermSection, rolePerms,
     // CRUD functions
@@ -571,9 +652,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense, saveSupplier, deleteSupplier, saveCompany,
     uploadFile, deleteFile, initDefaultPhases, updatePhaseStatus,
-    saveApproval, updateApproval, deleteApproval, updateUserName, fileToBase64,
+    createApproval, saveApproval, approveApproval, rejectApproval, updateApproval, deleteApproval, updateUserName, fileToBase64,
     // Computed values
-    currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
+    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
     // Gantt helper wrappers
     _getGanttDays, _getProjectColor, _getProjectColorLight,

@@ -76,6 +76,52 @@ export default function ProjectDetailScreen() {
                 ))}
                 {fs.projectTasks.filter(t => t.data.status !== 'Completado').length === 0 && <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>}
               </div>
+              {/* Quick Actions: Request Approval */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[15px] font-semibold flex items-center gap-2">📋 Aprobaciones</div>
+                  <button
+                    className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
+                    onClick={() => { ui.setForms(p => ({ ...p, appTitle: '', appDesc: '', appType: 'general', appAmount: '', appProject: ui.selectedProjectId })); ui.openModal('approval'); }}
+                  >+ Solicitar Aprobación</button>
+                </div>
+                {fs.approvals.length === 0 ? (
+                  <div className="text-center py-4 text-[var(--af-text3)] text-sm">Sin solicitudes de aprobación</div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                    {fs.approvals.slice(0, 10).map(a => {
+                      const isPending = a.data.status === 'Pendiente';
+                      return (
+                        <div key={a.id} className="flex items-start gap-3 p-3 bg-[var(--af-bg3)] rounded-lg border border-[var(--border)]">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 bg-[var(--af-bg4)]">
+                            {(a.data as any).type === 'budget_change' ? '💰' : (a.data as any).type === 'phase_completion' ? '🏗️' : (a.data as any).type === 'expense_approval' ? '🧾' : '📋'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-medium truncate">{a.data.title}</div>
+                            {a.data.description && <div className="text-[11px] text-[var(--muted-foreground)] truncate mt-0.5">{a.data.description}</div>}
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                isPending ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
+                                a.data.status === 'Aprobada' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                                'bg-red-500/10 text-red-400 border border-red-500/30'
+                              }`}>{a.data.status}</span>
+                              {(a.data as any).amount > 0 && <span className="text-[10px] text-[var(--af-accent)] font-medium">{fmtCOP((a.data as any).amount)}</span>}
+                              {(a.data as any).requestedByName && <span className="text-[10px] text-[var(--af-text3)]">{(a.data as any).requestedByName}</span>}
+                            </div>
+                            {(a.data as any).comments && <div className="text-[10px] text-[var(--muted-foreground)] mt-1 italic">💬 {(a.data as any).comments}</div>}
+                          </div>
+                          {isPending && (
+                            <div className="flex gap-1 flex-shrink-0">
+                              <button className="text-xs px-1.5 py-1 rounded bg-emerald-500/10 text-emerald-400 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all" onClick={() => { ui.setForms(p => ({ ...p, reviewingApproval: a, reviewComment: '' })); ui.openModal('approval'); }}>✓</button>
+                              <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500 hover:text-white transition-all" onClick={() => { ui.setForms(p => ({ ...p, reviewingApproval: a, reviewComment: '' })); ui.openModal('approval'); }}>✕</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>)}
 
             {/* Tab: Tareas */}

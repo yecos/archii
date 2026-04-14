@@ -116,15 +116,42 @@ export interface Supplier {
   };
 }
 
+export type ApprovalType = 'budget_change' | 'phase_completion' | 'expense_approval' | 'general';
+export type ApprovalStatus = 'Pendiente' | 'Aprobada' | 'Rechazada';
+
+export const APPROVAL_TYPE_LABELS: Record<ApprovalType, string> = {
+  budget_change: 'Cambio presupuestario',
+  phase_completion: 'Completar fase',
+  expense_approval: 'Aprobar gasto',
+  general: 'General',
+};
+
+export const APPROVAL_TYPE_ICONS: Record<ApprovalType, string> = {
+  budget_change: '💰',
+  phase_completion: '🏗️',
+  expense_approval: '🧾',
+  general: '📋',
+};
+
 export interface Approval {
   id: string;
   data: {
     title: string;
     description: string;
-    status: 'Pendiente' | 'Aprobada' | 'Rechazada';
-    requestedBy?: string;
+    status: ApprovalStatus;
+    type: ApprovalType;
+    requestedBy: string;
+    requestedByName: string;
+    projectId?: string;
+    projectName?: string;
+    amount?: number;
+    reviewedBy?: string;
+    reviewedByName?: string;
+    reviewedAt?: FirestoreTimestamp | null;
+    comments?: string;
     createdAt: FirestoreTimestamp | null;
-    createdBy?: string;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -408,7 +435,8 @@ export type NotifEventType =
   | 'meeting_reminder' // Recordatorio de reunión
   | 'phase_change'     // Cambio de fase de proyecto
   | 'comment_mention'  // Mención en comentario
-  | 'inventory_alert'; // Alerta de inventario (stock bajo)
+  | 'inventory_alert'  // Alerta de inventario (stock bajo)
+  | 'approval_action'; // Acciones de aprobación (crear, aprobar, rechazar)
 
 /** Per-user notification preferences — true = enabled, false = disabled. */
 export type NotifPreferences = { [K in NotifEventType]: boolean };
@@ -425,6 +453,7 @@ export const DEFAULT_NOTIF_PREFERENCES: NotifPreferences = {
   phase_change: true,
   comment_mention: true,
   inventory_alert: true,
+  approval_action: true,
 };
 
 /** Metadata for each notification event type (labels, descriptions, icons, categories). */
@@ -439,6 +468,7 @@ export const NOTIF_EVENT_CONFIG: Record<NotifEventType, { label: string; descrip
   phase_change:     { label: 'Cambios de proyecto',  description: 'Cambios de estado en tus proyectos',                    icon: '📁', category: 'projects' },
   comment_mention:  { label: 'Menciones',            description: 'Cuando alguien te menciona en un comentario',            icon: '💬', category: 'comments' },
   inventory_alert:  { label: 'Alertas de inventario',description: 'Stock bajo, entradas, salidas y transferencias',         icon: '📦', category: 'inventory' },
+  approval_action:  { label: 'Aprobaciones',         description: 'Creación, aprobación y rechazo de solicitudes',           icon: '📋', category: 'approvals' },
 };
 
 /** All NotifEventType values as a const array for iteration. */
@@ -453,6 +483,7 @@ export const NOTIF_EVENT_TYPES: readonly NotifEventType[] = [
   'phase_change',
   'comment_mention',
   'inventory_alert',
+  'approval_action',
 ];
 
 /* ===== CONSTANTES ===== */

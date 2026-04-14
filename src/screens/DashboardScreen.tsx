@@ -13,7 +13,7 @@ import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, AlertCircle, ChevronRight, Sparkles } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, AlertCircle, ChevronRight, Sparkles, ShieldCheck } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -38,7 +38,7 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function DashboardScreen() {
   const { navigateTo, showToast } = useUI();
   const { authUser, loading, getUserName, teamUsers } = useAuth();
-  const { projects, tasks, pendingCount, activeTasks, completedTasks, toggleTask, openProject, expenses } = useFirestore();
+  const { projects, tasks, pendingCount, activeTasks, completedTasks, toggleTask, openProject, expenses, pendingApprovals } = useFirestore();
   const { timeEntries } = useTimeTracking();
   const { invoices } = useInvoice();
   const { unreadCount, notifHistory } = useNotif();
@@ -255,17 +255,19 @@ export default function DashboardScreen() {
       )}
 
       {/* ─── Row 1: KPI Cards ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {[
           { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
           { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
           { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
           { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
+          { val: pendingApprovals.length, lbl: 'Aprobaciones pendientes', icon: <ShieldCheck size={16} />, bg: 'bg-amber-500/10', iconColor: 'text-amber-400', sub: pendingApprovals.length === 0 ? 'Sin solicitudes' : 'Requiere revisión', badge: pendingApprovals.length > 0 },
         ].map((m, i) => (
           <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5 hover:border-[var(--af-accent)]/30 transition-colors cursor-default">
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
               {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+              {m.badge && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
             </div>
             <div className="text-xl md:text-2xl font-bold leading-tight">{m.val}</div>
             <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5">{m.lbl}</div>

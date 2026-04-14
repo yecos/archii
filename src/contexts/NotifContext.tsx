@@ -230,10 +230,10 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     if (notifPrefs.approvals) {
       newApprovals.forEach(a => {
-        sendBrowserNotif('📋 Nueva solicitud de aprobación', `"${a.data.title}" · Pendiente de revisión`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId });
+        sendBrowserNotif('📋 Nueva solicitud de aprobación', `"${a.data.title}" · Pendiente de revisión`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
       });
       changedApprovals.forEach(a => {
-        sendBrowserNotif(a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada', `"${a.data.title}" · ${a.data.status}`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId });
+        sendBrowserNotif(a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada', `"${a.data.title}" · ${a.data.status}`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
       });
     }
     prevApprovalsRef.current = approvals;

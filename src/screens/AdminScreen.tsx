@@ -4,10 +4,10 @@ import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
-import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
+import { fmtDate, getInitials, statusColor, avatarColor, fmtCOP } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
-import { Trash2, Shield } from 'lucide-react';
+import { Trash2, Shield, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
 
 export default function AdminScreen() {
@@ -19,8 +19,8 @@ export default function AdminScreen() {
     buildGanttRows, completedTasks, findOverlaps, getGanttDays, getProjectColor,
     getProjectColorLight, getTaskBar, overdueTasks,
     projects, rolePerms, setAdminPermSection, setAdminTab, setAdminTooltipPos,
-    setAdminTooltipTask, setAdminWeekOffset, tasks,
-    toggleRolePerm,
+    setAdminTooltipTask, setAdminWeekOffset, tasks, allApprovals,
+    toggleRolePerm, approveApproval, rejectApproval,
   } = useFirestore();
 
   return (
@@ -39,6 +39,7 @@ export default function AdminScreen() {
             tabs={[
               { id: 'timeline', label: '📊 Timeline' },
               { id: 'dashboard', label: '📈 Dashboard' },
+              { id: 'approvals', label: `📋 Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
               { id: 'permissions', label: '🔐 Permisos' },
               { id: 'team', label: '👥 Equipo' },
             ]}
@@ -261,6 +262,97 @@ export default function AdminScreen() {
               </div>
             </div>
           </div>)}
+
+          {/* ===== APPROVALS TAB ===== */}
+          {adminTab === 'approvals' && (() => {
+            const pending = allApprovals.filter(a => a.data.status === 'Pendiente');
+            const approved = allApprovals.filter(a => a.data.status === 'Aprobada');
+            const rejected = allApprovals.filter(a => a.data.status === 'Rechazada');
+            const [approvalView, setApprovalView] = React.useState<'all' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('all');
+            const filtered = approvalView === 'all' ? allApprovals :
+              approvalView === 'Pendiente' ? pending :
+              approvalView === 'Aprobada' ? approved : rejected;
+
+            return (<div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">📋 Cola de Aprobaciones</h3>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{allApprovals.length} solicitudes en total</p>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Total</div><div className="text-2xl font-bold mt-1">{allApprovals.length}</div></div>
+                <div className="bg-amber-500/5 rounded-xl p-4 border border-amber-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Pendientes</div><div className="text-2xl font-bold text-amber-400 mt-1">{pending.length}</div></div>
+                <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Aprobadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{approved.length}</div></div>
+                <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Rechazadas</div><div className="text-2xl font-bold text-red-400 mt-1">{rejected.length}</div></div>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto">
+                {(['all', 'Pendiente', 'Aprobada', 'Rechazada'] as const).map(status => (
+                  <button key={status} className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${approvalView === status ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setApprovalView(status)}>
+                    {status === 'all' ? `Todos (${allApprovals.length})` : status === 'Pendiente' ? `⏳ Pendientes (${pending.length})` : status === 'Aprobada' ? `✅ Aprobadas (${approved.length})` : `❌ Rechazadas (${rejected.length})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Approval List */}
+              {filtered.length === 0 ? (
+                <div className="text-center py-16 text-[var(--af-text3)]">
+                  <div className="text-3xl mb-2">📋</div>
+                  <div className="text-sm">Sin aprobaciones{approvalView !== 'all' ? ` con estado "${approvalView}"` : ''}</div>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                  {filtered.map(a => {
+                    const isPending = a.data.status === 'Pendiente';
+                    const typeIcon = (a.data as any).type === 'budget_change' ? '💰' : (a.data as any).type === 'phase_completion' ? '🏗️' : (a.data as any).type === 'expense_approval' ? '🧾' : '📋';
+                    return (
+                      <div key={a.id} className={`bg-[var(--card)] border rounded-xl p-4 transition-all ${isPending ? 'border-amber-500/20 hover:border-amber-500/40' : 'border-[var(--border)]'}`}>
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 bg-[var(--af-bg4)]">{typeIcon}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-sm font-semibold">{a.data.title}</div>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                                isPending ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
+                                a.data.status === 'Aprobada' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                                'bg-red-500/10 text-red-400 border border-red-500/30'
+                              }`}>{a.data.status}</span>
+                            </div>
+                            {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mt-1">{a.data.description}</div>}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-[var(--af-text3)]">
+                              {(a.data as any).projectName && <span>📁 {(a.data as any).projectName}</span>}
+                              {(a.data as any).amount > 0 && <span className="text-[var(--af-accent)] font-medium">💰 {fmtCOP((a.data as any).amount)}</span>}
+                              {(a.data as any).requestedByName && <span>👤 {(a.data as any).requestedByName}</span>}
+                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `📅 ${fmtDate(d.toDate())}` : ''; } catch { return ''; } })()}
+                            </div>
+                            {(a.data as any)?.comments && (
+                              <div className="mt-2 text-[11px] text-[var(--muted-foreground)] bg-[var(--af-bg3)] rounded-md px-2.5 py-1.5 border border-[var(--border)]">
+                                <span className="font-medium">{(a.data as any)?.reviewedByName || 'Revisor'}:</span> {(a.data as any).comments}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {isPending && (
+                          <div className="flex gap-2 justify-end mt-3 pt-3 border-t border-[var(--border)]">
+                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all" onClick={() => approveApproval(a.id)}>
+                              <CheckCircle size={14} /> Aprobar
+                            </button>
+                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all" onClick={() => rejectApproval(a.id)}>
+                              <XCircle size={14} /> Rechazar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>);
+          })()}
 
           {/* ===== PERMISSIONS TAB ===== */}
           {adminTab === 'permissions' && (<div className="space-y-4">

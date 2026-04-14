@@ -2,8 +2,9 @@
 import React, { useMemo } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
+import { useNotif } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
-import { DollarSign, Download, Plus, TrendingDown, Receipt } from 'lucide-react';
+import { DollarSign, Download, Plus, TrendingDown, Receipt, AlertTriangle } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
@@ -32,6 +33,7 @@ function PieTooltip({ active, payload }: any) {
 export default function BudgetScreen() {
   const ui = useUI();
   const fs = useFirestore();
+  const { sendNotif } = useNotif();
 
   const totalExpenses = useMemo(() => fs.expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [fs.expenses]);
 
@@ -98,6 +100,57 @@ export default function BudgetScreen() {
           </button>
         </div>
       </div>
+
+      {/* Large Expense Approval Suggestion */}
+      {(() => {
+        const HIGH_EXPENSE_THRESHOLD = 5000000; // $5M COP
+        const recentLargeExpenses = fs.expenses.filter((e: any) => Number(e.data.amount) >= HIGH_EXPENSE_THRESHOLD).slice(0, 3);
+        if (recentLargeExpenses.length === 0) return null;
+        return (
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-amber-400" />
+              <span className="text-sm font-semibold text-amber-400">Gastos que requieren aprobación</span>
+            </div>
+            <div className="text-xs text-[var(--muted-foreground)] mb-3">Los siguientes gastos superan los {fmtCOP(HIGH_EXPENSE_THRESHOLD)}. Considere solicitar aprobación para gastos grandes.</div>
+            <div className="space-y-2">
+              {recentLargeExpenses.map(e => {
+                const proj = fs.projects.find((p: any) => p.id === e.data.projectId);
+                return (
+                  <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate">{e.data.concept}</div>
+                      <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || '—'} · {e.data.category}</div>
+                    </div>
+                    <div className="text-xs font-semibold text-amber-400">{fmtCOP(Number(e.data.amount))}</div>
+                    <button
+                      className="text-[10px] px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 cursor-pointer hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap"
+                      onClick={() => {
+                        ui.setForms((p: any) => ({
+                          ...p,
+                          appType: 'expense_approval',
+                          appTitle: `Aprobar gasto: ${e.data.concept}`,
+                          appDesc: `Gasto de ${fmtCOP(Number(e.data.amount))} en categoría ${e.data.category}${proj ? ` para ${proj.data.name}` : ''}`,
+                          appAmount: String(e.data.amount),
+                          appProject: e.data.projectId,
+                        }));
+                        ui.openModal('approval');
+                        sendNotif(
+                          '📋 Solicitud de aprobación sugerida',
+                          `Se ha pre-llenado una solicitud de aprobación para el gasto "${e.data.concept}"`,
+                          '🧾',
+                          `expense-approval-${e.id}`,
+                          { type: 'approval', screen: 'budget', eventType: 'approval_action' },
+                        );
+                      }}
+                    >Solicitar aprobación</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
