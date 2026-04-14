@@ -1,0 +1,248 @@
+================================================================================
+           INSTRUCTIVO Y BITACORA DE TRABAJO - ARCHIFLOW v2.0.0
+================================================================================
+ Proyecto: Archiflow (Archi Project)
+ Repositorio: https://github.com/yecos/archii
+ Deploy: Vercel
+ Framework: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4
+ Base de datos: Prisma + SQLite (desarrollo) / PostgreSQL (produccion)
+ Autenticacion: Firebase Auth
+ IA: Google Gemini
+ Notificaciones: WhatsApp Cloud API
+ Almacenamiento: OneDrive (Microsoft Graph API)
+ Estado: Funcionando en produccion via Vercel
+ Fecha de creacion del instructivo: 2026-04-14
+================================================================================
+
+
+================================================================================
+REGLA FUNDAMENTAL
+================================================================================
+
+ TODO cambio que se haga en el proyecto DEBE quedar registrado en la BITACORA
+ (seccion PARTE 4 de este archivo). Esto aplica tanto para actualizaciones
+ grandes como para arreglos de bugs. Si no esta en la bitacora, no existe.
+
+ Pasos obligatorios al iniciar CUALQUIER sesion de trabajo:
+   1. Leer este instructivo completo
+   2. Hacer git pull para tener el codigo mas reciente
+   3. Revisar la bitacora para entender el estado actual del proyecto
+   4. Registrar el inicio de la sesion en la bitacora
+
+
+================================================================================
+PARTE 1: ACTUALIZACIONES DE GRAN EMBARGADURA (FEATURES / REFACTORES)
+================================================================================
+
+Procedimiento para cambios grandes como nuevas funcionalidades completas,
+refactores de arquitectura, cambios de diseño significativos, etc.
+
+--------------------------------------------------------------------------------
+1.1 PASOS
+--------------------------------------------------------------------------------
+
+  PASO 1 - ANALISIS Y PLANIFICACION
+  ├── Leer la BITACORA (PARTE 4) para entender el estado actual
+  ├── Analizar el codigo existente relacionado al cambio
+  ├── Identificar todos los archivos que seran afectados
+  ├── Documentar el plan en la bitacora antes de tocar codigo
+  └── Estimar alcance: [PEQUENO] / [MEDIANO] / [GRANDE]
+
+  PASO 2 - RESPALDO (OBLIGATORIO)
+  ├── Crear tag de respaldo ANTES de cualquier cambio:
+  │     git tag -a "backup-pre-[DESCRIPCION]-[YYYYMMDD-HHMM]" -m "Respaldo antes de [descripcion]"
+  │     git push origin --tags
+  └── Registrar el tag en la bitacora
+
+  PASO 3 - DESARROLLO INCREMENTAL
+  ├── Hacer cambios de forma gradual (archivo por archivo o modulo por modulo)
+  ├── Commits atomicos y descriptivos despues de cada cambio significativo:
+  │     git add [archivo(s)]
+  │     git commit -m "[tipo]: [descripcion clara]"
+  │
+  │   Convencion de commits:
+  │     feat:     nueva funcionalidad
+  │     fix:      correccion de bug
+  │     refactor: reestructuracion sin cambio funcional
+  │     style:    cambios de formato/estilo
+  │     docs:     cambios en documentacion
+  │     chore:    mantenimiento
+  │     perf:     optimizacion de rendimiento
+  │
+  ├── Push frecuente para no perder trabajo:
+  │     git push origin main
+  ├── Actualizar la bitacora con cada cambio importante
+  └── NUNCA acumular muchos cambios sin commit ni push
+
+  PASO 4 - VERIFICACION
+  ├── Ejecutar lint para verificar que no hay errores:
+  │     bun run lint
+  ├── Verificar compilacion:
+  │     bun run build
+  ├── Revisar diff de cambios:
+  │     git diff HEAD~N (donde N = commits desde el inicio del cambio)
+  └── Documentar incidencias en la bitacora si las hay
+
+  PASO 5 - CONFIRMACION Y CIERRE
+  ├── Vercel detecta el push y hace deploy automatico
+  ├── Verificar que la app funciona en produccion
+  ├── Cerrar la entrada en la bitacora con resultado final
+  └── Listar todos los archivos modificados/creados
+
+
+================================================================================
+PARTE 2: ARREGLO DE BUGS (UN BUG A LA VEZ)
+================================================================================
+
+REGLA: Un bug a la vez. No mezclar correcciones de multiples bugs en un
+mismo cambio. Esto permite revision en tiempo real via Vercel preview.
+
+--------------------------------------------------------------------------------
+2.1 PASOS
+--------------------------------------------------------------------------------
+
+  PASO 1 - IDENTIFICACION DEL BUG
+  ├── Registrar el bug en la bitacora con:
+  │   - Descripcion del problema
+  │   - Pasos para reproducirlo
+  │   - Severidad: [CRITICA] / [ALTA] / [MEDIA] / [BAJA]
+  │   - Archivos potencialmente afectados
+  └── Asignar ID: BUG-[YYYYMMDD]-[NNN]
+      Ejemplo: BUG-20260414-001
+
+  PASO 2 - RESPALDO (OBLIGATORIO)
+  ├── Tag de respaldo:
+  │     git tag -a "backup-pre-bug-[ID]-[YYYYMMDD-HHMM]" -m "Respaldo antes de fix [ID]"
+  │     git push origin --tags
+  └── Registrar en bitacora
+
+  PASO 3 - CORRECCION
+  ├── Modificar UNICAMENTE lo necesario para corregir ESTE bug
+  ├── No mezclar con otros bugs ni agregar funcionalidades extras
+  ├── Commit descriptivo:
+  │     git add [archivo(s)]
+  │     git commit -m "fix([ID]): [descripcion de la correccion]"
+  │     Ejemplo: fix(BUG-20260414-001): corregir validacion de email en login
+  └── Push inmediato:
+        git push origin main
+
+  PASO 4 - VERIFICACION EN TIEMPO REAL
+  ├── Vercel hace deploy automatico (o preview)
+  ├── Verificar que el bug esta corregido
+  ├── Verificar que NO se rompio nada existente (regresion)
+  ├── Si hay problemas:
+  │   - Revertir si es necesario: git revert HEAD
+  │   - Corregir y hacer nuevo commit + push
+  │   - Verificar de nuevo
+  └── Documentar resultado en bitacora
+
+  PASO 5 - CIERRE
+  ├── Marcar bug como [RESUELTO] / [PARCIALMENTE RESUELTO] / [NO RESUELTO]
+  ├── Si no se resuelve, documentar por que y que se intento
+  └── Pasar al siguiente bug (repetir desde PASO 1)
+
+
+================================================================================
+PARTE 3: PROCEDIMIENTOS DE PROTECCION DE DATOS
+================================================================================
+
+OBLIGATORIOS. Aplican a ambos flujos de trabajo (actualizaciones y bugs).
+
+--------------------------------------------------------------------------------
+3.1 ANTI-SOBREESCRITURA
+--------------------------------------------------------------------------------
+
+  [A] PULL ANTES DE PUSH - SIEMPRE
+  ├── git pull origin main ANTES de cualquier push
+  ├── Resolver conflictos manualmente si los hay
+  └── Nunca usar git push --force a menos que sea absolutamente necesario
+
+  [B] REVISION ANTES DE COMMIT
+  ├── git status - revisar archivos que se van a incluir
+  ├── git diff - revisar cambios exactos
+  ├── Usar git add selectivo (archivo por archivo)
+  ├── NUNCA usar git add . ni git add -A sin revisar primero
+  └── Confirmar que no se incluyen archivos incorrectos o temporales
+
+  [C] ARCHIVOS SENSIBLES - NUNCA COMMITEAR
+  ├── Contraseñas, tokens, API keys en texto plano
+  ├── Datos personales de usuarios
+  ├── Archivos .env con valores reales (solo .env.example sin valores)
+  ├── Verificar .gitignore antes de cada commit
+  └── Si un archivo sensible fue commiteado: eliminar del historial y rotar credencial
+
+  [D] BITACORA - FUENTE DE VERDAD
+  ├── Este archivo es el registro oficial del proyecto
+  ├── Cada sesion DEBE leer la bitacora primero
+  ├── Cada cambio DEBE registrarse
+  ├── Las entradas antiguas NUNCA se modifican ni eliminan
+  ├── Solo se AGREGAN nuevas entradas al final
+  └── Si se necesita corregir, agregar nota aclaratoria debajo
+
+--------------------------------------------------------------------------------
+3.2 ANTI-PERDIDA DE DATOS
+--------------------------------------------------------------------------------
+
+  [E] COMMITS FRECUENTES
+  ├── Commitear cada cambio significativo (no acumular)
+  ├── Si un cambio toma mas de 15 minutos, ya deberia haber un commit
+  ├── Push al remoto al menos cada 30 minutos de trabajo activo
+  └── Al terminar sesion: commit + push OBLIGATORIO (sin excepciones)
+
+  [F] TAGS DE RESPALDO
+  ├── Crear tag ANTES de cada actualizacion grande o bugfix
+  ├── Formato: backup-pre-[tipo]-[identificador]-[YYYYMMDD-HHMM]
+  ├── Ejemplos:
+  │     backup-pre-feature-nuevo-dashboard-20260414-1430
+  │     backup-pre-bug-BUG-20260414-001-20260414-1500
+  ├── Siempre push de tags: git push origin --tags
+  └── Para restaurar: git checkout [tag]
+
+  [G] PROTEGER ARCHIVOS RAW Y BACKUPS
+  ├── Los archivos .txt en src/screens/ son respaldos de codigo
+  │   (ejemplo: BudgetScreen.txt es respaldo de BudgetScreen.tsx)
+  ├── NO eliminar estos archivos sin confirmacion
+  └── Son la ultima linea de defensa si algo sale mal
+
+  [H] PROTEGER EL INSTRUCTIVO
+  ├── Este archivo (INSTRUCTIVO_BITACORA.txt) NUNCA se elimina
+  ├── Siempre mantener copia actualizada en el repositorio
+  ├── En nueva sesion: LO PRIMERO es leer este archivo
+  └── Los registros van al final, NUNCA se eliminan
+
+
+================================================================================
+PARTE 4: BITACORA - REGISTRO DE CAMBIOS
+================================================================================
+
+IMPORTANTE: Cada nueva entrada se agrega AL FINAL.
+NUNCA se modifican ni eliminan entradas anteriores.
+Si se necesita corregir algo, agregar nota aclaratoria.
+
+--- INICIO DE BITACORA ---------------------------------------------------
+
+2026-04-14 14:00 | SESION INICIAL - Creacion del instructivo
+  Accion: Creacion del INSTRUCTIVO_BITACORA.txt
+  Motivo: Establecer metodologia de trabajo para el proyecto Archiflow
+  Detalles:
+    - Se clono el repositorio https://github.com/yecos/archii
+    - Proyecto: Archiflow v2.0.0, Next.js 16, React 19, TypeScript
+    - Deploy: Vercel (compilacion automatica al push)
+    - Integraciones: Firebase Auth, Google Gemini AI, WhatsApp Cloud API,
+      OneDrive/Microsoft Graph, Prisma/SQLite
+    - Estructura identificada:
+      * src/screens/ - Pantallas principales (Projects, Tasks, Budget, etc.)
+      * src/components/ - Componentes UI (modals, layout, features, common)
+      * src/contexts/ - Contextos React (Auth, App, UI, Chat, etc.)
+      * src/hooks/ - Custom hooks
+      * src/lib/ - Utilidades, servicios, tipos
+      * src/app/api/ - API Routes (ai-assistant, onedrive, whatsapp, etc.)
+    - Rama activa: main
+    - Ultimo commit: 4f18d50 refactor: descomponer AppContext.tsx en 6 contextos
+    - Commits recientes muestran trabajo activo en login, modales, y refactor
+    - Existen archivos .txt como respaldos de pantallas (.tsx)
+  Archivos creados: INSTRUCTIVO_BITACORA.txt
+  Estado: Completado - Instructivo listo para uso
+
+--- FIN DE BITACORA (las nuevas entradas van ARRIBA de esta linea) --------
+================================================================================
