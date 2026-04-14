@@ -6,7 +6,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
@@ -234,6 +234,14 @@ export default function TasksScreen() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Import */}
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            onClick={() => openModal('importData')}
+          >
+            <Upload size={13} /> Importar
+          </button>
+
           {/* Export Excel */}
           <button
             className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"

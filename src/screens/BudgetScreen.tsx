@@ -4,7 +4,7 @@ import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useNotif } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
-import { DollarSign, Download, Plus, TrendingDown, Receipt, AlertTriangle } from 'lucide-react';
+import { DollarSign, Download, Plus, TrendingDown, Receipt, AlertTriangle, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
@@ -86,6 +86,12 @@ export default function BudgetScreen() {
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{fs.expenses.length} gastos registrados</p>
         </div>
         <div className="flex gap-2">
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3.5 py-2 rounded-lg text-[13px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            onClick={() => ui.openModal('importData')}
+          >
+            <Upload size={14} /> Importar
+          </button>
           <button
             className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
             onClick={exportCSV}

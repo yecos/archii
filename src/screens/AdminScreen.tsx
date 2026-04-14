@@ -9,6 +9,7 @@ import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
 import { Trash2, Shield, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
+import AuditLogTable from '@/components/features/AuditLogTable';
 
 export default function AdminScreen() {
   const { showToast } = useUI();
@@ -42,6 +43,7 @@ export default function AdminScreen() {
               { id: 'approvals', label: `📋 Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
               { id: 'permissions', label: '🔐 Permisos' },
               { id: 'team', label: '👥 Equipo' },
+              { id: 'audit', label: '📋 Registro de Cambios' },
             ]}
             activeTab={adminTab}
             onTabChange={(id) => setAdminTab(id as any)}
@@ -506,6 +508,22 @@ export default function AdminScreen() {
               })}
             </div>
           </div>)}
+
+          {/* ===== AUDIT TAB ===== */}
+          {adminTab === 'audit' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">📋 Registro de Cambios</h3>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Historial de auditoría de la aplicación</p>
+                </div>
+              </div>
+              <AuditLogTable
+                teamUsers={teamUsers}
+                projects={projects}
+              />
+            </div>
+          )}
         </div>
       )}
     </>

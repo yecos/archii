@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -23,9 +23,17 @@ export default function ProjectsScreen() {
             return (<button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, projFilter: tab.v }))}>{tab.k} ({count})</button>);
           })}
         </div>
-        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('project'); }}>
-          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nuevo proyecto
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            onClick={() => openModal('importData')}
+          >
+            <Upload size={13} /> Importar
+          </button>
+          <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('project'); }}>
+            <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nuevo proyecto
+          </button>
+        </div>
       </div>
       {/* Company filter bar */}
       {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (

@@ -40,6 +40,9 @@ const InvMovementModal = dynamic(() => import('@/components/modals/InvMovementMo
 const InvTransferModal = dynamic(() => import('@/components/modals/InvTransferModal'), { ssr: false });
 const CompanyModal = dynamic(() => import('@/components/modals/CompanyModal'), { ssr: false });
 
+/* ─── Features (lazy) ─── */
+const ImportDataModal = dynamic(() => import('@/components/features/ImportDataModal'), { ssr: false });
+
 /* ─── Screens — eager (quick navigation) ─── */
 import ProjectsScreen from '@/screens/ProjectsScreen';
 
@@ -254,6 +257,7 @@ function AppContent() {
       <InvMovementModal open={!!modals.invMovement} onClose={() => closeModal('invMovement')} />
       <InvTransferModal open={!!modals.invTransfer} onClose={() => closeModal('invTransfer')} />
       <CompanyModal open={!!modals.company} onClose={() => closeModal('company')} />
+      <ImportDataModal open={!!modals.importData} onClose={() => closeModal('importData')} />
 
       <LightboxViewer />
     </div>
