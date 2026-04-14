@@ -221,6 +221,81 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 23:00 | FEATURE PACK v15 — Quality & UX Polish
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v15-quality-ux-20260415
+  Objetivo: 6 tareas de calidad, performance y UX
+  Commit: 332f159
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 15.1 — Empty catch blocks (59 fixes en 18 archivos):
+    - FirestoreContext: 10 catch blocks (saveProject, saveCompany, uploadFile, deleteFile,
+      6 WhatsApp .catch fire-and-forget)
+    - ChatContext: 6 (3 onSnapshot error handlers, sendMessage, startRecording, deleteMessage)
+    - OneDriveContext: 8 (graphApiGet, ensureProjectFolder, loadOneDriveFiles, uploadToOneDrive,
+      renameOneDriveFile, downloadOneDriveFile, searchOneDriveFiles, loadGalleryPhotos)
+    - InventoryContext: 3 (saveInvProduct, saveInvCategory, handleInvProductImageSelect)
+    - GalleryContext: 2 (saveGalleryPhoto, handleGalleryImageSelect)
+    - AuthContext: 2 (setPersistence, persistence setup)
+    - NotifPreferencesContext: 3 (localStorage read/write, Firestore fallback)
+    - UIContext: 2 (showToast DOM, Sonner fallback)
+    - ReportsScreen: 7 (export buttons)
+    - DashboardScreen: 4 (task parsing, export buttons)
+    - TasksScreen: 3 (drag opacity, export)
+    - AdminScreen: 2 (format date, delete user)
+    - InvoicesScreen: 1, ObraScreen: 1, useNotifications: 1, ActivityTimeline: 2, ImportDataModal: 1
+    - Patron: console.error para errores criticos, console.warn para no-criticos
+
+  Tarea 15.2 — ProjectsScreen mejorado (88 → ~440 lineas):
+    - Barra de busqueda por nombre, cliente, empresa (case-insensitive)
+    - Dropdown de ordenamiento: nombre, fecha, presupuesto, progreso (6 opciones)
+    - Toggle grid/list view con persistencia via forms.projView
+    - Vista lista: columnas nombre, cliente, estado, presupuesto, tareas, progreso, acciones
+    - Computacion de projectMeta (task count, spent budget) con useMemo
+
+  Tarea 15.3 — CalendarScreen weekly view responsive:
+    - Mobile: agenda vertical con eventos del dia seleccionado
+    - Day chips horizontales scrollables (Lun-Dom) con seleccion
+    - Reuniones con indicador púrpura, tareas con indicador por prioridad
+    - Desktop: grid 7-dias preservado intacto
+    - useIsMobile hook para deteccion de breakpoint
+
+  Tarea 15.4 — ProfileScreen useMemo (16 computaciones):
+    - Variables: myTasks, myPending, myCompleted, myInProgress, myHighPrio, myOverdue,
+      totalRate, myProjects, myExpenses, totalSpent, weeklyData, weekMax,
+      tasksByProject, prioData, prioMax, notifications
+    - Eliminados IIFEs del render, estructura limpia con return directo
+    - Cadena de dependencias correcta (derived values dependen de parents memoizados)
+
+  Tarea 15.5 — Lazy-load Recharts (~500KB fuera del bundle):
+    - DashboardCharts.tsx creado: 5 chart sections (TaskStatusPie, RevenueTrend,
+      BurndownBarChart, TeamWorkloadBarChart, ExpenseCategoryBarChart)
+    - ReportsCharts.tsx creado: 8 named-export chart components
+    - DashboardScreen y ReportsScreen: dynamic import con ssr: false
+    - Skeleton loading placeholders incluidos
+
+  Tarea 15.6 — Sidebar tipado (0 any restantes):
+    - FirebaseUser interface local (uid, email, displayName, photoURL)
+    - NavItem discriminated union ({id,label,icon,badge?} | {divider:true})
+    - 6 props tipados: authUser, teamUsers, projects, tasks, galleryPhotos, invLowStock
+    - Type guards para filter/map de navItems
+
+  Archivos creados (2): DashboardCharts.tsx, ReportsCharts.tsx
+  Archivos modificados (22): ActivityTimeline, ImportDataModal, Sidebar, AuthContext,
+    ChatContext, CommentsContext, FirestoreContext, GalleryContext, InventoryContext,
+    NotifPreferencesContext, OneDriveContext, UIContext, useNotifications,
+    AdminScreen, CalendarScreen, DashboardScreen, InvoicesScreen, ObraScreen,
+    ProfileScreen, ProjectsScreen, ReportsScreen, TasksScreen
+  Total: +1,268 lineas agregadas, -500 eliminadas (24 archivos tocados)
+
+  Resumen:
+    - 1 commit: 332f159
+    - 24 archivos tocados (2 creados, 22 modificados)
+    - 59 catch blocks con logging centralizado
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Total funcionalidades/mejoras (v7-v15): 42 items
+
 2026-04-15 22:00 | FEATURE PACK v14 — Chat refactor, Inventory tabs, Calendar weekly, Project templates
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v14-chat-inv-calendar-20260415
