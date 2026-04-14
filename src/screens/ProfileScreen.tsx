@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -17,52 +17,164 @@ export default function ProfileScreen() {
   const cal = useCalendar();
   const notifPrefs = useNotifPreferences();
 
+  const myTasks = useMemo(() =>
+    fs.tasks.filter(t => t.data.assigneeId === auth.authUser?.uid || !t.data.assigneeId),
+    [fs.tasks, auth.authUser?.uid]
+  );
+
+  const myPending = useMemo(() =>
+    myTasks.filter(t => t.data.status !== 'Completado'),
+    [myTasks]
+  );
+
+  const myCompleted = useMemo(() =>
+    myTasks.filter(t => t.data.status === 'Completado'),
+    [myTasks]
+  );
+
+  const myInProgress = useMemo(() =>
+    myTasks.filter(t => t.data.status === 'En progreso'),
+    [myTasks]
+  );
+
+  const myHighPrio = useMemo(() =>
+    myPending.filter(t => t.data.priority === 'Alta'),
+    [myPending]
+  );
+
+  const myOverdue = useMemo(() =>
+    myPending.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date()),
+    [myPending]
+  );
+
+  const totalRate = useMemo(() =>
+    myTasks.length > 0 ? Math.round((myCompleted.length / myTasks.length) * 100) : 0,
+    [myCompleted, myTasks]
+  );
+
+  const myProjects = useMemo(() =>
+    fs.projects.filter(p => p.data.createdBy === auth.authUser?.uid || myTasks.some(t => t.data.projectId === p.id)),
+    [fs.projects, auth.authUser?.uid, myTasks]
+  );
+
+  const myExpenses = useMemo(() =>
+    fs.expenses.filter(e => e.data.createdBy === auth.authUser?.uid),
+    [fs.expenses, auth.authUser?.uid]
+  );
+
+  const totalSpent = useMemo(() =>
+    myExpenses.reduce((s, e) => s + (Number(e.data.amount) || 0), 0),
+    [myExpenses]
+  );
+
+  // Weekly activity (last 7 days)
+  const weeklyData = useMemo(() => {
+    const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    return weekDays.map((label, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const dayEnd = new Date(dayStart.getTime() + 86400000);
+      const completed = myTasks.filter(t => t.data.status === 'Completado').filter(t => {
+        const cd = (t.data.createdAt as any)?.toDate ? (t.data.createdAt as any).toDate() : new Date(t.data.createdAt as any);
+        return cd >= dayStart && cd < dayEnd;
+      }).length;
+      return { label, count: completed, max: 5 };
+    });
+  }, [myTasks]);
+
+  const weekMax = useMemo(() =>
+    Math.max(...weeklyData.map(w => w.count), 1),
+    [weeklyData]
+  );
+
+  // Tasks by project
+  const tasksByProject = useMemo((): Record<string, { name: string; total: number; done: number }> => {
+    const result: Record<string, { name: string; total: number; done: number }> = {};
+    myProjects.forEach(p => {
+      const pTasks = myTasks.filter(t => t.data.projectId === p.id);
+      if (pTasks.length > 0) {
+        result[p.id] = { name: p.data.name, total: pTasks.length, done: pTasks.filter(t => t.data.status === 'Completado').length };
+      }
+    });
+    return result;
+  }, [myProjects, myTasks]);
+
+  // Tasks by priority
+  const prioData = useMemo(() => [
+    { label: 'Alta', count: myTasks.filter(t => t.data.priority === 'Alta').length, color: '#e05555' },
+    { label: 'Media', count: myTasks.filter(t => t.data.priority === 'Media').length, color: '#e09855' },
+    { label: 'Baja', count: myTasks.filter(t => t.data.priority === 'Baja').length, color: '#4caf7d' },
+  ], [myTasks]);
+
+  const prioMax = useMemo(() =>
+    Math.max(...prioData.map(p => p.count), 1),
+    [prioData]
+  );
+
+  // Notifications
+  const notifications = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const weekLater = new Date(today.getTime() + 7 * 86400000);
+    const result: { icon: string; text: string; time: string; urgent: boolean }[] = [];
+
+    // Overdue tasks (urgent)
+    myOverdue.forEach(t => {
+      const proj = fs.projects.find(p => p.id === t.data.projectId);
+      const daysOverdue = Math.floor((today.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
+      result.push({ icon: '⚡', text: `"${t.data.title}" venció hace ${daysOverdue} día${daysOverdue !== 1 ? 's' : ''}${proj ? ` — ${proj.data.name}` : ''}`, time: `Venció ${fmtDate(t.data.dueDate)}`, urgent: true });
+    });
+
+    // High priority pending tasks
+    if (myHighPrio.length > 0) {
+      myHighPrio.forEach(t => {
+        const proj = fs.projects.find(p => p.id === t.data.projectId);
+        result.push({ icon: '🔴', text: `Tarea urgente: "${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}`, time: `Prioridad Alta · ${t.data.status}`, urgent: true });
+      });
+    }
+
+    // Meetings today or this week
+    cal.meetings.forEach(m => {
+      if (m.data.date && (m.data.date === todayStr || (m.data.date > todayStr && m.data.date <= weekLater.toISOString().split('T')[0]))) {
+        const proj = fs.projects.find(p => p.id === m.data.projectId);
+        const isToday = m.data.date === todayStr;
+        result.push({ icon: '📅', text: `Reunión "${m.data.title}"${isToday ? ' hoy' : ''} a las ${m.data.time || '09:00'}${proj ? ` — ${proj.data.name}` : ''}`, time: `${fmtDate(m.data.date)} · ${m.data.duration || 60} min`, urgent: isToday });
+      }
+    });
+
+    // Pending approvals in my projects
+    const myProjectIds = myProjects.map(p => p.id);
+    const pendingApprovals = fs.approvals.filter(a => a.data.status === 'Pendiente');
+    if (pendingApprovals.length > 0) {
+      result.push({ icon: '📋', text: `${pendingApprovals.length} aprobación${pendingApprovals.length > 1 ? 'es' : ''} pendiente${pendingApprovals.length > 1 ? 's' : ''}`, time: 'Requiere atención', urgent: false });
+    }
+
+    // Recent new projects (last 7 days)
+    const recentProjects = fs.projects.filter(p => {
+      const cd = (p.data.createdAt as any)?.toDate ? (p.data.createdAt as any).toDate() : new Date(p.data.createdAt as any);
+      return cd >= new Date(today.getTime() - 7 * 86400000);
+    });
+    recentProjects.slice(0, 3).forEach(p => {
+      result.push({ icon: '📁', text: `Proyecto "${p.data.name}" — ${p.data.status}${p.data.client ? ` · Cliente: ${p.data.client}` : ''}`, time: fmtDate(p.data.createdAt), urgent: false });
+    });
+
+    // Tasks in progress
+    if (myInProgress.length > 0) {
+      myInProgress.slice(0, 3).forEach(t => {
+        const proj = fs.projects.find(p => p.id === t.data.projectId);
+        result.push({ icon: '🔄', text: `"${t.data.title}" en progreso${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, time: t.data.status, urgent: false });
+      });
+    }
+
+    // Sort: urgent first
+    result.sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
+
+    return result;
+  }, [myOverdue, myHighPrio, myInProgress, myProjects, fs.projects, cal.meetings, fs.approvals]);
+
   return (
-(() => {
-            const myTasks = fs.tasks.filter(t => t.data.assigneeId === auth.authUser?.uid || !t.data.assigneeId);
-            const myPending = myTasks.filter(t => t.data.status !== 'Completado');
-            const myCompleted = myTasks.filter(t => t.data.status === 'Completado');
-            const myInProgress = myTasks.filter(t => t.data.status === 'En progreso');
-            const myHighPrio = myPending.filter(t => t.data.priority === 'Alta');
-            const myOverdue = myPending.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date());
-            const totalRate = myTasks.length > 0 ? Math.round((myCompleted.length / myTasks.length) * 100) : 0;
-            const myProjects = fs.projects.filter(p => p.data.createdBy === auth.authUser?.uid || myTasks.some(t => t.data.projectId === p.id));
-            const myExpenses = fs.expenses.filter(e => e.data.createdBy === auth.authUser?.uid);
-            const totalSpent = myExpenses.reduce((s, e) => s + (Number(e.data.amount) || 0), 0);
-
-            // Weekly activity (last 7 days)
-            const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            const weeklyData = weekDays.map((label, i) => {
-              const d = new Date();
-              d.setDate(d.getDate() - (6 - i));
-              const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-              const dayEnd = new Date(dayStart.getTime() + 86400000);
-              const completed = myTasks.filter(t => t.data.status === 'Completado').filter(t => {
-                const cd = (t.data.createdAt as any)?.toDate ? (t.data.createdAt as any).toDate() : new Date(t.data.createdAt as any);
-                return cd >= dayStart && cd < dayEnd;
-              }).length;
-              return { label, count: completed, max: 5 };
-            });
-            const weekMax = Math.max(...weeklyData.map(w => w.count), 1);
-
-            // Tasks by project
-            const tasksByProject: Record<string, { name: string; total: number; done: number }> = {};
-            myProjects.forEach(p => {
-              const pTasks = myTasks.filter(t => t.data.projectId === p.id);
-              if (pTasks.length > 0) {
-                tasksByProject[p.id] = { name: p.data.name, total: pTasks.length, done: pTasks.filter(t => t.data.status === 'Completado').length };
-              }
-            });
-
-            // Tasks by priority
-            const prioData = [
-              { label: 'Alta', count: myTasks.filter(t => t.data.priority === 'Alta').length, color: '#e05555' },
-              { label: 'Media', count: myTasks.filter(t => t.data.priority === 'Media').length, color: '#e09855' },
-              { label: 'Baja', count: myTasks.filter(t => t.data.priority === 'Baja').length, color: '#4caf7d' },
-            ];
-            const prioMax = Math.max(...prioData.map(p => p.count), 1);
-
-            return (<div className="animate-fadeIn space-y-4">
+    <div className="animate-fadeIn space-y-4">
               {/* Profile Header Card */}
               <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden">
                 <div className="flex items-center gap-3 relative">
@@ -94,91 +206,31 @@ export default function ProfileScreen() {
               </div>
 
               {/* Notificaciones */}
-              {(() => {
-                const today = new Date();
-                const todayStr = today.toISOString().split('T')[0];
-                const weekLater = new Date(today.getTime() + 7 * 86400000);
-                const notifications: { icon: string; text: string; time: string; urgent: boolean }[] = [];
-
-                // Overdue tasks (urgent)
-                myOverdue.forEach(t => {
-                  const proj = fs.projects.find(p => p.id === t.data.projectId);
-                  const daysOverdue = Math.floor((today.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
-                  notifications.push({ icon: '⚡', text: `"${t.data.title}" venció hace ${daysOverdue} día${daysOverdue !== 1 ? 's' : ''}${proj ? ` — ${proj.data.name}` : ''}`, time: `Venció ${fmtDate(t.data.dueDate)}`, urgent: true });
-                });
-
-                // High priority pending tasks
-                if (myHighPrio.length > 0) {
-                  myHighPrio.forEach(t => {
-                    const proj = fs.projects.find(p => p.id === t.data.projectId);
-                    notifications.push({ icon: '🔴', text: `Tarea urgente: "${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}`, time: `Prioridad Alta · ${t.data.status}`, urgent: true });
-                  });
-                }
-
-                // Meetings today or this week
-                cal.meetings.forEach(m => {
-                  if (m.data.date && (m.data.date === todayStr || (m.data.date > todayStr && m.data.date <= weekLater.toISOString().split('T')[0]))) {
-                    const proj = fs.projects.find(p => p.id === m.data.projectId);
-                    const isToday = m.data.date === todayStr;
-                    notifications.push({ icon: '📅', text: `Reunión "${m.data.title}"${isToday ? ' hoy' : ''} a las ${m.data.time || '09:00'}${proj ? ` — ${proj.data.name}` : ''}`, time: `${fmtDate(m.data.date)} · ${m.data.duration || 60} min`, urgent: isToday });
-                  }
-                });
-
-                // Pending approvals in my projects
-                const myProjectIds = myProjects.map(p => p.id);
-                const pendingApprovals = fs.approvals.filter(a => a.data.status === 'Pendiente');
-                if (pendingApprovals.length > 0) {
-                  notifications.push({ icon: '📋', text: `${pendingApprovals.length} aprobación${pendingApprovals.length > 1 ? 'es' : ''} pendiente${pendingApprovals.length > 1 ? 's' : ''}`, time: 'Requiere atención', urgent: false });
-                }
-
-                // Recent new projects (last 7 days)
-                const recentProjects = fs.projects.filter(p => {
-                  const cd = (p.data.createdAt as any)?.toDate ? (p.data.createdAt as any).toDate() : new Date(p.data.createdAt as any);
-                  return cd >= new Date(today.getTime() - 7 * 86400000);
-                });
-                recentProjects.slice(0, 3).forEach(p => {
-                  notifications.push({ icon: '📁', text: `Proyecto "${p.data.name}" — ${p.data.status}${p.data.client ? ` · Cliente: ${p.data.client}` : ''}`, time: fmtDate(p.data.createdAt), urgent: false });
-                });
-
-                // Tasks in progress
-                if (myInProgress.length > 0) {
-                  myInProgress.slice(0, 3).forEach(t => {
-                    const proj = fs.projects.find(p => p.id === t.data.projectId);
-                    notifications.push({ icon: '🔄', text: `"${t.data.title}" en progreso${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, time: t.data.status, urgent: false });
-                  });
-                }
-
-                // Sort: urgent first
-                notifications.sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
-
-                return (
-                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-[13px] sm:text-[15px] font-semibold">Notificaciones Recientes</div>
-                      <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">{notifications.length} actividad{notifications.length !== 1 ? 'es' : ''}</span>
-                    </div>
-                    {notifications.length === 0 ? (
-                      <div className="text-center py-8 text-[var(--af-text3)]">
-                        <div className="text-3xl mb-2">🔔</div>
-                        <div className="text-sm">Sin notificaciones nuevas</div>
-                        <div className="text-xs text-[var(--muted-foreground)] mt-1">Las alertas aparecerán aquí cuando haya actividad</div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                        {notifications.slice(0, 15).map((n, i) => (
-                          <div key={i} className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${n.urgent ? 'bg-red-500/5 border border-red-500/20' : 'bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)]'}`}>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[13px] sm:text-[15px] font-semibold">Notificaciones Recientes</div>
+                  <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">{notifications.length} actividad{notifications.length !== 1 ? 'es' : ''}</span>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-[var(--af-text3)]">
+                    <div className="text-3xl mb-2">🔔</div>
+                    <div className="text-sm">Sin notificaciones nuevas</div>
+                    <div className="text-xs text-[var(--muted-foreground)] mt-1">Las alertas aparecerán aquí cuando haya actividad</div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {notifications.slice(0, 15).map((n, i) => (
+                      <div key={i} className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${n.urgent ? 'bg-red-500/5 border border-red-500/20' : 'bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)]'}`}>
                             <div className="text-base flex-shrink-0 mt-0.5">{n.icon}</div>
                             <div className="flex-1 min-w-0">
                               <div className="text-[12px] sm:text-[13px] leading-snug">{n.text}</div>
                               <div className="text-[10px] text-[var(--af-text3)] mt-0.5">{n.time}</div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                );
-              })()}
+                )}
+              </div>
 
               {/* Configuración de notificaciones por evento */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
@@ -430,7 +482,6 @@ export default function ProfileScreen() {
                   Cerrar sesión
                 </button>
               </div>
-            </div>);
-          })()
+            </div>
   );
 }

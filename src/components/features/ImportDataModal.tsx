@@ -183,7 +183,8 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
     try {
       await downloadTemplate(type);
       showToast('Plantilla descargada');
-    } catch {
+    } catch (err) {
+      console.error('[ArchiFlow] ImportData: download template failed:', err);
       showToast('Error al descargar la plantilla', 'error');
     }
   }, [showToast]);

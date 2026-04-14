@@ -100,14 +100,14 @@ export default function TasksScreen() {
     setDragTaskId(taskId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', taskId);
-    try { (e.target as HTMLElement).style.opacity = '0.4'; } catch {}
+    try { (e.target as HTMLElement).style.opacity = '0.4'; } catch (err) { console.error('[ArchiFlow] Tasks: set drag opacity failed:', err); }
   }, []);
 
   const handleDragEnd = useCallback((e: React.DragEvent) => {
     setDragTaskId(null);
     setDragOverCol(null);
     dragCounterRef.current = {};
-    try { (e.target as HTMLElement).style.opacity = '1'; } catch {}
+    try { (e.target as HTMLElement).style.opacity = '1'; } catch (err) { console.error('[ArchiFlow] Tasks: reset drag opacity failed:', err); }
   }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent, colStatus: string) => {
@@ -306,7 +306,7 @@ export default function TasksScreen() {
               try {
                 exportTasksExcel(tasks, projects, teamUsers);
                 showToast('Tareas exportadas a Excel');
-              } catch (err) { showToast('Error al exportar', 'error'); }
+              } catch (err) { console.error('[ArchiFlow] Tasks: export tasks Excel failed:', err); showToast('Error al exportar', 'error'); }
             }}
           >
             <Download size={13} /> Excel

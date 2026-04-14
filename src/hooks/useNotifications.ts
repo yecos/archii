@@ -126,7 +126,9 @@ export function useNotifications(showToastFn: (msg: string, type?: string) => vo
           const diff = Date.now() - parseInt(dismissed);
           if (diff < 3 * 24 * 60 * 60 * 1000) return;
         }
-      } catch {}
+      } catch (err) {
+        console.error('[ArchiFlow] Notifications: check dismissed timestamp failed:', err);
+      }
       const timer = setTimeout(() => {
         if (Notification.permission === 'default') setShowNotifBanner(true);
       }, 5000);

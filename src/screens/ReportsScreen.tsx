@@ -6,43 +6,22 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
 import { Download, FileSpreadsheet, FileText, Filter } from 'lucide-react';
+const _im = () => import('@/components/features/ReportsCharts');
+const TaskStatusPie = dynamic(() => _im().then(m => ({ default: m.TaskStatusPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const TaskPriorityPie = dynamic(() => _im().then(m => ({ default: m.TaskPriorityPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const MonthlyExpenseTrend = dynamic(() => _im().then(m => ({ default: m.MonthlyExpenseTrend })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const RoleDistPie = dynamic(() => _im().then(m => ({ default: m.RoleDistPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const BudgetVsRealBar = dynamic(() => _im().then(m => ({ default: m.BudgetVsRealBar })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const ExpenseCategoryPie = dynamic(() => _im().then(m => ({ default: m.ExpenseCategoryPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const HoursByProjectBar = dynamic(() => _im().then(m => ({ default: m.HoursByProjectBar })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const TeamRoleDistPie = dynamic(() => _im().then(m => ({ default: m.TeamRoleDistPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
 import { exportGeneralReportPDF, exportBudgetPDF, exportTimeReportPDF } from '@/lib/export-pdf';
 import { exportExpensesExcel, exportTimeExcel, exportProjectsExcel } from '@/lib/export-excel';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, getWeekStart } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 
-const COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'];
-
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
-      {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
-      {payload.map((p: any, i: number) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
-          <span className="text-[var(--muted-foreground)]">{p.name}:</span>
-          <span className="font-semibold">{typeof p.value === 'number' && p.value > 9999 ? fmtCOP(p.value) : p.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChartLegend({ payload }: any) {
-  return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-2">
-      {payload?.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-1.5 text-[10px]">
-          <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-          <span className="text-[var(--muted-foreground)]">{entry.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function ReportsScreen() {
   const { forms, setForms, showToast } = useUI();
@@ -183,7 +162,7 @@ export default function ReportsScreen() {
               try {
                 exportGeneralReportPDF({ projects, tasks, expenses: filteredExpenses, invoices: filteredInvoices, teamUsers, timeEntries: filteredTimeEntries });
                 showToast('Reporte PDF descargado');
-              } catch (err) { showToast('Error al generar PDF', 'error'); }
+              } catch (err) { console.error('[ArchiFlow] Reports: export general report PDF failed:', err); showToast('Error al generar PDF', 'error'); }
             }}>
               <FileText size={13} /> PDF
             </button>
@@ -205,7 +184,7 @@ export default function ReportsScreen() {
                 const a = document.createElement('a'); a.href = url; a.download = `archiflow-reporte-${new Date().toISOString().split('T')[0]}.csv`; a.click();
                 URL.revokeObjectURL(url);
                 showToast('Reporte CSV descargado');
-              } catch (err) { showToast('Error al exportar', 'error'); }
+              } catch (err) { console.error('[ArchiFlow] Reports: export CSV failed:', err); showToast('Error al exportar', 'error'); }
             }}>
               <Download size={13} /> CSV
             </button>
@@ -236,18 +215,7 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado ({dateLabel})</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizacion</div></div>
                 </div>
-                {taskStatusData.length > 0 && <div className="mb-4">
-                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Distribucion de Tareas</div>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <PieChart>
-                      <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={3} dataKey="value" stroke="none">
-                        {taskStatusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend content={<ChartLegend />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>}
+                <TaskStatusPie data={taskStatusData} />
                 {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos mas</div>}</div>}
               </div>
               {/* Card 2: Tareas y Productividad */}
@@ -261,18 +229,7 @@ export default function ReportsScreen() {
                 </div>
                 {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
                 {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
-                {taskPriorityData.length > 0 && <div>
-                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Por prioridad</div>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <PieChart>
-                      <Pie data={taskPriorityData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={3} dataKey="value" stroke="none">
-                        {taskPriorityData.map((_, i) => <Cell key={i} fill={['#ef4444', '#f59e0b', '#10b981', '#6366f1'][i % 4]} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend content={<ChartLegend />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>}
+                <TaskPriorityPie data={taskPriorityData} />
               </div>
               {/* Card 3: Presupuesto */}
               <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
@@ -283,26 +240,10 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div></div>
                 </div>
                 <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilizacion del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
-                {/* NEW: Monthly Expense Trend Line Chart */}
-                <div className="mb-4">
-                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Tendencia de Gastos</div>
-                  {monthlyExpenseTrend.some(d => d.gastos > 0) ? (
-                    <ResponsiveContainer width="100%" height={140}>
-                      <LineChart data={monthlyExpenseTrend} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Line type="monotone" dataKey="gastos" name="Gastos" stroke="#c8a96e" strokeWidth={2} dot={{ r: 3, fill: '#c8a96e' }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="text-sm text-[var(--muted-foreground)]">Sin gastos en el período</div>
-                  )}
-                </div>
+                <MonthlyExpenseTrend data={monthlyExpenseTrend} />
                 {/* Export budget button */}
                 <button className="w-full text-xs text-[var(--af-accent)] cursor-pointer hover:underline text-center bg-[var(--af-accent)]/5 rounded-lg py-2 transition-colors hover:bg-[var(--af-accent)]/10" onClick={() => {
-                  try { exportBudgetPDF({ expenses: filteredExpenses, projects }); showToast('Presupuesto PDF descargado'); } catch { showToast('Error', 'error'); }
+                  try { exportBudgetPDF({ expenses: filteredExpenses, projects }); showToast('Presupuesto PDF descargado'); } catch (err) { console.error('[ArchiFlow] Reports: export budget PDF failed:', err); showToast('Error', 'error'); }
                 }}>
                   <FileText size={12} className="inline mr-1" /> Descargar reporte de presupuesto PDF
                 </button>
@@ -314,18 +255,7 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div></div>
                 </div>
-                {roleDistData.length > 0 && <div className="mb-4">
-                  <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Roles</div>
-                  <ResponsiveContainer width="100%" height={120}>
-                    <PieChart>
-                      <Pie data={roleDistData} cx="50%" cy="50%" innerRadius={25} outerRadius={45} paddingAngle={3} dataKey="value" stroke="none">
-                        {roleDistData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend content={<ChartLegend />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>}
+                <RoleDistPie data={roleDistData} />
                 {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>{Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {const member = teamUsers.find(u => u.id === uid); return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>);})}</div>}
               </div>
             </div>;
@@ -365,42 +295,20 @@ export default function ReportsScreen() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Presupuesto vs Real por Proyecto</h3>
                   <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
-                    try { exportBudgetPDF({ expenses: filteredExpenses, projects }); showToast('PDF descargado'); } catch { showToast('Error', 'error'); }
+                    try { exportBudgetPDF({ expenses: filteredExpenses, projects }); showToast('PDF descargado'); } catch (err) { console.error('[ArchiFlow] Reports: export budget PDF failed:', err); showToast('Error', 'error'); }
                   }}><FileText size={12} className="inline mr-1" />PDF</button>
                 </div>
-                {budgetVsRealData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin proyectos con presupuesto</div> : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={budgetVsRealData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
-                      <Legend content={<ChartLegend />} />
-                      <Bar dataKey="presupuesto" name="Presupuesto" fill="#c8a96e" radius={[4, 4, 0, 0]} barSize={18} />
-                      <Bar dataKey="gastado" name="Gastado" fill={budgetPct > 90 ? '#ef4444' : '#10b981'} radius={[4, 4, 0, 0]} barSize={18} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                <BudgetVsRealBar data={budgetVsRealData} budgetPct={budgetPct} />
               </div>
               {/* Gastos por categoria */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Gastos por Categoria</h3>
                   <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
-                    try { exportExpensesExcel(filteredExpenses, projects); showToast('Excel descargado'); } catch { showToast('Error', 'error'); }
+                    try { exportExpensesExcel(filteredExpenses, projects); showToast('Excel descargado'); } catch (err) { console.error('[ArchiFlow] Reports: export expenses Excel failed:', err); showToast('Error', 'error'); }
                   }}><FileSpreadsheet size={12} className="inline mr-1" />Excel</button>
                 </div>
-                {categoryData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin gastos</div> : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
-                        {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend content={<ChartLegend />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
+                <ExpenseCategoryPie data={categoryData} />
               </div>
               {/* Rentabilidad */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
@@ -441,10 +349,10 @@ export default function ReportsScreen() {
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-[var(--af-text3)]">{dateLabel}</span>
                     <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
-                      try { exportTimeReportPDF({ timeEntries: filteredTimeEntries, teamUsers, projects }); showToast('PDF descargado'); } catch { showToast('Error', 'error'); }
+                      try { exportTimeReportPDF({ timeEntries: filteredTimeEntries, teamUsers, projects }); showToast('PDF descargado'); } catch (err) { console.error('[ArchiFlow] Reports: export time report PDF failed:', err); showToast('Error', 'error'); }
                     }}><FileText size={12} className="inline mr-1" />PDF</button>
                     <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
-                      try { exportTimeExcel(filteredTimeEntries, projects, teamUsers); showToast('Excel descargado'); } catch { showToast('Error', 'error'); }
+                      try { exportTimeExcel(filteredTimeEntries, projects, teamUsers); showToast('Excel descargado'); } catch (err) { console.error('[ArchiFlow] Reports: export time Excel failed:', err); showToast('Error', 'error'); }
                     }}><FileSpreadsheet size={12} className="inline mr-1" />Excel</button>
                   </div>
                 </div>
@@ -457,17 +365,7 @@ export default function ReportsScreen() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Horas por Proyecto</h3>
-                {hoursByProjectData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={hoursByProjectData} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} unit="h" />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={90} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
-                      <Bar dataKey="horas" name="Horas" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={14} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                <HoursByProjectBar data={hoursByProjectData} />
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Horas por Miembro</h3>
@@ -495,17 +393,7 @@ export default function ReportsScreen() {
             return (<>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Distribucion por Roles</h3>
-                {roleDistData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div> : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie data={roleDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={75} paddingAngle={3} dataKey="value" stroke="none">
-                        {roleDistData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend content={<ChartLegend />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
+                <TeamRoleDistPie data={roleDistData} />
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Productividad por Miembro</h3>

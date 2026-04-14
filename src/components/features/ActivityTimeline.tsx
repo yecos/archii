@@ -75,7 +75,8 @@ function formatRelativeTime(date: any): string {
     if (diffDay === 1) return 'Ayer';
     if (diffDay < 7) return `Hace ${diffDay} días`;
     return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-  } catch {
+  } catch (err) {
+    console.error('[ArchiFlow] ActivityTimeline: format relative date failed:', err);
     return '';
   }
 }
@@ -84,7 +85,8 @@ function toTimestamp(date: any): number {
   try {
     const d = date?.toDate ? date.toDate() : new Date(date);
     return isNaN(d.getTime()) ? 0 : d.getTime();
-  } catch {
+  } catch (err) {
+    console.error('[ArchiFlow] ActivityTimeline: parse timestamp failed:', err);
     return 0;
   }
 }

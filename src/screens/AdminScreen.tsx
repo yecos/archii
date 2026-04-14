@@ -335,7 +335,7 @@ export default function AdminScreen() {
                               {(a.data as any).projectName && <span>📁 {(a.data as any).projectName}</span>}
                               {(a.data as any).amount > 0 && <span className="text-[var(--af-accent)] font-medium">💰 {fmtCOP((a.data as any).amount)}</span>}
                               {(a.data as any).requestedByName && <span>👤 {(a.data as any).requestedByName}</span>}
-                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `📅 ${fmtDate(d.toDate())}` : ''; } catch { return ''; } })()}
+                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `📅 ${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
                             </div>
                             {(a.data as any)?.comments && (
                               <div className="mt-2 text-[11px] text-[var(--muted-foreground)] bg-[var(--af-bg3)] rounded-md px-2.5 py-1.5 border border-[var(--border)]">
@@ -471,7 +471,7 @@ export default function AdminScreen() {
                           const db = getFirebase().firestore();
                           await db.collection('users').doc(m.id).delete();
                           showToast(`${m.data?.name || m.data?.email} eliminado del equipo`);
-                        } catch (err) { showToast('Error al eliminar usuario', 'error'); }
+                        } catch (err) { console.error('[ArchiFlow] Admin: delete user failed:', err); showToast('Error al eliminar usuario', 'error'); }
                       }}
                       className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
                       title="Eliminar del equipo"

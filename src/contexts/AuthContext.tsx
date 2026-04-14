@@ -97,10 +97,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     try {
       const w = window as any;
       if (w.firebase?.auth?.Auth?.Persistence?.LOCAL) {
-        auth.setPersistence(w.firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+        auth.setPersistence(w.firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('[ArchiFlow] Auth: set persistence failed:', err));
       }
-    } catch (e) {
+    } catch (err) {
       // Ignore persistence errors — default behavior is fine
+      console.warn('[ArchiFlow] Auth: persistence setup failed:', err);
     }
 
     // Handle redirect results (for signInWithRedirect fallback)

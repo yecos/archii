@@ -2,7 +2,21 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
+import type { TeamUser, Project, Task, GalleryPhoto, InvProduct } from '@/lib/types';
 import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check } from 'lucide-react';
+
+/** Firebase auth user — loaded via CDN, so no npm type available. */
+interface FirebaseUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+
+/** Sidebar navigation item — either a clickable nav entry or a visual divider. */
+type NavItem =
+  | { id: string; label: string; icon: React.ReactNode; badge?: number }
+  | { divider: true };
 
 interface SidebarProps {
   screen: string;
@@ -13,14 +27,14 @@ interface SidebarProps {
   setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   userName: string;
   initials: string;
-  authUser: any;
-  teamUsers: any[];
+  authUser: FirebaseUser | null;
+  teamUsers: TeamUser[];
   isEmailAdmin: boolean;
-  projects: any[];
-  tasks: any[];
+  projects: Project[];
+  tasks: Task[];
   pendingCount: number;
-  galleryPhotos: any[];
-  invLowStock: any[];
+  galleryPhotos: GalleryPhoto[];
+  invLowStock: InvProduct[];
   isAdmin: boolean;
 }
 
@@ -29,7 +43,7 @@ export default React.memo(function Sidebar({
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
 }: SidebarProps) {
-  const navItems = [
+  const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} className="stroke-current" /> },
     { id: 'profile', label: 'Mi Perfil', icon: <User size={18} className="stroke-current" /> },
     { id: 'projects', label: 'Proyectos', icon: <Folder size={18} className="stroke-current" />, badge: projects.length },
@@ -70,7 +84,7 @@ export default React.memo(function Sidebar({
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
-          {navItems.filter((n: any) => !n.divider).slice(0, 5).map((n: any) => (
+          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 5).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className={`flex-1 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
@@ -78,7 +92,7 @@ export default React.memo(function Sidebar({
             </div>
           ))}
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Gestión</div>
-          {navItems.filter((n: any) => !n.divider).slice(5).map((n: any) => (
+          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(5).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className={`transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
@@ -86,7 +100,7 @@ export default React.memo(function Sidebar({
           ))}
         </div>
         <div className="border-t border-[var(--border)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid)} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid ?? '')} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
           <div className={`flex-1 min-w-0 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; const displayRole = isEmailAdmin ? 'Admin' : myRole; return `${ROLE_ICONS[displayRole] || '👤'} ${displayRole}`; })()}</div></div>
         </div>
       </aside>

@@ -211,7 +211,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       }
       if (!res.ok) return null;
       return await res.json();
-    } catch { return null; }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: Graph API request failed:', err); return null; }
   }, [msAccessToken, refreshMsToken]);
 
   const ensureProjectFolder = async (projectName: string) => {
@@ -253,7 +253,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       setOdProjectFolder(projFolderId);
       setMsLoading(false);
       return projFolderId;
-    } catch { setMsLoading(false); return null; }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: ensure project folder failed:', err); setMsLoading(false); return null; }
   };
 
   const loadOneDriveFiles = async (folderId: string) => {
@@ -264,7 +264,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       if (data?.value) {
         setOneDriveFiles(data.value);
       }
-    } catch { showToast('Error al cargar archivos', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: load files failed:', err); showToast('Error al cargar archivos', 'error'); }
     setMsLoading(false);
   };
 
@@ -283,7 +283,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       } else {
         showToast('Error al subir archivo', 'error');
       }
-    } catch { showToast('Error al subir', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: upload file failed:', err); showToast('Error al subir', 'error'); }
     setMsLoading(false);
   };
 
@@ -452,7 +452,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       } else {
         showToast('Error al renombrar', 'error');
       }
-    } catch { showToast('Error al renombrar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: rename file failed:', err); showToast('Error al renombrar', 'error'); }
   };
 
   const downloadOneDriveFile = async (fileId: string, fileName: string) => {
@@ -469,7 +469,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       } else {
         showToast('Error al descargar', 'error');
       }
-    } catch { showToast('Error al descargar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] OneDrive: download file failed:', err); showToast('Error al descargar', 'error'); }
   };
 
   const searchOneDriveFiles = useCallback(async (query: string) => {
@@ -483,7 +483,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         const data = await res.json();
         setOdSearchResults(data.items || data.value || []);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[ArchiFlow] OneDrive: search files failed:', e); }
     setOdSearching(false);
   }, [msAccessToken]);
 
@@ -497,7 +497,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         const data = await res.json();
         setOdGalleryPhotos(data.items || data.photos || []);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[ArchiFlow] OneDrive: load gallery photos failed:', e); }
     setGalleryLoading(false);
   }, [msAccessToken]);
 

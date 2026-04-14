@@ -73,7 +73,7 @@ export default function InvoicesScreen() {
                     <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                       {/* NEW: PDF Download */}
                       <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-[var(--af-accent)]/10 text-[var(--af-accent)] hover:bg-[var(--af-accent)]/20" onClick={() => {
-                        try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { showToast('Error al generar PDF', 'error'); }
+                        try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { console.error('[ArchiFlow] Invoices: export invoice PDF failed:', err); showToast('Error al generar PDF', 'error'); }
                       }} title="Descargar PDF">
                         <FileText size={14} />
                       </button>

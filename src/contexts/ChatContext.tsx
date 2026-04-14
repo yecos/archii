@@ -144,17 +144,17 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, () => {});
+      }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); });
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
       unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, () => {});
+      }, (err) => { console.error('[ArchiFlow] Chat: directMessages snapshot failed:', err); });
     } else {
       unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, () => {});
+      }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); });
     }
     return () => { unsub(); setMessages([]); };
   }, [ready, chatProjectId, chatDmUser, authUser]);
@@ -188,7 +188,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       else { await db.collection('projects').doc(chatProjectId).collection('messages').add(msgData); }
       setForms(p => ({ ...p, chatInput: '' }));
       setChatReplyingTo(null);
-    } catch { showToast('Error al enviar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Chat: send message failed:', err); showToast('Error al enviar', 'error'); }
   };
 
   const startRecording = async () => {
@@ -220,7 +220,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
         recAnimRef.current = requestAnimationFrame(monitorVol);
       };
       monitorVol();
-    } catch { showToast('No se pudo acceder al microfono', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Chat: start recording failed:', err); showToast('No se pudo acceder al microfono', 'error'); }
   };
 
   const stopRecording = (): Promise<Blob | null> => {
@@ -360,7 +360,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       await db.collection(collection).doc(msgId).delete();
       setChatMenuMsg(null);
       showToast('Mensaje eliminado');
-    } catch { showToast('Error al eliminar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Chat: delete message failed:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const copyMessageText = (text: string) => {

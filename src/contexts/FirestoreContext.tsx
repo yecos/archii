@@ -297,7 +297,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         }
       }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projTemplate: '' }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Firestore: save project failed:', err); showToast('Error al guardar', 'error'); }
   }, [editingId, forms, authUser, projects, msConnected, msAccessToken, showToast, closeModal, setForms]);
 
   const deleteProject = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
@@ -377,7 +377,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         if (assignees.length > 0 && forms.taskProject) {
           const proj = projects.find((p: any) => p.id === forms.taskProject);
           const projName = proj?.data?.name || 'Proyecto';
-          assignees.forEach((uid: string) => { notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {}); });
+          assignees.forEach((uid: string) => { notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp taskAssigned notification failed:', err)); });
         }
       }
       closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
@@ -450,7 +450,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       if (forms.expProject) {
         const proj = projects.find(p => p.id === forms.expProject);
         const projName = proj?.data.name || 'Proyecto';
-        notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(() => {});
+        notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp expenseCreated notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [forms, authUser, projects, showToast, closeModal, setForms]);
@@ -518,7 +518,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         logAudit('create', 'company' as AuditEntityType, ref.id, name, undefined, undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
       }
       closeModal('company'); setEditingId(null);
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Firestore: save company failed:', err); showToast('Error al guardar', 'error'); }
   }, [editingId, forms, showToast, closeModal, setEditingId, companies, authUser]);
 
   // --- Files ---
@@ -532,13 +532,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       const db = getFirebase().firestore();
       await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
-    } catch (err: unknown) { showToast('Error al subir: ' + (err instanceof Error ? err.message : ''), 'error'); }
+    } catch (err: unknown) { console.error('[ArchiFlow] Firestore: upload file failed:', err); showToast('Error al subir: ' + (err instanceof Error ? err.message : ''), 'error'); }
     e.target.value = '';
   }, [selectedProjectId, authUser, showToast, fileToBase64]);
 
   const deleteFile = useCallback(async (file: ProjectFile) => {
     if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete(); showToast('Archivo eliminado'); } catch { showToast('Error al eliminar', 'error'); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete(); showToast('Archivo eliminado'); } catch (err) { console.error('[ArchiFlow] Firestore: delete file failed:', err); showToast('Error al eliminar', 'error'); }
   }, [selectedProjectId, confirm, showToast]);
 
   // --- Work Phases ---
@@ -584,7 +584,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       closeModal('approval');
       setForms(p => ({ ...p, appTitle: '', appDesc: '', appType: 'general', appAmount: '', appProject: '' }));
       const projName = proj?.data?.name || 'Proyecto';
-      notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
+      notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalPending notification failed:', err));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al crear aprobación', 'error'); }
   }, [forms, selectedProjectId, projects, authUser, showToast, closeModal, setForms]);
 
@@ -604,7 +604,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       showToast('✅ Aprobación aceptada');
       const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
       if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Aprobada', authUser?.displayName || undefined).catch(() => {});
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Aprobada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Aprobada) notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);
@@ -620,7 +620,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update(updateData);
       showToast('❌ Aprobación rechazada');
       if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Rechazada', authUser?.displayName || undefined).catch(() => {});
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Rechazada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Rechazada) notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [allApprovals, approvals, selectedProjectId, authUser, showToast]);
@@ -634,7 +634,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       showToast('Estado actualizado');
       const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
       if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(() => {});
+        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); }
   }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);

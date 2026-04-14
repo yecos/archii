@@ -103,7 +103,7 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
   const deleteDailyLog = async (logId: string) => {
     if (!selectedProjectId) return;
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId).delete(); showToast('Bitácora eliminada'); if (selectedLogId === logId) { setDailyLogTab('list'); setSelectedLogId(null); } }
-    catch { showToast('Error al eliminar', 'error'); }
+    catch (err) { console.error('[ArchiFlow] Comments: delete daily log failed:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const openEditLog = (log: any) => {

@@ -44,7 +44,7 @@ function showToastDOM(message: string, type: ToastType = 'info', duration = 4500
     container.appendChild(el);
     requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translateY(0) scale(1)'; }); });
     setTimeout(function(){ el.style.opacity='0'; el.style.transform='translateY(-12px) scale(0.95)'; setTimeout(function(){ if(el.parentNode) el.remove(); },300); }, duration);
-  } catch(e) { /* silenciar errores de DOM */ }
+  } catch(e) { console.error('[ArchiFlow] UI: showToast DOM manipulation failed:', e); }
 }
 
 /* ===== UI CONTEXT ===== */
@@ -195,8 +195,8 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
       if (type === 'error') toast.error(msg, opts);
       else if (type === 'warning') toast.warning(msg, opts);
       else toast.success(msg, opts);
-    } catch {
-      // Sonner falló — ignorar
+    } catch (err) {
+      console.warn('[ArchiFlow] UI: Sonner toast failed:', err);
     }
     // Siempre mostrar toast DOM inline como garantía (funciona siempre)
     showToastDOM(msg, type as 'success' | 'error' | 'warning' | 'info');

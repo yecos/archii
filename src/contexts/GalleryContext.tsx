@@ -218,8 +218,9 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
       closeModal('gallery');
       setEditingId(null);
       setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' }));
-    } catch {
+    } catch (err) {
       setUploadProgress(0);
+      console.error('[ArchiFlow] Gallery: save photo failed:', err);
       showToast('Error al guardar foto', 'error');
     }
   }, [forms, authUser, editingId, showToast, closeModal, setEditingId, setForms]);
@@ -260,7 +261,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
         reader.readAsDataURL(file);
       });
       setForms(p => ({ ...p, galleryImageData: preview }));
-    } catch { showToast('Error al procesar imagen', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Gallery: process image failed:', err); showToast('Error al procesar imagen', 'error'); }
   }, [showToast, setForms]);
 
   // ===== LIGHTBOX FUNCTIONS =====

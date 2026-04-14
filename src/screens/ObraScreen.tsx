@@ -121,7 +121,7 @@ export default function ObraScreen() {
               try {
                 exportDailyLogsPDF({ logs: displayLogs, projectName: selectedProject?.data.name || 'Todos los proyectos' });
                 ui.showToast('Bitácora PDF descargada');
-              } catch { ui.showToast('Error al generar PDF', 'error'); }
+              } catch (err) { console.error('[ArchiFlow] Obra: export daily logs PDF failed:', err); ui.showToast('Error al generar PDF', 'error'); }
             }}>
               <FileText size={14} /> Exportar PDF
             </button>

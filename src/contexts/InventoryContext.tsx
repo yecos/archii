@@ -173,7 +173,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
       setForms(p => ({ ...p, ...resetForms }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Inventory: save product failed:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteInvProduct = async (id: string) => { if (!(await confirm({ title: 'Eliminar producto', description: '¿Eliminar este producto del inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -198,7 +198,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
       closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] Inventory: save category failed:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteInvCategory = async (id: string) => { if (!(await confirm({ title: 'Eliminar categoría', description: '¿Eliminar categoría?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -298,7 +298,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!file.type.startsWith('image/')) { showToast('Solo imágenes', 'error'); return; }
     if (file.size > 3 * 1024 * 1024) { showToast('Máx 3 MB', 'error'); return; }
     try { const base64 = await fileToBase64(file); setForms(p => ({ ...p, invProdImage: base64 })); }
-    catch { showToast('Error al procesar', 'error'); }
+    catch (err) { console.error('[ArchiFlow] Inventory: process product image failed:', err); showToast('Error al procesar', 'error'); }
   };
 
   // ===== COMPUTED VALUES =====

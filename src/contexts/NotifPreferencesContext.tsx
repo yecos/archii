@@ -69,8 +69,8 @@ export default function NotifPreferencesProvider({ children }: { children: React
               setPreferences({ ...DEFAULT_NOTIF_PREFERENCES, ...parsed });
             }
           }
-        } catch {
-          // Ignore localStorage errors — defaults will be used
+        } catch (err) {
+          console.error('[ArchiFlow] NotifPreferences: localStorage read failed:', err);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -87,13 +87,13 @@ export default function NotifPreferencesProvider({ children }: { children: React
     try {
       const db = getFirebase().firestore();
       await db.collection('users').doc(authUser.uid).collection('settings').doc('notifications').set(prefs);
-    } catch {
-      // Fallback to localStorage if Firestore write fails
+    } catch (err) {
+      console.warn('[ArchiFlow] NotifPreferences: Firestore write failed, using localStorage fallback:', err);
     }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    } catch {
-      // Ignore
+    } catch (err) {
+      console.error('[ArchiFlow] NotifPreferences: localStorage write failed:', err);
     }
   }, [authUser]);
 
