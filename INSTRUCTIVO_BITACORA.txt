@@ -221,6 +221,97 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 12:00 | FEATURE PACK v7 — 11 nuevas funcionalidades (Tier 1+2+3)
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-features-v7-20260415
+  Objetivo: Auditoria de API keys + 8 features nuevas + 3 limpiezas tecnicas
+  Commits realizados: 3
+
+  Tarea TIER 3 — Limpieza Tecnica (Commit: 353145a)
+    3.1 .env.example reescrito:
+      - Eliminadas variables muertas: GEMINI_API_KEY, DATABASE_URL, NEXT_PUBLIC_FIREBASE_* (6)
+      - Agregadas variables reales: OPENAI_API_KEY, OPENAI_BASE_URL, AI_MODEL,
+        WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN,
+        WHATSAPP_API_VERSION, NEXT_PUBLIC_MS_CLIENT_ID, AZURE_CLIENT_SECRET,
+        AZURE_CLIENT_ID, FIREBASE_ADMIN_CREDENTIALS, ADMIN_EMAIL
+      - Documentacion clara: cuales son obligatorias vs opcionales
+    3.2 Admin email extraido a variable de entorno:
+      - src/lib/api-auth.ts: ADMIN_EMAILS ahora lee process.env.ADMIN_EMAIL
+      - Soporta multiples emails separados por coma
+      - Fallback: yecos11@gmail.com (sin break change)
+    3.3 Dependencia muerta eliminada:
+      - @prisma/client y prisma removidos de package.json (no schema, no uso)
+      - -64 paquetes, +23 paquetes (limpieza de lockfile)
+    Archivos modificados: .env.example, src/lib/api-auth.ts, package.json, package-lock.json
+
+  Tarea TIER 1 — Features Alto Impacto (Commit: 9de5c87)
+    1.1 Dark Mode Toggle:
+      - ThemeProvider.tsx creado (next-themes, attribute=class, defaultTheme=system)
+      - TopBar.tsx: toggle 3 estados (light/dark/system) con iconos Sun/Moon/Monitor
+      - UIContext.tsx: adaptado para delegar a next-themes (API preservada)
+      - layout.tsx: ThemeProvider envuelto + FOUC prevention script actualizado
+      - globals.css: ya tenia .dark con variables CSS completas (sin cambios)
+    1.2 Subtareas/Checklists:
+      - Tipo Subtask agregado a types.ts (id, text, completed)
+      - Task interface: campo subtasks?: Subtask[]
+      - TaskModal.tsx: checklist completo con add/remove/toggle + progress indicator
+      - TasksScreen.tsx: SubtaskBadge (completadas/total) en cada tarea con subtareas
+    1.3 Alertas de Presupuesto:
+      - budget-alerts.ts: motor de alertas con umbrales 80%/90%/100%
+      - BudgetProgressBar.tsx: componente reutilizable con marcadores de umbral
+      - NotifContext.tsx: deteccion automatica al agregar gastos, dedup via localStorage
+      - DashboardScreen.tsx: banner de alertas con cards por proyecto
+      - ProjectDetailScreen.tsx: BudgetProgressBar en tab Presupuesto
+      - BudgetScreen.tsx: barras de presupuesto por proyecto
+    Archivos creados: ThemeProvider.tsx, budget-alerts.ts, BudgetProgressBar.tsx
+    Archivos modificados: 11 (layout, TopBar, UIContext, types, TaskModal, TasksScreen,
+      NotifContext, DashboardScreen, ProjectDetailScreen, BudgetScreen, FirestoreContext)
+
+  Tarea TIER 1+2 — Features Adicionales (Commit: 348c38a)
+    1.4 Comentarios en Tareas:
+      - TaskCommentsPanel.tsx: panel de comentarios filtrado por taskId
+      - TaskModal.tsx: seccion colapsable de comentarios (solo al editar)
+      - Soporte de reply threading via CommentsContext existente
+    2.5 Eventos Recurrentes:
+      - recurrence.ts: generateRecurringDates + expandMeetingForMonth utility
+      - Meeting type: campos recurrence y recurrenceEnd
+      - MeetingModal.tsx: selector recurrencia + preview de proximas 5 fechas
+      - CalendarContext.tsx: expandedMeetings computed para vistas mensuales
+      - CalendarScreen.tsx: icono Repeat en reuniones recurrentes
+    2.6 Canales de Notificacion:
+      - NotifPreferencesContext.tsx: preferencias por usuario en Firestore
+      - 10 tipos de eventos configurables (task_assigned, budget_alert, etc.)
+      - NotifContext.tsx: filtro isEventEnabled en sendNotif
+      - ProfileScreen.tsx: seccion toggles para cada tipo de evento
+      - AppContext.tsx: NotifPreferencesProvider en arbol de providers
+    2.7 IA Sugestiones Inteligentes:
+      - ai-suggestions/route.ts: rewrite completo con 5 tipos (tasks/budget/expenses/schedule/overview)
+      - AISuggestionsPanel.tsx: panel modal con tabs y cards de sugerencias
+      - DashboardScreen.tsx: boton "Sugerencias IA" con panel integrado
+    Archivos creados: TaskCommentsPanel.tsx, recurrence.ts, NotifPreferencesContext.tsx,
+      AISuggestionsPanel.tsx
+    Archivos modificados: 11
+
+  Tarea TIER 2 — Flujo de Aprobaciones (Commit: 05d11fd)
+    2.8 Approval Workflow real:
+      - Approval type: enhanced con type, project, amount, reviewer tracking
+      - FirestoreContext: createApproval, approveApproval, rejectApproval, pendingApprovals
+      - ApprovalModal.tsx: dual-mode (Crear/Revisar), 4 tipos de aprobacion
+      - ProjectDetailScreen.tsx: seccion Aprobaciones con lista completa
+      - BudgetScreen.tsx: deteccion de gastos grandes con sugerencia de aprobacion
+      - DashboardScreen.tsx: KPI card aprobaciones pendientes
+      - AdminScreen.tsx: tab Aprobaciones con cola y filtros
+      - NotifContext.tsx: eventType approval_action
+    Archivos modificados: 8
+
+  Resumen FEATURE PACK v7:
+    - 3 commits: 353145a, 9de5c87, 348c38a, 05d11fd
+    - 19 archivos creados o modificados
+    - 11 funcionalidades implementadas
+    - 0 errores TypeScript
+    - Build exitoso (14/14 paginas estaticas generadas)
+    - Vercel deploy automatico verificado
+
 2026-04-14 15:30 | BUG FIX - Arreglar login con Google, Microsoft y correo/contraseña
   Estado: RESUELTO
   Tag de respaldo: backup-pre-fix-login-auth-20260414
