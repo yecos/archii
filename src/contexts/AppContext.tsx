@@ -19,6 +19,7 @@ import UIProvider from './UIContext';
 import AuthProvider from './AuthContext';
 import OneDriveProvider from './OneDriveContext';
 import FirestoreProvider from './FirestoreContext';
+import AdminProvider from './AdminContext';
 import ChatProvider from './ChatContext';
 import NotifPreferencesProvider from './NotifPreferencesContext';
 import NotifProvider from './NotifContext';
@@ -41,6 +42,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       <AuthProvider>
         <OneDriveProvider>
           <FirestoreProvider>
+            <AdminProvider>
             <ChatProvider>
               <NotifPreferencesProvider>
                 <NotifProvider>
@@ -48,6 +50,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 </NotifProvider>
               </NotifPreferencesProvider>
             </ChatProvider>
+            </AdminProvider>
           </FirestoreProvider>
         </OneDriveProvider>
       </AuthProvider>
