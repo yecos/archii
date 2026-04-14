@@ -221,6 +221,91 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 12:00 | BUG FIX - Estabilidad login: 6 bugs encontrados y corregidos
+  Estado: RESUELTO
+  Objetivo: Mejorar robustez del sistema de autenticacion y corregir bugs latentes
+  Tag de respaldo: backup-pre-fix-auth-stability-20260415
+  Commits: c0a81a9
+
+  Hallazgo importante: El deploy en Vercel (archii.vercel.app, archiflow.vercel.app)
+    devuelve 404 DEPLOYMENT_NOT_FOUND. Los usuarios NO pueden acceder a la app.
+    Esto es probablemente la causa principal de "no se pueden logear" — no hay
+    app desplegada. El usuario debe verificar el proyecto en Vercel Dashboard
+    y asegurar que el repo esta conectado correctamente.
+
+  Bugs corregidos (6):
+
+  BUG-20260415-002: Polling infinito en AuthContext (sin limite de reintentos)
+    Severidad: MEDIA
+    Archivo: src/contexts/AuthContext.tsx lineas 64-88
+    Problema: El setInterval que espera Firebase no tenia limite maximo.
+      Si Firebase fallaba al cargar, el intervalo correria para siempre.
+    Fix: Agregado contador con MAX=50 intentos (5 segundos max). Si
+      se alcanza el limite, se ejecuta setLoading(false) para que la
+      app no se quede colgada en spinner infinito.
+
+  BUG-20260415-003: useFirebaseStatus cleanup no cancelaba timeouts recursivos
+    Severidad: MEDIA
+    Archivo: src/components/layout/AuthScreen.tsx lineas 18-77
+    Problema: El useEffect de useFirebaseStatus solo limpiaba el primer
+      setTimeout pero los recursivos (scheduleCheck(500)) nunca se
+      cancelaban al desmontar el componente.
+    Fix: Usar array `timers` para rastrear todos los IDs y limpiar
+      todos en el return del useEffect.
+
+  BUG-20260415-004: Boton "Reintentar conexion" era codigo muerto
+    Severidad: MEDIA
+    Archivo: src/components/layout/AuthScreen.tsx lineas 142-145
+    Problema: fbKey cambiaba de estado pero nunca se pasaba a
+      useFirebaseStatus(), cuyo useEffect tenia [] como deps.
+      El boton no hacia nada al hacerle click.
+    Fix: Cambiar useFirebaseStatus() a useFirebaseStatus(fbKey) y
+      agregar fbKey como dependencia del useEffect. Ahora al
+      hacer click en "Reintentar", se reinicia el check completo.
+
+  BUG-20260415-005: getFirebase() cache singleton nunca se invalidaba
+    Severidad: BAJA
+    Archivo: src/lib/firebase-service.ts lineas 89-95
+    Problema: Si la referencia cacheada _fb se volvia stale, getFirebase()
+      la retornaba sin verificar si seguia siendo valida.
+    Fix: Agregada verificacion de validez: si _fb.apps.length === 0
+      se resetea _fb = null y se busca la referencia de nuevo.
+
+  BUG-20260415-006: doLogin/doRegister se recreaban en cada tecla
+    Severidad: BAJA (rendimiento)
+    Archivo: src/contexts/AuthContext.tsx lineas 169-212
+    Problema: doLogin y doRegister tenian `forms` en sus useCallback
+      deps. Como forms es un objeto que cambia de referencia en cada
+      keystroke, los callbacks se recreaban en cada tecla, causando
+      re-renders en cascada a todos los consumidores del contexto.
+    Fix: Usar formsRef (useRef) para leer forms.current dentro del
+      callback, eliminando `forms` de las dependencias. Ahora los
+      callbacks son estables y solo dependen de showToast.
+
+  BUG-20260415-007: setTimeout en finally blocks se ejecutaba en componente desmontado
+    Severidad: BAJA
+    Archivo: src/components/layout/AuthScreen.tsx
+    Problema: Los handlers async (handleLoginClick, handleRegisterClick,
+      handlePasswordReset, handleGoogleClick, handleMicrosoftClick)
+      tenian setTimeout(() => setAuthLoading(false), N) en finally.
+      Si el login exitoso causaba que el componente se desmontara
+      (authUser cambiaba y AuthScreen desaparecia), el setTimeout
+      seguia ejecutandose en un componente desmontado.
+    Fix: Agregado mountedRef. Todos los setTimeout ahora verifican
+      if (mountedRef.current) antes de actualizar estado.
+
+  Mejora CSP:
+    Archivo: next.config.ts linea 20
+    Agregado https://*.firebasestorage.app a img-src y connect-src.
+    Antes: las operaciones de Firebase Storage serian bloqueadas por CSP.
+
+  Verificacion: npx next build -> exitoso, 14/14 paginas estaticas
+  Notas:
+    - Los 6 bugs son mejoras de estabilidad, no la causa raiz de que
+      login no funcione para todos los metodos
+    - La causa raiz mas probable es que el deploy en Vercel esta caido (404)
+    - Se recomienda verificar Vercel Dashboard y reconectar el repo
+
 2026-04-15 11:32 | BUG FIX - Build fallido: document is not defined en prerendering
   Estado: RESUELTO
   Objetivo: Corregir error de build que impedía deploy en Vercel
