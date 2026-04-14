@@ -1,45 +1,73 @@
 'use client';
-import React, { Suspense } from 'react';
+import React from 'react';
 
 /* ===== PROVIDER COMPOSITION =====
  *
- * Two-level provider architecture to avoid Turbopack TDZ errors:
+ * All providers are statically imported in a single chain.
+ * There are NO circular dependencies (verified with madge --circular).
+ * The previous React.lazy() split caused Turbopack dual-chunk TDZ errors
+ * at runtime because the same modules appeared in multiple chunks.
  *
- * Level 1 — Core providers (statically imported, always available):
- *   UIProvider > AuthProvider > OneDriveProvider > FirestoreProvider
+ * Nesting order — each provider can only consume ancestor contexts:
  *
- * Level 2 — Extended providers (dynamically imported, separate chunks):
- *   CommentsProvider, InvoiceProvider, InventoryProvider, GalleryProvider,
- *   TimeTrackingProvider, CalendarProvider, AdminProvider, ChatProvider,
- *   NotifPreferencesProvider, NotifProvider
- *
- * This forces Turbopack to create separate chunks for each group,
- * preventing intra-chunk circular evaluation order issues.
+ *   UIProvider
+ *     AuthProvider          (consumes UIContext)
+ *       OneDriveProvider    (consumes UIContext, AuthContext)
+ *         FirestoreProvider  (consumes UIContext, AuthContext, OneDriveContext)
+ *           CommentsProvider (consumes UIContext, AuthContext)
+ *             InvoiceProvider (consumes UIContext, AuthContext)
+ *               InventoryProvider (consumes UIContext, AuthContext)
+ *                 GalleryProvider (consumes UIContext, AuthContext)
+ *                   TimeTrackingProvider (consumes UIContext, AuthContext)
+ *                     CalendarProvider (consumes UIContext, AuthContext)
+ *                       AdminProvider (consumes FirestoreContext)
+ *                         ChatProvider (consumes UIContext, AuthContext)
+ *                           NotifPreferencesProvider (consumes AuthContext)
+ *                             NotifProvider (consumes many contexts)
  */
 
 import UIProvider from './UIContext';
 import AuthProvider from './AuthContext';
 import OneDriveProvider from './OneDriveContext';
 import FirestoreProvider from './FirestoreContext';
+import CommentsProvider from './CommentsContext';
+import InvoiceProvider from './InvoiceContext';
+import InventoryProvider from './InventoryContext';
+import GalleryProvider from './GalleryContext';
+import TimeTrackingProvider from './TimeTrackingContext';
+import CalendarProvider from './CalendarContext';
+import AdminProvider from './AdminContext';
+import ChatProvider from './ChatContext';
+import NotifPreferencesProvider from './NotifPreferencesContext';
+import NotifProvider from './NotifContext';
 
-/* ─── Extended Providers — dynamically imported to create separate chunks ─── */
-const ExtendedProviders = React.lazy(() => import('./ExtendedProviders'));
-
-/**
- * AppProvider composes all providers in two levels.
- * Core providers load synchronously; extended providers load lazily.
- */
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
       <AuthProvider>
         <OneDriveProvider>
           <FirestoreProvider>
-            <Suspense fallback={null}>
-              <ExtendedProviders>
-                {children}
-              </ExtendedProviders>
-            </Suspense>
+            <CommentsProvider>
+              <InvoiceProvider>
+                <InventoryProvider>
+                  <GalleryProvider>
+                    <TimeTrackingProvider>
+                      <CalendarProvider>
+                        <AdminProvider>
+                          <ChatProvider>
+                            <NotifPreferencesProvider>
+                              <NotifProvider>
+                                {children}
+                              </NotifProvider>
+                            </NotifPreferencesProvider>
+                          </ChatProvider>
+                        </AdminProvider>
+                      </CalendarProvider>
+                    </TimeTrackingProvider>
+                  </GalleryProvider>
+                </InventoryProvider>
+              </InvoiceProvider>
+            </CommentsProvider>
           </FirestoreProvider>
         </OneDriveProvider>
       </AuthProvider>
