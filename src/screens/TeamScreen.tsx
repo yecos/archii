@@ -1,34 +1,54 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getInitials, avatarColor } from '@/lib/helpers';
+import { Users, BarChart3 } from 'lucide-react';
+
+const TeamWorkloadView = dynamic(() => import('@/components/features/TeamWorkloadView'), { ssr: false });
 
 export default function TeamScreen() {
   const ui = useUI();
   const auth = useAuth();
   const fs = useFirestore();
+  const [teamTab, setTeamTab] = useState<'list' | 'workload'>('list');
 
   return (
     <div className="animate-fadeIn">
+      {/* Tab toggle */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        {/* Company filter for team */}
-        {(auth.getMyRole() === 'Admin' || auth.getMyRole() === 'Director') && fs.companies.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
-            <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!ui.forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
-              👥 Todo el equipo
-            </button>
-            {fs.companies.map(c => (
-              <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${ui.forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
-                🏢 {c.data.name}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`} onClick={() => setTeamTab('list')}>
+            <Users size={14} /> Lista
+          </button>
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'workload' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`} onClick={() => setTeamTab('workload')}>
+            <BarChart3 size={14} /> Carga de Trabajo
+          </button>
+        </div>
+        {teamTab === 'list' && (
+          <div className="text-sm text-[var(--muted-foreground)]">{auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).length} miembros</div>
         )}
-        <div className="text-sm text-[var(--muted-foreground)]">{auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).length} miembros</div>
       </div>
+
+      {teamTab === 'workload' ? (
+        <TeamWorkloadView navigateTo={ui.navigateTo} />
+      ) : (<>
+      {/* Company filter for team */}
+      {(auth.getMyRole() === 'Admin' || auth.getMyRole() === 'Director') && fs.companies.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1 mb-4">
+          <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!ui.forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
+            👥 Todo el equipo
+          </button>
+          {fs.companies.map(c => (
+            <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${ui.forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
+              🏢 {c.data.name}
+            </button>
+          ))}
+        </div>
+      )}
       {/* Role Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
         {USER_ROLES.slice(0, 4).map(role => {
@@ -100,6 +120,7 @@ export default function TeamScreen() {
           );
         })}
       </div>
+      </>)}
     </div>
   );
 }

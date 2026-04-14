@@ -9,6 +9,8 @@ import { useNotif } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import AISuggestionsPanel from '@/components/archiflow/AISuggestionsPanel';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
+import dynamic from 'next/dynamic';
+const ActivityTimeline = dynamic(() => import('@/components/features/ActivityTimeline'), { ssr: false });
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
@@ -308,23 +310,9 @@ export default function DashboardScreen() {
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Actividad reciente</div>
-            <TrendingUp size={16} className="text-[var(--af-text3)]" />
+            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Ver reportes →</button>
           </div>
-          {recentActivity.length === 0 ? (
-            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin actividad reciente</div>
-          ) : (
-            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
-              {recentActivity.map(item => (
-                <div key={item.id + item.type} className="flex items-start gap-3 group">
-                  <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5`}>{item.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium truncate">{item.title}</div>
-                    <div className="text-[11px] text-[var(--af-text3)] truncate">{item.subtitle}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ActivityTimeline />
         </div>
       </div>
 

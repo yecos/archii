@@ -6,14 +6,14 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
   { status: 'En progreso', color: 'bg-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-500' },
-  { status: 'Revision', color: 'bg-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
+  { status: 'En revisión', color: 'bg-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
   { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 ];
 
@@ -89,6 +89,8 @@ export default function TasksScreen() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const dragCounterRef = useRef<Record<string, number>>({});
 
   const taskFilterProject = forms.taskFilterProject || '';
@@ -174,6 +176,51 @@ export default function TasksScreen() {
 
   const viewMode = forms.taskView || 'list';
 
+  // Batch operations
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    if (selectedIds.size === filteredTasks.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTasks.map((t: any) => t.id)));
+    }
+  }, [filteredTasks, selectedIds.size]);
+
+  const batchComplete = useCallback(() => {
+    selectedIds.forEach(id => {
+      const t = tasks.find((x: any) => x.id === id);
+      if (t && t.data.status !== 'Completado') toggleTask(id, t.data.status);
+    });
+    showToast(`${selectedIds.size} tareas completadas`);
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }, [selectedIds, tasks, toggleTask, showToast]);
+
+  const batchReset = useCallback(() => {
+    selectedIds.forEach(id => {
+      const t = tasks.find((x: any) => x.id === id);
+      if (t && t.data.status === 'Completado') toggleTask(id, t.data.status);
+    });
+    showToast(`${selectedIds.size} tareas reiniciadas`);
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }, [selectedIds, tasks, toggleTask, showToast]);
+
+  const batchDelete = useCallback(() => {
+    if (!confirm(`Eliminar ${selectedIds.size} tareas?`)) return;
+    selectedIds.forEach(id => deleteTask(id));
+    showToast(`${selectedIds.size} tareas eliminadas`);
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }, [selectedIds, deleteTask, showToast]);
+
   return (
     <div className="animate-fadeIn">
       {/* Header */}
@@ -234,6 +281,15 @@ export default function TasksScreen() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Batch mode toggle (list only) */}
+          {viewMode === 'list' && (
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${batchMode ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] text-[var(--foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`}
+              onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()); }}
+            >
+              <SquareCheck size={13} /> Seleccionar
+            </button>
+          )}
           {/* Import */}
           <button
             className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
@@ -319,6 +375,32 @@ export default function TasksScreen() {
         )}
       </div>
 
+      {/* Batch Action Bar */}
+      {batchMode && selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-4 p-3 bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/30 rounded-xl animate-fadeIn">
+          <span className="text-[13px] font-semibold text-[var(--af-accent)]">{selectedIds.size} seleccionadas</span>
+          <button className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 cursor-pointer hover:bg-emerald-500/20 transition-colors" onClick={batchComplete}>
+            <CheckCheck size={12} /> Completar
+          </button>
+          <button className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 cursor-pointer hover:bg-blue-500/20 transition-colors" onClick={batchReset}>
+            <RotateCcw size={12} /> Reiniciar
+          </button>
+          <button className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20 transition-colors" onClick={batchDelete}>
+            <Trash2 size={12} /> Eliminar
+          </button>
+          <div className="flex-1" />
+          <button className="text-[11px] text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setSelectedIds(new Set())}>Deseleccionar</button>
+        </div>
+      )}
+      {batchMode && selectedIds.size === 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl animate-fadeIn">
+          <span className="text-[12px] text-[var(--muted-foreground)]">Selecciona tareas para acciones en lote</span>
+          <button className="text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={selectAll}>Seleccionar todas</button>
+          <div className="flex-1" />
+          <button className="text-[11px] text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setBatchMode(false)}>Cancelar</button>
+        </div>
+      )}
+
       {loading && <SkeletonTasks />}
 
       {!loading && viewMode === 'list' ? (
@@ -353,7 +435,15 @@ export default function TasksScreen() {
                   const proj = projects.find((p: any) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                   return (
-                    <div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
+                    <div key={t.id} className={`flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5 -mx-2 px-2 rounded-lg' : ''}`}>
+                      {batchMode && (
+                        <div
+                          className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center transition-all ${selectedIds.has(t.id) ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`}
+                          onClick={() => toggleSelect(t.id)}
+                        >
+                          {selectedIds.has(t.id) && <span className="text-background text-[10px] font-bold">✓</span>}
+                        </div>
+                      )}
                       <div
                         className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center transition-all ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`}
                         onClick={() => toggleTask(t.id, t.data.status)}

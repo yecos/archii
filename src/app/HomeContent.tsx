@@ -11,6 +11,7 @@ import { useNotif } from '@/hooks/useDomain';
 import AppProvider from '@/contexts/AppContext';
 import { Toaster } from 'sonner';
 import { Bell, X } from 'lucide-react';
+import { useUIStore } from '@/stores/ui-store';
 
 /* ─── Layout ─── */
 import LoadingScreen from '@/components/layout/LoadingScreen';
@@ -24,6 +25,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 /* ─── Features (lazy) ─── */
 const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/archiflow/CommandPalette'), { ssr: false });
 
 /* ─── Modals (lazy — solo se cargan cuando se abren) ─── */
 const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), { ssr: false });
@@ -76,6 +78,8 @@ function AppContent() {
   const { galleryPhotos } = useGallery();
   const { invLowStock } = useInventory();
   const { showNotifBanner, requestNotifPermission, dismissNotifBanner, inAppNotifs, setInAppNotifs, markNotifRead } = useNotif();
+  const commandOpen = useUIStore((s) => s.commandOpen);
+  const setCommandOpen = useUIStore((s) => s.setCommandOpen);
 
   if (!ready || loading) return <LoadingScreen />;
   if (!authUser) return (
@@ -260,6 +264,9 @@ function AppContent() {
       <ImportDataModal open={!!modals.importData} onClose={() => closeModal('importData')} />
 
       <LightboxViewer />
+
+      {/* ===== Command Palette (Cmd+K) ===== */}
+      <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
     </div>
   );
 }
