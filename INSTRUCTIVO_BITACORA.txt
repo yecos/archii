@@ -221,6 +221,70 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 00:00 | FEATURE PACK v16 — Potenciacion Visual
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v16-visual-20260415
+  Objetivo: 7 tareas de potenciacion visual (design system, empty states, auth, hover)
+  Commit: 04d72f2
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 16.1 — Sistema de sombras + diferenciacion de tarjetas:
+    * 6 niveles de sombra CSS (--shadow-xs a --shadow-glow)
+    * 3 variantes: card-elevated (sombra + hover lift), card-sunken (inset),
+      card-glass (backdrop-blur + dark mode)
+    * KPI cards con card-elevated + accent line gradiente dorada
+    * Project cards con card-elevated
+
+  Tarea 16.2 — Escala tipografica consistente:
+    * 8 tamaños CSS variables (--text-xs 11px a --text-3xl 36px)
+    * 6 utility classes: af-text-xs a af-text-xl, af-heading, af-heading-sm, af-label
+
+  Tarea 16.3 — Gradientes y efectos glass premium:
+    * Financial summary con gradiente card-to-bg3
+    * card-glass con backdrop-blur(12px) para superficies flotantes
+    * AuthScreen con fondo mesh gradient
+
+  Tarea 16.4 — Empty states premium con SVG line-art:
+    * EmptyState.tsx: componente reutilizable con 9 ilustraciones
+      (projects, tasks, search, chat, gallery, calendar, files, team, generic)
+    * SVGs minimalistas estilo Notion/Linear con currentColor
+    * Animacion emptyFloat (3s ease-in-out infinite)
+    * Aplicado en ProjectsScreen, TasksScreen, MessageList (chat)
+
+  Tarea 16.5 — Hover effects + transiciones consistentes:
+    * Patron 1 (cards): transition-all 200ms + hover:-translate-y-0.5 + active:scale-[0.99]
+    * Patron 2 (list items): transition-colors 150ms + hover:bg-[var(--af-bg3)]
+    * Patron 3 (action buttons): transition-opacity 150ms
+    * 6 pantallas actualizadas
+    * @media prefers-reduced-motion para accesibilidad
+
+  Tarea 16.6 — AuthScreen visual upgrade:
+    * Eliminado badge debug Firebase (artefacto dev en produccion)
+    * Card con card-glass + shadow-xl
+    * Logo con gold glow: shadow-[0_0_30px_rgba(158,124,62,0.2)]
+    * Divisor dorado bajo logo
+    * Boton submit con gradiente + hover glow + scale
+    * Social buttons con hover lift
+    * Fondo mesh gradient
+
+  Tarea 16.7 — Emoji a lucide icons:
+    * 6 reemplazos en Sidebar, Dashboard, InvProducts
+    * Fix import bug: FileText faltante en AdminScreen
+
+  Archivos creados (1): EmptyState.tsx (9 ilustraciones SVG inline)
+  Archivos modificados (15): globals.css, MessageList, InvDashboardTab,
+    InvProductsTab, AuthScreen, Sidebar, AdminScreen, BudgetScreen,
+    CalendarScreen, DashboardScreen, GalleryScreen, ProjectsScreen,
+    ReportsScreen, TasksScreen, TeamScreen
+  Total: +534 lineas agregadas, -150 eliminadas (16 archivos tocados)
+
+  Resumen:
+    - 1 commit: 04d72f2
+    - 16 archivos tocados (1 creado, 15 modificados)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Total funcionalidades/mejoras (v7-v16): 49 items
+
 2026-04-15 23:00 | FEATURE PACK v15 — Quality & UX Polish
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v15-quality-ux-20260415
