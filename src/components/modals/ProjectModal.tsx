@@ -1,11 +1,14 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
 
 export default function ProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveProject, companies } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const { forms, setForms, editingId, closeModal } = ui;
+  const { saveProject, companies } = fs;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>

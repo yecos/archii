@@ -1,10 +1,11 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
 import { LayoutGrid, Folder, ClipboardList, MessageCircle, MoreHorizontal } from 'lucide-react';
 
 export default React.memo(function BottomNav() {
-  const { screen, navigateTo, setSidebarOpen, sidebarOpen } = useApp();
+  const ui = useUI();
+  const { screen, navigateTo, setSidebarOpen, sidebarOpen } = ui;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-lg border-t border-[var(--border)] flex z-40 safe-bottom" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>

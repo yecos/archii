@@ -1,11 +1,12 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useFirestore } from '@/hooks/useDomain';
 
 export default function PortalScreen() {
-  const {
-    projects, setSelectedProjectId, setForms, navigateTo,
-  } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const { setSelectedProjectId, setForms, navigateTo } = ui;
+  const { projects } = fs;
 
   return (
     <div className="animate-fadeIn">

@@ -1,13 +1,16 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { SUPPLIER_CATS } from '@/lib/types';
 import { Star } from 'lucide-react';
 
 export default function SupplierModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveSupplier } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const { forms, setForms, editingId, closeModal } = ui;
+  const { saveSupplier } = fs;
   const rating = Number(forms.supRating) || 5;
 
   return (

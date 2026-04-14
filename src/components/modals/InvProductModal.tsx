@@ -2,12 +2,15 @@
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { Package, X, Image as ImageIcon } from 'lucide-react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useInventory } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { INV_UNITS, INV_WAREHOUSES } from '@/lib/types';
 
 export default function InvProductModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, invCategories, editingId, saveInvProduct, handleInvProductImageSelect, closeModal } = useApp();
+  const ui = useUI();
+  const inv = useInventory();
+  const { forms, setForms, editingId, closeModal } = ui;
+  const { invCategories, saveInvProduct, handleInvProductImageSelect } = inv;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={520}>

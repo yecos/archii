@@ -1,11 +1,16 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useFirestore, useTimeTracking } from '@/hooks/useDomain';
 import { DEFAULT_PHASES } from '@/lib/types';
 
 export default function TimeEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, closeModal, saveManualTimeEntry, projects } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const tt = useTimeTracking();
+  const { forms, setForms, closeModal } = ui;
+  const { projects } = fs;
+  const { saveManualTimeEntry } = tt;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>

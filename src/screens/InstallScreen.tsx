@@ -1,13 +1,14 @@
 'use client';
 import React from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
 
 export default function InstallScreen() {
+  const ui = useUI();
   const {
     handleInstall, installPrompt, isStandalone, platform, setIsInstalled,
     setShowInstallBanner, showToast,
-  } = useApp();
+  } = ui;
 
   return (
 <div className="animate-fadeIn space-y-5">

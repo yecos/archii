@@ -1,12 +1,15 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useAuth, useFirestore } from '@/hooks/useDomain';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 
 export default function FilesScreen() {
-  const {
-    navigateTo, projects, setForms, setSelectedProjectId, loading,
-  } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
+  const { navigateTo, setForms, setSelectedProjectId } = ui;
+  const { projects } = fs;
+  const { loading } = auth;
 
   return (
 <div className="animate-fadeIn">

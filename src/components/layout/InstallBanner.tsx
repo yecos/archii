@@ -1,10 +1,11 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
 import { Home as HomeIcon, X } from 'lucide-react';
 
 export default React.memo(function InstallBanner() {
-  const { showInstallBanner, installPrompt, isStandalone, handleInstall, dismissInstallBanner } = useApp();
+  const ui = useUI();
+  const { showInstallBanner, installPrompt, isStandalone, handleInstall, dismissInstallBanner } = ui;
 
   if (!showInstallBanner || !installPrompt || isStandalone) return null;
 

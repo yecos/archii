@@ -1,12 +1,15 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useInventory } from '@/hooks/useDomain';
 import { FormField, FormInput, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { CAT_COLORS } from '@/lib/types';
 
 export default function InvCategoryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, invCategories, editingId, saveInvCategory, closeModal } = useApp();
+  const ui = useUI();
+  const inv = useInventory();
+  const { forms, setForms, editingId, closeModal } = ui;
+  const { invCategories, saveInvCategory } = inv;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={420}>

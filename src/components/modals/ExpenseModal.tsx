@@ -1,12 +1,15 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { useApp } from '@/contexts/AppContext';
+import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { EXPENSE_CATS } from '@/lib/types';
 
 export default function ExpenseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, closeModal, saveExpense, projects } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const { forms, setForms, closeModal } = ui;
+  const { saveExpense, projects } = fs;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>
