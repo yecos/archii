@@ -4,7 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase } from '@/lib/firebase-service';
-import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, GalleryPhoto, TimeEntry, Invoice, Comment } from '@/lib/types';
+import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, TimeEntry, Invoice, Comment } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
@@ -13,6 +13,7 @@ import * as fbActions from '@/lib/firestore-actions';
 import { confirm } from '@/hooks/useConfirmDialog';
 import * as _gantt from '@/lib/gantt-helpers';
 import InventoryProvider from './InventoryContext';
+import GalleryProvider from './GalleryContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -35,8 +36,6 @@ interface FirestoreContextType {
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
   meetings: any[];
   setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
-  galleryPhotos: any[];
-  setGalleryPhotos: React.Dispatch<React.SetStateAction<any[]>>;
   timeEntries: TimeEntry[];
   setTimeEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   invoices: Invoice[];
@@ -51,12 +50,6 @@ interface FirestoreContextType {
   calYear: number; setCalYear: React.Dispatch<React.SetStateAction<number>>;
   calSelectedDate: string | null; setCalSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
   calFilterProject: string; setCalFilterProject: React.Dispatch<React.SetStateAction<string>>;
-
-  // Domain UI state — Gallery
-  galleryFilterProject: string; setGalleryFilterProject: React.Dispatch<React.SetStateAction<string>>;
-  galleryFilterCat: string; setGalleryFilterCat: React.Dispatch<React.SetStateAction<string>>;
-  lightboxPhoto: any; setLightboxPhoto: React.Dispatch<React.SetStateAction<any>>;
-  lightboxIndex: number; setLightboxIndex: React.Dispatch<React.SetStateAction<number>>;
 
   // Domain UI state — Time Tracking
   timeTab: string; setTimeTab: React.Dispatch<React.SetStateAction<string>>;
@@ -142,16 +135,6 @@ interface FirestoreContextType {
   deleteMeeting: (id: string) => Promise<void>;
   openEditMeeting: (m: any) => void;
 
-  // CRUD Functions — Gallery
-  saveGalleryPhoto: () => Promise<void>;
-  deleteGalleryPhoto: (id: string) => Promise<void>;
-  handleGalleryImageSelect: (e: any) => Promise<void>;
-  openLightbox: (photo: any, idx: number) => void;
-  closeLightbox: () => void;
-  lightboxPrev: () => void;
-  lightboxNext: () => void;
-  getFilteredGalleryPhotos: () => any[];
-
   // CRUD Functions — Time Tracking
   startTimeTracking: () => void;
   stopTimeTracking: () => Promise<void>;
@@ -218,7 +201,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
-  const [galleryPhotos, setGalleryPhotos] = useState<any[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -229,12 +211,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<string | null>(null);
   const [calFilterProject, setCalFilterProject] = useState<string>('all');
-
-  // ===== DOMAIN UI STATE — Gallery =====
-  const [galleryFilterProject, setGalleryFilterProject] = useState<string>('all');
-  const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
-  const [lightboxPhoto, setLightboxPhoto] = useState<any>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   // ===== DOMAIN UI STATE — Time Tracking =====
   const [timeTab, setTimeTab] = useState<string>('tracker');
@@ -388,16 +364,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: any) => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load gallery photos
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -733,51 +699,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const deleteMeeting = async (id: string) => { if (!(await confirm({ title: 'Eliminar reunión', description: '¿Eliminar reunión?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
 
-  // --- Gallery ---
-  const saveGalleryPhoto = async () => {
-    const imageData = forms.galleryImageData || '';
-    if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
-      if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
-      else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
-      closeModal('gallery'); setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' }));
-    } catch { showToast('Error al guardar foto', 'error'); }
-  };
-
-  const deleteGalleryPhoto = async (id: string) => { if (!(await confirm({ title: 'Eliminar foto', description: '¿Eliminar foto de la galería?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-
-  const handleGalleryImageSelect = async (e: any) => {
-    const file = e.target?.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { showToast('Solo se permiten imágenes', 'error'); return; }
-    if (file.size > 5 * 1024 * 1024) { showToast('La imagen no puede superar 5 MB', 'error'); return; }
-    try { const base64 = await fileToBase64(file); setForms(p => ({ ...p, galleryImageData: base64 })); }
-    catch { showToast('Error al procesar imagen', 'error'); }
-  };
-
-  const openLightbox = (photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); };
-  const closeLightbox = () => { setLightboxPhoto(null); setLightboxIndex(0); };
-  const lightboxPrev = () => {
-    const filtered = getFilteredGalleryPhotos();
-    if (filtered.length === 0) return;
-    setLightboxIndex(prev => { const next = (prev - 1 + filtered.length) % filtered.length; setLightboxPhoto(filtered[next]); return next; });
-  };
-  const lightboxNext = () => {
-    const filtered = getFilteredGalleryPhotos();
-    if (filtered.length === 0) return;
-    setLightboxIndex(prev => { const next = (prev + 1) % filtered.length; setLightboxPhoto(filtered[next]); return next; });
-  };
-
-  const getFilteredGalleryPhotos = () => {
-    let photos = galleryPhotos;
-    if (galleryFilterProject !== 'all') photos = photos.filter(p => p.data.projectId === galleryFilterProject);
-    if (galleryFilterCat !== 'all') photos = photos.filter(p => p.data.categoryName === galleryFilterCat);
-    return photos;
-  };
-
   // --- Time Tracking ---
   const startTimeTracking = () => {
     if (timeSession.isRunning) return;
@@ -877,13 +798,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals, meetings, setMeetings,
-    galleryPhotos, setGalleryPhotos,
     timeEntries, setTimeEntries, invoices, setInvoices,
     comments, setComments, dailyLogs, setDailyLogs,
     // Calendar
     calMonth, setCalMonth, calYear, setCalYear, calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
-    // Gallery
-    galleryFilterProject, setGalleryFilterProject, galleryFilterCat, setGalleryFilterCat, lightboxPhoto, setLightboxPhoto, lightboxIndex, setLightboxIndex,
     // Time Tracking
     timeTab, setTimeTab, timeFilterProject, setTimeFilterProject, timeFilterDate, setTimeFilterDate, timeSession, setTimeSession, timeTimerMs, setTimeTimerMs,
     // Invoices
@@ -905,8 +823,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     saveApproval, updateApproval, deleteApproval,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
     saveMeeting, deleteMeeting, openEditMeeting,
-    saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect,
-    openLightbox, closeLightbox, lightboxPrev, lightboxNext, getFilteredGalleryPhotos,
     startTimeTracking, stopTimeTracking, saveManualTimeEntry,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
     postComment, updateUserName, fileToBase64,
@@ -922,7 +838,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}><InventoryProvider>{children}</InventoryProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider>{children}</GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {

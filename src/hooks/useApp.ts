@@ -4,6 +4,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useOneDriveContext } from '@/contexts/OneDriveContext';
 import { useFirestoreContext } from '@/contexts/FirestoreContext';
 import { useInventoryContext } from '@/contexts/InventoryContext';
+import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -18,6 +19,7 @@ export function useApp() {
   const od = useOneDriveContext();
   const fs = useFirestoreContext();
   const inv = useInventoryContext();
+  const gal = useGalleryContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -177,8 +179,8 @@ export function useApp() {
     setApprovals: fs.setApprovals,
     meetings: fs.meetings,
     setMeetings: fs.setMeetings,
-    galleryPhotos: fs.galleryPhotos,
-    setGalleryPhotos: fs.setGalleryPhotos,
+    galleryPhotos: gal.galleryPhotos,
+    setGalleryPhotos: gal.setGalleryPhotos,
     invProducts: inv.invProducts,
     setInvProducts: inv.setInvProducts,
     invCategories: inv.invCategories,
@@ -207,14 +209,14 @@ export function useApp() {
     setCalFilterProject: fs.setCalFilterProject,
 
     // Domain UI — Gallery
-    galleryFilterProject: fs.galleryFilterProject,
-    setGalleryFilterProject: fs.setGalleryFilterProject,
-    galleryFilterCat: fs.galleryFilterCat,
-    setGalleryFilterCat: fs.setGalleryFilterCat,
-    lightboxPhoto: fs.lightboxPhoto,
-    setLightboxPhoto: fs.setLightboxPhoto,
-    lightboxIndex: fs.lightboxIndex,
-    setLightboxIndex: fs.setLightboxIndex,
+    galleryFilterProject: gal.galleryFilterProject,
+    setGalleryFilterProject: gal.setGalleryFilterProject,
+    galleryFilterCat: gal.galleryFilterCat,
+    setGalleryFilterCat: gal.setGalleryFilterCat,
+    lightboxPhoto: gal.lightboxPhoto,
+    setLightboxPhoto: gal.setLightboxPhoto,
+    lightboxIndex: gal.lightboxIndex,
+    setLightboxIndex: gal.setLightboxIndex,
 
     // Domain UI — Inventory
     invTab: inv.invTab,
@@ -332,15 +334,15 @@ export function useApp() {
     deleteMeeting: fs.deleteMeeting,
     openEditMeeting: fs.openEditMeeting,
     openProject: fs.openProject,
-    saveGalleryPhoto: fs.saveGalleryPhoto,
-    deleteGalleryPhoto: fs.deleteGalleryPhoto,
-    handleGalleryImageSelect: fs.handleGalleryImageSelect,
+    saveGalleryPhoto: gal.saveGalleryPhoto,
+    deleteGalleryPhoto: gal.deleteGalleryPhoto,
+    handleGalleryImageSelect: gal.handleGalleryImageSelect,
     handleInvProductImageSelect: inv.handleInvProductImageSelect,
-    openLightbox: fs.openLightbox,
-    closeLightbox: fs.closeLightbox,
-    lightboxPrev: fs.lightboxPrev,
-    lightboxNext: fs.lightboxNext,
-    getFilteredGalleryPhotos: fs.getFilteredGalleryPhotos,
+    openLightbox: gal.openLightbox,
+    closeLightbox: gal.closeLightbox,
+    lightboxPrev: gal.lightboxPrev,
+    lightboxNext: gal.lightboxNext,
+    getFilteredGalleryPhotos: gal.getFilteredGalleryPhotos,
     startTimeTracking: fs.startTimeTracking,
     stopTimeTracking: fs.stopTimeTracking,
     saveManualTimeEntry: fs.saveManualTimeEntry,
