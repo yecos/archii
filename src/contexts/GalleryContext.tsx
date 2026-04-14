@@ -265,6 +265,13 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
 
   // ===== LIGHTBOX FUNCTIONS =====
 
+  const getFilteredGalleryPhotos = useCallback(() => {
+    let photos = galleryPhotos;
+    if (galleryFilterProject !== 'all') photos = photos.filter((p: any) => p.data.projectId === galleryFilterProject);
+    if (galleryFilterCat !== 'all') photos = photos.filter((p: any) => p.data.categoryName === galleryFilterCat);
+    return photos;
+  }, [galleryPhotos, galleryFilterProject, galleryFilterCat]);
+
   const openLightbox = useCallback((photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); }, []);
   const closeLightbox = useCallback(() => { setLightboxPhoto(null); setLightboxIndex(0); }, []);
   const lightboxPrev = useCallback(() => {
@@ -277,13 +284,6 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
     if (filtered.length === 0) return;
     setLightboxIndex(prev => { const next = (prev + 1) % filtered.length; setLightboxPhoto(filtered[next]); return next; });
   }, [getFilteredGalleryPhotos]);
-
-  const getFilteredGalleryPhotos = useCallback(() => {
-    let photos = galleryPhotos;
-    if (galleryFilterProject !== 'all') photos = photos.filter((p: any) => p.data.projectId === galleryFilterProject);
-    if (galleryFilterCat !== 'all') photos = photos.filter((p: any) => p.data.categoryName === galleryFilterCat);
-    return photos;
-  }, [galleryPhotos, galleryFilterProject, galleryFilterCat]);
 
   // ===== PROVIDER =====
 
