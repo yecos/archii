@@ -107,19 +107,37 @@ export default function InvoicesScreen() {
           <div className="space-y-2">
             <div className="flex items-center justify-between"><span className="text-[13px] font-medium">Items</span><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={addInvoiceItem}>+ Agregar item</button></div>
             <div className="bg-[var(--af-bg3)] rounded-lg p-3 space-y-2">
-              <div className="grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium mb-1">
                 <div className="col-span-4">Concepto</div><div className="col-span-3">Fase</div><div className="col-span-2">Horas</div><div className="col-span-2">Tarifa</div><div className="col-span-1"></div>
               </div>
               {invoiceItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                  <input className="col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
-                  <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
-                    <option value="">Fase</option>
-                    {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
-                  </select>
-                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
-                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
-                  <button className="col-span-1 text-xs text-red-400 cursor-pointer text-center" onClick={() => removeInvoiceItem(idx)}>✕</button>
+                <div key={idx} className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-2.5 sm:p-0 sm:border-0 sm:rounded-none">
+                  {/* Mobile: stacked layout */}
+                  <div className="sm:hidden space-y-2">
+                    <input className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2.5 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
+                    <div className="flex gap-2">
+                      <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
+                        <option value="">Fase</option>
+                        {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+                      </select>
+                      <input type="number" className="w-20 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" placeholder="Horas" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="number" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" placeholder="Tarifa" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
+                      <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 cursor-pointer flex-shrink-0 border-none" onClick={() => removeInvoiceItem(idx)}>✕</button>
+                    </div>
+                  </div>
+                  {/* Desktop: grid layout */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
+                    <input className="col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
+                    <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
+                      <option value="">Fase</option>
+                      {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
+                    </select>
+                    <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
+                    <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
+                    <button className="col-span-1 text-xs text-red-400 cursor-pointer text-center" onClick={() => removeInvoiceItem(idx)}>✕</button>
+                  </div>
                 </div>
               ))}
             </div>

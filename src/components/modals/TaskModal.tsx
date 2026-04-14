@@ -74,9 +74,8 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={520}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">{ui.editingId ? 'Editar tarea' : 'Nueva tarea'}</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={520} title={ui.editingId ? 'Editar tarea' : 'Nueva tarea'}>
+      <div className="flex items-center justify-end mb-4">
         {ui.editingId && (
           <button
             type="button"

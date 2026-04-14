@@ -11,10 +11,7 @@ export default function CompanyModal({ open, onClose }: { open: boolean; onClose
   const { saveCompany } = fs;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={500}>
-      <div className="text-lg font-semibold mb-5">
-        {editingId ? 'Editar empresa' : 'Nueva empresa'}
-      </div>
+    <CenterModal open={open} onClose={onClose} maxWidth={500} title={editingId ? 'Editar empresa' : 'Nueva empresa'}>
 
       <div className="space-y-3">
         <FormField label="Nombre comercial" required>

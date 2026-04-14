@@ -65,7 +65,15 @@ export default function TeamScreen() {
       </div>
       {/* Team Members List */}
       <div className="space-y-2">
-        {auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).map(user => {
+        {auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).length === 0 ? (
+          <div className="text-center py-16 text-[var(--af-text3)]">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
+              <Users size={24} className="text-[var(--af-text3)]" />
+            </div>
+            <div className="text-[15px] font-medium text-[var(--muted-foreground)]">Sin miembros en el equipo</div>
+            <div className="text-xs mt-1">Invita miembros desde la configuración del proyecto</div>
+          </div>
+        ) : auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).map(user => {
           const role = user.data.role || 'Miembro';
           const isMe = user.id === auth.authUser?.uid;
           const myRole = auth.getMyRole();

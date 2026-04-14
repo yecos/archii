@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { Package, X, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { useUI, useInventory } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { INV_UNITS, INV_WAREHOUSES } from '@/lib/types';
@@ -13,11 +13,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
   const { invCategories, saveInvProduct, handleInvProductImageSelect } = inv;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={520}>
-      <div className="text-lg font-semibold mb-5 flex items-center gap-2">
-        <Package className="w-5 h-5" />
-        {editingId ? 'Editar producto' : 'Nuevo producto'}
-      </div>
+    <CenterModal open={open} onClose={onClose} maxWidth={520} title={editingId ? 'Editar producto' : 'Nuevo producto'}>
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="col-span-2">

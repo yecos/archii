@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { Camera, X, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useGallery } from '@/hooks/useDomain';
@@ -14,11 +14,7 @@ export default function GalleryModal({ open, onClose }: { open: boolean; onClose
   const gallery = useGallery();
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <div className="text-lg font-semibold mb-5 flex items-center gap-2">
-        <Camera className="w-5 h-5" />
-        {ui.editingId ? 'Editar foto' : 'Agregar foto'}
-      </div>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title="Agregar foto">
 
       {/* Image preview / upload area */}
       <div className="mb-4">

@@ -22,6 +22,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import InstallBanner from '@/components/layout/InstallBanner';
 import NotifPanel from '@/components/layout/NotifPanel';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 /* ─── Features (lazy) ─── */
 const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
@@ -149,6 +150,7 @@ function AppContent() {
         duration={3500}
       />
 
+      <OfflineBanner />
       <InstallBanner />
       <Sidebar
         screen={screen}

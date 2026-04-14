@@ -12,10 +12,7 @@ export default function InvCategoryModal({ open, onClose }: { open: boolean; onC
   const { invCategories, saveInvCategory } = inv;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={420}>
-      <div className="text-lg font-semibold mb-5">
-        {editingId ? 'Editar categoría' : '🏷️ Nueva categoría'}
-      </div>
+    <CenterModal open={open} onClose={onClose} maxWidth={420} title={editingId ? 'Editar categoría' : 'Nueva categoría'}>
 
       <FormField label="Nombre" required>
         <FormInput placeholder="Ej: Materiales" value={forms.invCatName || ''} onChange={e => setForms(p => ({ ...p, invCatName: e.target.value }))} />

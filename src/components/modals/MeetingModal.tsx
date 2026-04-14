@@ -62,8 +62,7 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
   const quickAddUsers = auth.teamUsers.slice(0, 8);
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">{ui.editingId ? 'Editar reunión' : 'Nueva reunión'}</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title={ui.editingId ? 'Editar reunión' : 'Nueva reunión'}>
 
       <div className="space-y-3">
         <FormField label="Título" required>

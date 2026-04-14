@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 export default function NotFound() {
   return (
@@ -104,7 +105,7 @@ export default function NotFound() {
         </p>
 
         {/* Home Button */}
-        <a
+        <Link
           href="/"
           className="af-notfound-btn"
         >
@@ -123,7 +124,7 @@ export default function NotFound() {
             <path d="M19 12H5" />
           </svg>
           Volver al inicio
-        </a>
+        </Link>
       </div>
 
       <style>{`

@@ -50,7 +50,7 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
   };
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={reviewApproval ? 520 : 500}>
+    <CenterModal open={open} onClose={onClose} maxWidth={reviewApproval ? 520 : 500} title="Aprobación">
       {/* Review Mode */}
       {reviewApproval ? (
         <>

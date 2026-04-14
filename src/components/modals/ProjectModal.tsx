@@ -11,8 +11,7 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
   const { saveProject, companies } = fs;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">{editingId ? 'Editar proyecto' : 'Nuevo proyecto'}</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title={editingId ? 'Editar proyecto' : 'Nuevo proyecto'}>
 
       <div className="space-y-3">
         <FormField label="Nombre" required>

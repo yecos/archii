@@ -12,8 +12,7 @@ export default function ExpenseModal({ open, onClose }: { open: boolean; onClose
   const { saveExpense, projects } = fs;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">Registrar gasto</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title={ui.editingId ? 'Editar gasto' : 'Registrar gasto'}>
 
       <div className="space-y-3">
         <FormField label="Concepto" required>

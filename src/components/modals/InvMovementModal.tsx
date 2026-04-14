@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { ClipboardList, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useUI, useInventory } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, ModalFooter } from '@/components/common/FormField';
 import { INV_WAREHOUSES } from '@/lib/types';
@@ -13,11 +13,7 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
   const { invProducts, saveInvMovement, getWarehouseStock, getTotalStock } = inv;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <div className="text-lg font-semibold mb-5 flex items-center gap-2">
-        <ClipboardList className="w-5 h-5" />
-        Registrar movimiento
-      </div>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title="Registrar movimiento">
 
       {/* Tipo toggle */}
       <div className="mb-3">

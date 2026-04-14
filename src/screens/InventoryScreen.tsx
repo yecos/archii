@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useInventory } from '@/hooks/useDomain';
@@ -18,6 +18,8 @@ export default function InventoryScreen() {
     setInvFilterCat, setInvMovFilterType,
     setInvSearch, setInvTab, setInvTransferFilterStatus, setInvWarehouseFilter,
   } = useInventory();
+  const [productLimit, setProductLimit] = useState(20);
+  const [movementLimit, setMovementLimit] = useState(20);
 
   return (
 <div className="animate-fadeIn">
@@ -161,19 +163,17 @@ export default function InventoryScreen() {
                   {invCategories.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
                 </select>
               </div>
-              {invProducts.filter(p => {
-                const ms = !invSearch || p.data.name.toLowerCase().includes(invSearch.toLowerCase()) || (p.data.sku || '').toLowerCase().includes(invSearch.toLowerCase());
-                const mc = invFilterCat === 'all' || p.data.categoryId === invFilterCat;
-                return ms && mc;
-              }).length === 0 ? (
-                <div className="text-center py-12"><div className="text-4xl mb-2">📦</div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
-              ) : (
-                <div className="space-y-2">
-                  {invProducts.filter(p => {
-                    const ms = !invSearch || p.data.name.toLowerCase().includes(invSearch.toLowerCase()) || (p.data.sku || '').toLowerCase().includes(invSearch.toLowerCase());
-                    const mc = invFilterCat === 'all' || p.data.categoryId === invFilterCat;
-                    return ms && mc;
-                  }).map(p => {
+              {(() => {
+                const filtered = invProducts.filter(p => {
+                  const ms = !invSearch || p.data.name.toLowerCase().includes(invSearch.toLowerCase()) || (p.data.sku || '').toLowerCase().includes(invSearch.toLowerCase());
+                  const mc = invFilterCat === 'all' || p.data.categoryId === invFilterCat;
+                  return ms && mc;
+                });
+                return filtered.length === 0 ? (
+                  <div className="text-center py-12"><div className="text-4xl mb-2">📦</div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
+                ) : (
+                  <div className="space-y-2">
+                    {filtered.slice(0, productLimit).map(p => {
                     const totalSt = getTotalStock(p);
                     const isLow = totalSt <= (Number(p.data.minStock) || 0);
                     const isOut = totalSt === 0;
@@ -222,8 +222,16 @@ export default function InventoryScreen() {
                       </div>
                     );
                   })}
+                  {filtered.length > productLimit && (
+                    <div className="text-center py-4">
+                      <button className="px-5 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => setProductLimit(prev => prev + 20)}>
+                        Cargar más productos
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+                );
+              })()}
             </div>)}
 
             {/* ===== Categories Tab ===== */}
@@ -323,17 +331,15 @@ export default function InventoryScreen() {
                 <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invMovFilterType} onChange={e => setInvMovFilterType(e.target.value)}><option value="all">Todos</option><option value="Entrada">Entradas</option><option value="Salida">Salidas</option></select>
                 <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invWarehouseFilter} onChange={e => setInvWarehouseFilter(e.target.value)}><option value="all">Todos los almacenes</option>{INV_WAREHOUSES.map(w => <option key={w} value={w}>{w}</option>)}</select>
               </div>
-              {invMovements.filter(m => {
-                const mt = invMovFilterType === 'all' || m.data.type === invMovFilterType;
-                const mw = invWarehouseFilter === 'all' || m.data.warehouse === invWarehouseFilter;
-                return mt && mw;
-              }).length === 0 ? (<div className="text-center py-12"><div className="text-4xl mb-2">📋</div><div className="text-[var(--muted-foreground)]">Sin movimientos</div></div>) : (
-                <div className="space-y-2">
-                  {invMovements.filter(m => {
-                    const mt = invMovFilterType === 'all' || m.data.type === invMovFilterType;
-                    const mw = invWarehouseFilter === 'all' || m.data.warehouse === invWarehouseFilter;
-                    return mt && mw;
-                  }).map(m => (
+              {(() => {
+                const filtered = invMovements.filter(m => {
+                  const mt = invMovFilterType === 'all' || m.data.type === invMovFilterType;
+                  const mw = invWarehouseFilter === 'all' || m.data.warehouse === invWarehouseFilter;
+                  return mt && mw;
+                });
+                return filtered.length === 0 ? (<div className="text-center py-12"><div className="text-4xl mb-2">📋</div><div className="text-[var(--muted-foreground)]">Sin movimientos</div></div>) : (
+                  <div className="space-y-2">
+                    {filtered.slice(0, movementLimit).map(m => (
                     <div key={m.id} className={`bg-[var(--af-bg3)] rounded-xl p-3 sm:p-4 border ${m.data.type === 'Entrada' ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -351,8 +357,16 @@ export default function InventoryScreen() {
                       </div>
                     </div>
                   ))}
+                  {filtered.length > movementLimit && (
+                    <div className="text-center py-4">
+                      <button className="px-5 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => setMovementLimit(prev => prev + 20)}>
+                        Cargar más movimientos
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+                );
+              })()}
             </div>)}
 
             {/* ===== Transfers Tab ===== */}

@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -13,6 +13,7 @@ export default function GalleryScreen() {
   const fs = useFirestore();
   const gallery = useGallery();
   const od = useOneDrive();
+  const [photoLimit, setPhotoLimit] = useState(24);
 
   return (
     <div className="animate-fadeIn p-4 sm:p-6 space-y-4">
@@ -51,8 +52,9 @@ export default function GalleryScreen() {
       <div className="text-xs text-[var(--muted-foreground)] mt-1">Agrega fotos de tus proyectos para documentar el progreso</div>
     </div>
   ) : (
+    <>
     <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))' }}>
-      {gallery.getFilteredGalleryPhotos().map((photo, idx) => {
+      {gallery.getFilteredGalleryPhotos().slice(0, photoLimit).map((photo, idx) => {
         const proj = fs.projects.find(p => p.id === photo.data.projectId);
         return (
           <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => gallery.openLightbox(photo, idx)}>
@@ -78,6 +80,14 @@ export default function GalleryScreen() {
         );
       })}
     </div>
+    {photoLimit < gallery.getFilteredGalleryPhotos().length && (
+      <div className="text-center py-4">
+        <button className="px-5 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => setPhotoLimit(prev => prev + 24)}>
+          Cargar mas fotos ({gallery.getFilteredGalleryPhotos().length - photoLimit} restantes)
+        </button>
+      </div>
+    )}
+    </>
   )}
 </div>
   );

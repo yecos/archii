@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useNotif } from '@/hooks/useDomain';
@@ -34,6 +34,15 @@ export default function BudgetScreen() {
   const ui = useUI();
   const fs = useFirestore();
   const { sendNotif } = useNotif();
+
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const toggleProjectExpand = useCallback((pid: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid); else next.add(pid);
+      return next;
+    });
+  }, []);
 
   const totalExpenses = useMemo(() => fs.expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [fs.expenses]);
 
@@ -267,7 +276,7 @@ export default function BudgetScreen() {
                     <BudgetProgressBar spent={total} budget={budget} showThresholds showLabel={!exps.length} />
                   </div>
                 )}
-                {exps.map((e: any) => (
+                {exps.slice(0, expandedProjects.has(pid) ? undefined : 5).map((e: any) => (
                   <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0`} style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />
                     <div className="flex-1 min-w-0">
@@ -278,6 +287,16 @@ export default function BudgetScreen() {
                     <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => fs.deleteExpense(e.id)}>✕</button>
                   </div>
                 ))}
+                {exps.length > 5 && !expandedProjects.has(pid) && (
+                  <button className="w-full text-center py-2 text-[12px] text-[var(--af-accent)] cursor-pointer hover:underline border-none bg-transparent" onClick={() => toggleProjectExpand(pid)}>
+                    Ver {exps.length - 5} gastos más
+                  </button>
+                )}
+                {expandedProjects.has(pid) && exps.length > 5 && (
+                  <button className="w-full text-center py-2 text-[12px] text-[var(--muted-foreground)] cursor-pointer hover:underline border-none bg-transparent" onClick={() => toggleProjectExpand(pid)}>
+                    Mostrar menos
+                  </button>
+                )}
               </div>
             );
           })}

@@ -13,8 +13,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
   const { saveManualTimeEntry } = tt;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">Registro Manual de Tiempo</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title={ui.editingId ? 'Editar registro' : 'Nuevo registro de tiempo'}>
 
       <div className="space-y-3">
         <div>

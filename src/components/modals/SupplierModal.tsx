@@ -14,8 +14,7 @@ export default function SupplierModal({ open, onClose }: { open: boolean; onClos
   const rating = Number(forms.supRating) || 5;
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</h2>
+    <CenterModal open={open} onClose={onClose} maxWidth={480} title={editingId ? 'Editar proveedor' : 'Nuevo proveedor'}>
 
       <div className="space-y-3">
         <FormField label="Nombre" required>
