@@ -11,6 +11,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 import * as fbActions from '@/lib/firestore-actions';
 import { confirm } from '@/hooks/useConfirmDialog';
+import * as _gantt from '@/lib/gantt-helpers';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -1098,92 +1099,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     ...(invProducts.filter(p => getTotalStock(p) === 0).map(p => ({ type: 'out_of_stock' as const, msg: `${p.data?.name || 'Producto'}: AGOTADO`, severity: 'critical' as const }))),
   ];
 
-  // ===== GANTT HELPERS =====
-  const GANTT_DAYS = 14;
-  const GANTT_DAY_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-  const GANTT_STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-    'Por hacer': { label: 'Pendiente', color: '#f59e0b', bg: '#fffbeb' },
-    'En progreso': { label: 'En Progreso', color: '#3b82f6', bg: '#eff6ff' },
-    'Revision': { label: 'Revisión', color: '#8b5cf6', bg: '#f5f3ff' },
-    'Completado': { label: 'Completado', color: '#10b981', bg: '#ecfdf5' },
-  };
-  const GANTT_PRIO_CFG: Record<string, { label: string; bg: string; color: string }> = {
-    'Baja': { label: 'Baja', bg: '#f1f5f9', color: '#475569' },
-    'Media': { label: 'Media', bg: '#e0f2fe', color: '#0369a1' },
-    'Alta': { label: 'Alta', bg: '#ffedd5', color: '#c2410c' },
-  };
-
-  const getMonday = (d: Date) => { const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); return new Date(d.getFullYear(), d.getMonth(), diff); };
-  const getGanttDays = () => {
-    const base = getMonday(new Date()); base.setHours(0,0,0,0);
-    base.setDate(base.getDate() + adminWeekOffset * 7);
-    const days: Date[] = [];
-    for (let i = 0; i < GANTT_DAYS; i++) { const day = new Date(base); day.setDate(day.getDate() + i); days.push(day); }
-    return days;
-  };
-
-  const getTaskBar = (task: any, days: Date[]) => {
-    if (!task.data.dueDate) return null;
-    const tStart = task.data.dueDate ? new Date(task.data.startDate || task.data.dueDate) : new Date();
-    const tEnd = new Date(task.data.dueDate);
-    const rangeStart = days[0]; const rangeEnd = new Date(days[days.length - 1]); rangeEnd.setDate(rangeEnd.getDate() + 1);
-    const DAY_MS: number = 86400000; const rangeSpan: number = Number(rangeEnd) - Number(rangeStart) / DAY_MS;
-    const leftPct: number = Math.max(0, (Number(tStart) - Number(rangeStart)) / DAY_MS / rangeSpan) * 100;
-    const widthPct: number = Math.max(2, ((Number(tEnd) - Number(tStart)) / DAY_MS + 1) / rangeSpan) * 100;
-    return { left: leftPct, width: Math.min(widthPct, 100 - leftPct) };
-  };
-
-  const buildGanttRows = (memberTasks: any[]) => {
-    const rows: any[][] = [];
-    memberTasks.forEach((t: any) => {
-      if (!t.data.dueDate) return;
-      let placed = false;
-      for (const row of rows) {
-        const overlaps = row.some((r: any) => {
-          if (!r.data.dueDate || !t.data.dueDate) return false;
-          return new Date(r.data.startDate || r.data.dueDate) <= new Date(t.data.dueDate) && new Date(t.data.startDate || t.data.dueDate) <= new Date(r.data.dueDate);
-        });
-        if (!overlaps) { row.push(t); placed = true; break; }
-      }
-      if (!placed) rows.push([t]);
-    });
-    return rows;
-  };
-
-  const findOverlaps = (memberTasks: any[]) => {
-    const overlapIds = new Set<string>();
-    for (let i = 0; i < memberTasks.length; i++) {
-      for (let j = i + 1; j < memberTasks.length; j++) {
-        const a = memberTasks[i], b = memberTasks[j];
-        if (!a.data.dueDate || !b.data.dueDate) continue;
-        if (new Date(a.data.startDate || a.data.dueDate) <= new Date(b.data.dueDate) && new Date(b.data.startDate || b.data.dueDate) <= new Date(a.data.dueDate)) {
-          overlapIds.add(a.id); overlapIds.add(b.id);
-        }
-      }
-    }
-    return overlapIds;
-  };
-
-  const getProjectColor = (projId: string) => {
-    const colors = ['#3b82f6','#8b5cf6','#f43f5e','#10b981','#f59e0b','#06b6d4','#ec4899','#84cc16','#6366f1','#f97316'];
-    const idx = projects.findIndex(p => p.id === projId);
-    return colors[Math.abs(idx) % colors.length];
-  };
-
-  const getProjectColorLight = (projId: string) => {
-    const map: Record<string, string> = { '#3b82f6':'#dbeafe','#8b5cf6':'#ede9fe','#f43f5e':'#ffe4e6','#10b981':'#d1fae5','#f59e0b':'#fef3c7','#06b6d4':'#cffafe','#ec4899':'#fce7f3','#84cc16':'#ecfccb','#6366f1':'#e0e7ff','#f97316':'#ffedd5' };
-    return map[getProjectColor(projId)] || '#f5f5f4';
-  };
-
-  const calcGanttDays = (startDate: string, endDate: string): number => {
-    if (!startDate || !endDate) return 0;
-    return Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)));
-  };
-
-  const calcGanttOffset = (phaseStart: string, timelineStart: string): number => {
-    if (!phaseStart || !timelineStart) return 0;
-    return Math.max(0, Math.ceil((new Date(phaseStart).getTime() - new Date(timelineStart).getTime()) / (1000 * 60 * 60 * 24)));
-  };
+  // ===== GANTT HELPERS (re-exported from @/lib/gantt-helpers) =====
+  const _getGanttDays = (weekOffset: number) => _gantt.getGanttDays(weekOffset);
+  const _getProjectColor = (projId: string) => _gantt.getProjectColor(projId, projects);
+  const _getProjectColorLight = (projId: string) => _gantt.getProjectColorLight(projId, projects);
 
   const value: FirestoreContextType = {
     // Collection state
@@ -1238,10 +1157,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
     invTotalValue, invLowStock, invTotalStock, invPendingTransfers, invAlerts,
-    // Gantt
-    GANTT_DAYS, GANTT_DAY_NAMES, GANTT_STATUS_CFG, GANTT_PRIO_CFG,
-    getMonday, getGanttDays, getTaskBar, buildGanttRows, findOverlaps,
-    getProjectColor, getProjectColorLight, calcGanttDays, calcGanttOffset,
+    // Gantt (re-exported from @/lib/gantt-helpers)
+    GANTT_DAYS: _gantt.GANTT_DAYS, GANTT_DAY_NAMES: _gantt.GANTT_DAY_NAMES,
+    GANTT_STATUS_CFG: _gantt.GANTT_STATUS_CFG, GANTT_PRIO_CFG: _gantt.GANTT_PRIO_CFG,
+    getMonday: _gantt.getMonday, getGanttDays: () => _getGanttDays(adminWeekOffset),
+    getTaskBar: _gantt.getTaskBar, buildGanttRows: _gantt.buildGanttRows, findOverlaps: _gantt.findOverlaps,
+    getProjectColor: _getProjectColor, getProjectColorLight: _getProjectColorLight,
+    calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
   return <FirestoreContext.Provider value={value}>{children}</FirestoreContext.Provider>;
