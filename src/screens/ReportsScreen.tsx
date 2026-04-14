@@ -219,7 +219,7 @@ export default function ReportsScreen() {
             const totalSpent = filteredExpenses.reduce((s, e) => s + (e.data.amount || 0), 0);
             const taskCompleted = tasks.filter(t => t.data.status === 'Completado').length;
             const taskInProgress = tasks.filter(t => t.data.status === 'En progreso').length;
-            const taskPending = tasks.filter(t => t.data.status === 'Pendiente' || t.data.status === 'Por hacer').length;
+            const taskPending = tasks.filter(t => t.data.status === 'Completado' || (t.data.status as string) === 'Pendiente' || t.data.status === 'Por hacer').length;
             const taskOverdue = tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
             const budgetPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
             const membersByRole: Record<string, number> = {};

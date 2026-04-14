@@ -325,12 +325,16 @@ export interface ChatMessage {
   uid: string;
   userName: string;
   userPhoto?: string;
-  content: string;
-  type?: 'text' | 'image' | 'audio' | 'file';
+  text: string;
+  type?: 'text' | 'image' | 'audio' | 'file' | 'TEXT' | 'AUDIO' | 'IMAGE' | 'FILE';
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
-  replyTo?: string;
+  fileData?: string;
+  fileType?: string;
+  audioData?: string;
+  audioDuration?: number;
+  replyTo?: { id: string; text: string; userName: string; uid: string } | string;
   reactions?: Record<string, string[]>;
   createdAt: FirestoreTimestamp | null;
 }

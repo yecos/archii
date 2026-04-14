@@ -25,7 +25,7 @@ export default function ObraScreen() {
   const [selectedProjectLogs, setSelectedProjectLogs] = useState<string | null>(null);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
-  const activeProjects = fs.projects.filter(p => p.data.status === 'Ejecucion');
+  const activeProjects = fs.projects.filter(p => (p.data.status as string) === 'Ejecucion');
 
   // Determine which logs to show
   const displayLogs = useMemo(() => {

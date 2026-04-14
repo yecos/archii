@@ -3,18 +3,19 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import type { GalleryPhoto, OneDriveFile } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== GALLERY CONTEXT ===== */
 interface GalleryContextType {
   // Collection state
-  galleryPhotos: any[];
-  setGalleryPhotos: React.Dispatch<React.SetStateAction<any[]>>;
+  galleryPhotos: GalleryPhoto[];
+  setGalleryPhotos: React.Dispatch<React.SetStateAction<GalleryPhoto[]>>;
 
   // Domain UI state
   galleryFilterProject: string; setGalleryFilterProject: React.Dispatch<React.SetStateAction<string>>;
   galleryFilterCat: string; setGalleryFilterCat: React.Dispatch<React.SetStateAction<string>>;
-  lightboxPhoto: any; setLightboxPhoto: React.Dispatch<React.SetStateAction<any>>;
+  lightboxPhoto: GalleryPhoto | OneDriveFile | null; setLightboxPhoto: React.Dispatch<React.SetStateAction<GalleryPhoto | OneDriveFile | null>>;
   lightboxIndex: number; setLightboxIndex: React.Dispatch<React.SetStateAction<number>>;
 
   // CRUD Functions
@@ -23,11 +24,11 @@ interface GalleryContextType {
   handleGalleryImageSelect: (e: any) => Promise<void>;
 
   // Lightbox Functions
-  openLightbox: (photo: any, idx: number) => void;
+  openLightbox: (photo: GalleryPhoto | OneDriveFile, idx: number) => void;
   closeLightbox: () => void;
   lightboxPrev: () => void;
   lightboxNext: () => void;
-  getFilteredGalleryPhotos: () => any[];
+  getFilteredGalleryPhotos: () => GalleryPhoto[];
 }
 
 const GalleryContext = createContext<GalleryContextType | null>(null);
@@ -37,12 +38,12 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
   const { ready, authUser } = useAuthContext();
 
   // ===== COLLECTION STATE =====
-  const [galleryPhotos, setGalleryPhotos] = useState<any[]>([]);
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
 
   // ===== DOMAIN UI STATE =====
   const [galleryFilterProject, setGalleryFilterProject] = useState<string>('all');
   const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
-  const [lightboxPhoto, setLightboxPhoto] = useState<any>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<GalleryPhoto | OneDriveFile | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   // ===== EFFECTS =====

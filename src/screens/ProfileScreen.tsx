@@ -37,7 +37,7 @@ export default function ProfileScreen() {
               const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
               const dayEnd = new Date(dayStart.getTime() + 86400000);
               const completed = myTasks.filter(t => t.data.status === 'Completado').filter(t => {
-                const cd = t.data.createdAt?.toDate ? t.data.createdAt.toDate() : new Date(t.data.createdAt);
+                const cd = (t.data.createdAt as any)?.toDate ? (t.data.createdAt as any).toDate() : new Date(t.data.createdAt as any);
                 return cd >= dayStart && cd < dayEnd;
               }).length;
               return { label, count: completed, max: 5 };
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
 
                 // Recent new projects (last 7 days)
                 const recentProjects = fs.projects.filter(p => {
-                  const cd = p.data.createdAt?.toDate ? p.data.createdAt.toDate() : new Date(p.data.createdAt);
+                  const cd = (p.data.createdAt as any)?.toDate ? (p.data.createdAt as any).toDate() : new Date(p.data.createdAt as any);
                   return cd >= new Date(today.getTime() - 7 * 86400000);
                 });
                 recentProjects.slice(0, 3).forEach(p => {
@@ -345,7 +345,7 @@ export default function ProfileScreen() {
                             )}
                           </div>
                           <div className="mt-2 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${t.data.status === 'En progreso' ? 'bg-blue-500 w-1/2' : t.data.status === 'Revision' ? 'bg-amber-500 w-3/4' : 'w-0'}`} />
+                            <div className={`h-full rounded-full ${t.data.status === 'En progreso' ? 'bg-blue-500 w-1/2' : (t.data.status as string) === 'Revision' ? 'bg-amber-500 w-3/4' : 'w-0'}`} />
                           </div>
                         </div>
                       );

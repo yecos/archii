@@ -4,19 +4,20 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
+import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== INVENTORY CONTEXT ===== */
 interface InventoryContextType {
   // Collection state
-  invProducts: any[];
-  setInvProducts: React.Dispatch<React.SetStateAction<any[]>>;
-  invCategories: any[];
-  setInvCategories: React.Dispatch<React.SetStateAction<any[]>>;
-  invMovements: any[];
-  setInvMovements: React.Dispatch<React.SetStateAction<any[]>>;
-  invTransfers: any[];
-  setInvTransfers: React.Dispatch<React.SetStateAction<any[]>>;
+  invProducts: InvProduct[];
+  setInvProducts: React.Dispatch<React.SetStateAction<InvProduct[]>>;
+  invCategories: InvCategory[];
+  setInvCategories: React.Dispatch<React.SetStateAction<InvCategory[]>>;
+  invMovements: InvMovement[];
+  setInvMovements: React.Dispatch<React.SetStateAction<InvMovement[]>>;
+  invTransfers: InvTransfer[];
+  setInvTransfers: React.Dispatch<React.SetStateAction<InvTransfer[]>>;
 
   // Domain UI state
   invTab: string; setInvTab: React.Dispatch<React.SetStateAction<string>>;
@@ -27,17 +28,17 @@ interface InventoryContextType {
   invWarehouseFilter: string; setInvWarehouseFilter: React.Dispatch<React.SetStateAction<string>>;
 
   // Helpers
-  getWarehouseStock: (product: any, warehouse: string) => number;
-  getTotalStock: (product: any) => number;
-  buildWarehouseStock: (product: any) => Record<string, number>;
+  getWarehouseStock: (product: InvProduct, warehouse: string) => number;
+  getTotalStock: (product: InvProduct) => number;
+  buildWarehouseStock: (product: InvProduct) => Record<string, number>;
 
   // CRUD Functions
   saveInvProduct: () => Promise<void>;
   deleteInvProduct: (id: string) => Promise<void>;
-  openEditInvProduct: (p: any) => void;
+  openEditInvProduct: (p: InvProduct) => void;
   saveInvCategory: () => Promise<void>;
   deleteInvCategory: (id: string) => Promise<void>;
-  openEditInvCategory: (c: any) => void;
+  openEditInvCategory: (c: InvCategory) => void;
   saveInvMovement: () => Promise<void>;
   deleteInvMovement: (id: string) => Promise<void>;
   saveInvTransfer: () => Promise<void>;
@@ -53,10 +54,10 @@ interface InventoryContextType {
 
   // Computed values
   invTotalValue: number;
-  invLowStock: any[];
+  invLowStock: InvProduct[];
   invTotalStock: number;
   invPendingTransfers: number;
-  invAlerts: any[];
+  invAlerts: Array<{ type: 'low_stock' | 'out_of_stock' | 'pending_transfer'; msg: string; severity: 'high' | 'medium' | 'critical' }>;
 }
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
@@ -66,10 +67,10 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   const { ready, authUser } = useAuthContext();
 
   // ===== COLLECTION STATE =====
-  const [invProducts, setInvProducts] = useState<any[]>([]);
-  const [invCategories, setInvCategories] = useState<any[]>([]);
-  const [invMovements, setInvMovements] = useState<any[]>([]);
-  const [invTransfers, setInvTransfers] = useState<any[]>([]);
+  const [invProducts, setInvProducts] = useState<InvProduct[]>([]);
+  const [invCategories, setInvCategories] = useState<InvCategory[]>([]);
+  const [invMovements, setInvMovements] = useState<InvMovement[]>([]);
+  const [invTransfers, setInvTransfers] = useState<InvTransfer[]>([]);
 
   // ===== DOMAIN UI STATE =====
   const [invTab, setInvTab] = useState<string>('dashboard');

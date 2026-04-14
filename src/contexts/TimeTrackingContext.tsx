@@ -3,19 +3,20 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import type { TimeEntry, TimeSession } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
 /* ===== TIME TRACKING CONTEXT ===== */
 interface TimeTrackingContextType {
   // Collection state
-  timeEntries: any[];
-  setTimeEntries: React.Dispatch<React.SetStateAction<any[]>>;
+  timeEntries: TimeEntry[];
+  setTimeEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
 
   // Domain UI state
   timeTab: string; setTimeTab: React.Dispatch<React.SetStateAction<string>>;
   timeFilterProject: string; setTimeFilterProject: React.Dispatch<React.SetStateAction<string>>;
   timeFilterDate: string; setTimeFilterDate: React.Dispatch<React.SetStateAction<string>>;
-  timeSession: any; setTimeSession: React.Dispatch<React.SetStateAction<any>>;
+  timeSession: TimeSession; setTimeSession: React.Dispatch<React.SetStateAction<TimeSession>>;
   timeTimerMs: number; setTimeTimerMs: React.Dispatch<React.SetStateAction<number>>;
 
   // CRUD Functions
@@ -31,13 +32,13 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
   const { ready, authUser } = useAuthContext();
 
   // ===== COLLECTION STATE =====
-  const [timeEntries, setTimeEntries] = useState<any[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
 
   // ===== DOMAIN UI STATE =====
   const [timeTab, setTimeTab] = useState<string>('tracker');
   const [timeFilterProject, setTimeFilterProject] = useState<string>('all');
   const [timeFilterDate, setTimeFilterDate] = useState<string>('');
-  const [timeSession, setTimeSession] = useState<{ entryId: string | null; startTime: number | null; description: string; projectId: string; phaseName: string; isRunning: boolean }>({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
+  const [timeSession, setTimeSession] = useState<TimeSession>({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
   const [timeTimerMs, setTimeTimerMs] = useState<number>(0);
 
   // ===== EFFECTS =====

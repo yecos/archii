@@ -14,6 +14,7 @@ import { confirm } from '@/hooks/useConfirmDialog';
 import { logAudit, extractChanges } from '@/lib/audit-trail';
 import type { AuditEntityType } from '@/lib/audit-trail';
 import * as _gantt from '@/lib/gantt-helpers';
+import AdminProvider from './AdminContext';
 import InventoryProvider from './InventoryContext';
 import GalleryProvider from './GalleryContext';
 import TimeTrackingProvider from './TimeTrackingContext';
@@ -24,16 +25,16 @@ import CommentsProvider from './CommentsContext';
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
   // Collection state
-  projects: any[];
-  setProjects: React.Dispatch<React.SetStateAction<any[]>>;
-  tasks: any[];
-  setTasks: React.Dispatch<React.SetStateAction<any[]>>;
+  projects: Project[];
+  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   expenses: Expense[];
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
-  companies: any[];
-  setCompanies: React.Dispatch<React.SetStateAction<any[]>>;
+  companies: Company[];
+  setCompanies: React.Dispatch<React.SetStateAction<Company[]>>;
   workPhases: WorkPhase[];
   setWorkPhases: React.Dispatch<React.SetStateAction<WorkPhase[]>>;
   projectFiles: ProjectFile[];
@@ -41,18 +42,6 @@ interface FirestoreContextType {
   approvals: Approval[];
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
   allApprovals: Approval[];
-  // Domain UI state — Admin
-  adminTab: string; setAdminTab: React.Dispatch<React.SetStateAction<string>>;
-  adminWeekOffset: number; setAdminWeekOffset: React.Dispatch<React.SetStateAction<number>>;
-  adminTaskSearch: string; setAdminTaskSearch: React.Dispatch<React.SetStateAction<string>>;
-  adminFilterAssignee: string; setAdminFilterAssignee: React.Dispatch<React.SetStateAction<string>>;
-  adminFilterProject: string; setAdminFilterProject: React.Dispatch<React.SetStateAction<string>>;
-  adminFilterPriority: string; setAdminFilterPriority: React.Dispatch<React.SetStateAction<string>>;
-  adminTooltipTask: any; setAdminTooltipTask: React.Dispatch<React.SetStateAction<any>>;
-  adminTooltipPos: { x: number; y: number }; setAdminTooltipPos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
-  adminPermSection: string; setAdminPermSection: React.Dispatch<React.SetStateAction<string>>;
-  rolePerms: Record<string, string[]>; setRolePerms: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
-  toggleRolePerm: (permName: string, role: string) => void;
 
   // CRUD Functions — Projects
   saveProject: () => Promise<void>;
@@ -104,30 +93,18 @@ interface FirestoreContextType {
   fileToBase64: (file: any) => Promise<string>;
 
   // Computed values
-  currentProject: any;
+  currentProject: Project | undefined;
   pendingCount: number;
   pendingApprovals: Approval[];
-  activeTasks: any[];
-  completedTasks: any[];
-  overdueTasks: any[];
-  urgentTasks: any[];
-  adminFilteredTasks: any[];
+  activeTasks: Task[];
+  completedTasks: Task[];
+  overdueTasks: Task[];
+  urgentTasks: Task[];
   projectExpenses: Expense[];
-  projectTasks: any[];
+  projectTasks: Task[];
   projectBudget: number;
   projectSpent: number;
-  // Gantt helpers
-  GANTT_DAYS: number;
-  GANTT_DAY_NAMES: string[];
-  GANTT_STATUS_CFG: Record<string, { label: string; color: string; bg: string }>;
-  GANTT_PRIO_CFG: Record<string, { label: string; bg: string; color: string }>;
-  getMonday: (d: Date) => Date;
-  getGanttDays: () => Date[];
-  getTaskBar: (task: any, days: Date[]) => { left: number; width: number } | null;
-  buildGanttRows: (memberTasks: any[]) => any[][];
-  findOverlaps: (memberTasks: any[]) => Set<string>;
-  getProjectColor: (projId: string) => string;
-  getProjectColorLight: (projId: string) => string;
+  // Gantt helpers (project-detail specific)
   calcGanttDays: (startDate: string, endDate: string) => number;
   calcGanttOffset: (phaseStart: string, timelineStart: string) => number;
 }
@@ -149,51 +126,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [allApprovals, setAllApprovals] = useState<Approval[]>([]);
-  // ===== DOMAIN UI STATE — Admin =====
-  const [adminTab, setAdminTab] = useState<string>('timeline');
-  const [adminWeekOffset, setAdminWeekOffset] = useState<number>(0);
-  const [adminTaskSearch, setAdminTaskSearch] = useState<string>('');
-  const [adminFilterAssignee, setAdminFilterAssignee] = useState<string>('all');
-  const [adminFilterProject, setAdminFilterProject] = useState<string>('all');
-  const [adminFilterPriority, setAdminFilterPriority] = useState<string>('all');
-  const [adminTooltipTask, setAdminTooltipTask] = useState<Task | null>(null);
-  const [adminTooltipPos, setAdminTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [adminPermSection, setAdminPermSection] = useState<string>('roles');
-  const [rolePerms, setRolePerms] = useState<Record<string, string[]>>({
-    'Ver Dashboard': ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'],
-    'Crear proyectos': ['Admin','Director','Arquitecto'],
-    'Editar proyectos': ['Admin','Director','Arquitecto'],
-    'Eliminar proyectos': ['Admin','Director'],
-    'Crear tareas': ['Admin','Director','Arquitecto','Interventor','Contratista'],
-    'Asignar tareas': ['Admin','Director','Arquitecto'],
-    'Gestionar equipo': ['Admin','Director'],
-    'Cambiar roles': ['Admin'],
-    'Ver presupuestos': ['Admin','Director','Arquitecto','Interventor','Cliente'],
-    'Ver inventario': ['Admin','Director','Arquitecto','Contratista','Interventor'],
-    'Gestionar inventario': ['Admin','Director','Contratista'],
-    'Panel Admin': ['Admin','Director'],
-    'Chat general': ['Admin','Director','Arquitecto','Interventor','Contratista','Cliente','Miembro'],
-    'Portal cliente': ['Admin','Director','Cliente'],
-  });
-  const toggleRolePerm = (permName: string, role: string) => {
-    setRolePerms(prev => {
-      const current = prev[permName] || [];
-      const has = current.includes(role);
-      const updated = { ...prev, [permName]: has ? current.filter(r => r !== role) : [...current, role] };
-      try { localStorage.setItem('archiflow-role-perms', JSON.stringify(updated)); } catch (err) { console.error("[ArchiFlow]", err); }
-      return updated;
-    });
-  };
 
   // ===== EFFECTS =====
-
-  // Load saved role permissions from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('archiflow-role-perms');
-      if (saved) setRolePerms(JSON.parse(saved));
-    } catch (err) { console.error("[ArchiFlow]", err); }
-  }, []);
 
   // Load projects
   useEffect(() => {
@@ -673,18 +607,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const urgentTasks = useMemo(() => activeTasks.filter(t => t.data?.priority === 'Alta'), [activeTasks]);
   const pendingCount = useMemo(() => tasks.filter(t => t.data?.status !== 'Completado').length, [tasks]);
 
-  const adminFilteredTasks = useMemo(() => activeTasks.filter(t => {
-    const ms = !adminTaskSearch || (t.data?.title || '').toLowerCase().includes(adminTaskSearch.toLowerCase());
-    const ma = adminFilterAssignee === 'all' || t.data?.assigneeId === adminFilterAssignee;
-    const mp = adminFilterProject === 'all' || t.data?.projectId === adminFilterProject;
-    const mpr = adminFilterPriority === 'all' || t.data?.priority === adminFilterPriority;
-    return ms && ma && mp && mpr;
-  }), [activeTasks, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority]);
-
-  // ===== GANTT HELPERS (re-exported from @/lib/gantt-helpers) =====
-  const _getGanttDays = (weekOffset: number) => _gantt.getGanttDays(weekOffset);
-  const _getProjectColor = (projId: string) => _gantt.getProjectColor(projId, projects);
-  const _getProjectColorLight = (projId: string) => _gantt.getProjectColorLight(projId, projects);
+  // ===== GANTT HELPERS (project-detail specific, re-exported from @/lib/gantt-helpers) =====
 
   const value: FirestoreContextType = useMemo(() => ({
     // Collection state
@@ -692,8 +615,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals, allApprovals,
-    // Admin
-    adminTab, setAdminTab, adminWeekOffset, setAdminWeekOffset, adminTaskSearch, setAdminTaskSearch, adminFilterAssignee, setAdminFilterAssignee, adminFilterProject, setAdminFilterProject, adminFilterPriority, setAdminFilterPriority, adminTooltipTask, setAdminTooltipTask, adminTooltipPos, setAdminTooltipPos, adminPermSection, setAdminPermSection, rolePerms, setRolePerms, toggleRolePerm,
     // CRUD
     saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
     saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
@@ -705,34 +626,25 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     createApproval, saveApproval, approveApproval, rejectApproval, updateApproval, deleteApproval,
     updateUserName, fileToBase64,
     // Computed
-    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
+    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
-    // Gantt (re-exported from @/lib/gantt-helpers)
-    GANTT_DAYS: _gantt.GANTT_DAYS, GANTT_DAY_NAMES: _gantt.GANTT_DAY_NAMES,
-    GANTT_STATUS_CFG: _gantt.GANTT_STATUS_CFG, GANTT_PRIO_CFG: _gantt.GANTT_PRIO_CFG,
-    getMonday: _gantt.getMonday, getGanttDays: () => _getGanttDays(adminWeekOffset),
-    getTaskBar: _gantt.getTaskBar, buildGanttRows: _gantt.buildGanttRows, findOverlaps: _gantt.findOverlaps,
-    getProjectColor: _getProjectColor, getProjectColorLight: _getProjectColorLight,
+    // Gantt (project-detail specific, re-exported from @/lib/gantt-helpers)
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   }), [
     // Collection state
     projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals, allApprovals,
-    // Admin state
-    adminTab, adminWeekOffset, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority, adminTooltipTask, adminTooltipPos, adminPermSection, rolePerms,
     // CRUD functions
-    toggleRolePerm, saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
+    saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
     saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense, saveSupplier, deleteSupplier, saveCompany,
     uploadFile, deleteFile, initDefaultPhases, updatePhaseStatus,
     createApproval, saveApproval, approveApproval, rejectApproval, updateApproval, deleteApproval, updateUserName, fileToBase64,
     // Computed values
-    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
+    currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
-    // Gantt helper wrappers
-    _getGanttDays, _getProjectColor, _getProjectColorLight,
   ]);
 
-  return <FirestoreContext.Provider value={value}><CommentsProvider><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></CommentsProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><AdminProvider><CommentsProvider><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></CommentsProvider></AdminProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {

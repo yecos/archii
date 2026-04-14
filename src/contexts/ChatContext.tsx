@@ -4,12 +4,13 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, QuerySnapshot, QueryDocSnapshot } from '@/lib/firebase-service';
 import { fmtSize } from '@/lib/helpers';
+import type { ChatMessage } from '@/lib/types';
 
 /* ===== CHAT CONTEXT ===== */
 interface ChatContextType {
   // State
-  messages: any[];
-  setMessages: React.Dispatch<React.SetStateAction<any[]>>;
+  messages: ChatMessage[];
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   chatProjectId: string | null;
   setChatProjectId: React.Dispatch<React.SetStateAction<string | null>>;
   chatDmUser: string | null;
@@ -55,8 +56,8 @@ interface ChatContextType {
   // Emoji, Reply, Reactions, Typing, Menu
   showEmojiPicker: boolean;
   setShowEmojiPicker: React.Dispatch<React.SetStateAction<boolean>>;
-  chatReplyingTo: any;
-  setChatReplyingTo: React.Dispatch<React.SetStateAction<any>>;
+  chatReplyingTo: ChatMessage | null;
+  setChatReplyingTo: React.Dispatch<React.SetStateAction<ChatMessage | null>>;
   messageReactions: Record<string, Record<string, string[]>>;
   setMessageReactions: React.Dispatch<React.SetStateAction<Record<string, Record<string, string[]>>>>;
   typingUsers: string[];
@@ -95,7 +96,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   const { ready, authUser } = useAuthContext();
 
   // State
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatProjectId, setChatProjectId] = useState<string | null>(null);
   const [chatDmUser, setChatDmUser] = useState<string | null>(null);
 
@@ -127,7 +128,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
 
   // Emoji, Reply, Reactions, Typing, Menu
   const [showEmojiPicker, setShowEmojiPicker2] = useState(false);
-  const [chatReplyingTo, setChatReplyingTo] = useState<any>(null);
+  const [chatReplyingTo, setChatReplyingTo] = useState<ChatMessage | null>(null);
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [chatMenuMsg, setChatMenuMsg] = useState<string | null>(null);
@@ -142,17 +143,17 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     let unsub: any;
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
       }, () => {});
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
       unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
       }, () => {});
     } else {
       unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
       }, () => {});
     }
     return () => { unsub(); setMessages([]); };

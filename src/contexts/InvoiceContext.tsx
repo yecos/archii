@@ -3,22 +3,23 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import type { Invoice, InvoiceItem } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
 /* ===== INVOICE CONTEXT ===== */
 interface InvoiceContextType {
   // Collection state
-  invoices: any[];
-  setInvoices: React.Dispatch<React.SetStateAction<any[]>>;
+  invoices: Invoice[];
+  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   // Domain UI state
   invoiceTab: string; setInvoiceTab: React.Dispatch<React.SetStateAction<string>>;
-  invoiceItems: any[]; setInvoiceItems: React.Dispatch<React.SetStateAction<any[]>>;
+  invoiceItems: InvoiceItem[]; setInvoiceItems: React.Dispatch<React.SetStateAction<InvoiceItem[]>>;
   invoiceFilterStatus: string; setInvoiceFilterStatus: React.Dispatch<React.SetStateAction<string>>;
   // Computed
-  invoices2: any[];
+  invoices2: Invoice[];
   // CRUD
   openNewInvoice: () => void;
-  updateInvoiceItem: (idx: number, field: string, value: any) => void;
+  updateInvoiceItem: (idx: number, field: string, value: string | number) => void;
   addInvoiceItem: () => void;
   removeInvoiceItem: (idx: number) => void;
   saveInvoice: () => void;
@@ -31,11 +32,11 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
   const { ready, authUser } = useAuthContext();
 
   // ===== COLLECTION STATE =====
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   // ===== DOMAIN UI STATE =====
   const [invoiceTab, setInvoiceTab] = useState<string>('list');
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
 
   // ===== EFFECTS =====

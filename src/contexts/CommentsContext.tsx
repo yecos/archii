@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
-import type { Comment } from '@/lib/types';
+import type { Comment, DailyLog } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
 /* ===== COMMENTS CONTEXT ===== */
@@ -11,8 +11,8 @@ interface CommentsContextType {
   // Collection state
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  dailyLogs: any[];
-  setDailyLogs: React.Dispatch<React.SetStateAction<any[]>>;
+  dailyLogs: DailyLog[];
+  setDailyLogs: React.Dispatch<React.SetStateAction<DailyLog[]>>;
 
   // Domain UI state — Comments
   commentText: string; setCommentText: React.Dispatch<React.SetStateAction<string>>;
@@ -26,7 +26,7 @@ interface CommentsContextType {
   // CRUD Functions — Daily Logs
   saveDailyLog: () => Promise<void>;
   deleteDailyLog: (logId: string) => Promise<void>;
-  openEditLog: (log: any) => void;
+  openEditLog: (log: DailyLog) => void;
   resetLogForm: () => void;
 
   // CRUD Functions — Comments
@@ -41,7 +41,7 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
 
   // ===== COLLECTION STATE =====
   const [comments, setComments] = useState<Comment[]>([]);
-  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
 
   // ===== DOMAIN UI STATE — Comments =====
   const [commentText, setCommentText] = useState<string>('');

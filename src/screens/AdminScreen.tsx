@@ -4,6 +4,7 @@ import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
+import { useAdmin } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor, fmtCOP } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
@@ -15,14 +16,19 @@ export default function AdminScreen() {
   const { showToast } = useUI();
   const { authUser, isAdmin, getUserName, teamUsers, updateUserRole } = useAuth();
   const {
-    GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG, activeTasks,
-    adminPermSection, adminTab, adminTooltipPos, adminTooltipTask,
-    buildGanttRows, completedTasks, findOverlaps, getGanttDays, getProjectColor,
-    getProjectColorLight, getTaskBar, overdueTasks,
-    projects, rolePerms, setAdminPermSection, setAdminTab, setAdminTooltipPos,
-    setAdminTooltipTask, setAdminWeekOffset, tasks, allApprovals,
-    toggleRolePerm, approveApproval, rejectApproval,
+    projects, tasks, allApprovals, activeTasks, completedTasks, overdueTasks,
+    approveApproval, rejectApproval,
   } = useFirestore();
+  const {
+    GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG,
+    adminFilteredTasks,
+    adminPermSection, adminTab, adminTooltipPos, adminTooltipTask,
+    buildGanttRows, findOverlaps, getGanttDays, getProjectColor,
+    getProjectColorLight, getTaskBar,
+    rolePerms, setAdminPermSection, setAdminTab, setAdminTooltipPos,
+    setAdminTooltipTask, setAdminWeekOffset,
+    toggleRolePerm,
+  } = useAdmin();
 
   return (
     <>
@@ -166,7 +172,7 @@ export default function AdminScreen() {
                     <div className="text-[12px] font-semibold mt-1">{t.data.title}</div>
                     {proj && <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{proj.data.name}</div>}
                     <div className="flex gap-3 mt-1 text-[10px] text-[var(--muted-foreground)]">
-                      {t.data.startDate && <span>{fmtDate(t.data.startDate)}</span>}
+                      {(t.data as any).startDate && <span>{fmtDate((t.data as any).startDate)}</span>}
                       {t.data.dueDate && <span>→ {fmtDate(t.data.dueDate)}</span>}
                     </div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">👤 {getUserName(t.data.assigneeId)}</div>

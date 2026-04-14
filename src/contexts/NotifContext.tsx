@@ -9,15 +9,15 @@ import { useInventoryContext } from './InventoryContext';
 import { fmtDate } from '@/lib/helpers';
 import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts';
 import { useNotifPreferencesContext } from './NotifPreferencesContext';
-import type { NotifEventType } from '@/lib/types';
+import type { NotifEventType, NotifEntry } from '@/lib/types';
 
 /* ===== NOTIFICATION CONTEXT ===== */
 interface NotifContextType {
   // State
   notifPermission: NotificationPermission;
   setNotifPermission: React.Dispatch<React.SetStateAction<NotificationPermission>>;
-  notifHistory: any[];
-  setNotifHistory: React.Dispatch<React.SetStateAction<any[]>>;
+  notifHistory: NotifEntry[];
+  setNotifHistory: React.Dispatch<React.SetStateAction<NotifEntry[]>>;
   notifPrefs: Record<string, boolean>;
   setNotifPrefs: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   showNotifPanel: boolean;
@@ -25,8 +25,8 @@ interface NotifContextType {
   unreadCount: number;
   notifSound: boolean;
   setNotifSound: React.Dispatch<React.SetStateAction<boolean>>;
-  inAppNotifs: any[];
-  setInAppNotifs: React.Dispatch<React.SetStateAction<any[]>>;
+  inAppNotifs: (NotifEntry & { ts?: number })[];
+  setInAppNotifs: React.Dispatch<React.SetStateAction<(NotifEntry & { ts?: number })[]>>;
   notifFilterCat: string;
   setNotifFilterCat: React.Dispatch<React.SetStateAction<string>>;
   showNotifBanner: boolean;
@@ -65,14 +65,14 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
-  const [notifHistory, setNotifHistory] = useState<any[]>([]);
+  const [notifHistory, setNotifHistory] = useState<NotifEntry[]>([]);
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
     chat: true, tasks: true, meetings: true, approvals: true, inventory: true, projects: true,
   });
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifSound, setNotifSound] = useState(true);
-  const [inAppNotifs, setInAppNotifs] = useState<any[]>([]);
+  const [inAppNotifs, setInAppNotifs] = useState<(NotifEntry & { ts?: number })[]>([]);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
 
@@ -302,7 +302,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     if (notifPrefs.projects) {
       changedProjects.forEach(p => {
-        const statusEmoji = p.data.status === 'Ejecucion' ? '🏗️' : p.data.status === 'Terminado' ? '🎉' : p.data.status === 'Diseno' ? '🎨' : '📁';
+        const statusEmoji = (p.data.status as string) === 'Ejecucion' ? '🏗️' : (p.data.status as string) === 'Terminado' ? '🎉' : (p.data.status as string) === 'Diseno' ? '🎨' : '📁';
         sendNotif(`${statusEmoji} Proyecto actualizado`, `"${p.data.name}" cambió a: ${p.data.status}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id, eventType: 'phase_change' });
       });
     }
@@ -398,7 +398,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     };
     setNotifHistory(prev => [notifEntry, ...prev].slice(0, 100));
     setInAppNotifs(prev => [...prev, { ...notifEntry, ts: Date.now() }]);
-    setTimeout(() => setInAppNotifs(prev => prev.filter(n => Date.now() - n.ts < 5000)), 5500);
+    setTimeout(() => setInAppNotifs(prev => prev.filter(n => Date.now() - (n.ts || 0) < 5000)), 5500);
     playNotifSound(type);
     vibrateNotif();
     if ('Notification' in window && Notification.permission === 'granted') {

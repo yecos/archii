@@ -9,8 +9,11 @@ export { useUIContext as useUI } from '@/contexts/UIContext';
 // Auth domain
 export { useAuthContext as useAuth } from '@/contexts/AuthContext';
 
-// Firestore domain (projects, tasks, expenses, suppliers, companies, files, phases, approvals, gantt, admin UI)
+// Firestore domain (projects, tasks, expenses, suppliers, companies, files, phases, approvals, gantt)
 export { useFirestoreContext as useFirestore } from '@/contexts/FirestoreContext';
+
+// Admin domain (admin UI state, gantt admin helpers, permissions)
+export { useAdminContext as useAdmin } from '@/contexts/AdminContext';
 
 // OneDrive domain
 export { useOneDriveContext as useOneDrive } from '@/contexts/OneDriveContext';

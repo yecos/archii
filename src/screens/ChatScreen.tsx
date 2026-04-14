@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useChat } from '@/hooks/useDomain';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
+import type { ChatMessage } from '@/lib/types';
 
 /* ===== EMOJI DATA ===== */
 const EMOJI_CATEGORIES = [
@@ -126,7 +127,7 @@ export default function ChatScreen() {
     let currentGroup: { date: Date; dateLabel: string; messages: any[] } | null = null;
 
     for (const m of filteredMessages) {
-      const ts = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+      const ts = (m.createdAt as any)?.toDate ? (m.createdAt as any).toDate() : new Date();
       const label = formatDateLabel(ts);
       if (!currentGroup || currentGroup.dateLabel !== label) {
         currentGroup = { date: ts, dateLabel: label, messages: [m] };
@@ -328,7 +329,7 @@ export default function ChatScreen() {
               {/* Messages in group */}
               {group.messages.map((m: any, mi: number) => {
                 const isMe = m.uid === authUser?.uid;
-                const ts = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+                const ts = (m.createdAt as any)?.toDate ? (m.createdAt as any).toDate() : new Date();
                 const msgType = m.type || 'TEXT';
                 const prevMsg = mi > 0 ? group.messages[mi - 1] : null;
                 const isSameSender = prevMsg && prevMsg.uid === m.uid;
@@ -453,7 +454,7 @@ export default function ChatScreen() {
                       {/* Context menu */}
                       {isMenuOpen && (
                         <div ref={menuRef} className={`absolute z-20 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl py-1 min-w-[160px] animate-fadeIn ${isMe ? 'right-0 mr-8' : 'left-0 ml-8'}`} style={{ bottom: 0, animationDuration: '0.12s' }}>
-                          <button className="w-full px-3.5 py-2 text-[12px] text-left hover:bg-[var(--af-bg3)] transition-colors flex items-center gap-2.5 cursor-pointer border-none bg-transparent text-[var(--foreground)]" onClick={() => { setChatReplyingTo({ id: m.id, text: m.text || '', userName: m.userName, uid: m.uid }); setChatMenuMsg(null); }}>
+                          <button className="w-full px-3.5 py-2 text-[12px] text-left hover:bg-[var(--af-bg3)] transition-colors flex items-center gap-2.5 cursor-pointer border-none bg-transparent text-[var(--foreground)]" onClick={() => { setChatReplyingTo({ id: m.id, text: m.text || '', userName: m.userName, uid: m.uid } as ChatMessage); setChatMenuMsg(null); }}>
                             <span className="text-sm">↩️</span> Responder
                           </button>
                           {m.text && (

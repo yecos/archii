@@ -5,6 +5,7 @@ import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { expandMeetingForMonth } from '@/lib/recurrence';
+import type { Meeting } from '@/lib/types';
 
 /* ===== CALENDAR + MEETINGS CONTEXT ===== */
 interface CalendarContextType {
@@ -14,14 +15,14 @@ interface CalendarContextType {
   calSelectedDate: string | null; setCalSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
   calFilterProject: string; setCalFilterProject: React.Dispatch<React.SetStateAction<string>>;
   // Meetings collection
-  meetings: any[];
-  setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
+  meetings: Meeting[];
+  setMeetings: React.Dispatch<React.SetStateAction<Meeting[]>>;
   // Expanded meetings for the currently viewed month (includes recurring occurrences)
-  expandedMeetings: Array<{ date: string; meeting: any; isRecurring: boolean }>;
+  expandedMeetings: Array<{ date: string; meeting: Meeting; isRecurring: boolean }>;
   // CRUD
   saveMeeting: () => Promise<void>;
   deleteMeeting: (id: string) => Promise<void>;
-  openEditMeeting: (m: any) => void;
+  openEditMeeting: (m: Meeting) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | null>(null);
@@ -37,7 +38,7 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
   const [calFilterProject, setCalFilterProject] = useState<string>('all');
 
   // ===== MEETINGS COLLECTION =====
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   // ===== EFFECTS =====
 
