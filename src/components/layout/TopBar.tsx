@@ -1,17 +1,30 @@
 'use client';
 import React from 'react';
+import { useTheme } from 'next-themes';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useNotif } from '@/hooks/useDomain';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
+import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Monitor, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
 
 export default React.memo(function TopBar() {
   const ui = useUI();
   const auth = useAuth();
   const fs = useFirestore();
   const notif = useNotif();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  // Theme toggle: cycles light → dark → system → light
+  const cycleTheme = React.useCallback(() => {
+    const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    setTheme(next);
+  }, [theme, setTheme]);
+
+  // Show loading placeholder until theme is hydrated
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted ? resolvedTheme === 'dark' : true; // default to dark to match FOUC script
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -56,9 +69,22 @@ export default React.memo(function TopBar() {
             <span className="absolute -top-1 -right-1 w-[10px] h-[10px] bg-amber-500 rounded-full animate-pulse" />
           )}
         </button>
-        {/* Theme toggle */}
-        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all" onClick={ui.toggleTheme} title={(ui.darkMode ? 'Cambiar a modo día' : 'Cambiar a modo noche') + ' (Ctrl+D)'}>
-          {ui.darkMode ? (
+        {/* Theme toggle — 3-state cycle: light / dark / system */}
+        <button
+          className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
+          onClick={cycleTheme}
+          title={(() => {
+            if (theme === 'system') return 'Seguir sistema (clic: claro)';
+            if (theme === 'dark') return 'Modo nocturno (clic: sistema)';
+            return 'Modo diurno (clic: nocturno)';
+          })()}
+        >
+          {!mounted ? (
+            /* placeholder — avoids hydration mismatch */
+            <Moon size={18} className="stroke-[var(--muted-foreground)]" />
+          ) : theme === 'system' ? (
+            <Monitor size={18} className="stroke-[var(--muted-foreground)]" />
+          ) : isDark ? (
             <Sun size={18} className="stroke-[var(--muted-foreground)]" />
           ) : (
             <Moon size={18} className="stroke-[var(--muted-foreground)]" />

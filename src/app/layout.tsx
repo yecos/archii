@@ -4,6 +4,7 @@ import "./globals.css";
 import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
 import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 import { AppProviders } from "@/components/layout/AppProviders";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "ArchiFlow — Gestión de Proyectos",
@@ -90,16 +91,26 @@ export default function RootLayout({
           }
         ` }} />
 
-        {/* Theme init - prevent FOUC */}
+        {/* Theme init - prevent FOUC (mirrors next-themes logic) */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            var t = localStorage.getItem('archiflow-theme') || 'dark';
-            if (t === 'dark') document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-          } catch(e) { document.documentElement.classList.add('dark'); }
+            var t = localStorage.getItem('archiflow-theme');
+            var d = 'system';
+            if (t === 'light' || t === 'dark' || t === 'system') d = t;
+            else if (t === null || t === undefined) d = 'system';
+            if (d === 'system') {
+              var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              document.documentElement.classList.toggle('dark', m);
+            } else {
+              document.documentElement.classList.toggle('dark', d === 'dark');
+            }
+          } catch(e) {
+            document.documentElement.classList.add('dark');
+          }
         ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
+        <ThemeProvider>
         {/* Register Service Worker */}
         <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
@@ -115,6 +126,7 @@ export default function RootLayout({
         <AIFloatingWrapper />
         {/* Keyboard Shortcuts - Global initialization */}
         <KeyboardShortcutsInitializer />
+        </ThemeProvider>
       </body>
     </html>
   );

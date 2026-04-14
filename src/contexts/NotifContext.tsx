@@ -7,6 +7,7 @@ import { useFirestoreContext } from './FirestoreContext';
 import { useCalendarContext } from './CalendarContext';
 import { useInventoryContext } from './InventoryContext';
 import { fmtDate } from '@/lib/helpers';
+import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts';
 
 /* ===== NOTIFICATION CONTEXT ===== */
 interface NotifContextType {
@@ -54,7 +55,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const { messages, chatProjectId } = useChatContext();
   const {
     tasks, approvals,
-    projects,
+    projects, expenses,
   } = useFirestoreContext();
   const { meetings } = useCalendarContext();
   const { invMovements, invTransfers, invProducts } = useInventoryContext();
@@ -80,6 +81,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const prevMovementsRef = useRef<any[]>([]);
   const prevTransfersRef = useRef<any[]>([]);
   const prevProjectsRef = useRef<any[]>([]);
+  const prevExpensesRef = useRef<any[]>([]);
   const isTabVisibleRef = useRef(true);
   const firstLoadDoneRef = useRef(false);
   const overdueCheckedRef = useRef<string>('');
@@ -138,11 +140,12 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         prevMovementsRef.current = invMovements;
         prevTransfersRef.current = invTransfers;
         prevProjectsRef.current = projects;
+        prevExpensesRef.current = expenses;
         firstLoadDoneRef.current = true;
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [messages, tasks, meetings, approvals, invMovements, invTransfers, projects]);
+  }, [messages, tasks, meetings, approvals, invMovements, invTransfers, projects, expenses]);
 
   // Calculate unread count
   useEffect(() => {
@@ -371,7 +374,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       gain.gain.value = 0.07;
       const tones: Record<string, [number, number]> = {
         chat: [587.33, 880], task: [659.25, 783.99], meeting: [523.25, 659.25],
-        approval: [698.46, 880], inventory: [440, 554.37], project: [493.88, 659.25], reminder: [880, 1046.5],
+        approval: [698.46, 880], inventory: [440, 554.37], project: [493.88, 659.25], reminder: [880, 1046.5], budget: [415.3, 523.25],
       };
       const [f1, f2] = tones[type || ''] || [587.33, 880];
       osc.frequency.value = f1; osc.start();
@@ -402,6 +405,29 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   }, [playNotifSound, vibrateNotif, navigateToRef]);
 
   const sendBrowserNotif = sendNotif;
+
+  // Detect budget threshold crossings
+  useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
+    if (!notifPrefs.projects) return;
+    const prev = prevExpensesRef.current;
+    // Only check when expenses change
+    if (expenses.length === prev.length && expenses.every((e, i) => e.id === prev[i]?.id && e.data.amount === prev[i]?.data.amount)) {
+      return;
+    }
+    const { newAlerts } = checkBudgetAlerts(projects as any, expenses as any);
+    newAlerts.forEach((alert) => {
+      const { title, body } = formatBudgetAlertMessage(alert);
+      sendNotif(
+        title,
+        body,
+        alert.emoji,
+        `budget-${alert.projectId}-${alert.threshold}`,
+        { type: 'budget', screen: 'projectDetail', itemId: alert.projectId },
+      );
+    });
+    prevExpensesRef.current = expenses;
+  }, [expenses, projects, notifPrefs.projects, sendNotif]);
 
   const requestNotifPermission = async () => {
     if (!('Notification' in window)) { showToast('Tu navegador no soporta notificaciones', 'error'); return; }

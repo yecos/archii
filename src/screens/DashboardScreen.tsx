@@ -9,8 +9,10 @@ import { useNotif } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
+import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
+import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, AlertCircle, ChevronRight } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -49,6 +51,9 @@ export default function DashboardScreen() {
     if (t.data.status === 'Completado' || !t.data.dueDate) return false;
     return new Date(t.data.dueDate) < new Date();
   }), [tasks]);
+
+  // Budget alerts
+  const budgetAlerts = useMemo(() => getActiveAlerts(projects as any, expenses as any), [projects, expenses]);
 
   // Burndown chart data
   const burndownData = useMemo(() => {
@@ -189,6 +194,43 @@ export default function DashboardScreen() {
           </button>
         </div>
       </div>
+
+      {/* ─── Budget Alert Banner ─── */}
+      {budgetAlerts.length > 0 && (
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-amber-400" />
+              <div className="text-[15px] font-semibold">Alertas de Presupuesto</div>
+              <span className="w-5 h-5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold flex items-center justify-center border border-red-500/20">{budgetAlerts.length}</span>
+            </div>
+            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('budget')}>
+              Ver presupuesto <ChevronRight size={12} />
+            </button>
+          </div>
+          <div className="space-y-3 max-h-64 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+            {budgetAlerts.map((alert: BudgetAlert) => (
+              <div
+                key={`alert-${alert.projectId}-${alert.threshold}`}
+                className={`flex items-center gap-3 p-3 rounded-lg ${getBudgetBgClass(alert.percentage)} border ${getBudgetBorderColorClass(alert.percentage)} cursor-pointer hover:opacity-80 transition-opacity`}
+                onClick={() => openProject(alert.projectId)}
+              >
+                <div className="text-xl flex-shrink-0">{alert.emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium truncate">{alert.projectName}</div>
+                  <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
+                    {fmtCOP(alert.spent)} de {fmtCOP(alert.budget)} · <span className={getBudgetTextColorClass(alert.percentage)}>{Math.round(alert.percentage)}%</span>
+                  </div>
+                  <div className="mt-2">
+                    <BudgetProgressBar spent={alert.spent} budget={alert.budget} showLabel={false} compact />
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-[var(--muted-foreground)] flex-shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Row 1: KPI Cards ─── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">

@@ -6,7 +6,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
@@ -16,6 +16,23 @@ const KANBAN_COLS = [
   { status: 'Revision', color: 'bg-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
   { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 ];
+
+function getSubtaskInfo(t: any): { total: number; completed: number } | null {
+  const subs = t.data?.subtasks;
+  if (!Array.isArray(subs) || subs.length === 0) return null;
+  return { total: subs.length, completed: subs.filter((s: any) => s.completed).length };
+}
+
+function SubtaskBadge({ info }: { info: { total: number; completed: number } }) {
+  const pct = info.total > 0 ? Math.round((info.completed / info.total) * 100) : 0;
+  const allDone = info.completed === info.total;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${allDone ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+      <CheckSquare size={9} />
+      {info.completed}/{info.total}
+    </span>
+  );
+}
 
 function getAssigneeIds(t: any): string[] {
   if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
@@ -346,9 +363,17 @@ export default function TasksScreen() {
                             </span>
                           )}
                           <AssigneeAvatars task={t} getUserName={getUserName} />
+                          {(() => { const si = getSubtaskInfo(t); return si && <SubtaskBadge info={si} />; })()}
                         </div>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {(() => { const si = getSubtaskInfo(t); return si && si.total > 0 && (
+                          <div className="w-12 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${si.completed === si.total ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`} style={{ width: `${(si.completed / si.total) * 100}%` }} />
+                          </div>
+                        ); })()}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                      </div>
                       <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
                         <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
@@ -460,6 +485,7 @@ export default function TasksScreen() {
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>
                                 {t.data.priority}
                               </span>
+                              {(() => { const si = getSubtaskInfo(t); return si && <SubtaskBadge info={si} />; })()}
                               {t.data.dueDate && (
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
                                   {isOverdue && <span className="w-1 h-1 rounded-full bg-red-400" />}

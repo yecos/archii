@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Plus, Eye, Pencil, Trash2, ChevronLeft, X } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, ChevronLeft, X, CheckSquare } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
@@ -9,6 +9,8 @@ import { useOneDrive } from '@/hooks/useDomain';
 import { useGallery } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
+import BudgetProgressBar from '@/components/features/BudgetProgressBar';
+import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
 
 export default function ProjectDetailScreen() {
   const ui = useUI();
@@ -83,7 +85,10 @@ export default function ProjectDetailScreen() {
                 <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { ui.setForms(p => ({ ...p, taskTitle: '', taskProject: ui.selectedProjectId, taskDue: new Date().toISOString().split('T')[0] })); ui.openModal('task'); }}>+ Nueva tarea</button>
               </div>
               {fs.projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
-              fs.projectTasks.map(t => (
+              fs.projectTasks.map(t => {
+                const subs = t.data?.subtasks;
+                const subtaskInfo = Array.isArray(subs) && subs.length > 0 ? { total: subs.length, completed: subs.filter((s: any) => s.completed).length } : null;
+                return (
                 <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => fs.toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
@@ -91,15 +96,27 @@ export default function ProjectDetailScreen() {
                     <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
                     <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                      {subtaskInfo && (
+                        <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${subtaskInfo.completed === subtaskInfo.total ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                          <CheckSquare size={9} />
+                          {subtaskInfo.completed}/{subtaskInfo.total}
+                        </span>
+                      )}
                       {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
                       {t.data.assigneeId && <span>👤 {auth.getUserName(t.data.assigneeId)}</span>}
                     </div>
+                    {subtaskInfo && subtaskInfo.total > 0 && (
+                      <div className="mt-1.5 w-24 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${subtaskInfo.completed === subtaskInfo.total ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`} style={{ width: `${(subtaskInfo.completed / subtaskInfo.total) * 100}%` }} />
+                      </div>
+                    )}
                   </div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                   <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => fs.openEditTask(t)}><Pencil className="w-3 h-3" /></button>
                   <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => fs.deleteTask(t.id)}><Trash2 className="w-3 h-3" /></button>
                 </div>
-              ))}
+                );
+              })}
             </div>)}
 
             {/* Tab: Presupuesto */}
@@ -108,10 +125,11 @@ export default function ProjectDetailScreen() {
                 <div className="text-sm text-[var(--muted-foreground)]">{fs.projectExpenses.length} gastos · Total: <span className="text-[var(--af-accent)] font-semibold">{fmtCOP(fs.projectSpent)}</span> {fs.projectBudget > 0 && <span>de {fmtCOP(fs.projectBudget)}</span>}</div>
                 <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { ui.setForms(p => ({ ...p, expConcept: '', expProject: ui.selectedProjectId, expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); ui.openModal('expense'); }}>+ Registrar gasto</button>
               </div>
-              {fs.projectBudget > 0 && <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
-                <div className="flex justify-between text-sm mb-2"><span className="text-[var(--muted-foreground)]">Presupuesto utilizado</span><span className="font-semibold">{Math.min(100, Math.round((fs.projectSpent / fs.projectBudget) * 100))}%</span></div>
-                <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${fs.projectSpent > fs.projectBudget ? 'bg-red-500' : fs.projectSpent > fs.projectBudget * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: Math.min(100, (fs.projectSpent / fs.projectBudget) * 100) + '%' }} /></div>
-              </div>}
+              {fs.projectBudget > 0 && (
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
+                  <BudgetProgressBar spent={fs.projectSpent} budget={fs.projectBudget} showThresholds />
+                </div>
+              )}
               {fs.projectExpenses.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">💰</div><div className="text-sm">Sin gastos registrados</div></div> :
               <div className="space-y-2">
                 {fs.projectExpenses.map(e => (

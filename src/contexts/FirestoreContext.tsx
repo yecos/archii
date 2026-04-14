@@ -4,7 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
-import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile } from '@/lib/types';
+import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, Company, Subtask } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
@@ -64,6 +64,8 @@ interface FirestoreContextType {
   toggleTask: (id: string, status: string) => Promise<void>;
   changeTaskStatus: (id: string, newStatus: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
+  deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
 
   // CRUD Functions — Expenses
   saveExpense: () => Promise<void>;
@@ -131,11 +133,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const { msConnected, msAccessToken, ensureProjectFolder } = useOneDriveContext();
 
   // ===== COLLECTION STATE =====
-  const [projects, setProjects] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
@@ -146,7 +148,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [adminFilterAssignee, setAdminFilterAssignee] = useState<string>('all');
   const [adminFilterProject, setAdminFilterProject] = useState<string>('all');
   const [adminFilterPriority, setAdminFilterPriority] = useState<string>('all');
-  const [adminTooltipTask, setAdminTooltipTask] = useState<any>(null);
+  const [adminTooltipTask, setAdminTooltipTask] = useState<Task | null>(null);
   const [adminTooltipPos, setAdminTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [adminPermSection, setAdminPermSection] = useState<string>('roles');
   const [rolePerms, setRolePerms] = useState<Record<string, string[]>>({
@@ -340,7 +342,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const db = getFirebase().firestore();
     const ts = serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
-    const data: any = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const subtasks: Subtask[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
+    const data: any = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
@@ -352,14 +355,15 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
           assignees.forEach((uid: string) => { notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {}); });
         }
       }
-      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
+      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [editingId, forms, authUser, projects, showToast, closeModal, setEditingId, setForms]);
 
   const openEditTask = useCallback((t: Task) => {
     setEditingId(t.id);
     const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: (t.data as any).projectId || '', taskAssignees: assignees, taskAssignee: (t.data as any).assigneeId || '', taskPriority: (t.data as any).priority || 'Media', taskStatus: (t.data as any).status || 'Por hacer', taskDue: (t.data as any).dueDate || '' }));
+    const subtasks: Subtask[] = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [];
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: (t.data as any).projectId || '', taskAssignees: assignees, taskAssignee: (t.data as any).assigneeId || '', taskPriority: (t.data as any).priority || 'Media', taskStatus: (t.data as any).status || 'Por hacer', taskDue: (t.data as any).dueDate || '', taskSubtasks: subtasks }));
     openModal('task');
   }, [setEditingId, setForms, openModal]);
 
@@ -378,6 +382,26 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, []);
 
   const deleteTask = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
+
+  const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    try {
+      const task = tasks.find((t: any) => t.id === taskId);
+      if (!task) return;
+      const subtasks: Subtask[] = Array.isArray((task.data as any).subtasks) ? (task.data as any).subtasks : [];
+      const updated = subtasks.map((s: Subtask) => s.id === subtaskId ? { ...s, completed: !s.completed } : s);
+      await getFirebase().firestore().collection('tasks').doc(taskId).update({ subtasks: updated, updatedAt: serverTimestamp() });
+    } catch (err) { console.error('[ArchiFlow]', err); }
+  }, [tasks]);
+
+  const deleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    try {
+      const task = tasks.find((t: any) => t.id === taskId);
+      if (!task) return;
+      const subtasks: Subtask[] = Array.isArray((task.data as any).subtasks) ? (task.data as any).subtasks : [];
+      const updated = subtasks.filter((s: Subtask) => s.id !== subtaskId);
+      await getFirebase().firestore().collection('tasks').doc(taskId).update({ subtasks: updated, updatedAt: serverTimestamp() });
+    } catch (err) { console.error('[ArchiFlow]', err); }
+  }, [tasks]);
 
   // --- Expenses ---
   const saveExpense = useCallback(async () => {
@@ -519,7 +543,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     adminTab, setAdminTab, adminWeekOffset, setAdminWeekOffset, adminTaskSearch, setAdminTaskSearch, adminFilterAssignee, setAdminFilterAssignee, adminFilterProject, setAdminFilterProject, adminFilterPriority, setAdminFilterPriority, adminTooltipTask, setAdminTooltipTask, adminTooltipPos, setAdminTooltipPos, adminPermSection, setAdminPermSection, rolePerms, setRolePerms, toggleRolePerm,
     // CRUD
     saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
-    saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask,
+    saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense,
     saveSupplier, deleteSupplier,
     saveCompany,
@@ -544,7 +568,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     adminTab, adminWeekOffset, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority, adminTooltipTask, adminTooltipPos, adminPermSection, rolePerms,
     // CRUD functions
     toggleRolePerm, saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
-    saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask,
+    saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense, saveSupplier, deleteSupplier, saveCompany,
     uploadFile, deleteFile, initDefaultPhases, updatePhaseStatus,
     saveApproval, updateApproval, deleteApproval, updateUserName, fileToBase64,

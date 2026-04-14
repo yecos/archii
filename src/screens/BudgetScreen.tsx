@@ -5,6 +5,8 @@ import { useFirestore } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
 import { DollarSign, Download, Plus, TrendingDown, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import BudgetProgressBar from '@/components/features/BudgetProgressBar';
+import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
 
 const CAT_COLORS: Record<string, string> = {
   'Materiales': '#c8a96e',
@@ -183,15 +185,29 @@ export default function BudgetScreen() {
           {Object.entries(byProject).map(([pid, exps]: [string, any]) => {
             const proj = fs.projects.find((p: any) => p.id === pid);
             const total = exps.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+            const budget = Number(proj?.data?.budget) || 0;
+            const pct = budget > 0 ? (total / budget) * 100 : -1;
             return (
-              <div key={pid} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div key={pid} className={`bg-[var(--card)] border rounded-xl p-5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : 'border-[var(--border)]'}`}>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Receipt size={16} className="text-[var(--af-accent)]" />
                     <span className="text-[15px] font-semibold">{proj?.data.name || 'Sin proyecto'}</span>
                   </div>
-                  <span className="text-[14px] font-semibold text-[var(--af-accent)]">{fmtCOP(total)}</span>
+                  <div className="flex items-center gap-2">
+                    {budget > 0 && pct >= 80 && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getBudgetBgClass(pct)} ${getBudgetTextColorClass(pct)} border ${getBudgetBorderColorClass(pct)}`}>
+                        {Math.round(pct)}%
+                      </span>
+                    )}
+                    <span className="text-[14px] font-semibold text-[var(--af-accent)]">{fmtCOP(total)}</span>
+                  </div>
                 </div>
+                {budget > 0 && (
+                  <div className="mb-3">
+                    <BudgetProgressBar spent={total} budget={budget} showThresholds showLabel={!exps.length} />
+                  </div>
+                )}
                 {exps.map((e: any) => (
                   <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0`} style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />

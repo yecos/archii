@@ -1,5 +1,6 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 import { SCREEN_TITLES } from '@/lib/types';
@@ -26,9 +27,9 @@ interface UIContextType {
   taskViewMode: 'list' | 'kanban';
   setTaskViewMode: React.Dispatch<React.SetStateAction<'list' | 'kanban'>>;
 
-  // Theme
+  // Theme (derived from next-themes for backward compatibility)
   darkMode: boolean;
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+  setDarkMode: (v: boolean) => void;
   toggleTheme: () => void;
 
   // PWA Install
@@ -77,8 +78,11 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const [chatMobileShow, setChatMobileShow] = useState(false);
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
 
-  // Theme
-  const [darkMode, setDarkMode] = useState(true);
+  // Theme — delegates to next-themes
+  const { resolvedTheme, setTheme: setNextTheme } = useTheme();
+  const darkMode = resolvedTheme === 'dark';
+  const setDarkMode = useCallback((v: boolean) => setNextTheme(v ? 'dark' : 'light'), [setNextTheme]);
+  const toggleTheme = useCallback(() => setNextTheme(darkMode ? 'light' : 'dark'), [darkMode, setNextTheme]);
 
   // PWA Install
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -95,16 +99,6 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const navigateToRef = useRef<(s: string, projId?: string | null) => void>(() => {});
 
   // ===== EFFECTS =====
-
-  // Init theme
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('archiflow-theme');
-      const isDark = saved ? saved === 'dark' : true;
-      setDarkMode(isDark);
-      document.documentElement.classList.toggle('dark', isDark);
-    } catch (err) { console.error("[ArchiFlow]", err); }
-  }, []);
 
   // Check if running as standalone app
   useEffect(() => {
@@ -171,13 +165,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     localStorage.setItem('archiflow-install-dismissed', String(Date.now()));
   }, [showToast]);
 
-  const toggleTheme = useCallback(() => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('archiflow-theme', next ? 'dark' : 'light');
-    showToast(next ? 'Modo nocturno activado' : 'Modo diurno activado');
-  }, [darkMode, showToast]);
+  // (toggleTheme defined above via next-themes delegation)
 
   const navigateTo = useCallback((s: string, projId?: string | null) => {
     setScreen(s);
@@ -210,7 +198,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     sidebarCollapsed, setSidebarCollapsed,
     chatMobileShow, setChatMobileShow,
     taskViewMode, setTaskViewMode,
-    darkMode, setDarkMode, toggleTheme,
+    darkMode, setDarkMode, toggleTheme, // derived from next-themes
     installPrompt, setInstallPrompt,
     showInstallBanner, setShowInstallBanner,
     isInstalled, setIsInstalled,

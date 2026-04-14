@@ -64,6 +64,12 @@ export interface Project {
 export type TaskPriority = 'Baja' | 'Media' | 'Alta' | 'Urgente';
 export type TaskStatus = 'Por hacer' | 'En progreso' | 'En revisión' | 'Completado';
 
+export interface Subtask {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   data: {
@@ -74,6 +80,7 @@ export interface Task {
     status: TaskStatus;
     dueDate: string;
     description?: string;
+    subtasks?: Subtask[];
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
     completedAt?: FirestoreTimestamp | null;
