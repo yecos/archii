@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase-admin";
 
-const ADMIN_EMAILS = ["yecos11@gmail.com"];
+const ADMIN_EMAILS = (process.env.ADMIN_EMAIL || "yecos11@gmail.com").split(",").map(e => e.trim().toLowerCase());
 
 export interface AuthUser {
   uid: string;
@@ -96,7 +96,7 @@ export async function requireAdmin(
 ): Promise<AuthUser> {
   const user = await requireAuth(request);
 
-  if (!ADMIN_EMAILS.includes(user.email)) {
+  if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
     console.warn(
       `[ArchiFlow Auth] Non-admin access attempt by ${user.email}`
     );
