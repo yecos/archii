@@ -206,29 +206,27 @@ function AppContent() {
           style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}
         >
           <div key={screen} className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-              <ErrorBoundary>
-              {screen === 'dashboard' && <DashboardScreen />}
-              {screen === 'projects' && <ProjectsScreen />}
-              {screen === 'projectDetail' && <ProjectDetailScreen />}
-              {screen === 'tasks' && <TasksScreen />}
-              {screen === 'chat' && <ChatScreen />}
-              {screen === 'budget' && <BudgetScreen />}
-              {screen === 'files' && <FilesScreen />}
-              {screen === 'obra' && <ObraScreen />}
-              {screen === 'suppliers' && <SuppliersScreen />}
-              {screen === 'team' && <TeamScreen />}
-              {screen === 'companies' && <CompaniesScreen />}
-              {screen === 'calendar' && <CalendarScreen />}
-              {screen === 'portal' && <PortalScreen />}
-              {screen === 'gallery' && <GalleryScreen />}
-              {screen === 'inventory' && <InventoryScreen />}
-              {screen === 'admin' && <AdminScreen />}
-              {screen === 'profile' && <ProfileScreen />}
-              {screen === 'install' && <InstallScreen />}
-              {screen === 'timeTracking' && <TimeTrackingScreen />}
-              {screen === 'invoices' && <InvoicesScreen />}
-              {screen === 'reports' && <ReportsScreen />}
-              </ErrorBoundary>
+              {screen === 'dashboard' && <ErrorBoundary label="Dashboard"><DashboardScreen /></ErrorBoundary>}
+              {screen === 'projects' && <ErrorBoundary label="Proyectos"><ProjectsScreen /></ErrorBoundary>}
+              {screen === 'projectDetail' && <ErrorBoundary label="Detalle de Proyecto"><ProjectDetailScreen /></ErrorBoundary>}
+              {screen === 'tasks' && <ErrorBoundary label="Tareas"><TasksScreen /></ErrorBoundary>}
+              {screen === 'chat' && <ErrorBoundary label="Chat"><ChatScreen /></ErrorBoundary>}
+              {screen === 'budget' && <ErrorBoundary label="Presupuestos"><BudgetScreen /></ErrorBoundary>}
+              {screen === 'files' && <ErrorBoundary label="Archivos"><FilesScreen /></ErrorBoundary>}
+              {screen === 'obra' && <ErrorBoundary label="Seguimiento de Obra"><ObraScreen /></ErrorBoundary>}
+              {screen === 'suppliers' && <ErrorBoundary label="Proveedores"><SuppliersScreen /></ErrorBoundary>}
+              {screen === 'team' && <ErrorBoundary label="Equipo"><TeamScreen /></ErrorBoundary>}
+              {screen === 'companies' && <ErrorBoundary label="Empresas"><CompaniesScreen /></ErrorBoundary>}
+              {screen === 'calendar' && <ErrorBoundary label="Calendario"><CalendarScreen /></ErrorBoundary>}
+              {screen === 'portal' && <ErrorBoundary label="Portal Cliente"><PortalScreen /></ErrorBoundary>}
+              {screen === 'gallery' && <ErrorBoundary label="Galería"><GalleryScreen /></ErrorBoundary>}
+              {screen === 'inventory' && <ErrorBoundary label="Inventario"><InventoryScreen /></ErrorBoundary>}
+              {screen === 'admin' && <ErrorBoundary label="Panel Admin"><AdminScreen /></ErrorBoundary>}
+              {screen === 'profile' && <ErrorBoundary label="Mi Perfil"><ProfileScreen /></ErrorBoundary>}
+              {screen === 'install' && <ErrorBoundary label="Instalar App"><InstallScreen /></ErrorBoundary>}
+              {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
+              {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
+              {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

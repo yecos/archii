@@ -8,6 +8,8 @@ import React, { Component, ReactNode } from 'react';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Screen name shown in the error message (e.g. "Dashboard", "Reportes") */
+  label?: string;
 }
 
 interface ErrorBoundaryState {
@@ -37,6 +39,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
+      const label = this.props.label || 'pantalla';
+
       return (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -52,7 +56,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             ⚠️
           </div>
           <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: 'var(--foreground, #f0f0ee)' }}>
-            Error al cargar
+            Error al cargar {label}
           </h3>
           <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #9a9b9e)', maxWidth: '300px', marginBottom: '16px' }}>
             {this.state.error?.message || 'Algo salió mal. Intenta de nuevo.'}
