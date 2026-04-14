@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
-import { useUI } from '@/hooks/useDomain';
-import { useNotif } from '@/hooks/useDomain';
+import { useUIContext as useUI } from '@/contexts/UIContext';
+import { useNotifContext as useNotif } from '@/contexts/NotifContext';
 import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle } from 'lucide-react';
 
 export default React.memo(function NotifPanel() {

@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { useUI } from '@/hooks/useDomain';
+import { useUIContext as useUI } from '@/contexts/UIContext';
 import { LayoutGrid, Folder, ClipboardList, MessageCircle, MoreHorizontal } from 'lucide-react';
 
 export default React.memo(function BottomNav() {

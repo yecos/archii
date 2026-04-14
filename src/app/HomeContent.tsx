@@ -2,12 +2,13 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 
-import { useUI } from '@/hooks/useDomain';
-import { useAuth } from '@/hooks/useDomain';
-import { useFirestore } from '@/hooks/useDomain';
-import { useGallery } from '@/hooks/useDomain';
-import { useInventory } from '@/hooks/useDomain';
-import { useNotif } from '@/hooks/useDomain';
+// Direct imports from context files (avoid barrel file to help Turbopack tree-shake)
+import { useUIContext } from '@/contexts/UIContext';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useFirestoreContext } from '@/contexts/FirestoreContext';
+import { useGalleryContext } from '@/contexts/GalleryContext';
+import { useInventoryContext } from '@/contexts/InventoryContext';
+import { useNotifContext } from '@/contexts/NotifContext';
 import AppProvider from '@/contexts/AppContext';
 import { Toaster } from 'sonner';
 import { Bell, X } from 'lucide-react';
@@ -72,13 +73,13 @@ const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: 
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 
 function AppContent() {
-  const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, screenTitles, showToast } = useUI();
-  const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset, userName, initials } = useAuth();
-  const { projects, tasks, currentProject, pendingCount } = useFirestore();
-  const { teamUsers, isAdmin, isEmailAdmin } = useAuth();
-  const { galleryPhotos } = useGallery();
-  const { invLowStock } = useInventory();
-  const { showNotifBanner, requestNotifPermission, dismissNotifBanner, inAppNotifs, setInAppNotifs, markNotifRead } = useNotif();
+  const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, screenTitles, showToast } = useUIContext();
+  const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset, userName, initials } = useAuthContext();
+  const { projects, tasks, currentProject, pendingCount } = useFirestoreContext();
+  const { teamUsers, isAdmin, isEmailAdmin } = useAuthContext();
+  const { galleryPhotos } = useGalleryContext();
+  const { invLowStock } = useInventoryContext();
+  const { showNotifBanner, requestNotifPermission, dismissNotifBanner, inAppNotifs, setInAppNotifs, markNotifRead } = useNotifContext();
   const commandOpen = useUIStore((s) => s.commandOpen);
   const setCommandOpen = useUIStore((s) => s.setCommandOpen);
 

@@ -1,10 +1,10 @@
 'use client';
 import React from 'react';
 import { useTheme } from 'next-themes';
-import { useUI } from '@/hooks/useDomain';
-import { useAuth } from '@/hooks/useDomain';
-import { useFirestore } from '@/hooks/useDomain';
-import { useNotif } from '@/hooks/useDomain';
+import { useUIContext as useUI } from '@/contexts/UIContext';
+import { useAuthContext as useAuth } from '@/contexts/AuthContext';
+import { useFirestoreContext as useFirestore } from '@/contexts/FirestoreContext';
+import { useNotifContext as useNotif } from '@/contexts/NotifContext';
 import { avatarColor } from '@/lib/helpers';
 import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Monitor, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
 
