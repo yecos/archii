@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -40,11 +39,11 @@ const InvMovementModal = dynamic(() => import('@/components/modals/InvMovementMo
 const InvTransferModal = dynamic(() => import('@/components/modals/InvTransferModal'), { ssr: false });
 const CompanyModal = dynamic(() => import('@/components/modals/CompanyModal'), { ssr: false });
 
-/* ─── Screens — eager (landing + quick navigation) ─── */
-import DashboardScreen from '@/screens/DashboardScreen';
+/* ─── Screens — eager (quick navigation) ─── */
 import ProjectsScreen from '@/screens/ProjectsScreen';
 
 /* ─── Screens — lazy (code-split por demanda) ─── */
+const DashboardScreen = dynamic(() => import('@/screens/DashboardScreen'), { ssr: false });
 const ProjectDetailScreen = dynamic(() => import('@/screens/ProjectDetailScreen'), { ssr: false });
 const TasksScreen = dynamic(() => import('@/screens/TasksScreen'), { ssr: false });
 const ChatScreen = dynamic(() => import('@/screens/ChatScreen'), { ssr: false });
@@ -206,15 +205,7 @@ function AppContent() {
           className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}
           style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={screen}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="flex-1 flex flex-col min-h-0"
-            >
+          <div key={screen} className="flex-1 flex flex-col min-h-0 animate-fadeIn">
               <ErrorBoundary>
               {screen === 'dashboard' && <DashboardScreen />}
               {screen === 'projects' && <ProjectsScreen />}
@@ -238,8 +229,7 @@ function AppContent() {
               {screen === 'invoices' && <InvoicesScreen />}
               {screen === 'reports' && <ReportsScreen />}
               </ErrorBoundary>
-            </motion.div>
-          </AnimatePresence>
+          </div>
         </main>
       </div>
 
