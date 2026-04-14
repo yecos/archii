@@ -132,7 +132,7 @@ export default function BudgetScreen() {
               {recentLargeExpenses.map(e => {
                 const proj = fs.projects.find((p: any) => p.id === e.data.projectId);
                 return (
-                  <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+                  <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--card)] rounded-lg border border-[var(--border)] transition-colors duration-150 hover:bg-[var(--af-bg3)]">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium truncate">{e.data.concept}</div>
                       <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || '—'} · {e.data.category}</div>
@@ -256,7 +256,7 @@ export default function BudgetScreen() {
             const budget = Number(proj?.data?.budget) || 0;
             const pct = budget > 0 ? (total / budget) * 100 : -1;
             return (
-              <div key={pid} className={`bg-[var(--card)] border rounded-xl p-5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : 'border-[var(--border)]'}`}>
+              <div key={pid} className={`bg-[var(--card)] border rounded-xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : 'border-[var(--border)]'}`}>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Receipt size={16} className="text-[var(--af-accent)]" />
@@ -277,14 +277,14 @@ export default function BudgetScreen() {
                   </div>
                 )}
                 {exps.slice(0, expandedProjects.has(pid) ? undefined : 5).map((e: any) => (
-                  <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
+                  <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group transition-colors duration-150 hover:bg-[var(--af-bg3)]">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0`} style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{e.data.concept}</div>
                       <div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div>
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
-                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => fs.deleteExpense(e.id)}>✕</button>
+                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-150" onClick={() => fs.deleteExpense(e.id)}>✕</button>
                   </div>
                 ))}
                 {exps.length > 5 && !expandedProjects.has(pid) && (

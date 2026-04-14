@@ -8,7 +8,7 @@ import { useAdmin } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor, fmtCOP } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
-import { Trash2, Shield, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Trash2, Shield, CheckCircle, XCircle, Clock, Lock, BarChart3, TrendingUp, ClipboardList, Users, AlertTriangle, HardHat, Folder, DollarSign, CalendarDays, User, Key, Check, X, Hourglass, FileText } from 'lucide-react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
 import AuditLogTable from '@/components/features/AuditLogTable';
 
@@ -34,7 +34,7 @@ export default function AdminScreen() {
     <>
       {!isAdmin && (
         <div className="animate-fadeIn p-6 text-center">
-          <div className="text-4xl mb-3">🔒</div>
+          <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3"><Lock size={28} className="text-[var(--af-text3)]" /></div>
           <div className="text-lg font-semibold">Acceso restringido</div>
           <div className="text-sm text-[var(--muted-foreground)] mt-1">Solo administradores y directores pueden acceder a este panel</div>
         </div>
@@ -44,12 +44,12 @@ export default function AdminScreen() {
         <div className="animate-fadeIn p-4 sm:p-6">
           <AnimatedTabs
             tabs={[
-              { id: 'timeline', label: '📊 Timeline' },
-              { id: 'dashboard', label: '📈 Dashboard' },
-              { id: 'approvals', label: `📋 Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
-              { id: 'permissions', label: '🔐 Permisos' },
-              { id: 'team', label: '👥 Equipo' },
-              { id: 'audit', label: '📋 Registro de Cambios' },
+              { id: 'timeline', label: 'Timeline' },
+              { id: 'dashboard', label: 'Dashboard' },
+              { id: 'approvals', label: `Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
+              { id: 'permissions', label: 'Permisos' },
+              { id: 'team', label: 'Equipo' },
+              { id: 'audit', label: 'Registro de Cambios' },
             ]}
             activeTab={adminTab}
             onTabChange={(id) => setAdminTab(id as any)}
@@ -72,7 +72,7 @@ export default function AdminScreen() {
             return (<div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold">📊 Admin Timeline</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Admin Timeline</h3>
                   <p className="text-xs text-[var(--muted-foreground)]">Vista de tareas del equipo en el tiempo</p>
                 </div>
                 <div className="flex gap-1.5">
@@ -131,7 +131,7 @@ export default function AdminScreen() {
                             <div className="text-[11px] font-semibold truncate">{member.data?.name || 'Sin nombre'}</div>
                             <div className="text-[9px] text-[var(--muted-foreground)]">{member.data?.role || 'Miembro'} · {member.tasks.length} tareas</div>
                           </div>
-                          {hasOverlap && <span className="ml-auto text-[10px] text-red-400">⚠</span>}
+                          {hasOverlap && <AlertTriangle size={12} className="ml-auto text-red-400" />}
                         </div>
                         <div className="flex-1 relative" style={{ minHeight: rowH }}>
                           {/* Weekend backgrounds */}
@@ -175,13 +175,13 @@ export default function AdminScreen() {
                       {(t.data as any).startDate && <span>{fmtDate((t.data as any).startDate)}</span>}
                       {t.data.dueDate && <span>→ {fmtDate(t.data.dueDate)}</span>}
                     </div>
-                    <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">👤 {getUserName(t.data.assigneeId)}</div>
+                    <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5"><User size={10} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}</div>
                   </div>);
               })()}
 
               {/* Overlap Alerts */}
               {membersWithOverlaps.length > 0 && (<div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3"><span className="text-sm font-semibold text-red-400">⚠️ Alertas de Carga</span></div>
+                <div className="flex items-center gap-2 mb-3"><span className="text-sm font-semibold text-red-400 flex items-center gap-1.5"><AlertTriangle size={14} />Alertas de Carga</span></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {membersWithOverlaps.map(m => {
                     const ovlTasks = m.tasks.filter(t => findOverlaps(m.tasks).has(t.id));
@@ -204,7 +204,7 @@ export default function AdminScreen() {
 
           {/* ===== DASHBOARD TAB ===== */}
           {adminTab === 'dashboard' && (<div className="space-y-4">
-            <h3 className="text-lg font-semibold">📈 Dashboard Admin</h3>
+            <h3 className="text-lg font-semibold flex items-center gap-2"><TrendingUp size={18} className="text-[var(--af-accent)]" />Dashboard Admin</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">Total Tareas</div><div className="text-2xl font-bold mt-1">{tasks.length}</div></div>
               <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">En Progreso</div><div className="text-2xl font-bold text-blue-400 mt-1">{tasks.filter(t => t.data.status === 'En progreso').length}</div></div>
@@ -214,7 +214,7 @@ export default function AdminScreen() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Upcoming */}
               <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
-                <h4 className="text-sm font-semibold mb-3">📅 Próximas Entregas</h4>
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays size={14} className="text-[var(--af-accent)]" />Próximas Entregas</h4>
                 {activeTasks.filter(t => t.data.dueDate).sort((a, b) => Number(new Date(a.data.dueDate)) - Number(new Date(b.data.dueDate))).slice(0, 8).map(t => {
                   const proj = projects.find(p => p.id === t.data.projectId);
                   const sc = GANTT_STATUS_CFG[t.data.status] || { color: '#6b7280', label: t.data.status };
@@ -231,7 +231,7 @@ export default function AdminScreen() {
               </div>
               {/* Projects overview */}
               <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
-                <h4 className="text-sm font-semibold mb-3">🏗️ Proyectos</h4>
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><HardHat size={14} className="text-[var(--af-accent)]" />Proyectos</h4>
                 {projects.map(p => {
                   const pTasks = tasks.filter(t => t.data.projectId === p.id);
                   const done = pTasks.filter(t => t.data.status === 'Completado').length;
@@ -248,7 +248,7 @@ export default function AdminScreen() {
             </div>
             {/* Team productivity */}
             <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
-              <h4 className="text-sm font-semibold mb-3">👥 Productividad del Equipo</h4>
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users size={14} className="text-[var(--af-accent)]" />Productividad del Equipo</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teamUsers.map(m => {
                   const mTasks = tasks.filter(t => t.data.assigneeId === m.id);
@@ -284,7 +284,7 @@ export default function AdminScreen() {
             return (<div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold">📋 Cola de Aprobaciones</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><ClipboardList size={18} className="text-[var(--af-accent)]" />Cola de Aprobaciones</h3>
                   <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{allApprovals.length} solicitudes en total</p>
                 </div>
               </div>
@@ -301,7 +301,7 @@ export default function AdminScreen() {
               <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto">
                 {(['all', 'Pendiente', 'Aprobada', 'Rechazada'] as const).map(status => (
                   <button key={status} className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${approvalView === status ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setApprovalView(status)}>
-                    {status === 'all' ? `Todos (${allApprovals.length})` : status === 'Pendiente' ? `⏳ Pendientes (${pending.length})` : status === 'Aprobada' ? `✅ Aprobadas (${approved.length})` : `❌ Rechazadas (${rejected.length})`}
+                    {status === 'all' ? `Todos (${allApprovals.length})` : status === 'Pendiente' ? `Pendientes (${pending.length})` : status === 'Aprobada' ? `Aprobadas (${approved.length})` : `Rechazadas (${rejected.length})`}
                   </button>
                 ))}
               </div>
@@ -309,18 +309,18 @@ export default function AdminScreen() {
               {/* Approval List */}
               {filtered.length === 0 ? (
                 <div className="text-center py-16 text-[var(--af-text3)]">
-                  <div className="text-3xl mb-2">📋</div>
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-2"><ClipboardList size={24} className="text-[var(--af-text3)]" /></div>
                   <div className="text-sm">Sin aprobaciones{approvalView !== 'all' ? ` con estado "${approvalView}"` : ''}</div>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
                   {filtered.map(a => {
                     const isPending = a.data.status === 'Pendiente';
-                    const typeIcon = (a.data as any).type === 'budget_change' ? '💰' : (a.data as any).type === 'phase_completion' ? '🏗️' : (a.data as any).type === 'expense_approval' ? '🧾' : '📋';
+                    const TypeIcon = (a.data as any).type === 'budget_change' ? <DollarSign size={18} className="text-emerald-400" /> : (a.data as any).type === 'phase_completion' ? <HardHat size={18} className="text-blue-400" /> : (a.data as any).type === 'expense_approval' ? <FileText size={18} className="text-amber-400" /> : <ClipboardList size={18} className="text-[var(--af-text3)]" />;
                     return (
                       <div key={a.id} className={`bg-[var(--card)] border rounded-xl p-4 transition-all ${isPending ? 'border-amber-500/20 hover:border-amber-500/40' : 'border-[var(--border)]'}`}>
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 bg-[var(--af-bg4)]">{typeIcon}</div>
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--af-bg4)]">{TypeIcon}</div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div className="text-sm font-semibold">{a.data.title}</div>
@@ -332,10 +332,10 @@ export default function AdminScreen() {
                             </div>
                             {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mt-1">{a.data.description}</div>}
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-[var(--af-text3)]">
-                              {(a.data as any).projectName && <span>📁 {(a.data as any).projectName}</span>}
-                              {(a.data as any).amount > 0 && <span className="text-[var(--af-accent)] font-medium">💰 {fmtCOP((a.data as any).amount)}</span>}
-                              {(a.data as any).requestedByName && <span>👤 {(a.data as any).requestedByName}</span>}
-                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `📅 ${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
+                              {(a.data as any).projectName && <span><Folder size={11} className="inline mr-0.5" />{(a.data as any).projectName}</span>}
+                              {(a.data as any).amount > 0 && <span className="text-[var(--af-accent)] font-medium"><DollarSign size={11} className="inline mr-0.5" />{fmtCOP((a.data as any).amount)}</span>}
+                              {(a.data as any).requestedByName && <span><User size={11} className="inline mr-0.5" />{(a.data as any).requestedByName}</span>}
+                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
                             </div>
                             {(a.data as any)?.comments && (
                               <div className="mt-2 text-[11px] text-[var(--muted-foreground)] bg-[var(--af-bg3)] rounded-md px-2.5 py-1.5 border border-[var(--border)]">
@@ -364,9 +364,9 @@ export default function AdminScreen() {
 
           {/* ===== PERMISSIONS TAB ===== */}
           {adminTab === 'permissions' && (<div className="space-y-4">
-            <h3 className="text-lg font-semibold">🔐 Permisos y Roles</h3>
+            <h3 className="text-lg font-semibold flex items-center gap-2"><Shield size={18} className="text-[var(--af-accent)]" />Permisos y Roles</h3>
             <div className="flex gap-1 mb-4">
-              {[{ id: 'roles', label: '👥 Roles' }, { id: 'permissions', label: '🔑 Permisos por rol' }].map(tab => (
+              {[{ id: 'roles', label: 'Roles' }, { id: 'permissions', label: 'Permisos por rol' }].map(tab => (
                 <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all ${adminPermSection === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)]'}`} onClick={() => setAdminPermSection(tab.id)}>{tab.label}</button>
               ))}
             </div>
@@ -453,7 +453,7 @@ export default function AdminScreen() {
           {/* ===== TEAM TAB ===== */}
           {adminTab === 'team' && (<div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold">👥 Equipo ({teamUsers.length})</h3>
+              <h3 className="text-lg font-semibold flex items-center gap-2"><Users size={18} className="text-[var(--af-accent)]" />Equipo ({teamUsers.length})</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamUsers.map(m => {
@@ -492,7 +492,7 @@ export default function AdminScreen() {
                     </div>
                     <span className="text-[10px] bg-[var(--card)] px-2 py-0.5 rounded-full border border-[var(--border)]">{mTasks.length} tareas</span>
                   </div>
-                  {mOverdue.length > 0 && (<div className="text-[10px] text-red-400 mb-2">⚠ {mOverdue.length} vencida{mOverdue.length > 1 ? 's' : ''}</div>)}
+                  {mOverdue.length > 0 && (<div className="text-[10px] text-red-400 mb-2"><AlertTriangle size={10} className="inline mr-0.5" />{mOverdue.length} vencida{mOverdue.length > 1 ? 's' : ''}</div>)}
                   {mTasks.length > 0 ? (<div className="space-y-1.5">
                     {mTasks.slice(0, 4).map(t => {
                       const proj = projects.find(p => p.id === t.data.projectId);
@@ -520,7 +520,7 @@ export default function AdminScreen() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold">📋 Registro de Cambios</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><ClipboardList size={18} className="text-[var(--af-accent)]" />Registro de Cambios</h3>
                   <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Historial de auditoría de la aplicación</p>
                 </div>
               </div>

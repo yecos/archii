@@ -7,7 +7,7 @@ import { useTimeTracking } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import dynamic from 'next/dynamic';
-import { Download, FileSpreadsheet, FileText, Filter } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Filter, AlertTriangle } from 'lucide-react';
 const _im = () => import('@/components/features/ReportsCharts');
 const TaskStatusPie = dynamic(() => _im().then(m => ({ default: m.TaskStatusPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
 const TaskPriorityPie = dynamic(() => _im().then(m => ({ default: m.TaskPriorityPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
@@ -227,7 +227,7 @@ export default function ReportsScreen() {
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-400">{taskInProgress}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div></div>
                   <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div></div>
                 </div>
-                {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
+                {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><AlertTriangle size={14} className="text-red-400" /><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
                 {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
                 <TaskPriorityPie data={taskPriorityData} />
               </div>
@@ -287,8 +287,8 @@ export default function ReportsScreen() {
               </div>
               {/* Alerts */}
               {(totalOverdue > 0 || (totalBudget > 0 && totalSpent > totalBudget * 0.9)) && <div className="lg:col-span-2 space-y-2">
-                {totalOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-red-400 text-lg">⚠️</span><span className="text-sm text-red-400 font-medium">Facturas vencidas por {fmtCOP(totalOverdue)}</span></div>}
-                {totalBudget > 0 && totalSpent > totalBudget * 0.9 && <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><span className="text-amber-400 text-lg">⚠️</span><span className="text-sm text-amber-400 font-medium">Gasto al {Math.round(totalSpent / totalBudget * 100)}% del presupuesto</span></div>}
+                {totalOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><AlertTriangle size={18} className="text-red-400" /><span className="text-sm text-red-400 font-medium">Facturas vencidas por {fmtCOP(totalOverdue)}</span></div>}
+                {totalBudget > 0 && totalSpent > totalBudget * 0.9 && <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><AlertTriangle size={18} className="text-amber-400" /><span className="text-sm text-amber-400 font-medium">Gasto al {Math.round(totalSpent / totalBudget * 100)}% del presupuesto</span></div>}
               </div>}
               {/* Budget vs Real */}
               <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">

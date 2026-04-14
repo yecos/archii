@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import type { InvProduct, InvCategory } from '@/lib/types';
@@ -33,7 +33,7 @@ export default function InvProductsTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold">📦 Productos ({invProducts.length})</h3>
+        <h3 className="text-lg font-semibold flex items-center gap-1.5"><Package size={18} className="text-[var(--af-accent)]" /> Productos ({invProducts.length})</h3>
         <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); const rf: Record<string,any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' }; INV_WAREHOUSES.forEach(w => { rf[`invProdWS_${w.replace(/\s/g,'_')}`] = '0'; }); setForms(p => ({ ...p, ...rf })); openModal('invProduct'); }}>
           <Plus className="w-4 h-4" strokeWidth={2} />
           Nuevo producto
@@ -56,7 +56,7 @@ export default function InvProductsTab({
           return ms && mc;
         });
         return filtered.length === 0 ? (
-          <div className="text-center py-12"><div className="text-4xl mb-2">📦</div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
+          <div className="text-center py-12"><div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3"><Package size={28} className="text-[var(--af-text3)]" /></div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
         ) : (
           <div className="space-y-2">
             {filtered.slice(0, productLimit).map(p => {
@@ -73,7 +73,7 @@ export default function InvProductsTab({
                         <span className="text-sm font-semibold truncate">{p.data.name}</span>
                         {p.data.sku && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--card)] text-[var(--muted-foreground)]">{p.data.sku}</span>}
                         {isOut && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">AGOTADO</span>}
-                        {isLow && !isOut && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">⚠ Bajo</span>}
+                        {isLow && !isOut && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 flex items-center gap-0.5"><AlertTriangle size={10} /> Bajo</span>}
                       </div>
                       <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{getInvCategoryName(p.data.categoryId)} · {p.data.unit}</div>
                     </div>

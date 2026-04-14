@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { BarChart3, AlertTriangle, Building2 } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement } from '@/lib/types';
@@ -28,7 +29,7 @@ export default function InvDashboardTab({
 }: InvDashboardTabProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">📊 Panel de Inventario</h3>
+      <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
@@ -51,7 +52,7 @@ export default function InvDashboardTab({
       {/* Alerts Section */}
       {invAlerts.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-red-400">⚠️ Alertas activas</h4>
+          <h4 className="text-sm font-semibold text-red-400 flex items-center gap-1.5"><AlertTriangle size={14} className="text-red-400" />Alertas activas</h4>
           {invAlerts.map((alert, i) => (
             <div key={i} className={`rounded-lg px-3 py-2.5 border flex items-center gap-2 ${alert.severity === 'critical' ? 'bg-red-500/15 border-red-500/30' : alert.severity === 'high' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
               <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${alert.severity === 'critical' ? 'bg-red-500/20 text-red-400' : alert.severity === 'high' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>{alert.severity === 'critical' ? 'CRÍTICO' : alert.severity === 'high' ? 'ALTO' : 'MEDIO'}</span>
@@ -62,7 +63,7 @@ export default function InvDashboardTab({
       )}
       {/* Warehouse Overview */}
       <div>
-        <h4 className="text-sm font-semibold mb-2">🏢 Stock por almacén</h4>
+        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><Building2 size={14} className="text-[var(--af-accent)]" />Stock por almacén</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {INV_WAREHOUSES.map(wh => {
             const whStock = invProducts.reduce((s, p) => s + getWarehouseStock(p, wh), 0);

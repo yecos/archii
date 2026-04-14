@@ -4,6 +4,7 @@ import { Search, ChevronLeft, X, Paperclip, Mic, Send } from 'lucide-react';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
 import MessageBubble from './MessageBubble';
 import EmojiPicker from './EmojiPicker';
+import EmptyState from '@/components/ui/EmptyState';
 import type { ChatMessage } from '@/lib/types';
 
 interface MessageListProps {
@@ -149,19 +150,12 @@ export default function MessageList(props: MessageListProps) {
 
         {/* Empty state */}
         {filteredMessages.length === 0 && (
-          <div className="flex-1 flex items-center justify-center py-12">
-            <div className="text-center max-w-[240px]">
-              <div className="w-20 h-20 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">{chatProjectId === '__dm__' ? '🤝' : '💬'}</span>
-              </div>
-              <div className="text-[14px] font-semibold text-[var(--foreground)] mb-1">
-                {chatMsgSearch.trim() ? 'Sin resultados' : chatProjectId === '__dm__' ? 'Inicia una conversación' : 'Empieza la conversación'}
-              </div>
-              <div className="text-[12px] text-[var(--af-text3)] leading-relaxed">
-                {chatMsgSearch.trim() ? 'No se encontraron mensajes con ese criterio' : chatProjectId === '__dm__' ? 'Envía el primer mensaje para iniciar el chat directo' : '¡Saluda al equipo y comparte actualizaciones!'}
-              </div>
-            </div>
-          </div>
+          <EmptyState
+            illustration={chatMsgSearch.trim() ? 'search' : 'chat'}
+            title={chatMsgSearch.trim() ? 'Sin resultados' : chatProjectId === '__dm__' ? 'Inicia una conversación' : 'Empieza la conversación'}
+            description={chatMsgSearch.trim() ? 'No se encontraron mensajes con ese criterio' : chatProjectId === '__dm__' ? 'Envía el primer mensaje para iniciar el chat directo' : '¡Saluda al equipo y comparte actualizaciones!'}
+            compact
+          />
         )}
 
         {/* Message groups by date */}

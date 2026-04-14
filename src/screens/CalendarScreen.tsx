@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
 import { expandMeetingForMonth } from '@/lib/recurrence';
-import { Repeat, ChevronLeft, ChevronRight, Clock, FolderOpen } from 'lucide-react';
+import { Repeat, ChevronLeft, ChevronRight, Clock, FolderOpen, CalendarDays, Users, Zap, User, Folder, Pencil, X } from 'lucide-react';
 
 /* ===== Helpers ===== */
 
@@ -378,7 +378,7 @@ export default function CalendarScreen() {
                 if (!hasEvents) {
                   return (
                     <div className="flex flex-col items-center justify-center py-12 text-[var(--muted-foreground)]">
-                      <div className="text-3xl mb-2 opacity-50">📅</div>
+                      <CalendarDays size={30} className="text-[var(--muted-foreground)]" />
                       <div className="text-[13px] font-medium">Sin eventos</div>
                       <div className="text-[11px] mt-0.5 opacity-70">
                         {(() => {
@@ -438,7 +438,7 @@ export default function CalendarScreen() {
                             </div>
                             {m.data.attendees && m.data.attendees.length > 0 && (
                               <div className="text-[9px] text-[var(--muted-foreground)] mt-0.5">
-                                👥 {Array.isArray(m.data.attendees) ? m.data.attendees.length : String(m.data.attendees).split(',').length} asistentes
+                                <Users size={10} className="inline mr-0.5" />{Array.isArray(m.data.attendees) ? m.data.attendees.length : String(m.data.attendees).split(',').length} asistentes
                               </div>
                             )}
                           </div>
@@ -479,7 +479,7 @@ export default function CalendarScreen() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                {isOverdue && <span className="text-[11px]">⚡</span>}
+                                {isOverdue && <Zap size={11} className="text-red-400" />}
                                 <span className="text-[13px] font-medium truncate">{t.data.title}</span>
                               </div>
                               <div className="flex items-center gap-2 mt-1">
@@ -497,7 +497,7 @@ export default function CalendarScreen() {
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[9px] text-[var(--muted-foreground)]">
-                                  👤 {getUserName(t.data.assigneeId)}
+                                  <User size={9} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}
                                 </span>
                               </div>
                             </div>
@@ -602,7 +602,7 @@ export default function CalendarScreen() {
                                 }`}
                                 title={t.data.title}
                               >
-                                {isOverdue ? '⚡ ' : ''}
+                                {isOverdue ? '' : ''}
                                 {t.data.title}
                               </div>
                             );
@@ -755,7 +755,7 @@ export default function CalendarScreen() {
                           }`}
                           title={t.data.title}
                         >
-                          {isOverdue ? '⚡ ' : ''}
+                          {isOverdue ? '' : ''}
                           {t.data.title}
                         </div>
                       );
@@ -769,12 +769,12 @@ export default function CalendarScreen() {
                       <div
                         key={`${e.meeting.id}-${e.date}-${i}`}
                         className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400 flex items-center gap-0.5"
-                        title={`📅 ${e.meeting.data.title} (${e.meeting.data.time})`}
+                        title={`${e.meeting.data.title} (${e.meeting.data.time})`}
                       >
                         {e.isRecurring ? (
                           <Repeat size={8} className="flex-shrink-0" />
                         ) : (
-                          '📅'
+                          <CalendarDays size={8} className="flex-shrink-0" />
                         )}{' '}
                         {e.meeting.data.time}
                       </div>
@@ -814,7 +814,7 @@ export default function CalendarScreen() {
           </div>
           {selectedDayTasks.length === 0 ? (
             <div className="text-center py-6 text-[var(--af-text3)]">
-              <div className="text-2xl mb-1">📅</div>
+              <CalendarDays size={20} className="text-[var(--muted-foreground)]" />
               <div className="text-sm">Sin tareas pendientes para este día</div>
             </div>
           ) : (
@@ -848,8 +848,8 @@ export default function CalendarScreen() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
-                        {proj && <span>📁 {proj.data.name}</span>}
-                        <span>👤 {getUserName(t.data.assigneeId)}</span>
+                        {proj && <span><Folder size={10} className="inline mr-0.5" />{proj.data.name}</span>}
+                        <span><User size={9} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}</span>
                         <span className={`px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>
                           {t.data.status}
                         </span>
@@ -867,7 +867,7 @@ export default function CalendarScreen() {
               <div className="mt-3 pt-3 border-t border-[var(--border)]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[12px] font-semibold text-purple-400">
-                    📅 Reuniones ({selectedDayMeetings.length})
+                    <CalendarDays size={12} className="inline mr-1" /> Reuniones ({selectedDayMeetings.length})
                   </div>
                   <button
                     className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
@@ -904,7 +904,7 @@ export default function CalendarScreen() {
                                 className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)]"
                                 onClick={() => openEditMeeting(m)}
                               >
-                                ✏️
+                                <Pencil size={12} />
                               </button>
                               <button
                                 className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer"
@@ -918,11 +918,11 @@ export default function CalendarScreen() {
                             <span>
                               🕐 {m.data.time || '09:00'} · {m.data.duration || 60} min
                             </span>
-                            {meetProj && <span>📁 {meetProj.data.name}</span>}
+                            {meetProj && <span><Folder size={10} className="inline mr-0.5" />{meetProj.data.name}</span>}
                           </div>
                           {m.data.attendees && m.data.attendees.length > 0 && (
                             <div className="text-[10px] text-[var(--af-text3)] mt-1">
-                              👥{' '}
+                              <Users size={10} className="inline" />
                               {Array.isArray(m.data.attendees)
                                 ? m.data.attendees.join(', ')
                                 : m.data.attendees}

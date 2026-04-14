@@ -18,7 +18,7 @@ const DashboardCharts = dynamic(() => import('@/components/features/DashboardCha
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
-import { FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, TrendingUp, AlertCircle, ChevronRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, TrendingUp, AlertCircle, ChevronRight, Sparkles, ShieldCheck, Bell } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -222,10 +222,10 @@ export default function DashboardScreen() {
             {budgetAlerts.map((alert: BudgetAlert) => (
               <div
                 key={`alert-${alert.projectId}-${alert.threshold}`}
-                className={`flex items-center gap-3 p-3 rounded-lg ${getBudgetBgClass(alert.percentage)} border ${getBudgetBorderColorClass(alert.percentage)} cursor-pointer hover:opacity-80 transition-opacity`}
+                className={`flex items-center gap-3 p-3 rounded-lg ${getBudgetBgClass(alert.percentage)} border ${getBudgetBorderColorClass(alert.percentage)} cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]`}
                 onClick={() => openProject(alert.projectId)}
               >
-                <div className="text-xl flex-shrink-0">{alert.emoji}</div>
+                <div className="text-xl flex-shrink-0"><AlertTriangle size={20} className={alert.severity === 'critical' ? 'text-red-400' : alert.severity === 'danger' ? 'text-orange-400' : 'text-amber-400'} /></div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium truncate">{alert.projectName}</div>
                   <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
@@ -251,7 +251,8 @@ export default function DashboardScreen() {
           { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
           { val: pendingApprovals.length, lbl: 'Aprobaciones pendientes', icon: <ShieldCheck size={16} />, bg: 'bg-amber-500/10', iconColor: 'text-amber-400', sub: pendingApprovals.length === 0 ? 'Sin solicitudes' : 'Requiere revisión', badge: pendingApprovals.length > 0 },
         ].map((m, i) => (
-          <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5 hover:border-[var(--af-accent)]/30 transition-colors cursor-default">
+          <div key={i} className="card-elevated rounded-xl p-4 md:p-5 relative overflow-hidden cursor-default">
+            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-[var(--af-accent)]/30 to-transparent" />
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
               {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
@@ -276,7 +277,7 @@ export default function DashboardScreen() {
           ) : projects.slice(0, 4).map((p: any) => {
             const prog = p.data.progress || 0;
             return (
-              <div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openProject(p.id)}>
+              <div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors duration-150" onClick={() => openProject(p.id)}>
                 <div className="flex justify-between mb-2">
                   <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
@@ -325,7 +326,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Financial Summary */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -358,7 +359,7 @@ export default function DashboardScreen() {
             {notifHistory.length === 0 ? <div className="text-center py-4 text-[var(--af-text3)] text-[12px]">Sin notificaciones</div> :
             notifHistory.slice(0, 5).map((n: any) => (
               <div key={n.id} className={`flex items-start gap-2 p-2 rounded-lg ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}>
-                <span className="text-[14px] mt-0.5 flex-shrink-0">{n.icon || '🔔'}</span>
+                <span className="mt-0.5 flex-shrink-0">{n.icon || <Bell size={14} />}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-medium truncate">{n.title}</div>
                   <div className="text-[10px] text-[var(--muted-foreground)] truncate">{n.body}</div>

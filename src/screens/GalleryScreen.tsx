@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Camera, Image as ImageIcon } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useGallery } from '@/hooks/useDomain';
@@ -22,7 +22,7 @@ export default function GalleryScreen() {
   {/* Header */}
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 className="text-lg font-semibold">📸 Galería de proyectos</h2>
+      <h2 className="text-lg font-semibold"><Camera size={18} className="inline mr-1.5 text-[var(--af-accent)]" />Galería de proyectos</h2>
       <p className="text-sm text-[var(--muted-foreground)]">{gallery.getFilteredGalleryPhotos().length} foto{gallery.getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
     </div>
     <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); ui.openModal('gallery'); }}>
@@ -62,7 +62,7 @@ export default function GalleryScreen() {
   {/* Photo Grid */}
   {!od.galleryLoading && gallery.getFilteredGalleryPhotos().length === 0 ? (
     <div className="text-center py-16">
-      <div className="text-4xl mb-3">🖼️</div>
+      <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3"><ImageIcon size={24} className="text-[var(--af-text3)]" /></div>
       <div className="text-[var(--muted-foreground)]">No hay fotos en la galería</div>
       <div className="text-xs text-[var(--muted-foreground)] mt-1">Agrega fotos de tus proyectos para documentar el progreso</div>
     </div>

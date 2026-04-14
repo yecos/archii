@@ -10,6 +10,7 @@ import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
+import EmptyState from '@/components/ui/EmptyState';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -407,17 +408,11 @@ export default function TasksScreen() {
       {!loading && viewMode === 'list' ? (
         /* LIST VIEW */
         filteredTasks.length === 0 ? (
-          <div className="text-center py-16 text-[var(--af-text3)]">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
-              <KanbanSquare size={24} className="text-[var(--af-text3)]" />
-            </div>
-            <div className="text-[15px] font-medium text-[var(--muted-foreground)]">
-              {searchQuery || filterPriority || filterAssignee ? 'Sin resultados' : 'Sin tareas'}
-            </div>
-            <div className="text-xs mt-1">
-              {searchQuery || filterPriority || filterAssignee ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
-            </div>
-          </div>
+          <EmptyState
+            illustration={(searchQuery || filterPriority || filterAssignee) ? 'search' : 'tasks'}
+            title={(searchQuery || filterPriority || filterAssignee) ? 'Sin resultados' : 'Sin tareas'}
+            description={(searchQuery || filterPriority || filterAssignee) ? 'Intenta con otros filtros' : 'Las tareas aparecerán aquí cuando las crees'}
+          />
         ) : (
           <StaggerContainer>
           {['Alta', 'Media', 'Baja'].map(prio => {
@@ -436,7 +431,7 @@ export default function TasksScreen() {
                   const proj = projects.find((p: any) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                   return (
-                    <div key={t.id} className={`flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5 -mx-2 px-2 rounded-lg' : ''}`}>
+                    <div key={t.id} className={`flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group transition-colors duration-150 hover:bg-[var(--af-bg3)] ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5 -mx-2 px-2 rounded-lg' : ''}`}>
                       {batchMode && (
                         <div
                           className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center transition-all ${selectedIds.has(t.id) ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`}
@@ -473,7 +468,7 @@ export default function TasksScreen() {
                         ); })()}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
                         <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
                           <X size={12} />
@@ -490,14 +485,12 @@ export default function TasksScreen() {
       ) : (
         /* KANBAN VIEW */
         filteredTasks.length === 0 ? (
-          <div className="text-center py-16 text-[var(--af-text3)]">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
-              <KanbanSquare size={24} className="text-[var(--af-text3)]" />
-            </div>
-            <div className="text-[15px] font-medium text-[var(--muted-foreground)]">
-              {searchQuery || filterPriority || filterAssignee ? 'Sin resultados' : 'Sin tareas'}
-            </div>
-          </div>
+          <EmptyState
+            illustration={(searchQuery || filterPriority || filterAssignee) ? 'search' : 'tasks'}
+            title={(searchQuery || filterPriority || filterAssignee) ? 'Sin resultados' : 'Sin tareas'}
+            description={(searchQuery || filterPriority || filterAssignee) ? 'Intenta con otros filtros' : 'Las tareas aparecerán aquí cuando las crees'}
+            compact
+          />
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
             {KANBAN_COLS.map(col => {
@@ -558,7 +551,7 @@ export default function TasksScreen() {
                           draggable
                           onDragStart={e => handleDragStart(e, t.id)}
                           onDragEnd={handleDragEnd}
-                          className={`bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5 group/card ${
+                          className={`bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all duration-200 ease-out hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 active:scale-[0.99] group/card ${
                             isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'border-[var(--border)] hover:border-[var(--input)]'
                           }`}
                           onClick={() => openEditTask(t)}

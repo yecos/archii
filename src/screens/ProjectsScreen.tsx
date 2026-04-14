@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useMemo } from 'react';
-import { Plus, Upload, Search, X, Grid3X3, List, ArrowUpDown, Calendar, ClipboardCheck } from 'lucide-react';
+import { Plus, Upload, Search, X, Grid3X3, List, ArrowUpDown, Calendar, ClipboardCheck, Globe, Building2, Pencil, Trash2, MapPin } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { SkeletonProjects } from '@/components/ui/SkeletonLoaders';
 import { statusColor, fmtCOP, fmtDate } from '@/lib/helpers';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
+import EmptyState from '@/components/ui/EmptyState';
 
 type SortOption = 'name-asc' | 'name-desc' | 'newest' | 'oldest' | 'budget-desc' | 'progress-desc';
 
@@ -167,7 +168,7 @@ export default function ProjectsScreen() {
             }`}
             onClick={() => setForms(p => ({ ...p, projCompanyFilter: '' }))}
           >
-            🌐 Todas las empresas
+            <Globe size={12} className="inline mr-1" />Todas las empresas
           </button>
           {companies.map(c => (
             <button
@@ -179,7 +180,7 @@ export default function ProjectsScreen() {
               }`}
               onClick={() => setForms(p => ({ ...p, projCompanyFilter: c.id }))}
             >
-              🏢 {c.data.name}
+              <Building2 size={12} className="inline mr-1" />{c.data.name}
             </button>
           ))}
         </div>
@@ -258,15 +259,11 @@ export default function ProjectsScreen() {
       {loading && <SkeletonProjects />}
 
       {!loading && filteredProjects.length === 0 && (
-        <div className="text-center py-16 text-[var(--af-text3)]">
-          <div className="text-4xl mb-3">📁</div>
-          <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">
-            {searchQuery ? 'Sin resultados' : 'Sin proyectos'}
-          </div>
-          <div className="text-[13px]">
-            {searchQuery ? 'Intenta con otra búsqueda' : 'Crea tu primer proyecto'}
-          </div>
-        </div>
+        <EmptyState
+          illustration={searchQuery ? 'search' : 'projects'}
+          title={searchQuery ? 'Sin resultados' : 'Sin proyectos'}
+          description={searchQuery ? 'Intenta con otra búsqueda' : 'Crea tu primer proyecto para comenzar'}
+        />
       )}
 
       {!loading && filteredProjects.length > 0 && viewMode === 'grid' && (
@@ -279,7 +276,7 @@ export default function ProjectsScreen() {
             return (
               <StaggerItem key={p.id}>
                 <div
-                  className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden"
+                  className="card-elevated rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out hover:border-[var(--input)] hover:-translate-y-0.5 active:scale-[0.99] relative overflow-hidden"
                   onClick={() => openProject(p.id)}
                 >
                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
@@ -290,7 +287,7 @@ export default function ProjectsScreen() {
                       </span>
                       {compName && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">
-                          🏢 {compName}
+                          <Building2 size={10} className="inline mr-0.5" />{compName}
                         </span>
                       )}
                     </div>
@@ -299,19 +296,19 @@ export default function ProjectsScreen() {
                         className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]"
                         onClick={() => openEditProject(p)}
                       >
-                        ✏️
+                        <Pencil size={12} />
                       </button>
                       <button
                         className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20"
                         onClick={() => deleteProject(p.id)}
                       >
-                        🗑
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
                   <div className="text-[15px] font-semibold mb-1">{d.name}</div>
                   <div className="text-xs text-[var(--af-text3)] mb-3">
-                    {d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}
+                    {d.location ? <><MapPin size={10} className="inline mr-0.5" />{d.location}</> : ''}{d.client ? ' · ' + d.client : ''}
                   </div>
                   <div className="flex gap-4 mb-3">
                     <div>
@@ -358,7 +355,7 @@ export default function ProjectsScreen() {
               return (
                 <StaggerItem key={p.id}>
                   <div
-                    className={`grid sm:grid-cols-[1fr_120px_90px_110px_100px_100px_80px] gap-2 sm:gap-3 px-4 py-3 cursor-pointer transition-all hover:bg-[var(--af-bg3)] group ${
+                    className={`grid sm:grid-cols-[1fr_120px_90px_110px_100px_100px_80px] gap-2 sm:gap-3 px-4 py-3 cursor-pointer transition-colors duration-150 hover:bg-[var(--af-bg3)] group ${
                       !isLast ? 'border-b border-[var(--border)]' : ''
                     }`}
                     onClick={() => openProject(p.id)}
@@ -367,8 +364,8 @@ export default function ProjectsScreen() {
                     <div className="min-w-0">
                       <div className="text-[13.5px] font-semibold truncate">{d.name}</div>
                       <div className="text-[11px] text-[var(--af-text3)] flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {d.location && <span>📍 {d.location}</span>}
-                        {compName && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)]">🏢 {compName}</span>}
+                        {d.location && <span><MapPin size={10} className="inline mr-0.5" />{d.location}</span>}
+                        {compName && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)]"><Building2 size={10} className="inline mr-0.5" />{compName}</span>}
                         {d.endDate && (
                           <span className="flex items-center gap-0.5">
                             <Calendar size={10} /> {fmtDate(d.endDate)}
@@ -427,7 +424,7 @@ export default function ProjectsScreen() {
                     </div>
 
                     {/* Actions */}
-                    <div className="hidden sm:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="hidden sm:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                       <button
                         className="text-[11px] px-2 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20"
                         onClick={e => { e.stopPropagation(); openEditProject(p); }}
