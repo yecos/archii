@@ -5,6 +5,7 @@ import { useOneDriveContext } from '@/contexts/OneDriveContext';
 import { useFirestoreContext } from '@/contexts/FirestoreContext';
 import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useGalleryContext } from '@/contexts/GalleryContext';
+import { useTimeTrackingContext } from '@/contexts/TimeTrackingContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -20,6 +21,7 @@ export function useApp() {
   const fs = useFirestoreContext();
   const inv = useInventoryContext();
   const gal = useGalleryContext();
+  const tt = useTimeTrackingContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -189,8 +191,8 @@ export function useApp() {
     setInvMovements: inv.setInvMovements,
     invTransfers: inv.invTransfers,
     setInvTransfers: inv.setInvTransfers,
-    timeEntries: fs.timeEntries,
-    setTimeEntries: fs.setTimeEntries,
+    timeEntries: tt.timeEntries,
+    setTimeEntries: tt.setTimeEntries,
     invoices: fs.invoices,
     setInvoices: fs.setInvoices,
     comments: fs.comments,
@@ -233,16 +235,16 @@ export function useApp() {
     setInvWarehouseFilter: inv.setInvWarehouseFilter,
 
     // Domain UI — Time Tracking
-    timeTab: fs.timeTab,
-    setTimeTab: fs.setTimeTab,
-    timeFilterProject: fs.timeFilterProject,
-    setTimeFilterProject: fs.setTimeFilterProject,
-    timeFilterDate: fs.timeFilterDate,
-    setTimeFilterDate: fs.setTimeFilterDate,
-    timeSession: fs.timeSession,
-    setTimeSession: fs.setTimeSession,
-    timeTimerMs: fs.timeTimerMs,
-    setTimeTimerMs: fs.setTimeTimerMs,
+    timeTab: tt.timeTab,
+    setTimeTab: tt.setTimeTab,
+    timeFilterProject: tt.timeFilterProject,
+    setTimeFilterProject: tt.setTimeFilterProject,
+    timeFilterDate: tt.timeFilterDate,
+    setTimeFilterDate: tt.setTimeFilterDate,
+    timeSession: tt.timeSession,
+    setTimeSession: tt.setTimeSession,
+    timeTimerMs: tt.timeTimerMs,
+    setTimeTimerMs: tt.setTimeTimerMs,
 
     // Domain UI — Invoices
     invoiceTab: fs.invoiceTab,
@@ -343,9 +345,9 @@ export function useApp() {
     lightboxPrev: gal.lightboxPrev,
     lightboxNext: gal.lightboxNext,
     getFilteredGalleryPhotos: gal.getFilteredGalleryPhotos,
-    startTimeTracking: fs.startTimeTracking,
-    stopTimeTracking: fs.stopTimeTracking,
-    saveManualTimeEntry: fs.saveManualTimeEntry,
+    startTimeTracking: tt.startTimeTracking,
+    stopTimeTracking: tt.stopTimeTracking,
+    saveManualTimeEntry: tt.saveManualTimeEntry,
     openNewInvoice: fs.openNewInvoice,
     updateInvoiceItem: fs.updateInvoiceItem,
     addInvoiceItem: fs.addInvoiceItem,

@@ -14,6 +14,7 @@ import { confirm } from '@/hooks/useConfirmDialog';
 import * as _gantt from '@/lib/gantt-helpers';
 import InventoryProvider from './InventoryContext';
 import GalleryProvider from './GalleryContext';
+import TimeTrackingProvider from './TimeTrackingContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -36,8 +37,6 @@ interface FirestoreContextType {
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
   meetings: any[];
   setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
-  timeEntries: TimeEntry[];
-  setTimeEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   invoices: Invoice[];
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   comments: Comment[];
@@ -50,13 +49,6 @@ interface FirestoreContextType {
   calYear: number; setCalYear: React.Dispatch<React.SetStateAction<number>>;
   calSelectedDate: string | null; setCalSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
   calFilterProject: string; setCalFilterProject: React.Dispatch<React.SetStateAction<string>>;
-
-  // Domain UI state — Time Tracking
-  timeTab: string; setTimeTab: React.Dispatch<React.SetStateAction<string>>;
-  timeFilterProject: string; setTimeFilterProject: React.Dispatch<React.SetStateAction<string>>;
-  timeFilterDate: string; setTimeFilterDate: React.Dispatch<React.SetStateAction<string>>;
-  timeSession: any; setTimeSession: React.Dispatch<React.SetStateAction<any>>;
-  timeTimerMs: number; setTimeTimerMs: React.Dispatch<React.SetStateAction<number>>;
 
   // Domain UI state — Invoices
   invoices2: Invoice[];
@@ -135,11 +127,6 @@ interface FirestoreContextType {
   deleteMeeting: (id: string) => Promise<void>;
   openEditMeeting: (m: any) => void;
 
-  // CRUD Functions — Time Tracking
-  startTimeTracking: () => void;
-  stopTimeTracking: () => Promise<void>;
-  saveManualTimeEntry: () => void;
-
   // CRUD Functions — Invoices
   openNewInvoice: () => void;
   updateInvoiceItem: (idx: number, field: string, value: any) => void;
@@ -201,7 +188,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [dailyLogs, setDailyLogs] = useState<any[]>([]);
@@ -211,13 +197,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<string | null>(null);
   const [calFilterProject, setCalFilterProject] = useState<string>('all');
-
-  // ===== DOMAIN UI STATE — Time Tracking =====
-  const [timeTab, setTimeTab] = useState<string>('tracker');
-  const [timeFilterProject, setTimeFilterProject] = useState<string>('all');
-  const [timeFilterDate, setTimeFilterDate] = useState<string>('');
-  const [timeSession, setTimeSession] = useState<{ entryId: string | null; startTime: number | null; description: string; projectId: string; phaseName: string; isRunning: boolean }>({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
-  const [timeTimerMs, setTimeTimerMs] = useState<number>(0);
 
   // ===== DOMAIN UI STATE — Invoices =====
   const [invoiceTab, setInvoiceTab] = useState<string>('list');
@@ -367,15 +346,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     return () => unsub();
   }, [ready, authUser]);
 
-  // Load time entries
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: any) => {
-      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
 
   // Load invoices
   useEffect(() => {
@@ -406,15 +376,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando dailyLogs:', err); });
     return () => { unsub(); setDailyLogs([]); };
   }, [ready, authUser, selectedProjectId]);
-
-  // Time tracker: live timer update
-  useEffect(() => {
-    if (!timeSession.isRunning || !timeSession.startTime) return;
-    const interval = setInterval(() => {
-      setTimeTimerMs(Date.now() - timeSession.startTime!);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeSession.isRunning, timeSession.startTime]);
 
   // AI project context
   const currentProject = projects.find((p: any) => p.id === selectedProjectId);
@@ -699,38 +660,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const deleteMeeting = async (id: string) => { if (!(await confirm({ title: 'Eliminar reunión', description: '¿Eliminar reunión?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
 
-  // --- Time Tracking ---
-  const startTimeTracking = () => {
-    if (timeSession.isRunning) return;
-    const desc = forms.teDescription || forms.teQuickDesc || 'Trabajo en proyecto';
-    const projId = forms.teProject || '';
-    const phase = forms.tePhase || '';
-    if (!projId) { showToast('Selecciona un proyecto', 'error'); return; }
-    setTimeSession({ entryId: null, startTime: Date.now(), description: desc, projectId: projId, phaseName: phase, isRunning: true });
-    setTimeTimerMs(0);
-  };
-
-  const stopTimeTracking = async () => {
-    if (!timeSession.isRunning || !timeSession.startTime) return;
-    const endTime = new Date();
-    const startTime = new Date(timeSession.startTime);
-    const durationMin = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
-    if (durationMin < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
-    const dateStr = startTime.toISOString().split('T')[0];
-    const startStr = startTime.toTimeString().substring(0, 5);
-    const endStr = endTime.toTimeString().substring(0, 5);
-    await fbActions.saveTimeEntry({ teProject: timeSession.projectId, tePhase: timeSession.phaseName, teDescription: timeSession.description, teStartTime: startStr, teEndTime: endStr, teDuration: durationMin, teBillable: true, teRate: Number(forms.teRate) || 50000, teDate: dateStr }, null, showToast, authUser);
-    setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
-    setTimeTimerMs(0);
-  };
-
-  const saveManualTimeEntry = () => {
-    const dur = Number(forms.teManualDuration) || 0;
-    if (dur < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
-    if (!forms.teProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    fbActions.saveTimeEntry({ teProject: forms.teProject, tePhase: forms.tePhase || '', teDescription: forms.teDescription || '', teStartTime: forms.teStartTime || '08:00', teEndTime: forms.teEndTime || '17:00', teDuration: dur, teBillable: forms.teBillable !== false, teRate: Number(forms.teRate) || 50000, teDate: forms.teDate || new Date().toISOString().split('T')[0] }, editingId, showToast, authUser);
-    closeModal('timeEntry');
-  };
 
   // --- Invoices ---
   const openNewInvoice = () => {
@@ -798,12 +727,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals, meetings, setMeetings,
-    timeEntries, setTimeEntries, invoices, setInvoices,
+    invoices, setInvoices,
     comments, setComments, dailyLogs, setDailyLogs,
     // Calendar
     calMonth, setCalMonth, calYear, setCalYear, calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
-    // Time Tracking
-    timeTab, setTimeTab, timeFilterProject, setTimeFilterProject, timeFilterDate, setTimeFilterDate, timeSession, setTimeSession, timeTimerMs, setTimeTimerMs,
     // Invoices
     invoices2: invoices, invoiceTab, setInvoiceTab, invoiceItems, setInvoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
     // Comments
@@ -823,7 +750,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     saveApproval, updateApproval, deleteApproval,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
     saveMeeting, deleteMeeting, openEditMeeting,
-    startTimeTracking, stopTimeTracking, saveManualTimeEntry,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
     postComment, updateUserName, fileToBase64,
     // Computed
@@ -838,7 +764,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider>{children}</GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider><TimeTrackingProvider>{children}</TimeTrackingProvider></GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {
