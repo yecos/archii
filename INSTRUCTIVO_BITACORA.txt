@@ -322,6 +322,23 @@ Si se necesita corregir algo, agregar nota aclaratoria.
   Archivos creados: INSTRUCTIVO_BITACORA.txt
   Estado: Completado - Instructivo listo para uso
 
+2026-04-14 16:15 | BUG FIX CRITICO - fb.FieldValue rompia toda escritura a Firestore
+  Categoria: Bug critico (runtime crash en TODA la app)
+  Motivo: El fix de TS cambio fb.firestore.FieldValue a fb.FieldValue
+    En Firebase compat SDK cargado via CDN, FieldValue NO es propiedad
+    directa de firebase — solo existe en firebase.firestore.FieldValue
+  Impacto: Todas las operaciones de escritura fallaban silenciosamente:
+    - Crear/editar proyectos, tareas, gastos, proveedores
+    - Login/registro (crea documento en users)
+    - Login Google/Microsoft (auth state listener + user doc)
+    - Bitacora, reuniones, facturas, inventario, galeria
+  Archivo modificado: src/lib/firestore-actions.ts (21 ocurrencias)
+  Fix: Revertir fb.FieldValue -> fb.firestore.FieldValue
+  Leccion: Siempre verificar que los fixes TS no cambien la semantica
+    de accesos a propiedades en runtime. firebase.firestore.FieldValue
+    es la unica forma correcta de acceder a FieldValue en compat SDK.
+  Commit: 7fe06df
+
 2026-04-14 16:00 | FIX TS - Resolver 59 errores TypeScript pre-existentes
   Categoria: Mejora de calidad de codigo (TypeScript strict)
   Accion: Eliminar todos los errores de compilacion TypeScript
