@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
@@ -287,17 +287,17 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   // ===== CRUD FUNCTIONS =====
 
-  const fileToBase64 = (file: any): Promise<string> => {
+  const fileToBase64 = useCallback((file: any): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  };
+  }, []);
 
   // --- Projects ---
-  const saveProject = async () => {
+  const saveProject = useCallback(async () => {
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
@@ -317,25 +317,25 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
     } catch { showToast('Error al guardar', 'error'); }
-  };
+  }, [editingId, forms, authUser, msConnected, msAccessToken, showToast, closeModal, setForms]);
 
-  const deleteProject = async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
+  const deleteProject = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }, [confirm, showToast]);
 
-  const openEditProject = (p: Project) => {
+  const openEditProject = useCallback((p: Project) => {
     setEditingId(p.id);
     setForms(f => ({ ...f, projName: p.data.name, projStatus: p.data.status, projClient: p.data.client, projLocation: p.data.location, projBudget: p.data.budget, projDesc: p.data.description, projStart: p.data.startDate, projEnd: p.data.endDate, projCompany: p.data.companyId || '' }));
     openModal('project');
-  };
+  }, [setEditingId, setForms, openModal]);
 
-  const updateProjectProgress = async (val: number) => {
+  const updateProjectProgress = useCallback(async (val: number) => {
     if (!selectedProjectId) return;
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [selectedProjectId, showToast]);
 
-  const openProject = (id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); };
+  const openProject = useCallback((id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); }, [setSelectedProjectId, setScreen]);
 
   // --- Tasks ---
-  const saveTask = async () => {
+  const saveTask = useCallback(async () => {
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
@@ -355,33 +355,33 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       }
       closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [editingId, forms, authUser, projects, showToast, closeModal, setEditingId, setForms]);
 
-  const openEditTask = (t: Task) => {
+  const openEditTask = useCallback((t: Task) => {
     setEditingId(t.id);
     const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
     setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: (t.data as any).projectId || '', taskAssignees: assignees, taskAssignee: (t.data as any).assigneeId || '', taskPriority: (t.data as any).priority || 'Media', taskStatus: (t.data as any).status || 'Por hacer', taskDue: (t.data as any).dueDate || '' }));
     openModal('task');
-  };
+  }, [setEditingId, setForms, openModal]);
 
-  const updateUserName = async (newName: string) => {
+  const updateUserName = useCallback(async (newName: string) => {
     if (!newName || !authUser) return;
     try { await authUser.updateProfile({ displayName: newName }); await getFirebase().firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [authUser, showToast, setForms]);
 
-  const toggleTask = async (id: string, status: string) => {
+  const toggleTask = useCallback(async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
     try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
-  };
+  }, []);
 
-  const changeTaskStatus = async (id: string, newStatus: string) => {
+  const changeTaskStatus = useCallback(async (id: string, newStatus: string) => {
     try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
-  };
+  }, []);
 
-  const deleteTask = async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteTask = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
 
   // --- Expenses ---
-  const saveExpense = async () => {
+  const saveExpense = useCallback(async () => {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
@@ -397,12 +397,12 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(() => {});
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [forms, authUser, projects, showToast, closeModal, setForms]);
 
-  const deleteExpense = async (id: string) => { if (!(await confirm({ title: 'Eliminar gasto', description: '¿Eliminar gasto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteExpense = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar gasto', description: '¿Eliminar gasto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm, showToast]);
 
   // --- Suppliers ---
-  const saveSupplier = async () => {
+  const saveSupplier = useCallback(async () => {
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
@@ -412,12 +412,12 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
       closeModal('supplier'); setForms(p => ({ ...p, supName: '', supCategory: '', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [editingId, forms, showToast, closeModal, setForms]);
 
-  const deleteSupplier = async (id: string) => { if (!(await confirm({ title: 'Eliminar proveedor', description: '¿Eliminar proveedor?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteSupplier = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proveedor', description: '¿Eliminar proveedor?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
 
   // --- Companies ---
-  const saveCompany = async () => {
+  const saveCompany = useCallback(async () => {
     const name = forms.compName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
@@ -427,10 +427,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
     } catch { showToast('Error al guardar', 'error'); }
-  };
+  }, [editingId, forms, showToast, closeModal, setEditingId]);
 
   // --- Files ---
-  const uploadFile = async (e: any) => {
+  const uploadFile = useCallback(async (e: any) => {
     const file = e.target?.files?.[0];
     if (!file || !selectedProjectId) return;
     if (file.size > 10 * 1024 * 1024) { showToast('El archivo no puede superar 10 MB', 'error'); return; }
@@ -442,15 +442,15 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
-  };
+  }, [selectedProjectId, authUser, showToast, fileToBase64]);
 
-  const deleteFile = async (file: ProjectFile) => {
+  const deleteFile = useCallback(async (file: ProjectFile) => {
     if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete(); showToast('Archivo eliminado'); } catch { showToast('Error al eliminar', 'error'); }
-  };
+  }, [selectedProjectId, confirm, showToast]);
 
   // --- Work Phases ---
-  const initDefaultPhases = async () => {
+  const initDefaultPhases = useCallback(async () => {
     if (workPhases.length > 0) return;
     const db = getFirebase().firestore();
     const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
@@ -458,14 +458,14 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
     }
     showToast('Fases inicializadas');
-  };
+  }, [workPhases, selectedProjectId, showToast]);
 
-  const updatePhaseStatus = async (phaseId: string, status: string) => {
+  const updatePhaseStatus = useCallback(async (phaseId: string, status: string) => {
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
-  };
+  }, [selectedProjectId]);
 
   // --- Approvals ---
-  const saveApproval = async () => {
+  const saveApproval = useCallback(async () => {
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
@@ -474,9 +474,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       const projName = currentProject?.data.name || 'Proyecto';
       notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
+  }, [forms, selectedProjectId, currentProject, authUser, showToast, closeModal, setForms]);
 
-  const updateApproval = async (id: string, status: string) => {
+  const updateApproval = useCallback(async (id: string, status: string) => {
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
       showToast('Estado actualizado');
@@ -486,9 +486,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         notifyWhatsApp.approvalResolved((approval?.data as any).createdBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(() => {});
       }
     } catch (err) { console.error("[ArchiFlow]", err); }
-  };
+  }, [selectedProjectId, approvals, currentProject, authUser, showToast]);
 
-  const deleteApproval = async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteApproval = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
 
   // ===== COMPUTED VALUES =====
   const activeTasks = useMemo(() => tasks.filter(t => t.data?.status !== 'Completado'), [tasks]);

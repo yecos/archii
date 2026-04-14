@@ -141,7 +141,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // ===== FUNCTIONS =====
 
-  const doLogin = async () => {
+  const doLogin = useCallback(async () => {
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
@@ -160,9 +160,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       showToast(msgs[e.code] || `Error: ${e.code || e.message || 'No se pudo iniciar sesión'}`, 'error');
     }
-  };
+  }, [forms, showToast]);
 
-  const doRegister = async () => {
+  const doRegister = useCallback(async () => {
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
@@ -184,9 +184,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       showToast(msgs[e.code] || `Error al registrar: ${e.code || e.message || ''}`, 'error');
     }
-  };
+  }, [forms, showToast]);
 
-  const doGoogleLogin = async () => {
+  const doGoogleLogin = useCallback(async () => {
     try {
       console.log('[ArchiFlow Auth] Attempting Google login...');
       const fb = getFirebase();
@@ -220,9 +220,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
       showToast(msgs[e.code] || `Error con Google: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
     }
-  };
+  }, [showToast]);
 
-  const doMicrosoftLogin = async () => {
+  const doMicrosoftLogin = useCallback(async () => {
     try {
       console.log('[ArchiFlow Auth] Attempting Microsoft login...');
       const fb = getFirebase();
@@ -293,37 +293,37 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
     }
-  };
+  }, [showToast]);
 
-  const doLogout = async () => { if (!(await confirm({ title: 'Cerrar sesión', description: '¿Cerrar sesión de ArchiFlow?' }))) return; getFirebase().auth().signOut(); };
+  const doLogout = useCallback(async () => { if (!(await confirm({ title: 'Cerrar sesión', description: '¿Cerrar sesión de ArchiFlow?' }))) return; getFirebase().auth().signOut(); }, [confirm]);
 
-  const updateUserRole = async (uid: string, newRole: string) => {
+  const updateUserRole = useCallback(async (uid: string, newRole: string) => {
     try {
       await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
       showToast(`Rol actualizado a ${newRole}`);
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al cambiar rol', 'error'); }
-  };
+  }, [showToast]);
 
-  const updateUserCompany = async (uid: string, companyId: string) => {
+  const updateUserCompany = useCallback(async (uid: string, companyId: string) => {
     try {
       await getFirebase().firestore().collection('users').doc(uid).update({ companyId: companyId || null });
       showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al asignar empresa', 'error'); }
-  };
+  }, [showToast]);
 
-  const getMyCompanyId = () => {
+  const getMyCompanyId = useCallback(() => {
     if (!authUser) return null;
     const me = teamUsers.find(u => u.id === authUser.uid);
     return me?.data?.companyId || null;
-  };
+  }, [authUser, teamUsers]);
 
-  const getMyRole = () => {
+  const getMyRole = useCallback(() => {
     if (!authUser) return 'Miembro';
     const me = teamUsers.find(u => u.id === authUser.uid);
     return me?.data?.role || 'Miembro';
-  };
+  }, [authUser, teamUsers]);
 
-  const visibleProjects = (projects: Project[]) => {
+  const visibleProjects = useCallback((projects: Project[]) => {
     const myRole = getMyRole();
     const myComp = getMyCompanyId();
     if (myRole === 'Admin' || myRole === 'Director') {
@@ -333,12 +333,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       return projects.filter(p => !p.data?.companyId || p.data.companyId === myComp);
     }
     return projects;
-  };
+  }, [getMyRole, getMyCompanyId]);
 
-  const getUserName = (uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; };
+  const getUserName = useCallback((uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; }, [teamUsers]);
 
   // Computed
-  const getUserRole = (uid: string) => { const u = teamUsers.find(x => x.id === uid); return u?.data?.role || 'Miembro'; };
+  const getUserRole = useCallback((uid: string) => { const u = teamUsers.find(x => x.id === uid); return u?.data?.role || 'Miembro'; }, [teamUsers]);
   const userName = authUser?.displayName || authUser?.email?.split('@')[0] || '';
   const initials = getInitials(userName);
   const myRole = getUserRole(authUser?.uid || '');

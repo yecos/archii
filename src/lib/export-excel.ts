@@ -4,7 +4,7 @@
  * ArchiFlow v2.0 — Exportar datos tabulares a .xlsx
  */
 
-import * as XLSX from 'xlsx';
+import type XLSX from 'xlsx';
 
 function fmtCOPFull(n: number): string {
   if (!n || n === 0) return '0';
@@ -20,7 +20,8 @@ function fmtDurationMinutes(mins: number): string {
   return `${m}m`;
 }
 
-function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
+async function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
+  const XLSX = await import('xlsx');
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
@@ -35,7 +36,8 @@ function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
    EXPORTAR TAREAS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]) {
+export async function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   const data = tasks.map(t => {
@@ -91,7 +93,8 @@ export function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]
    EXPORTAR GASTOS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportExpensesExcel(expenses: any[], projects: any[]) {
+export async function exportExpensesExcel(expenses: any[], projects: any[]) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   const data = expenses.map(e => {
@@ -143,7 +146,8 @@ export function exportExpensesExcel(expenses: any[], projects: any[]) {
    EXPORTAR TIEMPO A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: any[]) {
+export async function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: any[]) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   const data = timeEntries.map(e => {
@@ -202,7 +206,8 @@ export function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: 
    EXPORTAR INVENTARIO A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportInventoryExcel(products: any[], categories: any[], movements: any[]) {
+export async function exportInventoryExcel(products: any[], categories: any[], movements: any[]) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   // Products sheet
@@ -264,7 +269,8 @@ export function exportInventoryExcel(products: any[], categories: any[], movemen
    EXPORTAR PROYECTOS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportProjectsExcel(projects: any[], tasks: any[], expenses: any[]) {
+export async function exportProjectsExcel(projects: any[], tasks: any[], expenses: any[]) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   const data = projects.map(p => {

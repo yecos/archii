@@ -4,8 +4,7 @@
  * ArchiFlow v2.0 — Todos los reportes en PDF.
  */
 
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 import { fmtCOP, fmtDate, fmtDuration } from './helpers';
 
 // Colores de marca ArchiFlow
@@ -90,7 +89,11 @@ function checkAddPage(doc: jsPDF, y: number, needed: number = 40): number {
    EXPORTAR FACTURA A PDF
    ═══════════════════════════════════════════════ */
 
-export function exportInvoicePDF(invoice: any, project?: any) {
+export async function exportInvoicePDF(invoice: any, project?: any) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -267,7 +270,7 @@ export function exportInvoicePDF(invoice: any, project?: any) {
    EXPORTAR REPORTE GENERAL A PDF
    ═══════════════════════════════════════════════ */
 
-export function exportGeneralReportPDF(data: {
+export async function exportGeneralReportPDF(data: {
   projects: any[];
   tasks: any[];
   expenses: any[];
@@ -275,6 +278,10 @@ export function exportGeneralReportPDF(data: {
   teamUsers: any[];
   timeEntries: any[];
 }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -411,10 +418,14 @@ export function exportGeneralReportPDF(data: {
    EXPORTAR BITÁCORA A PDF
    ═══════════════════════════════════════════════ */
 
-export function exportDailyLogsPDF(data: {
+export async function exportDailyLogsPDF(data: {
   logs: any[];
   projectName: string;
 }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -554,11 +565,15 @@ export function exportDailyLogsPDF(data: {
    EXPORTAR PRESUPUESTO A PDF
    ═══════════════════════════════════════════════ */
 
-export function exportBudgetPDF(data: {
+export async function exportBudgetPDF(data: {
   expenses: any[];
   projects: any[];
   projectName?: string;
 }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -657,11 +672,15 @@ export function exportBudgetPDF(data: {
    EXPORTAR TIEMPO A PDF
    ═══════════════════════════════════════════════ */
 
-export function exportTimeReportPDF(data: {
+export async function exportTimeReportPDF(data: {
   timeEntries: any[];
   teamUsers: any[];
   projects: any[];
 }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
 
   addHeader(doc, 'Reporte de Tiempo', 'Registro de horas por proyecto y miembro');
