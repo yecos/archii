@@ -1,16 +1,21 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useCalendar } from '@/hooks/useDomain';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
 
 export default function CalendarScreen() {
+  const { openModal, setEditingId, setForms } = useUI();
+  const { getUserName } = useAuth();
+  const { projects, tasks } = useFirestore();
   const {
-    calFilterProject, calMonth, calSelectedDate, calYear, deleteMeeting,
-    getUserName, meetings, openEditMeeting, openModal, projects,
-    setCalFilterProject, setCalMonth, setCalSelectedDate, setCalYear, setEditingId,
-    setForms, tasks,
-  } = useApp();
+    calFilterProject, calMonth, calSelectedDate, calYear,
+    setCalFilterProject, setCalMonth, setCalSelectedDate, setCalYear,
+    meetings, deleteMeeting, openEditMeeting,
+  } = useCalendar();
 
   return (
 (() => {

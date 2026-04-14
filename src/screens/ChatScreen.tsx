@@ -1,6 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useChat } from '@/hooks/useDomain';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
 
 /* ===== EMOJI DATA ===== */
@@ -40,21 +43,23 @@ const getAvatarHSL = (uid: string) => {
 };
 
 export default function ChatScreen() {
+  const { forms, setForms, showToast, chatMobileShow, setChatMobileShow } = useUI();
+  const { authUser, teamUsers } = useAuth();
+  const { projects } = useFirestore();
   const {
-    audioPreviewBlobRef, audioPreviewDuration, audioPreviewUrl, audioProgress, authUser,
-    chatDmUser, chatDropActive, chatMobileShow, chatProjectId, fileIcon,
-    fileInputRef, forms, handleFileSelect, handleMicButton, isRecording,
-    messages, pendingFiles, playingAudio, projects, recDuration,
-    recVolume, removePendingFile, sendAll, setAudioPreviewDuration, setAudioPreviewUrl,
-    setChatDmUser, setChatDropActive, setChatMobileShow, setChatProjectId, setForms,
-    setShowEmojiPicker, showEmojiPicker, stopRecording, teamUsers, toggleAudioPlay,
+    audioPreviewBlobRef, audioPreviewDuration, audioPreviewUrl, audioProgress,
+    chatDmUser, chatDropActive, chatProjectId, fileIcon,
+    fileInputRef, handleFileSelect, handleMicButton, isRecording,
+    messages, pendingFiles, playingAudio,
+    recDuration, recVolume, removePendingFile, sendAll, setAudioPreviewDuration, setAudioPreviewUrl,
+    setChatDmUser, setChatDropActive, setChatProjectId,
+    setShowEmojiPicker, showEmojiPicker, stopRecording, toggleAudioPlay,
     chatReplyingTo, setChatReplyingTo,
     messageReactions, toggleReaction,
     chatMenuMsg, setChatMenuMsg,
     chatMsgSearch, setChatMsgSearch,
     deleteMessage, copyMessageText,
-    showToast,
-  } = useApp();
+  } = useChat();
 
   const [emojiSearch, setEmojiSearch] = useState('');
   const [activeEmojiCat, setActiveEmojiCat] = useState('Frecuentes');

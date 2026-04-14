@@ -1,14 +1,15 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
 import { SkeletonProjects } from '@/components/ui/SkeletonLoaders';
 import { statusColor, fmtCOP } from '@/lib/helpers';
 
 export default function ProjectsScreen() {
-  const {
-    loading, projects, companies, forms, setForms, setEditingId, openModal,
-    visibleProjects, openEditProject, deleteProject, openProject, getMyRole,
-  } = useApp();
+  const { forms, setForms, setEditingId, openModal } = useUI();
+  const { loading, getMyRole, visibleProjects } = useAuth();
+  const { projects, companies, openEditProject, deleteProject, openProject } = useFirestore();
 
   return (
     <div className="animate-fadeIn">

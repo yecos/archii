@@ -1,20 +1,22 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useInventory } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
 import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
 import { INV_WAREHOUSES, TRANSFER_STATUSES } from '@/lib/types';
 
 export default function InventoryScreen() {
+  const { openModal, setEditingId, setForms, showToast } = useUI();
   const {
     deleteInvCategory, deleteInvMovement, deleteInvProduct, deleteInvTransfer, getInvCategoryColor,
     getInvCategoryName, getInvProductName, getTotalStock, getWarehouseStock, invAlerts,
     invCategories, invFilterCat, invMovFilterType, invMovements, invPendingTransfers,
     invProducts, invSearch, invTab, invTotalStock, invTotalValue,
     invTransferFilterStatus, invTransfers, invWarehouseFilter, openEditInvCategory, openEditInvProduct,
-    openModal, setEditingId, setForms, setInvFilterCat, setInvMovFilterType,
-    setInvSearch, setInvTab, setInvTransferFilterStatus, setInvWarehouseFilter, showToast,
-  } = useApp();
+    setInvFilterCat, setInvMovFilterType,
+    setInvSearch, setInvTab, setInvTransferFilterStatus, setInvWarehouseFilter,
+  } = useInventory();
 
   return (
 <div className="animate-fadeIn">

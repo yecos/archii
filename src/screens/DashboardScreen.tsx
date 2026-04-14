@@ -1,6 +1,12 @@
 'use client';
 import React, { useMemo } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useTimeTracking } from '@/hooks/useDomain';
+import { useInvoice } from '@/hooks/useDomain';
+import { useNotif } from '@/hooks/useDomain';
+import { useComments } from '@/hooks/useDomain';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
@@ -27,11 +33,13 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 
 export default function DashboardScreen() {
-  const {
-    loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
-    activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
-    dailyLogs, timeEntries, showToast,
-  } = useApp();
+  const { navigateTo, showToast } = useUI();
+  const { authUser, loading, getUserName, teamUsers } = useAuth();
+  const { projects, tasks, pendingCount, activeTasks, completedTasks, toggleTask, openProject, expenses } = useFirestore();
+  const { timeEntries } = useTimeTracking();
+  const { invoices } = useInvoice();
+  const { unreadCount, notifHistory } = useNotif();
+  const { dailyLogs } = useComments();
 
   // Computed data
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);

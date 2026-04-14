@@ -1,6 +1,11 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useTimeTracking } from '@/hooks/useDomain';
+import { useInvoice } from '@/hooks/useDomain';
+import { useComments } from '@/hooks/useDomain';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { Download, FileSpreadsheet, FileText, Filter } from 'lucide-react';
 import { exportGeneralReportPDF, exportBudgetPDF, exportTimeReportPDF } from '@/lib/export-pdf';
@@ -40,10 +45,12 @@ function ChartLegend({ payload }: any) {
 }
 
 export default function ReportsScreen() {
-  const {
-    expenses, forms, invoices, projects, setForms,
-    showToast, tasks, teamUsers, timeEntries, dailyLogs,
-  } = useApp();
+  const { forms, setForms, showToast } = useUI();
+  const { teamUsers } = useAuth();
+  const { expenses, projects, tasks } = useFirestore();
+  const { timeEntries } = useTimeTracking();
+  const { invoices } = useInvoice();
+  const { dailyLogs } = useComments();
 
   const [dateFilter, setDateFilter] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
 

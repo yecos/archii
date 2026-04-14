@@ -2,7 +2,13 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
-import AppProvider, { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useGallery } from '@/hooks/useDomain';
+import { useInventory } from '@/hooks/useDomain';
+import { useNotif } from '@/hooks/useDomain';
+import AppProvider from '@/contexts/AppContext';
 import { Toaster } from 'sonner';
 import { Bell, X } from 'lucide-react';
 
@@ -60,21 +66,13 @@ const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: 
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 
 function AppContent() {
-  const {
-    ready, loading, authUser, screen, navigateTo,
-    sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed,
-    closeModal,
-    projects, tasks, teamUsers, companies,
-    currentProject, pendingCount, isAdmin, isEmailAdmin,
-    userName, initials,
-    doLogin, doRegister, doGoogleLogin, doMicrosoftLogin,
-    forms, setForms,
-    modals,
-    galleryPhotos, invLowStock,
-    showNotifBanner, requestNotifPermission, dismissNotifBanner,
-    inAppNotifs, setInAppNotifs, markNotifRead,
-    screenTitles,
-  } = useApp();
+  const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, screenTitles } = useUI();
+  const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, userName, initials } = useAuth();
+  const { projects, tasks, currentProject, pendingCount } = useFirestore();
+  const { teamUsers, isAdmin, isEmailAdmin } = useAuth();
+  const { galleryPhotos } = useGallery();
+  const { invLowStock } = useInventory();
+  const { showNotifBanner, requestNotifPermission, dismissNotifBanner, inAppNotifs, setInAppNotifs, markNotifRead } = useNotif();
 
   if (!ready || loading) return <LoadingScreen />;
   if (!authUser) return (

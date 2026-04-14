@@ -1,6 +1,8 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useInvoice } from '@/hooks/useDomain';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
@@ -9,11 +11,13 @@ import { exportInvoicePDF } from '@/lib/export-pdf';
 import { FileText, Download } from 'lucide-react';
 
 export default function InvoicesScreen() {
+  const { forms, setForms, showToast } = useUI();
+  const { projects } = useFirestore();
   const {
-    addInvoiceItem, forms, invoiceFilterStatus, invoiceItems, invoiceTab,
-    invoices, openNewInvoice, projects, removeInvoiceItem, saveInvoice,
-    setForms, setInvoiceFilterStatus, setInvoiceTab, showToast, updateInvoiceItem,
-  } = useApp();
+    addInvoiceItem, invoiceFilterStatus, invoiceItems, invoiceTab,
+    invoices, openNewInvoice, removeInvoiceItem, saveInvoice,
+    setInvoiceFilterStatus, setInvoiceTab, updateInvoiceItem,
+  } = useInvoice();
 
   return (
 <div className="animate-fadeIn space-y-4">

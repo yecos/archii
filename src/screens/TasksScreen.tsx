@@ -1,6 +1,9 @@
 'use client';
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useTimeTracking } from '@/hooks/useDomain';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
@@ -57,21 +60,10 @@ function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUse
 }
 
 export default function TasksScreen() {
-  const app = useApp() as any;
-  const changeTaskStatus = app.changeTaskStatus || (() => {});
-  const deleteTask = app.deleteTask || (() => {});
-  const forms = app.forms || {};
-  const getUserName = app.getUserName || ((uid: string) => uid);
-  const loading = app.loading || false;
-  const openEditTask = app.openEditTask || (() => {});
-  const openModal = app.openModal || (() => {});
-  const projects = app.projects || [];
-  const setForms = app.setForms || (() => {});
-  const tasks = app.tasks || [];
-  const toggleTask = app.toggleTask || (() => {});
-  const timeEntries = app.timeEntries || [];
-  const showToast = app.showToast || (() => {});
-  const teamUsers = app.teamUsers || [];
+  const { forms, setForms, openModal, showToast } = useUI();
+  const { loading, getUserName, teamUsers } = useAuth();
+  const { tasks, projects, toggleTask, changeTaskStatus, deleteTask, openEditTask } = useFirestore();
+  const { timeEntries } = useTimeTracking();
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -229,7 +221,7 @@ export default function TasksScreen() {
             className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
             onClick={() => {
               try {
-                exportTasksExcel(tasks, projects, useApp().teamUsers);
+                exportTasksExcel(tasks, projects, teamUsers);
                 showToast('Tareas exportadas a Excel');
               } catch (err) { showToast('Error al exportar', 'error'); }
             }}

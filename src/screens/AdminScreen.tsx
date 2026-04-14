@@ -1,21 +1,25 @@
 'use client';
 import React from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
 
 export default function AdminScreen() {
+  const { showToast } = useUI();
+  const { authUser, isAdmin, getUserName, teamUsers, updateUserRole } = useAuth();
   const {
     GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG, activeTasks,
-    adminPermSection, adminTab, adminTooltipPos, adminTooltipTask, authUser,
+    adminPermSection, adminTab, adminTooltipPos, adminTooltipTask,
     buildGanttRows, completedTasks, findOverlaps, getGanttDays, getProjectColor,
-    getProjectColorLight, getTaskBar, getUserName, isAdmin, overdueTasks,
+    getProjectColorLight, getTaskBar, overdueTasks,
     projects, rolePerms, setAdminPermSection, setAdminTab, setAdminTooltipPos,
-    setAdminTooltipTask, setAdminWeekOffset, showToast, tasks, teamUsers,
-    toggleRolePerm, updateUserRole,
-  } = useApp();
+    setAdminTooltipTask, setAdminWeekOffset, tasks,
+    toggleRolePerm,
+  } = useFirestore();
 
   return (
     <>
