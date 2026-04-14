@@ -221,6 +221,69 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 04:00 | ETAPA 5 - Code Splitting Avanzado + Limpieza de Bundle
+  Estado: COMPLETADA
+  Tag de respaldo: backup-pre-etapa5-codesplit-20260415
+  Objetivo: Reducir bundle inicial, eliminar dependencias muertas, optimizar imagenes
+  Commits realizados: 3
+
+  Tarea 5.1 - Eliminar framer-motion + DashboardScreen lazy + dead deps
+    Archivos modificados:
+      * src/app/HomeContent.tsx - Eliminado import de framer-motion, reemplazado
+        AnimatePresence/motion.div por CSS animation (animate-fadeIn existente)
+        DashboardScreen cambiada de import eager a next/dynamic (ssr: false)
+      * src/components/ui/chart.tsx - ELIMINADO (codigo muerto, shadcn wrapper
+        que importaba recharts pero nunca era usado por ningun componente)
+      * src/lib/db.ts - ELIMINADO (codigo muerto, Prisma DB nunca conectado)
+      * package.json - Eliminadas 8 dependencias muertas:
+        framer-motion (~30KB gz), sharp (~2.6MB native), @dnd-kit/core,
+        @dnd-kit/sortable, @dnd-kit/utilities (~50KB), @tanstack/react-table
+        (~40KB), date-fns (~15KB), uuid (~8KB)
+    Commit: b87fe37
+
+  Tarea 5.2 - Agregar loading=lazy a imagenes + prisma a devDependencies
+    Archivos modificados (8):
+      * src/screens/ObraScreen.tsx - 1 img
+      * src/screens/InventoryScreen.tsx - 4 imgs
+      * src/screens/ChatScreen.tsx - 3 imgs (incluido upload preview)
+      * src/screens/ProjectDetailScreen.tsx - 3 imgs
+      * src/components/features/LightboxViewer.tsx - 2 imgs
+      * src/components/modals/GalleryModal.tsx - 1 img
+      * src/components/modals/InvProductModal.tsx - 1 img
+    Resultado: 18/18 tags <img> en src/ tienen loading="lazy"
+    prisma movido de dependencies a devDependencies
+    Commit: c0c2cf1
+
+  Tarea 5.3 - Eliminar firebase client SDK + tipo nativo
+    Archivos modificados:
+      * package.json - Eliminada dependencia 'firebase' npm (solo se usa via CDN)
+      * src/lib/types.ts - FirestoreTimestamp cambiado de import dinamico
+        de firebase/firestore a tipo nativo { seconds, nanoseconds } | null
+      * bun.lock - Actualizado
+    Commit: d0ba8e7
+
+  Resumen ETAPA 5:
+    - 3 commits: b87fe37, c0c2cf1, d0ba8e7
+    - 12 archivos modificados, 2 eliminados
+    - 10 dependencias eliminadas (9 npm packages + prisma movido a devDeps)
+    - Bundle inicial reducido: ~180KB gz (framer-motion 30KB + DashboardScreen/recharts 150KB)
+    - node_modules reducido: ~5MB+ (sharp 2.6MB + dnd-kit 50KB + react-table 40KB + etc)
+    - 15 imagenes con loading="lazy" agregado
+    - Build exitoso, 0 errores TypeScript
+    - Vercel deploy automatico
+
+  Estado del proyecto tras ETAPA 5:
+    - Todas las pantallas excepto ProjectsScreen son lazy-loaded
+    - framer-motion eliminado (reemplazado por CSS nativo)
+    - 0 dependencias muertas
+    - recharts solo se carga cuando se navega a Dashboard/Reports/Obra/Invoices/Budget
+    - jspdf/xlsx solo se cargan al exportar (ya configurado en ETAPA 3)
+
+  Proximos pasos recomendados:
+    - ETAPA 6: Documentacion y tipos finales
+    - Opcional: Migrar base64 a Firebase Storage URLs (reducir tamaño de DB)
+    - Opcional: Implementar next/image para URLs de Firestore/OneDrive
+
 2026-04-15 02:30 | ETAPA 4 - Separacion de useApp() en hooks de dominio
   Estado: COMPLETADA
   Objetivo: Eliminar el patron useApp() monolitico que causaba re-renders
