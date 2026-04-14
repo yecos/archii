@@ -129,7 +129,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('users').onSnapshot(snap => {
+    const unsub = db.collection('users').onSnapshot((snap: any) => {
       setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();

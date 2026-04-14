@@ -156,12 +156,14 @@ export interface DailyLog {
 
 export interface ProjectFile {
   id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  uploadedBy?: string;
-  createdAt: FirestoreTimestamp | null;
+  data: {
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    uploadedBy?: string;
+    createdAt: FirestoreTimestamp | null;
+  };
 }
 
 export interface OneDriveFile {

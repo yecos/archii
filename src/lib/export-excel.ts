@@ -7,8 +7,8 @@
 import * as XLSX from 'xlsx';
 
 function fmtCOPFull(n: number): string {
-  if (!n || n === 0) return 0;
-  return Number(n);
+  if (!n || n === 0) return '0';
+  return String(Number(n));
 }
 
 function fmtDurationMinutes(mins: number): string {

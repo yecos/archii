@@ -362,7 +362,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -372,7 +372,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -382,7 +382,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -393,10 +393,10 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsubs: any[] = [];
-    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {}));
-    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {}));
     return () => unsubs.forEach(u => u());
@@ -406,7 +406,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot(snap => {
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot((snap: any) => {
       setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => { unsub(); setWorkPhases([]); };
@@ -416,8 +416,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot(snap => {
-      setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
+      setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => { unsub(); setProjectFiles([]); };
   }, [ready, selectedProjectId]);
@@ -426,7 +426,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => { unsub(); setApprovals([]); };
@@ -436,7 +436,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot(snap => {
+    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: any) => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -446,7 +446,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -456,7 +456,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
       setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -466,7 +466,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot(snap => {
+    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: any) => {
       setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -476,7 +476,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
       setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -486,7 +486,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
       setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -496,7 +496,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
+    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: any) => {
       setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -506,7 +506,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
       setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -516,7 +516,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
+    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: any) => {
       setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
@@ -526,7 +526,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot((snap: any) => {
       setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => { unsub(); setDailyLogs([]); };

@@ -77,8 +77,8 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
     const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
     const tasks = snap.docs
       .map((d: any) => ({ id: d.id, ...d.data() }))
-      .filter(t => activeStatuses.includes(t.status))
-      .sort((a, b) => {
+      .filter((t: any) => activeStatuses.includes(t.status))
+      .sort((a: any, b: any) => {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;

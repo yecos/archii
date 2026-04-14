@@ -391,14 +391,14 @@ export default function ProjectDetailScreen() {
                   <div key={f.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all group">
                     <div className="flex items-start justify-between mb-2">
                       <div className="w-10 h-10 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center text-lg">
-                        {f.type?.startsWith('image/') ? '🖼️' : f.type === 'application/pdf' ? '📄' : f.type?.includes('video') ? '🎬' : '📎'}
+                        {f.data.type?.startsWith('image/') ? '🖼️' : f.data.type === 'application/pdf' ? '📄' : f.data.type?.includes('video') ? '🎬' : '📎'}
                       </div>
                       <button className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity" onClick={() => deleteFile(f)}>✕</button>
                     </div>
-                    <div className="text-sm font-medium truncate mb-0.5">{f.name}</div>
-                    <div className="text-[11px] text-[var(--af-text3)]">{fmtSize(f.size)}</div>
-                    {f.type?.startsWith('image/') && f.data && <div className="mt-2"><img src={f.data} alt={f.name} className="w-full h-24 object-cover rounded-lg border border-[var(--border)]" loading="lazy" /></div>}
-                    {f.data && <a href={f.data} download={f.name} className="text-[11px] text-[var(--af-accent)] mt-2 inline-block hover:underline">Descargar archivo</a>}
+                    <div className="text-sm font-medium truncate mb-0.5">{f.data.name}</div>
+                    <div className="text-[11px] text-[var(--af-text3)]">{fmtSize(f.data.size)}</div>
+                    {f.data.type?.startsWith('image/') && f.data.url && <div className="mt-2"><img src={f.data.url} alt={f.data.name} className="w-full h-24 object-cover rounded-lg border border-[var(--border)]" loading="lazy" /></div>}
+                    {f.data.url && <a href={f.data.url} download={f.data.name} className="text-[11px] text-[var(--af-accent)] mt-2 inline-block hover:underline">Descargar archivo</a>}
                   </div>
                 ))}
               </div>}
@@ -422,14 +422,14 @@ export default function ProjectDetailScreen() {
               <div className="relative pl-6">
                 <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--input)]" />
                 {workPhases.map(phase => {
-                  const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
+                  const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completada';
                   return (<div key={phase.id} className="relative mb-5">
                     <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
                     <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
                       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                         <div className="text-sm font-semibold">{phase.data.name}</div>
                         <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none cursor-pointer" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
-                          <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
+                          <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completada">Completada</option>
                         </select>
                       </div>
                       {phase.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{phase.data.description}</div>}
@@ -468,7 +468,7 @@ export default function ProjectDetailScreen() {
                           const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
                           const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
                           const color = ganttColors[idx % ganttColors.length];
-                          const isDone = phase.data.status === 'Completado';
+                          const isDone = phase.data.status === 'Completada';
                           const isActive = phase.data.status === 'En progreso';
                           return (
                             <div key={phase.id} className="flex items-center mb-1.5">
@@ -836,19 +836,19 @@ export default function ProjectDetailScreen() {
                 <div className="space-y-2">
                   {workPhases.map(ph => (
                     <div key={ph.id} className="flex items-center gap-3 py-1.5">
-                      <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+                      <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
                       <span className="text-sm flex-1">{ph.data.name}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completada' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
                     </div>
                   ))}
                 </div>
               </div>)}
               {/* Files gallery */}
-              {projectFiles.filter(f => f.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
+              {projectFiles.filter(f => f.data.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
                 <div className="text-[15px] font-semibold mb-3">Galería</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {projectFiles.filter(f => f.type?.startsWith('image/')).map(f => (
-                    <a key={f.id} href={f.data} download={f.name}><img src={f.data} alt={f.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" loading="lazy" /></a>
+                  {projectFiles.filter(f => f.data.type?.startsWith('image/')).map(f => (
+                    <a key={f.id} href={f.data.url} download={f.data.name}><img src={f.data.url} alt={f.data.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" loading="lazy" /></a>
                   ))}
                 </div>
               </div>)}
@@ -860,13 +860,13 @@ export default function ProjectDetailScreen() {
                   <div key={a.id} className="border border-[var(--border)] rounded-lg p-3 mb-2">
                     <div className="flex items-start justify-between mb-1">
                       <div className="text-sm font-semibold">{a.data.title}</div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${a.data.status === 'Aprobado' ? 'bg-emerald-500/10 text-emerald-400' : a.data.status === 'Rechazado' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>{a.data.status}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${a.data.status === 'Aprobada' ? 'bg-emerald-500/10 text-emerald-400' : a.data.status === 'Rechazada' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>{a.data.status}</span>
                     </div>
                     {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{a.data.description}</div>}
                     {a.data.status === 'Pendiente' && (
                       <div className="flex gap-2 mt-2">
-                        <button className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-emerald-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Aprobado')}>✓ Aprobar</button>
-                        <button className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-red-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Rechazado')}>✕ Rechazar</button>
+                        <button className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-emerald-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Aprobada')}>✓ Aprobar</button>
+                        <button className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-red-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Rechazada')}>✕ Rechazar</button>
                         <button className="ml-auto text-xs text-[var(--af-text3)] cursor-pointer hover:text-red-400" onClick={() => deleteApproval(a.id)}>Eliminar</button>
                       </div>
                     )}
