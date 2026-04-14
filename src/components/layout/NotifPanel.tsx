@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle } from 'lucide-react';
 
-export default function NotifPanel() {
+export default React.memo(function NotifPanel() {
   const {
     showNotifPanel, setShowNotifPanel, notifFilterCat, setNotifFilterCat,
     notifHistory, notifPrefs, toggleNotifPref, notifSound, setNotifSound,
@@ -160,4 +160,4 @@ export default function NotifPanel() {
       </div>
     </>
   );
-}
+});

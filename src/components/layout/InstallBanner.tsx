@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Home as HomeIcon, X } from 'lucide-react';
 
-export default function InstallBanner() {
+export default React.memo(function InstallBanner() {
   const { showInstallBanner, installPrompt, isStandalone, handleInstall, dismissInstallBanner } = useApp();
 
   if (!showInstallBanner || !installPrompt || isStandalone) return null;
@@ -34,4 +34,4 @@ export default function InstallBanner() {
       </div>
     </div>
   );
-}
+});

@@ -24,7 +24,7 @@ interface SidebarProps {
   isAdmin: boolean;
 }
 
-export default function Sidebar({
+export default React.memo(function Sidebar({
   screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed,
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
@@ -92,4 +92,4 @@ export default function Sidebar({
       </aside>
     </>
   );
-}
+});

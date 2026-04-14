@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { LayoutGrid, Folder, ClipboardList, MessageCircle, MoreHorizontal } from 'lucide-react';
 
-export default function BottomNav() {
+export default React.memo(function BottomNav() {
   const { screen, navigateTo, setSidebarOpen, sidebarOpen } = useApp();
 
   return (
@@ -26,4 +26,4 @@ export default function BottomNav() {
       })}
     </nav>
   );
-}
+});
