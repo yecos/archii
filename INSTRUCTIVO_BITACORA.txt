@@ -339,7 +339,7 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     - ProjectDetailScreen: d.photos/equipment/materials/activities ->
       d.photos!/d.equipment!/d.materials!/d.activities! (non-null assertion)
   Verificacion: npx tsc --noEmit confirma 0 errores nuevos introducidos
-  Commit: pendiente
+  Commit: 6a7f8a5
 
 --- FIN DE BITACORA (las nuevas entradas van ARRIBA de esta linea) --------
 ================================================================================
