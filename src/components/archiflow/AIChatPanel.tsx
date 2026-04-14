@@ -117,11 +117,14 @@ function useTypewriter(messages: Message[], setMessages: React.Dispatch<React.Se
     return () => { if (typingRef.current) clearTimeout(typingRef.current); };
   }, [pendingMsg?.id]);
 
-  // Scroll while typing
-  const scrollContainer = document.querySelector('[data-ai-messages]');
-  if (pendingMsg && scrollContainer) {
-    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-  }
+  // Scroll while typing (useEffect to avoid document access during SSR)
+  useEffect(() => {
+    if (!pendingMsg) return;
+    const scrollContainer = document.querySelector('[data-ai-messages]');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  }, [pendingMsg]);
 }
 
 /* ─── Typing Cursor Component ─── */
