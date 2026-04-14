@@ -221,6 +221,35 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 18:00 | ETAPA 2 - Descomponer FirestoreContext (paso 1: Gantt helpers)
+  Accion: Extraer logica no-reactiva de FirestoreContext a modulos utils
+  Tag de respaldo: backup-pre-bugfix-proyectos-auth-20260414 (reutilizado)
+  Motivo: FirestoreContext tiene 1,254 lineas — objetivo reducir a < 800
+
+  Paso 2.1 - Extraer Gantt helpers a modulo utilitario
+    Archivo creado: src/lib/gantt-helpers.ts (114 lineas)
+    Contenido:
+      * 4 constantes: GANTT_DAYS, GANTT_DAY_NAMES, GANTT_STATUS_CFG, GANTT_PRIO_CFG
+      * 10 funciones puras: getMonday, getGanttDays, getTaskBar, buildGanttRows,
+        findOverlaps, getProjectColor, getProjectColorLight, calcGanttDays, calcGanttOffset
+    Cambios en FirestoreContext.tsx:
+      * Import de _gantt desde @/lib/gantt-helpers
+      * 85 lineas de implementacion eliminadas
+      * Re-export via wrappers para mantener compatibilidad con consumers
+      * getGanttDays() adaptado para recibir weekOffset como parametro
+      * getProjectColor/getProjectColorLight adaptados para recibir projects
+    Estrategia: Re-export desde el context (los consumers NO necesitan cambios)
+    Commit: c4c1315
+
+  Estado de FirestoreContext: 1,254 -> 1,176 lineas (-78 netas)
+  Proximos pasos:
+    - Paso 2.2: Extraer InventoryContext (dominio mas auto-contenido, ~120 lineas)
+    - Paso 2.3: Extraer GalleryContext (~60 lineas)
+    - Paso 2.4: Extraer TimeTrackingContext (~50 lineas)
+    - Paso 2.5: Extraer CalendarContext + Meetings (~40 lineas)
+    - Paso 2.6: Extraer InvoiceContext (~40 lineas)
+    - Paso 2.7: Evaluar si Projects/Tasks/Expenses pueden separarse
+
 2026-04-14 17:00 | BUG FIX - Pantalla Proyectos rota + Login Google/Windows no funciona
   Categoria: Bug critico (2 bugs)
   Tag de respaldo: backup-pre-bugfix-proyectos-auth-20260414
