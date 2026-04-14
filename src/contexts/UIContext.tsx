@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { domToast } from '@/lib/toast-dom';
 import { useUIStore } from '@/stores/ui-store';
 import { SCREEN_TITLES } from '@/lib/types';
 
@@ -144,10 +145,17 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const closeModal = useCallback((n: string) => { setModals(p => ({ ...p, [n]: false })); setEditingId(null); }, []);
 
   const showToast = useCallback((msg: string, type = 'success') => {
-    const opts = { duration: 3500 };
-    if (type === 'error') toast.error(msg, opts);
-    else if (type === 'warning') toast.warning(msg, opts);
-    else toast.success(msg, opts);
+    // Intentar con sonner primero (Toaster puede no renderizar con React 19)
+    try {
+      const opts = { duration: 3500 };
+      if (type === 'error') toast.error(msg, opts);
+      else if (type === 'warning') toast.warning(msg, opts);
+      else toast.success(msg, opts);
+    } catch {
+      // Sonner falló — ignorar
+    }
+    // Siempre mostrar toast DOM como garantía (funciona siempre, sin depender de React)
+    domToast(msg, type as 'success' | 'error' | 'warning' | 'info', 4500);
   }, []);
 
   const handleInstall = useCallback(async () => {
