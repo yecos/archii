@@ -8,6 +8,7 @@
 import { getFirebase } from '@/lib/firebase-service';
 import { fileToBase64 } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
+import { confirm } from '@/hooks/useConfirmDialog';
 
 type ToastFn = (msg: string, type?: string) => void;
 
@@ -63,7 +64,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteProject(projectId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este proyecto y todos sus datos?')) return;
+  if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto y todos sus datos? Esta acción no se puede deshacer.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar proyecto', async () => {
     const db = getFirebase().firestore();
     // Delete subcollections
@@ -120,7 +121,7 @@ export async function toggleTask(taskId: string, currentStatus: string, showToas
 }
 
 export async function deleteTask(taskId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta tarea?')) return;
+  if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar esta tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar tarea', async () => {
     await getFirebase().firestore().collection('tasks').doc(taskId).delete();
     showToast('Tarea eliminada');
@@ -181,7 +182,7 @@ export function saveExpense(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteExpense(expenseId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este gasto?')) return;
+  if (!(await confirm({ title: 'Eliminar gasto', description: '¿Eliminar este gasto?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar gasto', async () => {
     await getFirebase().firestore().collection('expenses').doc(expenseId).delete();
     showToast('Gasto eliminado');
@@ -226,7 +227,7 @@ export function saveSupplier(data: Record<string, any>, editingId: string | null
 }
 
 export async function deleteSupplier(supplierId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este proveedor?')) return;
+  if (!(await confirm({ title: 'Eliminar proveedor', description: '¿Eliminar este proveedor?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar proveedor', async () => {
     await getFirebase().firestore().collection('suppliers').doc(supplierId).delete();
     showToast('Proveedor eliminado');
@@ -267,7 +268,7 @@ export function saveCompany(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteCompany(companyId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta empresa?')) return;
+  if (!(await confirm({ title: 'Eliminar empresa', description: '¿Eliminar esta empresa?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar empresa', async () => {
     await getFirebase().firestore().collection('companies').doc(companyId).delete();
     showToast('Empresa eliminada');
@@ -295,7 +296,7 @@ export async function uploadProjectFile(projectId: string, file: File, showToast
 }
 
 export async function deleteProjectFile(projectId: string, fileId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este archivo?')) return;
+  if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar este archivo del proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar archivo', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('files').doc(fileId).delete();
     showToast('Archivo eliminado');
@@ -377,7 +378,7 @@ export async function updateApproval(projectId: string, approvalId: string, stat
 }
 
 export async function deleteApproval(projectId: string, approvalId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta solicitud?')) return;
+  if (!(await confirm({ title: 'Eliminar solicitud', description: '¿Eliminar esta aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar aprobación', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(approvalId).delete();
     showToast('Solicitud eliminada');
@@ -423,7 +424,7 @@ export function saveMeeting(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta reunión?')) return;
+  if (!(await confirm({ title: 'Eliminar reunión', description: '¿Eliminar esta reunión?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar reunión', async () => {
     await getFirebase().firestore().collection('meetings').doc(meetingId).delete();
     showToast('Reunión eliminada');
@@ -449,7 +450,7 @@ export async function saveGalleryPhoto(data: Record<string, any>, showToast: Toa
 }
 
 export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta foto?')) return;
+  if (!(await confirm({ title: 'Eliminar foto', description: '¿Eliminar esta foto de la galería?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar foto', async () => {
     await getFirebase().firestore().collection('galleryPhotos').doc(photoId).delete();
     showToast('Foto eliminada');
@@ -498,7 +499,7 @@ export function saveInvProduct(data: Record<string, any>, editingId: string | nu
 }
 
 export async function deleteInvProduct(productId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este producto?')) return;
+  if (!(await confirm({ title: 'Eliminar producto', description: '¿Eliminar este producto del inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar producto', async () => {
     await getFirebase().firestore().collection('invProducts').doc(productId).delete();
     showToast('Producto eliminado');
@@ -529,7 +530,7 @@ export function saveInvCategory(data: Record<string, any>, editingId: string | n
 }
 
 export async function deleteInvCategory(catId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta categoría?')) return;
+  if (!(await confirm({ title: 'Eliminar categoría', description: '¿Eliminar esta categoría de inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar categoría', async () => {
     await getFirebase().firestore().collection('invCategories').doc(catId).delete();
     showToast('Categoría eliminada');
@@ -556,7 +557,7 @@ export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, a
 }
 
 export async function deleteInvMovement(movId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este movimiento?')) return;
+  if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar este registro de movimiento?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar movimiento', async () => {
     await getFirebase().firestore().collection('invMovements').doc(movId).delete();
     showToast('Movimiento eliminado');
@@ -584,7 +585,7 @@ export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, a
 }
 
 export async function deleteInvTransfer(transId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta transferencia?')) return;
+  if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar este registro de transferencia?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar transferencia', async () => {
     await getFirebase().firestore().collection('invTransfers').doc(transId).delete();
     showToast('Transferencia eliminada');
@@ -654,7 +655,7 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
 }
 
 export async function deleteTimeEntry(entryId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar este registro de tiempo?')) return;
+  if (!(await confirm({ title: 'Eliminar registro', description: '¿Eliminar este registro de tiempo?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar tiempo', async () => {
     await getFirebase().firestore().collection('timeEntries').doc(entryId).delete();
     showToast('Registro eliminado');
@@ -708,7 +709,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: string, sho
 }
 
 export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
-  if (!confirm('¿Eliminar esta factura?')) return;
+  if (!(await confirm({ title: 'Eliminar factura', description: '¿Eliminar esta factura?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
   return fbAction('eliminar factura', async () => {
     await getFirebase().firestore().collection('invoices').doc(invoiceId).delete();
     showToast('Factura eliminada');

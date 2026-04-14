@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { confirm } from '@/hooks/useConfirmDialog';
 import { useApp } from '@/contexts/AppContext';
 
 export default function InstallScreen() {
@@ -173,8 +174,8 @@ export default function InstallScreen() {
                   <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Mostrar prompt
                 </button>
-                <button className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400 cursor-pointer hover:bg-red-500/20 transition-colors flex items-center gap-2" onClick={() => {
-                  if (confirm('¿Borrar todo el caché offline? Esto recargará la app completamente.')) {
+                <button className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400 cursor-pointer hover:bg-red-500/20 transition-colors flex items-center gap-2" onClick={async () => {
+                  if (await confirm({ title: 'Borrar caché', description: '¿Borrar todo el caché offline? Esto recargará la app completamente.' })) {
                     if ('serviceWorker' in navigator) {
                       navigator.serviceWorker.controller?.postMessage({ type: 'CLEAR_CACHE' });
                     }

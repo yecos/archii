@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { confirm } from '@/hooks/useConfirmDialog';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 
@@ -317,7 +318,7 @@ export default function ProjectDetailScreen() {
                                       <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                         <button onClick={() => downloadOneDriveFile(f.id, f.name)} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-[var(--card)] cursor-pointer bg-transparent border-none">⬇️</button>
                                         <button onClick={() => { setOdRenaming(f.id); setOdRenameName(f.name); }} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-[var(--card)] cursor-pointer bg-transparent border-none">✏️</button>
-                                        <button onClick={() => { if (confirm('¿Eliminar archivo de OneDrive?')) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20">✕</button>
+                                        <button onClick={async () => { if (await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo de OneDrive?', confirmText: 'Eliminar', variant: 'destructive' })) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20">✕</button>
                                       </div>
                                     )}
                                   </div>
@@ -361,7 +362,7 @@ export default function ProjectDetailScreen() {
                                           <button onClick={() => { setOdRenaming(f.id); setOdRenameName(f.name); }} className="text-[10px] px-1 py-0.5 rounded hover:bg-[var(--af-bg4)] cursor-pointer bg-transparent border-none" title="Renombrar">✏️</button>
                                         </>
                                       )}
-                                      <button onClick={() => { if (confirm('¿Eliminar de OneDrive?')) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20" title="Eliminar">✕</button>
+                                      <button onClick={async () => { if (await confirm({ title: 'Eliminar archivo', description: '¿Eliminar de OneDrive?', confirmText: 'Eliminar', variant: 'destructive' })) { deleteFromOneDrive(f.id, odCurrentFolder); } }} className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer border-none hover:bg-red-500/20" title="Eliminar">✕</button>
                                     </div>
                                   </div>
                                 ))}
@@ -552,7 +553,7 @@ export default function ProjectDetailScreen() {
                                 <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent transition-colors" onClick={() => openEditLog(log)} title="Editar">
                                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent transition-colors" onClick={() => { if (confirm('¿Eliminar este registro de bitácora?')) deleteDailyLog(log.id); }} title="Eliminar">
+                                <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent transition-colors" onClick={async () => { if (await confirm({ title: 'Eliminar registro', description: '¿Eliminar este registro de bitácora?', confirmText: 'Eliminar', variant: 'destructive' })) deleteDailyLog(log.id); }} title="Eliminar">
                                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                                 </button>
                               </div>

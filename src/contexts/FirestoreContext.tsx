@@ -10,6 +10,7 @@ import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 import * as fbActions from '@/lib/firestore-actions';
+import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -600,7 +601,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
+  const deleteProject = async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
 
   const openEditProject = (p: Project) => {
     setEditingId(p.id);
@@ -659,7 +660,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteTask = async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // --- Expenses ---
   const saveExpense = async () => {
@@ -680,7 +681,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
-  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteExpense = async (id: string) => { if (!(await confirm({ title: 'Eliminar gasto', description: '¿Eliminar gasto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // --- Suppliers ---
   const saveSupplier = async () => {
@@ -695,7 +696,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
-  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteSupplier = async (id: string) => { if (!(await confirm({ title: 'Eliminar proveedor', description: '¿Eliminar proveedor?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // --- Companies ---
   const saveCompany = async () => {
@@ -726,7 +727,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   };
 
   const deleteFile = async (file: ProjectFile) => {
-    if (!confirm('¿Eliminar archivo?')) return;
+    if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete(); showToast('Archivo eliminado'); } catch { showToast('Error al eliminar', 'error'); }
   };
 
@@ -769,7 +770,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteApproval = async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // --- Daily Logs ---
   const saveDailyLog = async () => {
@@ -849,7 +850,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvProduct = async (id: string) => { if (!(await confirm({ title: 'Eliminar producto', description: '¿Eliminar este producto del inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const openEditInvProduct = (p: any) => {
     setEditingId(p.id);
@@ -873,7 +874,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvCategory = async (id: string) => { if (!(await confirm({ title: 'Eliminar categoría', description: '¿Eliminar categoría?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   const saveInvMovement = async () => {
@@ -899,7 +900,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error al registrar movimiento', 'error'); }
   };
 
-  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvMovement = async (id: string) => { if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar movimiento?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const saveInvTransfer = async () => {
     const productId = forms.invTrProduct || '';
@@ -923,7 +924,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error en transferencia', 'error'); }
   };
 
-  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvTransfer = async (id: string) => { if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar registro de transferencia?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const getInvCategoryName = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.name : 'Sin categoría'; };
   const getInvCategoryColor = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.color : '#6b7280'; };
@@ -942,7 +943,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
-  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteMeeting = async (id: string) => { if (!(await confirm({ title: 'Eliminar reunión', description: '¿Eliminar reunión?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
 
   // --- Gallery ---
@@ -959,7 +960,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     } catch { showToast('Error al guardar foto', 'error'); }
   };
 
-  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteGalleryPhoto = async (id: string) => { if (!(await confirm({ title: 'Eliminar foto', description: '¿Eliminar foto de la galería?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const handleGalleryImageSelect = async (e: any) => {
     const file = e.target?.files?.[0];

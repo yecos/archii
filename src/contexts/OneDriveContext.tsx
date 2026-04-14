@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import type { OneDriveFile } from '@/lib/types';
+import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== ONEDRIVE CONTEXT ===== */
 interface OneDriveContextType {
@@ -287,7 +288,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
   };
 
   const deleteFromOneDrive = async (fileId: string, folderId: string) => {
-    if (!confirm('¿Eliminar archivo de OneDrive?')) return;
+    if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo de OneDrive?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     setMsLoading(true);
     try {
       const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {

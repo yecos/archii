@@ -5,6 +5,7 @@ import { getFirebase } from '@/lib/firebase-service';
 import { ADMIN_EMAILS } from '@/lib/types';
 import type { TeamUser, Project, Task } from '@/lib/types';
 import { getInitials } from '@/lib/helpers';
+import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== AUTH CONTEXT ===== */
 interface AuthContextType {
@@ -22,7 +23,7 @@ interface AuthContextType {
   doRegister: () => Promise<void>;
   doGoogleLogin: () => Promise<void>;
   doMicrosoftLogin: () => Promise<void>;
-  doLogout: () => void;
+  doLogout: () => Promise<void>;
   getMyRole: () => string;
   getMyCompanyId: () => string | null;
   visibleProjects: (projects: Project[]) => Project[];
@@ -290,7 +291,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
+  const doLogout = async () => { if (!(await confirm({ title: 'Cerrar sesión', description: '¿Cerrar sesión de ArchiFlow?' }))) return; getFirebase().auth().signOut(); };
 
   const updateUserRole = async (uid: string, newRole: string) => {
     try {

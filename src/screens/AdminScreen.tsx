@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { confirm } from '@/hooks/useConfirmDialog';
 import { useApp } from '@/contexts/AppContext';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
@@ -354,7 +355,7 @@ export default function AdminScreen() {
                   {isAdminMember && !isSelf && (
                     <button
                       onClick={async () => {
-                        if (!confirm(`¿Eliminar a ${m.data?.name || m.data?.email}? Esta acción no se puede deshacer.`)) return;
+                        if (!(await confirm({ title: 'Eliminar usuario', description: '¿Eliminar a ' + (m.data?.name || m.data?.email) + '? Esta acción no se puede deshacer.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
                         try {
                           const db = getFirebase().firestore();
                           await db.collection('users').doc(m.id).delete();
