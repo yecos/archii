@@ -24,6 +24,7 @@ interface AuthContextType {
   doGoogleLogin: () => Promise<void>;
   doMicrosoftLogin: () => Promise<void>;
   doLogout: () => Promise<void>;
+  doPasswordReset: (email: string) => Promise<void>;
   getMyRole: () => string;
   getMyCompanyId: () => string | null;
   visibleProjects: (projects: Project[]) => Project[];
@@ -81,6 +82,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const fb = getFirebase();
     const auth = fb.auth();
 
+    // Set auth persistence to LOCAL (survives browser restart)
+    try {
+      const w = window as any;
+      if (w.firebase?.auth?.Auth?.Persistence?.LOCAL) {
+        auth.setPersistence(w.firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+      }
+    } catch (e) {
+      // Ignore persistence errors — default behavior is fine
+    }
+
     // Handle redirect results (for signInWithRedirect fallback)
     auth.getRedirectResult().then((result: any) => {
       if (result?.credential) {
@@ -123,6 +134,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           console.error('[ArchiFlow Auth] Error creando/cargando documento de usuario:', err);
         }
       }
+      setLoading(false);
+    }, (authErr: unknown) => {
+      // onAuthStateChanged error handler — ensure loading is always cleared
+      console.error('[ArchiFlow Auth] onAuthStateChanged error:', authErr);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -184,9 +199,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const doGoogleLogin = useCallback(async () => {
     try {
       const fb = getFirebase();
-      const provider = new (fb as any).auth.GoogleAuthProvider();
+      const authNS = (fb as any).auth;
+      const authInstance = fb.auth();
+      const provider = new authNS.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await fb.auth().signInWithPopup(provider);
+      const result = await authInstance.signInWithPopup(provider);
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
       if (e.code === 'auth/popup-closed-by-user') return;
@@ -202,9 +219,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
         try {
           const fb2 = getFirebase();
-          const provider2 = new (fb2 as any).auth.GoogleAuthProvider();
+          const authNS2 = (fb2 as any).auth;
+          const authInstance2 = fb2.auth();
+          const provider2 = new authNS2.GoogleAuthProvider();
           provider2.setCustomParameters({ prompt: 'select_account' });
-          await fb2.auth().signInWithRedirect(provider2);
+          await authInstance2.signInWithRedirect(provider2);
           return;
         } catch (redirectErr: any) {
           console.error('[ArchiFlow Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
@@ -217,41 +236,26 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const doMicrosoftLogin = useCallback(async () => {
     try {
       const fb = getFirebase();
-      const authNS = fb.auth;
+      const authNS = (fb as any).auth;
       const authInstance = fb.auth();
-      const provider = new (authNS as any).OAuthProvider('microsoft.com');
-      provider.addScope('Files.ReadWrite.All');
-      provider.addScope('Sites.ReadWrite.All');
-      provider.addScope('User.Read');
-      provider.setCustomParameters({ prompt: 'select_account' });
 
+      // First try with minimal scopes (User.Read only) to avoid consent screen issues
       let result: any;
       try {
+        const provider = new authNS.OAuthProvider('microsoft.com');
+        provider.addScope('User.Read');
+        provider.setCustomParameters({ prompt: 'select_account' });
         result = await authInstance.signInWithPopup(provider);
       } catch (popupErr: any) {
-        if (popupErr.code === 'auth/internal-error' || popupErr.code === 'auth/oauth_error') {
-          console.warn('[ArchiFlow Auth] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
-          const basicProvider = new (authNS as any).OAuthProvider('microsoft.com');
-          basicProvider.setCustomParameters({ prompt: 'select_account' });
-          try {
-            result = await authInstance.signInWithPopup(basicProvider);
-          } catch (basicErr: any) {
-            if (basicErr.code === 'auth/popup-blocked') {
-              const redirectProvider = new (authNS as any).OAuthProvider('microsoft.com');
-              redirectProvider.setCustomParameters({ prompt: 'select_account' });
-              await authInstance.signInWithRedirect(redirectProvider);
-              return;
-            }
-            throw basicErr;
-          }
-        } else if (popupErr.code === 'auth/popup-blocked') {
-          const redirectProvider = new (authNS as any).OAuthProvider('microsoft.com');
+        if (popupErr.code === 'auth/popup-blocked') {
+          // Fallback to redirect flow
+          const redirectProvider = new authNS.OAuthProvider('microsoft.com');
+          redirectProvider.addScope('User.Read');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);
           return;
-        } else {
-          throw popupErr;
         }
+        throw popupErr;
       }
 
       const credential = result.credential as any;
@@ -274,12 +278,33 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
         'auth/invalid-credential': 'Credenciales de Microsoft inválidas.',
-        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains. Agrega archii-theta.vercel.app.',
-        'auth/internal-error': 'Error de autenticación Microsoft. Verifica Azure Portal > API permissions.',
+        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains.',
+        'auth/internal-error': 'Error de autenticación Microsoft. Verifica que Microsoft esté habilitado en Firebase Console > Authentication > Sign-in method.',
+        'auth/oauth_error': 'Error de OAuth con Microsoft. Verifica Azure Portal > App registrations.',
         'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Google o Email). Intenta con ese método.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
       };
       showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
+    }
+  }, [showToast]);
+
+  const doPasswordReset = useCallback(async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Ingresa un correo electrónico válido', 'error');
+      return;
+    }
+    try {
+      await getFirebase().auth().sendPasswordResetEmail(email);
+      showToast('Se envió un correo para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.');
+    } catch (e: any) {
+      console.error('[ArchiFlow Auth] Password reset error:', e.code, e.message, e);
+      const msgs: Record<string, string> = {
+        'auth/user-not-found': 'No existe cuenta con ese correo.',
+        'auth/invalid-email': 'El formato del correo no es válido.',
+        'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+        'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+      };
+      showToast(msgs[e.code] || `Error al enviar correo: ${e.code || e.message || ''}`, 'error');
     }
   }, [showToast]);
 
@@ -338,12 +363,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     authUser, setAuthUser,
     loading, setLoading,
     teamUsers,
-    doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout,
+    doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout, doPasswordReset,
     getMyRole, getMyCompanyId, visibleProjects, getUserName,
     updateUserRole, updateUserCompany,
     userName, initials, myRole, isAdmin, isEmailAdmin, getUserRole,
     msAuthCallbackRef,
-  }), [ready, authUser, loading, teamUsers, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout, getMyRole, getMyCompanyId, visibleProjects, getUserName, updateUserRole, updateUserCompany, userName, initials, myRole, isAdmin, isEmailAdmin, getUserRole]);
+  }), [ready, authUser, loading, teamUsers, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout, doPasswordReset, getMyRole, getMyCompanyId, visibleProjects, getUserName, updateUserRole, updateUserCompany, userName, initials, myRole, isAdmin, isEmailAdmin, getUserRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

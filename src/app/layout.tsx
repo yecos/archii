@@ -77,7 +77,8 @@ export default function RootLayout({
                 projectId: "archiflow-c2855",
                 storageBucket: "archiflow-c2855.firebasestorage.app",
                 messagingSenderId: "247246043394",
-                appId: "1:247246043394:web:408e1365957eea4ee2aa1b"
+                appId: "1:247246043394:web:408e1365957eea4ee2aa1b",
+                measurementId: "G-9MHDE7DX1H"
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }

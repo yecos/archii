@@ -8,6 +8,7 @@ interface AuthScreenProps {
   doRegister: () => void;
   doGoogleLogin: () => void;
   doMicrosoftLogin: () => void;
+  doPasswordReset?: (email: string) => Promise<void>;
   showToast: (msg: string, type?: string) => void;
 }
 
@@ -143,11 +144,32 @@ function inputClasses(hasError: boolean) {
     : `${inputBase} border-[var(--input)] focus:border-[var(--af-accent)]`;
 }
 
-export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin }: AuthScreenProps) {
+export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset }: AuthScreenProps) {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
   const [authLoading, setAuthLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [fbKey, setFbKey] = useState(0);
   const fbStatus = useFirebaseStatus();
+
+  const retryFirebase = () => setFbKey(k => k + 1);
+
+  const handlePasswordReset = async () => {
+    if (!doPasswordReset) return;
+    if (!resetEmail || !EMAIL_REGEX.test(resetEmail)) {
+      setLoginErrors(prev => ({ ...prev, loginEmail: 'Ingresa un correo válido para restablecer' }));
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      await doPasswordReset(resetEmail);
+      setResetSent(true);
+    } finally {
+      setTimeout(() => setAuthLoading(false), 2000);
+    }
+  };
 
   const handleLoginClick = async () => {
     const errors = validateLoginForm(forms);
@@ -237,7 +259,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
         Firebase: {fbStatus.status === 'checking' ? '⏳ cargando...' : fbStatus.status === 'ok' ? '✅ OK' : `❌ ${fbStatus.detail}`}
       </div>
 
-      <div className="bg-[var(--card)] border border-[var(--input)] rounded-2xl p-8 w-full max-w-[400px]">
+      <div className="relative bg-[var(--card)] border border-[var(--input)] rounded-2xl p-8 w-full max-w-[400px]">
         <div className="flex items-center gap-3 mb-7">
           <div className="w-10 h-10 bg-[var(--af-accent)] rounded-lg flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -251,12 +273,15 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
             <div className="font-medium mb-1">Firebase no pudo cargar</div>
             <div className="text-xs opacity-80">{fbStatus.detail}</div>
             <div className="text-xs opacity-60 mt-1">Abre la consola del navegador (F12) para ver más detalles.</div>
+            <button className="mt-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded-lg text-xs text-red-300 cursor-pointer transition-colors" onClick={retryFirebase}>
+              Reintentar conexión
+            </button>
           </div>
         )}
 
         {/* Loading overlay */}
         {authLoading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 rounded-2xl">
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 rounded-2xl cursor-wait">
             <div className="w-6 h-6 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
@@ -305,7 +330,38 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
             <svg viewBox="0 0 21 21" className="w-[18px] h-[18px]"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
             Continuar con Microsoft
           </button>
-          <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿No tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, showRegister: true }))}>Regístrate</a></div>
+          {/* Forgot password */}
+          {showForgot ? (
+            <div className="mb-4 p-3 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)]">
+              {resetSent ? (
+                <div className="text-sm text-emerald-400">
+                  <div className="font-medium">Correo enviado</div>
+                  <div className="text-xs opacity-80 mt-1">Revisa tu bandeja de entrada y spam.</div>
+                  <button className="mt-2 text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => { setShowForgot(false); setResetSent(false); setResetEmail(''); }}>Volver al login</button>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm font-medium mb-2">Restablecer contraseña</div>
+                  <input
+                    className={`${inputBase} border-[var(--input)] focus:border-[var(--af-accent)] mb-2`}
+                    placeholder="tu@correo.com"
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                    disabled={authLoading}
+                  />
+                  <div className="flex gap-2">
+                    <button className="flex-1 px-3 py-1.5 bg-[var(--af-accent)] text-background rounded-lg text-xs font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={handlePasswordReset} disabled={authLoading}>Enviar enlace</button>
+                    <button className="px-3 py-1.5 bg-transparent text-[var(--muted-foreground)] rounded-lg text-xs cursor-pointer hover:text-[var(--foreground)] transition-colors border border-[var(--border)]" onClick={() => { setShowForgot(false); setResetEmail(''); setLoginErrors({}); }}>Cancelar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="text-center mt-4 text-xs text-[var(--af-text3)]">
+              <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setShowForgot(true)}>¿Olvidaste tu contraseña?</a>
+            </div>
+          )}
+          <div className="text-center mt-3 text-sm text-[var(--af-text3)]">¿No tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, showRegister: true }))}>Regístrate</a></div>
         </>) : (<>
           <div className="text-xl font-semibold mb-1">Crear cuenta</div>
           <div className="text-sm text-[var(--muted-foreground)] mb-7">Únete a tu equipo en ArchiFlow</div>

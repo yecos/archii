@@ -65,8 +65,8 @@ const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: 
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 
 function AppContent() {
-  const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, screenTitles } = useUI();
-  const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, userName, initials } = useAuth();
+  const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, screenTitles, showToast } = useUI();
+  const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset, userName, initials } = useAuth();
   const { projects, tasks, currentProject, pendingCount } = useFirestore();
   const { teamUsers, isAdmin, isEmailAdmin } = useAuth();
   const { galleryPhotos } = useGallery();
@@ -103,7 +103,8 @@ function AppContent() {
         doRegister={doRegister}
         doGoogleLogin={doGoogleLogin}
         doMicrosoftLogin={doMicrosoftLogin}
-        showToast={() => {}}
+        doPasswordReset={doPasswordReset}
+        showToast={showToast}
       />
     </>
   );
