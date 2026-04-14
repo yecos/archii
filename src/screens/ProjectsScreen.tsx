@@ -1,10 +1,12 @@
 'use client';
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { SkeletonProjects } from '@/components/ui/SkeletonLoaders';
 import { statusColor, fmtCOP } from '@/lib/helpers';
+import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
 export default function ProjectsScreen() {
   const { forms, setForms, setEditingId, openModal } = useUI();
@@ -22,7 +24,7 @@ export default function ProjectsScreen() {
           })}
         </div>
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('project'); }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proyecto
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nuevo proyecto
         </button>
       </div>
       {/* Company filter bar */}
@@ -44,11 +46,11 @@ export default function ProjectsScreen() {
         return projs.length === 0 ? (
           <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projs.map(p => {
               const d = p.data, prog = d.progress || 0;
               const compName = companies.find(c => c.id === d.companyId)?.data?.name;
-              return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
+              return (<StaggerItem key={p.id}><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
                 <div className="flex justify-between items-start mb-2.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -67,9 +69,9 @@ export default function ProjectsScreen() {
                   <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
                 </div>
                 <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-              </div>);
+              </div></StaggerItem>);
             })}
-          </div>
+          </StaggerContainer>
         );
       })()}
     </div>

@@ -1,32 +1,58 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import AIChatPanel from './AIChatPanel';
 import QuickActions from './QuickActions';
 import { useUIStore } from '@/stores/ui-store';
+import { Plus, HelpCircle } from 'lucide-react';
 
 export default function AIFloatingWrapper() {
   const [chatOpen, setChatOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isScrollHidden, setIsScrollHidden] = useState(false);
   const [tooltip, setTooltip] = useState(true);
   const currentScreen = useUIStore((s) => s.currentScreen);
+  const lastScrollY = useRef(0);
 
   // Hide FABs on chat screen to avoid overlapping the chat input bar
   const hideFABs = currentScreen === 'chat';
 
-  // Mostrar el botón después de un breve delay para que no moleste al cargar
+  // Show button after 2-second delay
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Ocultar tooltip después de 5 segundos
+  // Hide tooltip after 5 seconds
   useEffect(() => {
     const timer = setTimeout(() => setTooltip(false), 5000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Hide on scroll down, show on scroll up
+  useEffect(() => {
+    if (hideFABs) return;
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) return;
+
+    const handleScroll = () => {
+      const currentY = mainContent.scrollTop;
+      const diff = currentY - lastScrollY.current;
+
+      if (diff > 10 && currentY > 100) {
+        setIsScrollHidden(true);
+      } else if (diff < -5) {
+        setIsScrollHidden(false);
+      }
+
+      lastScrollY.current = currentY;
+    };
+
+    mainContent.addEventListener('scroll', handleScroll, { passive: true });
+    return () => mainContent.removeEventListener('scroll', handleScroll);
+  }, [hideFABs]);
 
   const handleChatOpen = () => {
     setChatOpen(true);
@@ -39,7 +65,7 @@ export default function AIFloatingWrapper() {
     setTooltip(false);
   };
 
-  if (!isVisible) return null;
+  const shouldShow = isVisible && !isScrollHidden;
 
   return (
     <>
@@ -58,7 +84,12 @@ export default function AIFloatingWrapper() {
 
       {/* Floating Buttons - hidden on chat screen, positioned higher on desktop */}
       {!hideFABs && (
-      <div className="fixed bottom-20 md:bottom-20 right-4 md:right-6 z-[90] flex flex-col items-end gap-3">
+      <div className={cn(
+        'fixed bottom-20 md:bottom-20 right-4 md:right-6 z-[90] flex flex-col items-end gap-3 transition-all duration-300',
+        shouldShow
+          ? 'translate-y-0 opacity-100'
+          : 'translate-y-4 opacity-0 pointer-events-none'
+      )}>
         {/* Tooltip */}
         {tooltip && !chatOpen && !quickOpen && (
           <div className="animate-slideUp mb-1 px-3 py-2 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] shadow-lg text-xs text-muted-foreground max-w-[200px]">
@@ -77,11 +108,9 @@ export default function AIFloatingWrapper() {
               : 'bg-[var(--af-bg3)] text-foreground border border-[var(--af-bg4)] hover:border-[var(--af-accent)]/30'
           )}
           title="Acciones rápidas"
+          aria-label="Acciones rápidas"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Plus className="w-5 h-5" />
         </button>
 
         {/* Main AI Chat Button (golden) */}
@@ -94,12 +123,9 @@ export default function AIFloatingWrapper() {
             chatOpen && 'scale-90 opacity-0 pointer-events-none'
           )}
           title="Abrir asistente IA"
+          aria-label="Abrir asistente IA"
         >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2Z" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <circle cx="12" cy="17" r="0.5" fill="currentColor" />
-          </svg>
+          <HelpCircle className="w-6 h-6" />
         </button>
       </div>
       )}

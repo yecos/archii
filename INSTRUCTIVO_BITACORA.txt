@@ -955,3 +955,87 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- FIN DE BITACORA (las nuevas entradas van ARRIBA de esta linea) --------
 ================================================================================
+
+2026-04-14 | ETAPA 7 - BLOQUE 3: UX PREMIUM VISUAL
+  Estado: COMPLETADA
+  Tag de respaldo: backup-pre-ux-premium-20260414
+  Objetivo: Implementar todas las mejoras visuales del Bloque 3 del instructivo
+    (transiciones premium, iconos consistentes, animaciones, accesibilidad)
+  Dependencia: framer-motion reinstalado (se habia eliminado en ETAPA 5)
+
+  U-01 - Reemplazar SVGs inline por Lucide React
+    11 archivos modificados, ~50+ SVGs reemplazados por iconos Lucide:
+    * ChatScreen.tsx - 14 SVGs (Search, ChevronLeft, X, Pause, Play,
+      Download, MoreVertical, Paperclip, Mic, Send)
+    * InstallScreen.tsx - 5 SVGs (Check, Download, Info, RefreshCw, Trash2)
+    * AdminScreen.tsx - 2 SVGs (Trash2, Shield)
+    * ProjectDetailScreen.tsx - 6 SVGs (Plus, Eye, Pencil, Trash2, ChevronLeft, X)
+    * SuppliersScreen.tsx - 1 SVG (Plus)
+    * GalleryScreen.tsx - 1 SVG (Plus)
+    * ProjectsScreen.tsx - 1 SVG (Plus)
+    * CompaniesScreen.tsx - 3 SVGs (Plus, Pencil, Trash2)
+    * InventoryScreen.tsx - 13 SVGs (Plus, Search, Pencil, Trash2)
+    * AIFloatingWrapper.tsx - 2 SVGs (Plus, HelpCircle)
+    * HomeContent.tsx - 1 SVG (X close notification)
+
+  U-02 - Toast Sonner: YA IMPLEMENTADO (ETAPA 1)
+  U-04 - Recharts: YA IMPLEMENTADO (5 pantallas)
+  U-05 - Modales Dialog/Drawer: YA IMPLEMENTADO (CenterModal + Vaul)
+  U-06 - Skeleton shimmer: YA IMPLEMENTADO (af-skeleton system)
+
+  U-03 - Transiciones de pagina con Framer Motion
+    * HomeContent.tsx - AnimatePresence + motion.div con exit animation
+    * Antes: CSS animate-fadeIn (sin exit)
+    * Ahora: initial opacity:0 y:8 -> animate opacity:1 y:0 -> exit opacity:0 y:-8
+
+  U-07 - Stagger animations en cards y listas
+    Archivo creado: src/components/ui/StaggerContainer.tsx
+    * StaggerContainer: wrapper con staggerChildren: 0.04
+    * StaggerItem: fade-in individual con y:12 -> y:0
+    * Aplicado en: ProjectsScreen, TasksScreen, SuppliersScreen
+
+  U-08 - Indicador de tab animado (underline deslizante)
+    Archivo creado: src/components/ui/AnimatedTabs.tsx
+    * motion.div con layoutId="tab-indicator" para sliding animation
+    * Spring animation con bounce: 0.15
+    * Aplicado en: AdminScreen (reemplazo de tabs manuales)
+
+  U-10 - Efecto typewriter para respuestas IA
+    Archivo creado: src/components/ui/TypewriterText.tsx
+    * Renderizado caracter por caracter con cursor parpadeante
+    * Props: text, speed (20ms default), className, onComplete
+
+  U-12 - Boton flotante IA ocultar al scroll down
+    * AIFloatingWrapper.tsx - Scroll listener en #main-content
+    * Hide: scroll down > 100px (translate-y-4 + opacity-0)
+    * Show: scroll up (transition-all duration-300)
+
+  U-14 - Accesibilidad WCAG 2.1 basica
+    * HomeContent.tsx - role="main" + aria-label en navegacion
+    * AIFloatingWrapper.tsx - aria-label en botones flotantes
+    * CalendarScreen.tsx - Fix boton "Hoy" duplicado eliminado
+
+  Archivos nuevos (3):
+    * src/components/ui/StaggerContainer.tsx
+    * src/components/ui/AnimatedTabs.tsx
+    * src/components/ui/TypewriterText.tsx
+
+  Archivos modificados (15):
+    * src/app/HomeContent.tsx
+    * src/components/archiflow/AIFloatingWrapper.tsx
+    * src/screens/ChatScreen.tsx
+    * src/screens/AdminScreen.tsx
+    * src/screens/CalendarScreen.tsx
+    * src/screens/CompaniesScreen.tsx
+    * src/screens/GalleryScreen.tsx
+    * src/screens/InstallScreen.tsx
+    * src/screens/InventoryScreen.tsx
+    * src/screens/ProjectDetailScreen.tsx
+    * src/screens/ProjectsScreen.tsx
+    * src/screens/SuppliersScreen.tsx
+    * src/screens/TasksScreen.tsx
+    * package.json (framer-motion reinstalado)
+    * package-lock.json
+
+  Verificacion: npx tsc --noEmit -> 0 errores TypeScript
+  Items del Bloque 3: 14 items, 8 implementados nuevos, 6 ya existentes

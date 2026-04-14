@@ -8,6 +8,7 @@ import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
+import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -310,13 +311,14 @@ export default function TasksScreen() {
             </div>
           </div>
         ) : (
-          ['Alta', 'Media', 'Baja'].map(prio => {
+          <StaggerContainer>
+          {['Alta', 'Media', 'Baja'].map(prio => {
             const group = filteredTasks.filter((t: any) => t.data.priority === prio);
             if (!group.length) return null;
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
             return (
-              <div key={prio} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
+              <StaggerItem key={prio}><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
                 <div className={`inline-flex items-center gap-1.5 text-xs font-semibold mb-3 px-2.5 py-1 rounded-lg ${prioColorBg}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${prioDot}`} />
                   Prioridad {prio}
@@ -356,9 +358,10 @@ export default function TasksScreen() {
                     </div>
                   );
                 })}
-              </div>
+              </div></StaggerItem>
             );
           })
+          }</StaggerContainer>
         )
       ) : (
         /* KANBAN VIEW */

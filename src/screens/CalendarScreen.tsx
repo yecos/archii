@@ -65,7 +65,6 @@ export default function CalendarScreen() {
               {/* Stats row */}
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{meetings.filter(m => m.data.date && m.data.date.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} este mes</span></div>
-                <button className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); setCalSelectedDate(today.toISOString().split('T')[0]); }}>Hoy</button>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="bg-red-500/10 rounded-lg p-2.5 text-center">

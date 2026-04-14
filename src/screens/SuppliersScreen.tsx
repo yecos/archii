@@ -1,9 +1,11 @@
 'use client';
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
+import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 
 export default function SuppliersScreen() {
   const ui = useUI();
@@ -15,7 +17,7 @@ export default function SuppliersScreen() {
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="text-sm text-[var(--muted-foreground)]">{fs.suppliers.length} proveedores</div>
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { ui.setEditingId(null); ui.openModal('supplier'); }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proveedor
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nuevo proveedor
         </button>
       </div>
       {auth.loading && (
@@ -26,9 +28,9 @@ export default function SuppliersScreen() {
       {!auth.loading && fs.suppliers.length === 0 ? (
         <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🏪</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proveedores</div><div className="text-[13px]">Agrega tu primer proveedor</div></div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {fs.suppliers.map(s => (
-            <div key={s.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
+            <StaggerItem key={s.id}><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
               <div className="flex items-start justify-between mb-2">
                 <div className="w-11 h-11 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg flex items-center justify-center text-lg">🏪</div>
                 <div className="flex gap-1.5">
@@ -45,9 +47,9 @@ export default function SuppliersScreen() {
                 {s.data.address && <div>📍 {s.data.address}</div>}
                 {s.data.website && <div>🌐 {s.data.website}</div>}
               </div>
-            </div>
+            </div></StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
     </div>
   );

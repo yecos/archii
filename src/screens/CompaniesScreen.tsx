@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -14,7 +15,7 @@ export default function CompaniesScreen() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="text-sm text-[var(--muted-foreground)]">{fs.companies.length} empresa{fs.companies.length !== 1 ? 's' : ''} registrada{fs.companies.length !== 1 ? 's' : ''}</div>
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, compName: '', compNit: '', compAddress: '', compPhone: '', compEmail: '', compLegal: '' })); ui.openModal('company'); }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva empresa
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nueva empresa
         </button>
       </div>
       {fs.companies.length === 0 ? (<div className="text-center py-16"><div className="text-4xl mb-3">🏢</div><div className="text-sm text-[var(--muted-foreground)]">No hay empresas registradas</div><div className="text-xs text-[var(--af-text3)] mt-1">Crea tu primera empresa para organizar proyectos</div></div>) : (
@@ -29,10 +30,10 @@ export default function CompaniesScreen() {
               </div>
               <div className="flex gap-1">
                 <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { ui.setEditingId(c.id); ui.setForms(p => ({ ...p, compName: c.data.name || '', compNit: c.data.nit || '', compAddress: c.data.address || '', compPhone: c.data.phone || '', compEmail: c.data.email || '', compLegal: c.data.legalName || '' })); ui.openModal('company'); }} title="Editar">
-                  <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <Pencil className="w-3 h-3" strokeWidth={2} />
                 </button>
                 <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={async () => { if (!(await confirm({ title: 'Eliminar empresa', description: '¿Eliminar esta empresa?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('companies').doc(c.id).delete(); ui.showToast('Empresa eliminada'); } catch (err) { console.error('[ArchiFlow]', err); ui.showToast('Error', 'error'); } }} title="Eliminar">
-                  <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  <Trash2 className="w-3 h-3" strokeWidth={2} />
                 </button>
               </div>
             </div>

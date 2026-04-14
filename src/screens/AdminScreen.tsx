@@ -7,6 +7,8 @@ import { useFirestore } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
+import { Trash2, Shield } from 'lucide-react';
+import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
 
 export default function AdminScreen() {
   const { showToast } = useUI();
@@ -33,12 +35,17 @@ export default function AdminScreen() {
 
       {isAdmin && (
         <div className="animate-fadeIn p-4 sm:p-6">
-          {/* Sub-tabs */}
-          <div className="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
-            {[{ id: 'timeline' as const, label: '📊 Timeline' }, { id: 'dashboard' as const, label: '📈 Dashboard' }, { id: 'permissions' as const, label: '🔐 Permisos' }, { id: 'team' as const, label: '👥 Equipo' }].map(tab => (
-              <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap cursor-pointer transition-all ${adminTab === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setAdminTab(tab.id)}>{tab.label}</button>
-            ))}
-          </div>
+          <AnimatedTabs
+            tabs={[
+              { id: 'timeline', label: '📊 Timeline' },
+              { id: 'dashboard', label: '📈 Dashboard' },
+              { id: 'permissions', label: '🔐 Permisos' },
+              { id: 'team', label: '👥 Equipo' },
+            ]}
+            activeTab={adminTab}
+            onTabChange={(id) => setAdminTab(id as any)}
+            className="mb-5 overflow-x-auto"
+          />
 
           {/* ===== TIMELINE TAB ===== */}
           {adminTab === 'timeline' && (() => {
@@ -369,12 +376,12 @@ export default function AdminScreen() {
                       className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
                       title="Eliminar del equipo"
                     >
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                   {isSelf && (
                     <div className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-[var(--card)] text-[var(--muted-foreground)] flex items-center justify-center" title="No puedes eliminarte a ti mismo">
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                      <Shield className="w-3.5 h-3.5" />
                     </div>
                   )}
                   <div className="flex items-center gap-3 mb-3">

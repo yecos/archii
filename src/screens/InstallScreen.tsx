@@ -2,6 +2,7 @@
 import React from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
+import { Check, Download, Info, RefreshCw, Trash2 } from 'lucide-react';
 
 export default function InstallScreen() {
   const ui = useUI();
@@ -16,7 +17,7 @@ export default function InstallScreen() {
             {isStandalone ? (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-emerald-400 fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <Check className="w-5 h-5 stroke-emerald-400" strokeWidth={2} />
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-emerald-400">App instalada correctamente</div>
@@ -26,7 +27,7 @@ export default function InstallScreen() {
             ) : installPrompt ? (
               <div className="bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/20 rounded-xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-[var(--af-accent)]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-[var(--af-accent)] fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <Download className="w-5 h-5 stroke-[var(--af-accent)]" strokeWidth={2} />
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-semibold">Listo para instalar</div>
@@ -39,7 +40,7 @@ export default function InstallScreen() {
             ) : (
               <div className="bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/20 rounded-xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-[var(--af-accent)]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-[var(--af-accent)] fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <Info className="w-5 h-5 stroke-[var(--af-accent)]" strokeWidth={2} />
                 </div>
                 <div>
                   <div className="text-sm font-semibold">Instalación manual</div>
@@ -162,7 +163,7 @@ export default function InstallScreen() {
                     });
                   }
                 }}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                  <RefreshCw className="w-4 h-4" />
                   Actualizar cache
                 </button>
                 <button className="px-4 py-2 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[13px] text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center gap-2" onClick={() => {
@@ -172,7 +173,7 @@ export default function InstallScreen() {
                   setShowInstallBanner(true);
                   showToast('Recordatorio de instalación restablecido');
                 }}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <Download className="w-4 h-4" />
                   Mostrar prompt
                 </button>
                 <button className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400 cursor-pointer hover:bg-red-500/20 transition-colors flex items-center gap-2" onClick={async () => {
@@ -185,7 +186,7 @@ export default function InstallScreen() {
                     setTimeout(() => window.location.reload(), 1000);
                   }
                 }}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  <Trash2 className="w-4 h-4" />
                   Borrar caché
                 </button>
               </div>

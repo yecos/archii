@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Plus, Eye, Pencil, Trash2, ChevronLeft, X } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
@@ -95,8 +96,8 @@ export default function ProjectDetailScreen() {
                     </div>
                   </div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                  <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => fs.openEditTask(t)}>✎</button>
-                  <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => fs.deleteTask(t.id)}>✕</button>
+                  <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => fs.openEditTask(t)}><Pencil className="w-3 h-3" /></button>
+                  <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => fs.deleteTask(t.id)}><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
             </div>)}

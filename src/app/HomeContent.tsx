@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -160,6 +161,7 @@ function AppContent() {
         galleryPhotos={galleryPhotos}
         invLowStock={invLowStock}
         isAdmin={isAdmin}
+        aria-label="Navegación principal"
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -192,7 +194,7 @@ function AppContent() {
                 <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-2 leading-snug">{n.body}</div>
               </div>
               <button className="w-5 h-5 flex items-center justify-center rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex-shrink-0 bg-transparent border-none cursor-pointer mt-0.5" onClick={(e) => { e.stopPropagation(); setInAppNotifs(prev => prev.filter(x => x.id !== n.id)); }}>
-                <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <X size={12} className="stroke-current" />
               </button>
             </div>
           ))}
@@ -203,10 +205,19 @@ function AppContent() {
         {/* Main content with screen rendering */}
         <main
           id="main-content"
+          role="main"
           className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}
           style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}
         >
-          <div key={screen} className="flex-1 flex flex-col min-h-0 animate-fadeIn">
+          <AnimatePresence mode="wait">
+          <motion.div
+            key={screen}
+            className="flex-1 flex flex-col min-h-0"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+          >
               {screen === 'dashboard' && <ErrorBoundary label="Dashboard"><DashboardScreen /></ErrorBoundary>}
               {screen === 'projects' && <ErrorBoundary label="Proyectos"><ProjectsScreen /></ErrorBoundary>}
               {screen === 'projectDetail' && <ErrorBoundary label="Detalle de Proyecto"><ProjectDetailScreen /></ErrorBoundary>}
@@ -228,7 +239,8 @@ function AppContent() {
               {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
               {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
               {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
-          </div>
+          </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

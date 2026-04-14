@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useUI } from '@/hooks/useDomain';
 import { useInventory } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
@@ -146,13 +147,13 @@ export default function InventoryScreen() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold">📦 Productos ({invProducts.length})</h3>
                 <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); const rf: Record<string,any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' }; INV_WAREHOUSES.forEach(w => { rf[`invProdWS_${w.replace(/\s/g,'_')}`] = '0'; }); setForms(p => ({ ...p, ...rf })); openModal('invProduct'); }}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <Plus className="w-4 h-4" strokeWidth={2} />
                   Nuevo producto
                 </button>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
                   <input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg pl-9 pr-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Buscar producto..." value={invSearch} onChange={e => setInvSearch(e.target.value)} />
                 </div>
                 <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invFilterCat} onChange={e => setInvFilterCat(e.target.value)}>
@@ -192,8 +193,8 @@ export default function InventoryScreen() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvProduct(p.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                            <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><Pencil className="w-3.5 h-3.5" /></button>
+                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvProduct(p.id)}><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                         {/* Per-warehouse stock breakdown */}
@@ -229,7 +230,7 @@ export default function InventoryScreen() {
             {invTab === 'categories' && (<div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">🏷️ Categorías ({invCategories.length})</h3>
-                <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2" onClick={() => { setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' })); openModal('invCategory'); }}><svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva categoría</button>
+                <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2" onClick={() => { setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' })); openModal('invCategory'); }}><Plus className="w-4 h-4" strokeWidth={2} />Nueva categoría</button>
               </div>
               {invCategories.length === 0 ? (<div className="text-center py-12"><div className="text-4xl mb-2">🏷️</div><div className="text-[var(--muted-foreground)]">No hay categorías</div></div>) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -243,8 +244,8 @@ export default function InventoryScreen() {
                             <div><div className="text-sm font-semibold">{c.data.name}</div><div className="text-xs text-[var(--muted-foreground)]">{count} producto{count !== 1 ? 's' : ''}</div>{c.data.description && <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{c.data.description}</div>}</div>
                           </div>
                           <div className="flex gap-1">
-                            <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvCategory(c)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvCategory(c.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                            <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvCategory(c)}><Pencil className="w-3.5 h-3.5" /></button>
+                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvCategory(c.id)}><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                       </div>
@@ -316,7 +317,7 @@ export default function InventoryScreen() {
             {invTab === 'movements' && (<div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold">📋 Movimientos ({invMovements.length})</h3>
-                <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-emerald-600 text-white border-none hover:bg-emerald-700 transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' })); openModal('invMovement'); }}><svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar movimiento</button>
+                <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-emerald-600 text-white border-none hover:bg-emerald-700 transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' })); openModal('invMovement'); }}><Plus className="w-4 h-4" strokeWidth={2} />Registrar movimiento</button>
               </div>
               <div className="flex gap-2">
                 <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invMovFilterType} onChange={e => setInvMovFilterType(e.target.value)}><option value="all">Todos</option><option value="Entrada">Entradas</option><option value="Salida">Salidas</option></select>
@@ -345,7 +346,7 @@ export default function InventoryScreen() {
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-right"><div className={`text-sm font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '+' : '-'}{m.data.quantity}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data.date || ''}</div></div>
-                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvMovement(m.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvMovement(m.id)}><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </div>
                     </div>
@@ -383,7 +384,7 @@ export default function InventoryScreen() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${t.data.status === 'Completada' ? 'bg-emerald-500/15 text-emerald-400' : t.data.status === 'En tránsito' ? 'bg-blue-500/15 text-blue-400' : t.data.status === 'Cancelada' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>{t.data.status}</span>
-                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvTransfer(t.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvTransfer(t.id)}><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </div>
                     </div>
