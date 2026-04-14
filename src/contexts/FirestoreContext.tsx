@@ -310,8 +310,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         showToast('Proyecto creado');
         if (msConnected && msAccessToken) {
           ensureProjectFolder(name).then(folderId => {
-            if (folderId) console.log('[ArchiFlow] Carpeta OneDrive creada para:', name);
-            else console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name);
+            if (!folderId) console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name);
           });
         }
       }

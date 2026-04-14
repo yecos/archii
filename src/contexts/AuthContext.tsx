@@ -84,7 +84,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // Handle redirect results (for signInWithRedirect fallback)
     auth.getRedirectResult().then((result: any) => {
       if (result?.credential) {
-        console.log('[ArchiFlow Auth] Redirect sign-in successful:', result.user?.email);
         // Handle Microsoft redirect tokens
         if (result.credential.accessToken) {
           if (msAuthCallbackRef.current) {
@@ -110,13 +109,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const ref = db.collection('users').doc(user.uid);
           const snap = await ref.get();
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
           if (!snap.exists) {
             await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: (fb as any).firestore.FieldValue.serverTimestamp() });
           } else if (isAdminEmail) {
             const current = snap.data()?.role;
             if (current !== 'Admin') {
-              console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
               await ref.update({ role: 'Admin' });
             }
           }
@@ -145,9 +142,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      console.log('[ArchiFlow Auth] Attempting email/password login for:', email);
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
-      console.log('[ArchiFlow Auth] Email/password login successful');
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Login error:', e.code, e.message, e);
       const msgs: Record<string, string> = {
@@ -166,12 +161,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      console.log('[ArchiFlow Auth] Attempting registration for:', email);
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
       await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() });
-      console.log('[ArchiFlow Auth] Registration successful for:', email);
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Register error:', e.code, e.message, e);
       const msgs: Record<string, string> = {
@@ -188,12 +181,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const doGoogleLogin = useCallback(async () => {
     try {
-      console.log('[ArchiFlow Auth] Attempting Google login...');
       const fb = getFirebase();
       const provider = new (fb as any).auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await fb.auth().signInWithPopup(provider);
-      console.log('[ArchiFlow Auth] Google login successful:', result.user?.email);
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
       if (e.code === 'auth/popup-closed-by-user') return;
@@ -207,7 +198,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
       };
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
-        console.log('[ArchiFlow Auth] Popup failed, trying redirect fallback for Google...');
         try {
           const fb2 = getFirebase();
           const provider2 = new (fb2 as any).auth.GoogleAuthProvider();
@@ -224,7 +214,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const doMicrosoftLogin = useCallback(async () => {
     try {
-      console.log('[ArchiFlow Auth] Attempting Microsoft login...');
       const fb = getFirebase();
       const authNS = fb.auth;
       const authInstance = fb.auth();
@@ -246,7 +235,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             result = await authInstance.signInWithPopup(basicProvider);
           } catch (basicErr: any) {
             if (basicErr.code === 'auth/popup-blocked') {
-              console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
               const redirectProvider = new (authNS as any).OAuthProvider('microsoft.com');
               redirectProvider.setCustomParameters({ prompt: 'select_account' });
               await authInstance.signInWithRedirect(redirectProvider);
@@ -255,7 +243,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             throw basicErr;
           }
         } else if (popupErr.code === 'auth/popup-blocked') {
-          console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
           const redirectProvider = new (authNS as any).OAuthProvider('microsoft.com');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);
@@ -265,7 +252,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
       }
 
-      console.log('[ArchiFlow Auth] Microsoft login successful');
       const credential = result.credential as any;
       if (credential?.accessToken) {
         // Use callback bridge for OneDriveContext

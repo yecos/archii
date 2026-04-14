@@ -139,7 +139,6 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         prevTransfersRef.current = invTransfers;
         prevProjectsRef.current = projects;
         firstLoadDoneRef.current = true;
-        console.log('[ArchiFlow] First load complete — notifications armed');
       }, 2000);
       return () => clearTimeout(timer);
     }
