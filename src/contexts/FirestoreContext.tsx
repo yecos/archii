@@ -4,7 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase } from '@/lib/firebase-service';
-import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, TimeEntry, Invoice, Comment } from '@/lib/types';
+import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, Comment } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
@@ -16,6 +16,7 @@ import InventoryProvider from './InventoryContext';
 import GalleryProvider from './GalleryContext';
 import TimeTrackingProvider from './TimeTrackingContext';
 import CalendarProvider from './CalendarContext';
+import InvoiceProvider from './InvoiceContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -36,18 +37,10 @@ interface FirestoreContextType {
   setProjectFiles: React.Dispatch<React.SetStateAction<ProjectFile[]>>;
   approvals: Approval[];
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
-  invoices: Invoice[];
-  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   dailyLogs: any[];
   setDailyLogs: React.Dispatch<React.SetStateAction<any[]>>;
-
-  // Domain UI state — Invoices
-  invoices2: Invoice[];
-  invoiceTab: string; setInvoiceTab: React.Dispatch<React.SetStateAction<string>>;
-  invoiceItems: any[]; setInvoiceItems: React.Dispatch<React.SetStateAction<any[]>>;
-  invoiceFilterStatus: string; setInvoiceFilterStatus: React.Dispatch<React.SetStateAction<string>>;
 
   // Domain UI state — Comments
   commentText: string; setCommentText: React.Dispatch<React.SetStateAction<string>>;
@@ -115,13 +108,6 @@ interface FirestoreContextType {
   openEditLog: (log: any) => void;
   resetLogForm: () => void;
 
-  // CRUD Functions — Invoices
-  openNewInvoice: () => void;
-  updateInvoiceItem: (idx: number, field: string, value: any) => void;
-  addInvoiceItem: () => void;
-  removeInvoiceItem: (idx: number) => void;
-  saveInvoice: () => void;
-
   // CRUD Functions — Comments
   postComment: (taskId: string, projectId: string) => void;
 
@@ -175,14 +161,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [dailyLogs, setDailyLogs] = useState<any[]>([]);
-
-  // ===== DOMAIN UI STATE — Invoices =====
-  const [invoiceTab, setInvoiceTab] = useState<string>('list');
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
 
   // ===== DOMAIN UI STATE — Comments =====
   const [commentText, setCommentText] = useState<string>('');
@@ -316,16 +296,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
-
-  // Load invoices
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
 
   // Load comments
   useEffect(() => {
@@ -614,30 +584,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     setLogForm({ date: new Date().toISOString().split('T')[0], weather: '', temperature: '', activities: [''], laborCount: '', equipment: [''], materials: [''], observations: '', photos: [], supervisor: '' });
   };
 
-  // --- Invoices ---
-  const openNewInvoice = () => {
-    setEditingId(null);
-    setInvoiceItems([{ concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
-    setForms(p => ({ ...p, invProject: '', invNumber: '', invStatus: 'Borrador', invTax: 19, invNotes: '', invIssueDate: new Date().toISOString().split('T')[0], invDueDate: '' }));
-    setInvoiceTab('create');
-  };
-
-  const updateInvoiceItem = (idx: number, field: string, value: any) => {
-    setInvoiceItems(prev => { const items = [...prev]; items[idx] = { ...items[idx], [field]: value }; if (field === 'hours' || field === 'rate') items[idx].amount = (Number(items[idx].hours) || 0) * (Number(items[idx].rate) || 0); return items; });
-  };
-
-  const addInvoiceItem = () => setInvoiceItems(prev => [...prev, { concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
-  const removeInvoiceItem = (idx: number) => { if (invoiceItems.length <= 1) return; setInvoiceItems(prev => prev.filter((_, i) => i !== idx)); };
-
-  const saveInvoice = () => {
-    if (!forms.invProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
-    const tax = Number(forms.invTax) || 19;
-    const total = subtotal + (subtotal * tax / 100);
-    fbActions.saveInvoice({ invProject: forms.invProject, invNumber: forms.invNumber || '', invStatus: forms.invStatus || 'Borrador', invItems: invoiceItems, invSubtotal: subtotal, invTax: tax, invTotal: total, invNotes: forms.invNotes || '', invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0], invDueDate: forms.invDueDate || '' }, editingId, showToast, authUser);
-    setInvoiceTab('list');
-  };
-
   // --- Comments ---
   const postComment = (taskId: string, projectId: string) => {
     if (!commentText.trim()) return;
@@ -680,10 +626,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals,
-    invoices, setInvoices,
     comments, setComments, dailyLogs, setDailyLogs,
-    // Invoices
-    invoices2: invoices, invoiceTab, setInvoiceTab, invoiceItems, setInvoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
     // Comments
     commentText, setCommentText, replyingTo, setReplyingTo,
     // Daily Logs
@@ -700,7 +643,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     initDefaultPhases, updatePhaseStatus,
     saveApproval, updateApproval, deleteApproval,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
-    openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
     postComment, updateUserName, fileToBase64,
     // Computed
     currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
@@ -714,7 +656,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {

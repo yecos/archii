@@ -7,6 +7,7 @@ import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useTimeTrackingContext } from '@/contexts/TimeTrackingContext';
 import { useCalendarContext } from '@/contexts/CalendarContext';
+import { useInvoiceContext } from '@/contexts/InvoiceContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -24,6 +25,7 @@ export function useApp() {
   const gal = useGalleryContext();
   const tt = useTimeTrackingContext();
   const cal = useCalendarContext();
+  const invCtx = useInvoiceContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -195,8 +197,6 @@ export function useApp() {
     setInvTransfers: inv.setInvTransfers,
     timeEntries: tt.timeEntries,
     setTimeEntries: tt.setTimeEntries,
-    invoices: fs.invoices,
-    setInvoices: fs.setInvoices,
     comments: fs.comments,
     setComments: fs.setComments,
     dailyLogs: fs.dailyLogs,
@@ -249,12 +249,14 @@ export function useApp() {
     setTimeTimerMs: tt.setTimeTimerMs,
 
     // Domain UI — Invoices
-    invoiceTab: fs.invoiceTab,
-    setInvoiceTab: fs.setInvoiceTab,
-    invoiceItems: fs.invoiceItems,
-    setInvoiceItems: fs.setInvoiceItems,
-    invoiceFilterStatus: fs.invoiceFilterStatus,
-    setInvoiceFilterStatus: fs.setInvoiceFilterStatus,
+    invoices: invCtx.invoices,
+    setInvoices: invCtx.setInvoices,
+    invoiceTab: invCtx.invoiceTab,
+    setInvoiceTab: invCtx.setInvoiceTab,
+    invoiceItems: invCtx.invoiceItems,
+    setInvoiceItems: invCtx.setInvoiceItems,
+    invoiceFilterStatus: invCtx.invoiceFilterStatus,
+    setInvoiceFilterStatus: invCtx.setInvoiceFilterStatus,
 
     // Domain UI — Comments
     commentText: fs.commentText,
@@ -350,11 +352,11 @@ export function useApp() {
     startTimeTracking: tt.startTimeTracking,
     stopTimeTracking: tt.stopTimeTracking,
     saveManualTimeEntry: tt.saveManualTimeEntry,
-    openNewInvoice: fs.openNewInvoice,
-    updateInvoiceItem: fs.updateInvoiceItem,
-    addInvoiceItem: fs.addInvoiceItem,
-    removeInvoiceItem: fs.removeInvoiceItem,
-    saveInvoice: fs.saveInvoice,
+    openNewInvoice: invCtx.openNewInvoice,
+    updateInvoiceItem: invCtx.updateInvoiceItem,
+    addInvoiceItem: invCtx.addInvoiceItem,
+    removeInvoiceItem: invCtx.removeInvoiceItem,
+    saveInvoice: invCtx.saveInvoice,
     postComment: fs.postComment,
     fileToBase64: fs.fileToBase64,
 
