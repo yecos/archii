@@ -1,18 +1,47 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Repeat } from 'lucide-react';
+import { generateRecurringDates } from '@/lib/recurrence';
+
+const RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'Ninguna' },
+  { value: 'daily', label: 'Diaria' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'biweekly', label: 'Quincenal' },
+  { value: 'monthly', label: 'Mensual' },
+  { value: 'yearly', label: 'Anual' },
+] as const;
+
+function formatPreviewDate(isoStr: string): string {
+  const parts = isoStr.split('-');
+  if (parts.length !== 3) return isoStr;
+  const day = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  return `${day} ${months[monthIdx]} ${parts[0]}`;
+}
 
 export default function MeetingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
   const auth = useAuth();
   const fs = useFirestore();
   const calendar = useCalendar();
+
+  const recurrence = ui.forms.meetRecurrence || 'none';
+  const meetDate = ui.forms.meetDate || '';
+  const recurrenceEnd = ui.forms.meetRecurrenceEnd || '';
+
+  // Generate preview of next 5 dates
+  const previewDates = useMemo(() => {
+    if (recurrence === 'none' || !meetDate) return [];
+    return generateRecurringDates(meetDate, recurrence as any, recurrenceEnd || undefined, 5);
+  }, [recurrence, meetDate, recurrenceEnd]);
 
   const toggleAttendee = (name: string) => {
     const current = (ui.forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -88,6 +117,52 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
             <option value="120">120 min</option>
           </FormSelect>
         </FormField>
+
+        {/* Recurrence Section */}
+        <div className="border border-[var(--border)] rounded-lg p-3 space-y-3">
+          <FormField label="Recurrencia">
+            <div className="flex items-center gap-2">
+              <Repeat size={14} className="text-[var(--muted-foreground)] flex-shrink-0" />
+              <FormSelect
+                value={recurrence}
+                onChange={(e) => ui.setForms(p => ({ ...p, meetRecurrence: e.target.value, meetRecurrenceEnd: '' }))}
+              >
+                {RECURRENCE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </FormSelect>
+            </div>
+          </FormField>
+
+          {recurrence !== 'none' && (
+            <FormField label="Hasta (opcional)">
+              <FormInput
+                type="date"
+                value={recurrenceEnd}
+                onChange={(e) => ui.setForms(p => ({ ...p, meetRecurrenceEnd: e.target.value }))}
+                placeholder="Sin límite"
+                min={meetDate}
+              />
+            </FormField>
+          )}
+
+          {/* Preview of next 5 occurrences */}
+          {previewDates.length > 0 && (
+            <div className="mt-1">
+              <div className="text-[10px] text-[var(--muted-foreground)] mb-1.5">Próximas ocurrencias:</div>
+              <div className="flex flex-wrap gap-1.5">
+                {previewDates.map((d, i) => (
+                  <span
+                    key={d}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20"
+                  >
+                    {formatPreviewDate(d)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <FormField label="Participantes">
           <FormInput

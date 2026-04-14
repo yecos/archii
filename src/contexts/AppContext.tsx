@@ -20,6 +20,7 @@ import AuthProvider from './AuthContext';
 import OneDriveProvider from './OneDriveContext';
 import FirestoreProvider from './FirestoreContext';
 import ChatProvider from './ChatContext';
+import NotifPreferencesProvider from './NotifPreferencesContext';
 import NotifProvider from './NotifContext';
 
 /**
@@ -31,7 +32,8 @@ import NotifProvider from './NotifContext';
  *       OneDriveProvider  (consumes UIContext, AuthContext)
  *         FirestoreProvider (consumes UIContext, AuthContext, OneDriveContext)
  *           ChatProvider    (consumes UIContext, AuthContext)
- *             NotifProvider (consumes UIContext, AuthContext, ChatContext, FirestoreContext)
+ *             NotifPreferencesProvider (consumes AuthContext — stores per-user prefs in Firestore)
+ *               NotifProvider (consumes UIContext, AuthContext, ChatContext, FirestoreContext, NotifPreferencesContext)
  */
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -40,9 +42,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         <OneDriveProvider>
           <FirestoreProvider>
             <ChatProvider>
-              <NotifProvider>
-                {children}
-              </NotifProvider>
+              <NotifPreferencesProvider>
+                <NotifProvider>
+                  {children}
+                </NotifProvider>
+              </NotifPreferencesProvider>
             </ChatProvider>
           </FirestoreProvider>
         </OneDriveProvider>

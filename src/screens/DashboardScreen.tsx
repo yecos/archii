@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
@@ -7,12 +7,13 @@ import { useTimeTracking } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { useNotif } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
+import AISuggestionsPanel from '@/components/archiflow/AISuggestionsPanel';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, AlertCircle, ChevronRight } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, AlertCircle, ChevronRight, Sparkles } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -42,6 +43,7 @@ export default function DashboardScreen() {
   const { invoices } = useInvoice();
   const { unreadCount, notifHistory } = useNotif();
   const { dailyLogs } = useComments();
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
 
   // Computed data
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
@@ -182,6 +184,13 @@ export default function DashboardScreen() {
           <span className="text-[11px] text-[var(--af-text3)]">Dashboard Premium</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20 cursor-pointer hover:bg-[var(--af-accent)]/20 transition-colors"
+            onClick={() => setSuggestionsOpen(true)}
+          >
+            <Sparkles size={13} />
+            <span>Sugerencias IA</span>
+          </button>
           <button className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
             try { exportGeneralReportPDF({ projects, tasks, expenses, invoices, teamUsers, timeEntries }); showToast('Reporte PDF descargado'); } catch { showToast('Error', 'error'); }
           }}>
@@ -194,6 +203,19 @@ export default function DashboardScreen() {
           </button>
         </div>
       </div>
+
+      {/* ─── AI Suggestions Panel ─── */}
+      <AISuggestionsPanel
+        isOpen={suggestionsOpen}
+        onClose={() => setSuggestionsOpen(false)}
+        onNavigate={(screen, projectId) => {
+          if (projectId) {
+            openProject(projectId);
+          } else {
+            navigateTo(screen);
+          }
+        }}
+      />
 
       {/* ─── Budget Alert Banner ─── */}
       {budgetAlerts.length > 0 && (

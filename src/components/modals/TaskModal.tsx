@@ -4,9 +4,11 @@ import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useChat } from '@/hooks/useDomain';
+import { useComments } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
-import { X, Users, Plus, Check, Square, Trash2 } from 'lucide-react';
+import TaskCommentsPanel from '@/components/features/TaskCommentsPanel';
+import { X, Users, Plus, Check, Square, Trash2, MessageSquare, ChevronDown } from 'lucide-react';
 import type { Subtask } from '@/lib/types';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -14,10 +16,12 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   const auth = useAuth();
   const fs = useFirestore();
   const chat = useChat();
+  const cmt = useComments();
 
   const assignees: string[] = Array.isArray(ui.forms.taskAssignees) ? ui.forms.taskAssignees : [];
   const subtasks: Subtask[] = Array.isArray(ui.forms.taskSubtasks) ? ui.forms.taskSubtasks : [];
   const [newSubtaskText, setNewSubtaskText] = useState('');
+  const [showComments, setShowComments] = useState(false);
 
   const completedCount = subtasks.filter(s => s.completed).length;
   const totalCount = subtasks.length;
@@ -71,7 +75,24 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={520}>
-      <h2 className="text-lg font-semibold mb-4">{ui.editingId ? 'Editar tarea' : 'Nueva tarea'}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">{ui.editingId ? 'Editar tarea' : 'Nueva tarea'}</h2>
+        {ui.editingId && (
+          <button
+            type="button"
+            onClick={() => setShowComments(!showComments)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] cursor-pointer transition-all ${
+              showComments
+                ? 'bg-[var(--af-accent)]/15 text-[var(--af-accent)] border border-[var(--af-accent)]/25'
+                : 'bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            <MessageSquare size={13} />
+            Comentarios
+            <ChevronDown size={13} className={`transition-transform ${showComments ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+      </div>
 
       <div className="space-y-3">
         <FormField label="Titulo" required>
@@ -276,6 +297,16 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           />
         </FormField>
       </div>
+
+      {/* Comments section — only when editing an existing task */}
+      {ui.editingId && showComments && (
+        <div className="mt-4 pt-4 border-t border-[var(--border)]">
+          <TaskCommentsPanel
+            taskId={ui.editingId}
+            projectId={ui.forms.taskProject || ''}
+          />
+        </div>
+      )}
 
       <ModalFooter
         onCancel={() => ui.closeModal('task')}

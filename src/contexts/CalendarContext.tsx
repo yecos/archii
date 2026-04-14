@@ -4,6 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
+import { expandMeetingForMonth } from '@/lib/recurrence';
 
 /* ===== CALENDAR + MEETINGS CONTEXT ===== */
 interface CalendarContextType {
@@ -15,6 +16,8 @@ interface CalendarContextType {
   // Meetings collection
   meetings: any[];
   setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
+  // Expanded meetings for the currently viewed month (includes recurring occurrences)
+  expandedMeetings: Array<{ date: string; meeting: any; isRecurring: boolean }>;
   // CRUD
   saveMeeting: () => Promise<void>;
   deleteMeeting: (id: string) => Promise<void>;
@@ -48,6 +51,16 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     return () => unsub();
   }, [ready, authUser]);
 
+  // ===== COMPUTED: Expanded meetings for current month =====
+  const expandedMeetings = useMemo(() => {
+    const results: Array<{ date: string; meeting: any; isRecurring: boolean }> = [];
+    for (const m of meetings) {
+      const expanded = expandMeetingForMonth(m as { id: string; data: Record<string, any> }, calYear, calMonth);
+      results.push(...expanded.map(e => ({ date: e.date, meeting: e.meeting, isRecurring: e.isRecurring })));
+    }
+    return results;
+  }, [meetings, calYear, calMonth]);
+
   // ===== CRUD FUNCTIONS =====
 
   const saveMeeting = async () => {
@@ -56,10 +69,28 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     try {
       const db = getFirebase().firestore();
       const ts = serverTimestamp();
-      const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
+      const recurrence = forms.meetRecurrence || 'none';
+      const recurrenceEnd = recurrence !== 'none' && forms.meetRecurrenceEnd ? forms.meetRecurrenceEnd : null;
+      const data: Record<string, any> = {
+        title,
+        description: forms.meetDesc || '',
+        projectId: forms.meetProject || '',
+        date: forms.meetDate || '',
+        time: forms.meetTime || '09:00',
+        duration: Number(forms.meetDuration) || 60,
+        attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        createdAt: ts,
+        createdBy: authUser?.uid,
+      };
+      if (recurrence && recurrence !== 'none') {
+        data.recurrence = recurrence;
+      }
+      if (recurrenceEnd) {
+        data.recurrenceEnd = recurrenceEnd;
+      }
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
-      closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
+      closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurrence: 'none', meetRecurrenceEnd: '' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
@@ -70,7 +101,18 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
 
   const openEditMeeting = (m: any) => {
     setEditingId(m.id);
-    setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') }));
+    setForms(f => ({
+      ...f,
+      meetTitle: m.data.title,
+      meetProject: m.data.projectId || '',
+      meetDate: m.data.date || '',
+      meetTime: m.data.time || '09:00',
+      meetDuration: String(m.data.duration || 60),
+      meetDesc: m.data.description || '',
+      meetAttendees: (m.data.attendees || []).join(', '),
+      meetRecurrence: m.data.recurrence || 'none',
+      meetRecurrenceEnd: m.data.recurrenceEnd || '',
+    }));
     openModal('meeting');
   };
 
@@ -80,8 +122,9 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     calMonth, setCalMonth, calYear, setCalYear,
     calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
     meetings, setMeetings,
+    expandedMeetings,
     saveMeeting, deleteMeeting, openEditMeeting,
-  }), [calMonth, calYear, calSelectedDate, calFilterProject, meetings, saveMeeting, deleteMeeting, openEditMeeting]);
+  }), [calMonth, calYear, calSelectedDate, calFilterProject, meetings, expandedMeetings, saveMeeting, deleteMeeting, openEditMeeting]);
 
   return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>;
 }

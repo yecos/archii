@@ -272,6 +272,8 @@ export interface Company {
   };
 }
 
+export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
 export interface Meeting {
   id: string;
   data: {
@@ -286,6 +288,8 @@ export interface Meeting {
     createdBy?: string;
     createdAt: FirestoreTimestamp | null;
     createdByUid?: string;
+    recurrence?: RecurrencePattern;
+    recurrenceEnd?: string; // ISO date string — when recurrence stops
   };
 }
 
@@ -390,6 +394,66 @@ export interface TimeSession {
   phaseName: string;
   isRunning: boolean;
 }
+
+/* ===== NOTIFICATION EVENT TYPES ===== */
+
+/** Granular notification event categories for per-event preference control. */
+export type NotifEventType =
+  | 'task_assigned'    // Nueva tarea asignada
+  | 'task_due_soon'    // Tarea próxima a vencer
+  | 'task_completed'   // Tarea completada
+  | 'expense_added'    // Nuevo gasto registrado
+  | 'budget_alert'     // Alerta de presupuesto
+  | 'chat_message'     // Nuevo mensaje en chat
+  | 'meeting_reminder' // Recordatorio de reunión
+  | 'phase_change'     // Cambio de fase de proyecto
+  | 'comment_mention'  // Mención en comentario
+  | 'inventory_alert'; // Alerta de inventario (stock bajo)
+
+/** Per-user notification preferences — true = enabled, false = disabled. */
+export type NotifPreferences = { [K in NotifEventType]: boolean };
+
+/** Default: all notification channels enabled. */
+export const DEFAULT_NOTIF_PREFERENCES: NotifPreferences = {
+  task_assigned: true,
+  task_due_soon: true,
+  task_completed: true,
+  expense_added: true,
+  budget_alert: true,
+  chat_message: true,
+  meeting_reminder: true,
+  phase_change: true,
+  comment_mention: true,
+  inventory_alert: true,
+};
+
+/** Metadata for each notification event type (labels, descriptions, icons, categories). */
+export const NOTIF_EVENT_CONFIG: Record<NotifEventType, { label: string; description: string; icon: string; category: string }> = {
+  task_assigned:    { label: 'Tarea asignada',       description: 'Cuando te asignan una nueva tarea',                    icon: '📋', category: 'tasks' },
+  task_due_soon:    { label: 'Tarea por vencer',     description: 'Recordatorio de tareas próximas a vencer o vencidas',   icon: '⏰', category: 'tasks' },
+  task_completed:   { label: 'Tarea completada',     description: 'Cuando se completa una tarea asignada a ti',            icon: '✅', category: 'tasks' },
+  expense_added:    { label: 'Nuevo gasto',          description: 'Cuando se registra un gasto en tus proyectos',           icon: '💰', category: 'budget' },
+  budget_alert:     { label: 'Alerta de presupuesto',description: 'Cuando un proyecto alcanza un umbral de presupuesto',   icon: '🚨', category: 'budget' },
+  chat_message:     { label: 'Mensajes de chat',     description: 'Nuevos mensajes en chat general o de proyecto',          icon: '💬', category: 'chat' },
+  meeting_reminder: { label: 'Reuniones',            description: 'Nuevas reuniones programadas y recordatorios',           icon: '📅', category: 'meetings' },
+  phase_change:     { label: 'Cambios de proyecto',  description: 'Cambios de estado en tus proyectos',                    icon: '📁', category: 'projects' },
+  comment_mention:  { label: 'Menciones',            description: 'Cuando alguien te menciona en un comentario',            icon: '💬', category: 'comments' },
+  inventory_alert:  { label: 'Alertas de inventario',description: 'Stock bajo, entradas, salidas y transferencias',         icon: '📦', category: 'inventory' },
+};
+
+/** All NotifEventType values as a const array for iteration. */
+export const NOTIF_EVENT_TYPES: readonly NotifEventType[] = [
+  'task_assigned',
+  'task_due_soon',
+  'task_completed',
+  'expense_added',
+  'budget_alert',
+  'chat_message',
+  'meeting_reminder',
+  'phase_change',
+  'comment_mention',
+  'inventory_alert',
+];
 
 /* ===== CONSTANTES ===== */
 

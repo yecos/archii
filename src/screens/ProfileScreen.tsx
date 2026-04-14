@@ -4,14 +4,17 @@ import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useOneDrive } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
+import { useNotifPreferences } from '@/hooks/useDomain';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
+import { ROLE_COLORS, ROLE_ICONS, NOTIF_EVENT_TYPES, NOTIF_EVENT_CONFIG } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
 
 export default function ProfileScreen() {
   const auth = useAuth();
   const fs = useFirestore();
   const od = useOneDrive();
   const cal = useCalendar();
+  const notifPrefs = useNotifPreferences();
 
   return (
 (() => {
@@ -175,6 +178,58 @@ export default function ProfileScreen() {
                   </div>
                 );
               })()}
+
+              {/* Configuración de notificaciones por evento */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="text-base">⚙️</div>
+                    <div className="text-[13px] sm:text-[15px] font-semibold">Configurar Notificaciones</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] sm:text-[11px] text-[var(--muted-foreground)]">
+                      {NOTIF_EVENT_TYPES.filter(e => notifPrefs.preferences[e]).length}/{NOTIF_EVENT_TYPES.length} activas
+                    </span>
+                    <button
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] transition-colors"
+                      onClick={notifPrefs.resetDefaults}
+                    >
+                      Restablecer
+                    </button>
+                  </div>
+                </div>
+                {notifPrefs.loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-5 h-5 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {NOTIF_EVENT_TYPES.map(eventType => {
+                      const config = NOTIF_EVENT_CONFIG[eventType];
+                      const enabled = notifPrefs.preferences[eventType];
+                      return (
+                        <div
+                          key={eventType}
+                          className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="text-base flex-shrink-0 w-6 text-center">{config.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] sm:text-[13px] font-medium leading-tight">{config.label}</div>
+                              <div className="text-[10px] sm:text-[11px] text-[var(--muted-foreground)] leading-tight mt-0.5">{config.description}</div>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={enabled}
+                            onCheckedChange={(checked) => notifPrefs.updatePreference(eventType, checked)}
+                            className="flex-shrink-0 data-[state=checked]:bg-[var(--af-accent)]"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* Charts row - stacked on mobile, 3-col on desktop */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">

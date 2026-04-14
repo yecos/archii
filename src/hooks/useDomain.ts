@@ -38,3 +38,6 @@ export { useCommentsContext as useComments } from '@/contexts/CommentsContext';
 
 // Notifications domain
 export { useNotifContext as useNotif } from '@/contexts/NotifContext';
+
+// Notification Preferences domain
+export { useNotifPreferencesContext as useNotifPreferences } from '@/contexts/NotifPreferencesContext';

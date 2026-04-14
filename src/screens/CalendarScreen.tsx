@@ -6,6 +6,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
+import { Repeat } from 'lucide-react';
 
 export default function CalendarScreen() {
   const { openModal, setEditingId, setForms } = useUI();
@@ -14,7 +15,7 @@ export default function CalendarScreen() {
   const {
     calFilterProject, calMonth, calSelectedDate, calYear,
     setCalFilterProject, setCalMonth, setCalSelectedDate, setCalYear,
-    meetings, deleteMeeting, openEditMeeting,
+    meetings, expandedMeetings, deleteMeeting, openEditMeeting,
   } = useCalendar();
 
   return (
@@ -31,7 +32,12 @@ export default function CalendarScreen() {
               const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               return calTasks.filter(t => t.data.dueDate === dateStr);
             };
+            const getExpandedMeetingsForDay = (day: number) => {
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return expandedMeetings.filter(e => e.date === dateStr);
+            };
             const selectedDayTasks = calSelectedDate ? calTasks.filter(t => t.data.dueDate === calSelectedDate) : [];
+            const selectedDayMeetings = calSelectedDate ? expandedMeetings.filter(e => e.date === calSelectedDate) : [];
             const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else { setCalMonth(m => m - 1); } setCalSelectedDate(null); };
             const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else { setCalMonth(m => m + 1); } setCalSelectedDate(null); };
 
@@ -64,7 +70,7 @@ export default function CalendarScreen() {
 
               {/* Stats row */}
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{meetings.filter(m => m.data.date && m.data.date.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} este mes</span></div>
+                <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurrence: 'none', meetRecurrenceEnd: '' })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{expandedMeetings.length} este mes</span></div>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="bg-red-500/10 rounded-lg p-2.5 text-center">
@@ -97,6 +103,7 @@ export default function CalendarScreen() {
                     const isToday = day === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
                     const isSelected = calSelectedDate === dateStr;
                     const dayTasks = getTasksForDay(day);
+                    const dayMeetings = getExpandedMeetingsForDay(day);
                     const isPast = new Date(dateStr) < new Date(today.toISOString().split('T')[0]);
                     return (
                       <div key={day} className={`min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] p-1 sm:p-1.5 cursor-pointer transition-colors ${isSelected ? 'bg-[var(--af-accent)]/10' : 'hover:bg-[var(--af-bg3)]'} ${isPast && !isToday ? 'opacity-70' : ''}`} onClick={() => setCalSelectedDate(dateStr)}>
@@ -114,7 +121,8 @@ export default function CalendarScreen() {
                             );
                           })}
                           {dayTasks.length > 3 && <div className="text-[8px] text-[var(--muted-foreground)] pl-1">+{dayTasks.length - 3} más</div>}
-                          {meetings.filter(m => m.data.date === dateStr).map(m => <div key={m.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📅 ${m.data.title} (${m.data.time})`}>📅 {m.data.time}</div>)}
+                          {dayMeetings.slice(0, 2).map((e, i) => <div key={`${e.meeting.id}-${e.date}-${i}`} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400 flex items-center gap-0.5" title={`📅 ${e.meeting.data.title} (${e.meeting.data.time})`}>{e.isRecurring ? <Repeat size={8} className="flex-shrink-0" /> : '📅'} {e.meeting.data.time}</div>)}
+                          {dayMeetings.length > 2 && <div className="text-[8px] text-[var(--muted-foreground)] pl-1">+{dayMeetings.length - 2} más</div>}
                         </div>
                       </div>
                     );
@@ -162,21 +170,24 @@ export default function CalendarScreen() {
 
                   {/* Reuniones del día seleccionado */}
                   {(() => {
-                    const dayMeetings = meetings.filter(m => m.data.date === calSelectedDate);
-                    if (dayMeetings.length === 0) return null;
+                    if (selectedDayMeetings.length === 0) return null;
                     return (
                       <div className="mt-3 pt-3 border-t border-[var(--border)]">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="text-[12px] font-semibold text-purple-400">📅 Reuniones ({dayMeetings.length})</div>
-                          <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Nueva</button>
+                          <div className="text-[12px] font-semibold text-purple-400">📅 Reuniones ({selectedDayMeetings.length})</div>
+                          <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurrence: 'none', meetRecurrenceEnd: '' })); openModal('meeting'); }}>+ Nueva</button>
                         </div>
                         <div className="space-y-2">
-                          {dayMeetings.sort((a, b) => (a.data.time || '').localeCompare(b.data.time || '')).map(m => {
+                          {selectedDayMeetings.sort((a, b) => (a.meeting.data.time || '').localeCompare(b.meeting.data.time || '')).map((e, i) => {
+                            const m = e.meeting;
                             const meetProj = projects.find(p => p.id === m.data.projectId);
                             return (
-                              <div key={m.id} className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5">
+                              <div key={`${m.id}-${e.date}-${i}`} className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5">
                                 <div className="flex items-start justify-between gap-2 mb-1">
-                                  <div className="text-[13px] font-medium">{m.data.title}</div>
+                                  <div className="text-[13px] font-medium flex items-center gap-1.5">
+                                    {e.isRecurring && <Repeat size={13} className="text-purple-400/70 flex-shrink-0" />}
+                                    {m.data.title}
+                                  </div>
                                   <div className="flex gap-1 flex-shrink-0">
                                     <button className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)]" onClick={() => openEditMeeting(m)}>✏️</button>
                                     <button className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteMeeting(m.id)}>✕</button>

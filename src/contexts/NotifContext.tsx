@@ -8,6 +8,8 @@ import { useCalendarContext } from './CalendarContext';
 import { useInventoryContext } from './InventoryContext';
 import { fmtDate } from '@/lib/helpers';
 import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts';
+import { useNotifPreferencesContext } from './NotifPreferencesContext';
+import type { NotifEventType } from '@/lib/types';
 
 /* ===== NOTIFICATION CONTEXT ===== */
 interface NotifContextType {
@@ -59,6 +61,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   } = useFirestoreContext();
   const { meetings } = useCalendarContext();
   const { invMovements, invTransfers, invProducts } = useInventoryContext();
+  const { isEventEnabled } = useNotifPreferencesContext();
 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
@@ -167,7 +170,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         const msgType = lastMsg.type || 'TEXT';
         const typeLabel = msgType === 'AUDIO' ? '🎤 Nota de voz' : msgType === 'IMAGE' ? '🖼️ Imagen' : msgType === 'FILE' ? '📎 Archivo' : '';
         const bodyText = lastMsg.text?.substring(0, 120) || (msgType === 'AUDIO' ? '🎵 Nota de voz' : msgType === 'IMAGE' ? '📷 Foto' : msgType === 'FILE' ? `📎 ${lastMsg.fileName || 'Archivo'}` : '');
-        sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId });
+        sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId, eventType: 'chat_message' });
       }
     }
     prevMessagesRef.current = messages;
@@ -187,13 +190,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       newTasks.forEach(t => {
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif('📋 Nueva tarea asignada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id });
+          sendBrowserNotif('📋 Nueva tarea asignada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: 'task_assigned' });
         }
       });
       changedTasks.forEach(t => {
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif(t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''} · ${t.data.status}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id });
+          sendBrowserNotif(t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''} · ${t.data.status}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: t.data.status === 'Completado' ? 'task_completed' as NotifEventType : 'task_assigned' as NotifEventType });
         }
       });
     }
@@ -209,7 +212,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (newMeetings.length > 0 && notifPrefs.meetings) {
       newMeetings.forEach(m => {
         const proj = projects.find(p => p.id === m.data.projectId);
-        sendBrowserNotif('📅 Nueva reunión programada', `"${m.data.title}"${m.data.time ? ` a las ${m.data.time}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `meeting-${m.id}`, { type: 'meeting', screen: 'calendar', itemId: m.id });
+        sendBrowserNotif('📅 Nueva reunión programada', `"${m.data.title}"${m.data.time ? ` a las ${m.data.time}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `meeting-${m.id}`, { type: 'meeting', screen: 'calendar', itemId: m.id, eventType: 'meeting_reminder' });
       });
     }
     prevMeetingsRef.current = meetings;
@@ -245,11 +248,11 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     const newMovs = invMovements.filter(m => !prevMov.find(p => p.id === m.id));
     newMovs.forEach(m => {
       const prod = invProducts.find(p => p.id === m.data.productId);
-      sendNotif(m.data.type === 'Entrada' ? '📥 Entrada de inventario' : '📤 Salida de inventario', `${prod?.data?.name || 'Producto'} · ${m.data.quantity} ${prod?.data?.unit || 'uds'}${m.data.reason ? ` — ${m.data.reason}` : ''}`, undefined, `mov-${m.id}`, { type: 'inventory', screen: 'inventory' });
+      sendNotif(m.data.type === 'Entrada' ? '📥 Entrada de inventario' : '📤 Salida de inventario', `${prod?.data?.name || 'Producto'} · ${m.data.quantity} ${prod?.data?.unit || 'uds'}${m.data.reason ? ` — ${m.data.reason}` : ''}`, undefined, `mov-${m.id}`, { type: 'inventory', screen: 'inventory', eventType: 'inventory_alert' });
     });
     const newTrans = invTransfers.filter(t => !prevTrans.find(p => p.id === t.id));
     newTrans.forEach(t => {
-      sendNotif('🚚 Nueva transferencia', `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse} (${t.data.quantity})`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory' });
+      sendNotif('🚚 Nueva transferencia', `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse} (${t.data.quantity})`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory', eventType: 'inventory_alert' });
     });
     const changedTrans = invTransfers.filter(t => {
       const p = prevTrans.find(pp => pp.id === t.id);
@@ -257,7 +260,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     changedTrans.forEach(t => {
       const statusEmoji = t.data.status === 'Completada' ? '✅' : t.data.status === 'En tránsito' ? '🚛' : t.data.status === 'Cancelada' ? '❌' : '📦';
-      sendNotif(`${statusEmoji} Transferencia ${t.data.status.toLowerCase()}`, `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse}`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory' });
+      sendNotif(`${statusEmoji} Transferencia ${t.data.status.toLowerCase()}`, `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse}`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory', eventType: 'inventory_alert' });
     });
     prevMovementsRef.current = invMovements;
     prevTransfersRef.current = invTransfers;
@@ -278,7 +281,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
           const diff = meetingMinutes - nowMinutes;
           if (diff === 15 || diff === 5) {
             const proj = projects.find(p => p.id === m.data.projectId);
-            sendBrowserNotif(`⏰ Reunión en ${diff} minutos`, `"${m.data.title}" a las ${m.data.time}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `reminder-${m.id}-${diff}`, { type: 'meeting', screen: 'calendar' });
+            sendBrowserNotif(`⏰ Reunión en ${diff} minutos`, `"${m.data.title}" a las ${m.data.time}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `reminder-${m.id}-${diff}`, { type: 'meeting', screen: 'calendar', eventType: 'meeting_reminder' });
           }
         }
       });
@@ -300,7 +303,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (notifPrefs.projects) {
       changedProjects.forEach(p => {
         const statusEmoji = p.data.status === 'Ejecucion' ? '🏗️' : p.data.status === 'Terminado' ? '🎉' : p.data.status === 'Diseno' ? '🎨' : '📁';
-        sendNotif(`${statusEmoji} Proyecto actualizado`, `"${p.data.name}" cambió a: ${p.data.status}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id });
+        sendNotif(`${statusEmoji} Proyecto actualizado`, `"${p.data.name}" cambió a: ${p.data.status}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id, eventType: 'phase_change' });
       });
     }
     prevProjectsRef.current = projects;
@@ -319,7 +322,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         t.data.assigneeId === authUser?.uid && t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today
       );
       if (myOverdue.length > 0) {
-        sendNotif(`⚠️ ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`, myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '), undefined, 'overdue-daily', { type: 'reminder', screen: 'tasks' });
+        sendNotif(`⚠️ ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`, myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '), undefined, 'overdue-daily', { type: 'reminder', screen: 'tasks', eventType: 'task_due_soon' });
       }
     };
     check();
@@ -348,7 +351,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
           outOfStock.length > 0
             ? `${outOfStock.length} sin stock${lowStock.length > 0 ? `, ${lowStock.length} bajo mínimo` : ''}: ${outOfStock.map(p => p.data.name).slice(0,3).join(', ')}`
             : `${lowStock.length} producto${lowStock.length > 1 ? 's' : ''} bajo mínimo: ${lowStock.map(p => p.data.name).slice(0,3).join(', ')}`,
-          undefined, 'inv-lowstock-check', { type: 'inventory', screen: 'inventory' }
+          undefined, 'inv-lowstock-check', { type: 'inventory', screen: 'inventory', eventType: 'inventory_alert' }
         );
       }
     };
@@ -384,6 +387,9 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   }, [notifSound]);
 
   const sendNotif = useCallback((title: string, body: string, icon?: string, tag?: string, data?: any) => {
+    // Check granular event preference — if eventType is specified and disabled, skip
+    const eventType = data?.eventType as NotifEventType | undefined;
+    if (eventType && !isEventEnabled(eventType)) return;
     const type = data?.type || 'info';
     const notifEntry = {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
@@ -402,7 +408,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         setTimeout(() => n.close(), 8000);
       } catch (e: any) { console.warn('OS Notification error:', e); }
     }
-  }, [playNotifSound, vibrateNotif, navigateToRef]);
+  }, [playNotifSound, vibrateNotif, navigateToRef, isEventEnabled]);
 
   const sendBrowserNotif = sendNotif;
 
@@ -423,7 +429,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         body,
         alert.emoji,
         `budget-${alert.projectId}-${alert.threshold}`,
-        { type: 'budget', screen: 'projectDetail', itemId: alert.projectId },
+        { type: 'budget', screen: 'projectDetail', itemId: alert.projectId, eventType: 'budget_alert' },
       );
     });
     prevExpensesRef.current = expenses;
