@@ -221,6 +221,88 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 15:30 | BUG FIX - Arreglar login con Google, Microsoft y correo/contraseña
+  Estado: RESUELTO
+  Tag de respaldo: backup-pre-fix-login-auth-20260414
+  Objetivo: Diagnosticar y corregir problemas en los 3 metodos de autenticacion
+  Commit: ee16a02
+
+  Problemas identificados:
+  BUG-20260414-005: Login con Google y Microsoft fallaba silenciosamente
+    Severidad: CRITICA
+    Causa raiz: En AuthContext.tsx, las funciones doGoogleLogin y doMicrosoftLogin
+      accedian a los constructores GoogleAuthProvider y OAuthProvider usando
+      (fb as any).auth.GoogleAuthProvider() y (authNS as any).OAuthProvider().
+      El casting con 'as any' podria causar problemas en tiempo de ejecucion
+      con el SDK compat cargado via CDN. Se cambio a usar una variable
+      intermedia const authNS = (fb as any).auth para acceder correctamente
+      al namespace que contiene los constructores.
+
+    Adicionalmente, el login de Microsoft solicitaba scopes agresivos
+      (Files.ReadWrite.All, Sites.ReadWrite.All) que causaban errores de
+      consentimiento (auth/internal-error) cuando el usuario no habia aprobado
+      previamente esos permisos en Azure. Se simplifico a solicitar solo
+      User.Read para el login basico, evitando la pantalla de consentimiento.
+
+  BUG-20260414-006: Auth loading se quedaba colgado permanentemente
+    Severidad: CRITICA
+    Causa raiz: El onAuthStateChanged no tenia un segundo callback de error.
+      Si el listener fallaba (por ejemplo, por problemas de red o Firebase),
+      setLoading(false) nunca se ejecutaba, dejando la app en spinner infinito.
+    Fix: Se agrego un segundo callback (authErr) a onAuthStateChanged que
+      ejecuta setLoading(false) y loguea el error.
+
+  BUG-20260414-007: showToast vacio en AuthScreen
+    Severidad: ALTA
+    Causa raiz: En HomeContent.tsx linea 106, AuthScreen recibia
+      showToast={() => {}} (funcion no-op). Los errores de login nunca se
+      mostraban al usuario, aunque las funciones de auth usaban showToast
+      de UIContext internamente, el Toaster en la rama de auth recibia
+      la funcion vacia.
+    Fix: Se cambio a pasar el showToast real desde useUI() y tambien
+      se agrego doPasswordReset como prop.
+
+  BUG-20260414-008: Overlay de loading cubria toda la pantalla
+    Severidad: MEDIA
+    Causa raiz: AuthScreen.tsx usaba className="absolute inset-0..." pero
+      el div padre no tenia position:relative. El overlay se posicionaba
+      relativo al viewport en vez de la tarjeta de login.
+    Fix: Se agrego "relative" al div padre de la tarjeta de auth.
+
+  BUG-20260414-009: No existia funcion de restablecer contraseña
+    Severidad: MEDIA
+    Causa raiz: No habia forma de recuperar la cuenta si el usuario
+      olvidaba su contraseña.
+    Fix: Se agrego doPasswordReset en AuthContext.tsx y flujo completo
+      en AuthScreen.tsx con enlace "¿Olvidaste tu contraseña?".
+
+  Archivos modificados (4):
+    * src/contexts/AuthContext.tsx
+      - Corregido acceso a GoogleAuthProvider y OAuthProvider via namespace
+      - Microsoft login simplificado a scope minimo (User.Read)
+      - Agregada persistencia LOCAL de auth (sobrevive reinicio de navegador)
+      - Agregado error handler en onAuthStateChanged
+      - Nueva funcion doPasswordReset
+    * src/components/layout/AuthScreen.tsx
+      - Corregido overlay de loading (relative en padre)
+      - Agregado enlace "¿Olvidaste tu contraseña?" con flujo completo
+      - Agregado boton "Reintentar conexión" cuando Firebase falla
+      - Recibida nueva prop doPasswordReset
+    * src/app/HomeContent.tsx
+      - showToast real pasado a AuthScreen (antes era () => {})
+      - doPasswordReset pasado a AuthScreen
+    * src/app/layout.tsx
+      - Agregado measurementId faltante a Firebase config
+
+  Verificacion: Vercel deploy automatico al push
+  Notas adicionales:
+    - Se recuerda que para que Google/Microsoft funcionen, deben estar
+      habilitados en Firebase Console > Authentication > Sign-in method
+    - Para Microsoft: el tenant de Azure AD debe estar configurado y
+      la app registrada en Azure Portal > App registrations
+    - Para Email/Password: debe estar habilitado en Firebase Console >
+      Authentication > Sign-in method > Email/Password
+
 2026-04-15 06:00 | ETAPA 6 - Documentacion, Tipos Finales y Cleanup
   Estado: COMPLETADA
   Tag de respaldo: backup-pre-etapa6-docs-types-20260415
