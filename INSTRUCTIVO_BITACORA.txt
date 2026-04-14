@@ -221,6 +221,61 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 18:00 | FEATURE PACK v11 — UX Enhancement + Productividad
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v11-ux-productivity-20260415
+  Objetivo: Mejorar UX con búsqueda global, vista de carga de equipo, batch ops y timeline
+  Commit: 54627c0
+  Build: exitoso (14/14 páginas estáticas, 0 errores TypeScript)
+
+  Tarea 11.1 — Global Search (Cmd+K):
+    - CommandPalette.tsx creado (433 líneas)
+    - Búsqueda en 6 entidades: navegación, proyectos, tareas, equipo, proveedores, empresas
+    - Debounce 200ms, filtrado por categoría, highlighting de texto coincidente
+    - Navegación con teclado (arriba/abajo/enter/escape)
+    - Acciones rápidas cuando búsqueda vacía: nuevo proyecto, tarea, gasto
+    - Integrado en HomeContent.tsx con useUIStore (commandOpen)
+    - Atajo Cmd+K / Ctrl+K ya existía (useKeyboardShortcuts.ts)
+
+  Tarea 11.2 — Team Workload View:
+    - TeamWorkloadView.tsx creado (324 líneas)
+    - Stats: total miembros, promedio tareas, miembro más cargado, sin tareas
+    - Cards con avatar, nombre, rol, badges de tareas, barra de progreso
+    - Indicador de nivel: Sin carga/Normal/Alta/Sobrecargado
+    - Lista de tareas activas por miembro (máx 3)
+    - Ordenamiento: más cargados, menos cargados, alfabético
+    - Integrado como tab "Carga de Trabajo" en TeamScreen.tsx
+
+  Tarea 11.3 — Activity Timeline:
+    - ActivityTimeline.tsx creado (380 líneas)
+    - Timeline unificada: tareas, gastos, facturas, bitácoras, notificaciones, aprobaciones
+    - Filtros: Todo, Tareas, Financiero, Actividad
+    - Tiempo relativo en español (Hace 5 min, Ayer, Hace 3 días)
+    - Máx 30 items con toggle "Ver más/menos"
+    - Reemplazó la sección "Actividad reciente" estática del DashboardScreen
+
+  Tarea 11.4 — Batch Operations:
+    - Botón "Seleccionar" en TasksScreen (solo vista lista)
+    - Modo batch con checkboxes en cada tarea
+    - Barra de acciones: Completar, Reiniciar, Eliminar
+    - "Seleccionar todas" / "Deseleccionar"
+    - Confirmación antes de eliminar
+    - Toast de feedback por cada acción
+
+  Tarea 11.5 — Kanban Fix:
+    - Columna "Revision" corregida a "En revisión" (coincide con TaskStatus type)
+    - Antes las tareas en "En revisión" no aparecían en la columna Kanban
+
+  Archivos creados (3): CommandPalette.tsx, TeamWorkloadView.tsx, ActivityTimeline.tsx
+  Archivos modificados (4): HomeContent.tsx, DashboardScreen.tsx, TasksScreen.tsx, TeamScreen.tsx
+  Total: +1,276 líneas agregadas, -33 eliminadas
+
+  Resumen:
+    - 1 commit, 7 archivos tocados
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automático
+    - Total funcionalidades implementadas (v7-v11): 24
+
 2026-04-15 12:00 | FEATURE PACK v7 — 11 nuevas funcionalidades (Tier 1+2+3)
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-features-v7-20260415
