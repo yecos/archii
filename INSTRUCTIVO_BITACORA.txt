@@ -221,6 +221,28 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 22:15 | ETAPA 2 - Paso 2.7: Extraer CommentsContext + DailyLogs
+  Accion: Extraer logica de comentarios y bitacora diaria de FirestoreContext
+  Commit: 1cd4d00
+
+  Archivo creado: src/contexts/CommentsContext.tsx (152 lineas)
+    Contenido:
+      * Interface CommentsContextType
+      * 2 useState: comments (Comment[]), dailyLogs (any[])
+      * 2 UI state Comments: commentText, replyingTo
+      * 4 UI state DailyLogs: dailyLogTab, selectedLogId, logForm (+setLogForm)
+      * 2 useEffect: listeners comments + dailyLogs
+      * 5 CRUD: postComment, saveDailyLog, deleteDailyLog, openEditLog, resetLogForm
+
+  Archivos modificados:
+    * FirestoreContext.tsx - 666 -> 550 lineas (-116 netas)
+      - Eliminado: 2 state, 6 UI state, 2 effects, 5 CRUD
+      - Eliminado imports: Comment type, fbActions, teamUsers de AuthContext
+    * useApp.ts - consume de useCommentsContext (variable cmt)
+
+  Verificacion: tsc --noEmit -> 0 errores TypeScript
+  Progreso acumulado FirestoreContext: 1,254 -> 550 (-704, -56%)
+
 2026-04-14 22:00 | ETAPA 2 - Paso 2.6: Extraer InvoiceContext
   Accion: Conectar InvoiceContext existente y eliminar codigo duplicado de FirestoreContext
   Motivo: InvoiceContext.tsx estaba creado pero sin importar ni consumir
