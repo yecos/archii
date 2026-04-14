@@ -221,6 +221,70 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 01:30 | ETAPA 3 - UX/Performance Optimization (5 tareas)
+  Estado: COMPLETADA (6 de 7 tareas — Task 3.6 diferida)
+  Tag de respaldo: backup-pre-etapa3-performance-20260414
+  Objetivo: Reducir bundle inicial, eliminar re-renders innecesarios, mejorar UX
+  Commits realizados: 4
+
+  Tarea 3.1 - useMemo en value objects de 12 context providers
+    Archivos modificados: 12 context files
+      * FirestoreContext.tsx - 11 computed values en useMemo + value object
+      * UIContext.tsx - 4 funciones en useCallback + value en useMemo
+      * AuthContext.tsx, OneDriveContext.tsx, ChatContext.tsx, InventoryContext.tsx,
+        NotifContext.tsx, GalleryContext.tsx, TimeTrackingContext.tsx,
+        CalendarContext.tsx, InvoiceContext.tsx, CommentsContext.tsx - value en useMemo
+    Impacto: Elimina re-renders en cascada cuando contextos no cambian
+    Commit: 2be85ca
+
+  Tarea 3.2 - Lazy load de 5 pantallas pesadas
+    Pantallas movidas a dynamic(): ProjectDetailScreen (879 LOC), ChatScreen (696 LOC),
+      TasksScreen (496 LOC), ProfileScreen (378 LOC), BudgetScreen (224 LOC)
+    Solo quedan eager: DashboardScreen + ProjectsScreen (pantalla de inicio)
+    Commit: 85c7ecb (junto con tarea 3.3)
+
+  Tarea 3.3 - Lazy load de 14 modales + LightboxViewer
+    Modales movidos a dynamic(): ProjectModal, TaskModal, ExpenseModal, SupplierModal,
+      TimeEntryModal, ApprovalModal, MeetingModal, GalleryModal, InvProductModal,
+      InvCategoryModal, InvMovementModal, InvTransferModal, CompanyModal
+    LightboxViewer movido a dynamic()
+    Total: ~2,500+ LOC removidas del bundle inicial
+    Commit: 85c7ecb
+
+  Tarea 3.4 - React.memo en 5 layout components
+    Componentes envueltos: Sidebar, TopBar, BottomNav, InstallBanner, NotifPanel
+    Impacto: Layout no re-renderiza cuando cambian datos no relacionados
+    Commit: 9cbfd1f
+
+  Tarea 3.5 - useCallback en 36 funciones CRUD
+    FirestoreContext: 24 funciones envueltas (save/delete/open + helpers)
+    AuthContext: 12 funciones envueltas (login/logout + user helpers)
+    Impacto: Referencias estables para callbacks pasados a componentes hijos
+    Commit: 1d43a65
+
+  Tarea 3.7 - Dynamic import jspdf + xlsx (~830KB fuera del bundle)
+    export-pdf.ts: jsPDF + jspdf-autotable importados dinámicamente (5 funciones)
+    export-excel.ts: xlsx importado dinámicamente (6 funciones)
+    Impacto: ~830KB removidos del bundle inicial (carga solo al exportar)
+    Commit: 1d43a65
+
+  Tarea 3.6 - Separar useApp() en hooks de dominio (DIFERIDA)
+    Motivo: Refactor masivo que afecta todos los consumers de useApp().
+      Alto riesgo de regresiones. Se difiere a ETAPA 4 donde se hara
+      junto con tests unitarios que protejan contra regresiones.
+
+  Resumen ETAPA 3:
+    - 19 archivos modificados
+    - Bundle inicial reducido estimado: ~1,100KB menos (pantallas + modales + librerias)
+    - Re-renders reducidos significativamente (useMemo + useCallback + React.memo)
+    - 0 errores TypeScript tras todos los cambios
+    - Vercel deploy automático verificado
+
+  Proximos pasos recomendados:
+    - ETAPA 4: Testing + separar useApp() en hooks de dominio (con tests de regresión)
+    - ETAPA 5: Code splitting adicional (framer-motion → CSS transitions)
+    - ETAPA 6: Documentación y tipos
+
 2026-04-14 22:30 | ETAPA 2 - CIERRE: Descomposicion de FirestoreContext completada
   Estado: COMPLETADA
   Objetivo original: Reducir FirestoreContext monolito de 1,254 lineas
