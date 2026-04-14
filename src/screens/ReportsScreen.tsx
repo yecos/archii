@@ -97,7 +97,8 @@ export default function ReportsScreen() {
   const budgetVsRealData = useMemo(() => {
     return projects.filter(p => p.data.budget > 0).sort((a, b) => b.data.budget - a.data.budget).slice(0, 6).map(p => {
       const spent = filteredExpenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + e.data.amount, 0);
-      const name = p.data.name.length > 12 ? p.data.name.slice(0, 12) + '...' : p.data.name;
+      const rawName = p.data.name || 'Sin nombre';
+      const name = rawName.length > 12 ? rawName.slice(0, 12) + '...' : rawName;
       return { name, presupuesto: p.data.budget, gastado: spent };
     });
   }, [projects, filteredExpenses]);

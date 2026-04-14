@@ -290,7 +290,7 @@ export default function ObraScreen() {
                           </div>
                           <div className="flex items-center gap-2">
                             {log.data.laborCount > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 flex items-center gap-1"><Users size={10} />{log.data.laborCount}</span>}
-                            {(log.data.activities?.length || 0) > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">{log.data.activities.length} act.</span>}
+                            {(log.data.activities?.length || 0) > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">{log.data.activities!.length} act.</span>}
                             {isExpanded ? <ChevronUp size={14} className="text-[var(--af-text3)]" /> : <ChevronDown size={14} className="text-[var(--af-text3)]" />}
                           </div>
                         </div>

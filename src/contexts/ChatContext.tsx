@@ -332,11 +332,12 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       const snap = await reactionRef.get();
       if (snap.exists) {
         const data = snap.data();
-        if (data.users.includes(uid)) {
-          if (data.users.length <= 1) await reactionRef.delete();
-          else await reactionRef.update({ users: data.users.filter((u: string) => u !== uid) });
+        const users: string[] = data.users || [];
+        if (users.includes(uid)) {
+          if (users.length <= 1) await reactionRef.delete();
+          else await reactionRef.update({ users: users.filter((u: string) => u !== uid) });
         } else {
-          await reactionRef.update({ users: [...data.users, uid] });
+          await reactionRef.update({ users: [...users, uid] });
         }
       } else {
         await reactionRef.set({ users: [uid] });

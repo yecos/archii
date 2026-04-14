@@ -322,5 +322,24 @@ Si se necesita corregir algo, agregar nota aclaratoria.
   Archivos creados: INSTRUCTIVO_BITACORA.txt
   Estado: Completado - Instructivo listo para uso
 
+2026-04-14 15:30 | BUG FIX - Error "Cannot read properties of undefined (reading 'length')"
+  Categoria: Bug fix (1 bug critico + 8 patrones defensivos)
+  Accion: Correccion de accesos a .length sin proteccion contra undefined
+  Motivo: La app mostraba "Error al cargar" via ErrorBoundary al acceder
+    a propiedades de documentos Firestore que podian ser undefined/null
+  Archivos modificados:
+    * src/screens/ReportsScreen.tsx (linea 100)
+    * src/contexts/ChatContext.tsx (lineas 335-341)
+    * src/screens/ObraScreen.tsx (linea 293)
+    * src/screens/ProjectDetailScreen.tsx (lineas 577-663, 7 ubicaciones)
+  Cambios principales:
+    - ReportsScreen: p.data.name.length -> (p.data.name || 'Sin nombre').length
+    - ChatContext: data.users -> (data.users || []) con variable local 'users'
+    - ObraScreen: log.data.activities.length -> log.data.activities!.length
+    - ProjectDetailScreen: d.photos/equipment/materials/activities ->
+      d.photos!/d.equipment!/d.materials!/d.activities! (non-null assertion)
+  Verificacion: npx tsc --noEmit confirma 0 errores nuevos introducidos
+  Commit: pendiente
+
 --- FIN DE BITACORA (las nuevas entradas van ARRIBA de esta linea) --------
 ================================================================================

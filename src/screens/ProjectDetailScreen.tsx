@@ -576,10 +576,10 @@ export default function ProjectDetailScreen() {
                               )}
                               {d.photos?.length > 0 && (
                                 <div className="flex gap-1.5 mt-2">
-                                  {d.photos.slice(0, 4).map((p: string, i: number) => (
+                                  {d.photos!.slice(0, 4).map((p: string, i: number) => (
                                     <img key={i} src={p} alt="" className="w-14 h-14 rounded-lg object-cover border border-[var(--border)]" />
                                   ))}
-                                  {d.photos.length > 4 && <div className="w-14 h-14 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[11px] text-[var(--muted-foreground)] border border-[var(--border)]">+{d.photos.length - 4}</div>}
+                                  {d.photos!.length > 4 && <div className="w-14 h-14 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[11px] text-[var(--muted-foreground)] border border-[var(--border)]">+{d.photos!.length - 4}</div>}
                                 </div>
                               )}
                             </div>
@@ -620,7 +620,7 @@ export default function ProjectDetailScreen() {
                           <div className="mb-4">
                             <div className="text-[11px] font-semibold uppercase text-[var(--muted-foreground)] mb-2">Actividades Realizadas</div>
                             <div className="space-y-1.5">
-                              {d.activities.map((a: string, i: number) => (
+                              {d.activities!.map((a: string, i: number) => (
                                 <div key={i} className="flex items-start gap-2 text-sm">
                                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)] mt-1.5 flex-shrink-0" />
                                   {a}
@@ -641,7 +641,7 @@ export default function ProjectDetailScreen() {
                             <div className="bg-[var(--af-bg3)] rounded-lg p-3">
                               <div className="text-[10px] font-semibold uppercase text-[var(--muted-foreground)] mb-1">Equipos</div>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {d.equipment.map((e: string, i: number) => <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--card)]">{e}</span>)}
+                                {d.equipment!.map((e: string, i: number) => <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--card)]">{e}</span>)}
                               </div>
                             </div>
                           )}
@@ -651,16 +651,16 @@ export default function ProjectDetailScreen() {
                           <div className="mb-4">
                             <div className="text-[11px] font-semibold uppercase text-[var(--muted-foreground)] mb-2">Materiales Utilizados</div>
                             <div className="flex flex-wrap gap-1">
-                              {d.materials.map((m: string, i: number) => <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{m}</span>)}
+                              {d.materials!.map((m: string, i: number) => <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{m}</span>)}
                             </div>
                           </div>
                         )}
 
                         {d.photos?.length > 0 && (
                           <div className="mb-4">
-                            <div className="text-[11px] font-semibold uppercase text-[var(--muted-foreground)] mb-2">Fotos del Día ({d.photos.length})</div>
+                            <div className="text-[11px] font-semibold uppercase text-[var(--muted-foreground)] mb-2">Fotos del Día ({d.photos!.length})</div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              {d.photos.map((p: string, i: number) => <img key={i} src={p} alt="" className="w-full h-28 rounded-lg object-cover border border-[var(--border)] cursor-pointer hover:opacity-90 transition-opacity" />)}
+                              {d.photos!.map((p: string, i: number) => <img key={i} src={p} alt="" className="w-full h-28 rounded-lg object-cover border border-[var(--border)] cursor-pointer hover:opacity-90 transition-opacity" />)}
                             </div>
                           </div>
                         )}
