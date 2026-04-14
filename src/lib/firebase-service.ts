@@ -87,7 +87,12 @@ let _fb: FirebaseApp | null = null;
  * Throws a clear error if Firebase hasn't loaded yet.
  */
 export function getFirebase(): FirebaseApp {
-  if (_fb) return _fb;
+  if (_fb) {
+    try {
+      if (_fb.apps && _fb.apps.length > 0) return _fb;
+    } catch { /* stale reference */ }
+    _fb = null;
+  }
   // Acceso seguro a window.firebase (SDK compat via CDN)
   const w = typeof window !== 'undefined' ? window : null;
   if (!w) {

@@ -15,12 +15,15 @@ interface AuthScreenProps {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ── Firebase health check ── */
-function useFirebaseStatus() {
+function useFirebaseStatus(triggerKey: number) {
   const [status, setStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [detail, setDetail] = useState('');
   useEffect(() => {
     let attempts = 0;
     const maxAttempts = 10;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const scheduleCheck = (delay: number) => { timers.push(setTimeout(check, delay)); };
+
     const check = () => {
       attempts++;
       try {
@@ -30,19 +33,13 @@ function useFirebaseStatus() {
         const loadedScripts = Array.from(scripts).filter((s: any) => s.src);
         
         if (!w.firebase) {
-          if (attempts < maxAttempts) {
-            setTimeout(check, 500);
-            return;
-          }
+          if (attempts < maxAttempts) { scheduleCheck(500); return; }
           setStatus('error');
           setDetail(`Firebase SDK no cargó. Scripts en DOM: ${loadedScripts.length}.`);
           return;
         }
         if (!w.firebase.apps || w.firebase.apps.length === 0) {
-          if (attempts < maxAttempts) {
-            setTimeout(check, 500);
-            return;
-          }
+          if (attempts < maxAttempts) { scheduleCheck(500); return; }
           setStatus('error');
           setDetail('Firebase App no inicializado.');
           return;
@@ -50,22 +47,15 @@ function useFirebaseStatus() {
         // IMPORTANT: GoogleAuthProvider is on the namespace firebase.auth (no parentheses!)
         // NOT on the instance firebase.auth()
         const authNS = w.firebase.auth; // namespace — has GoogleAuthProvider, OAuthProvider
-        const authInstance = w.firebase.auth(); // instance — has signInWithPopup, currentUser
         
         if (!authNS || !authNS.GoogleAuthProvider) {
-          if (attempts < maxAttempts) {
-            setTimeout(check, 500);
-            return;
-          }
+          if (attempts < maxAttempts) { scheduleCheck(500); return; }
           setStatus('error');
           setDetail('GoogleAuthProvider no disponible — firebase-auth-compat.js no cargó.');
           return;
         }
         if (!authNS.OAuthProvider) {
-          if (attempts < maxAttempts) {
-            setTimeout(check, 500);
-            return;
-          }
+          if (attempts < maxAttempts) { scheduleCheck(500); return; }
           setStatus('error');
           setDetail('OAuthProvider no disponible.');
           return;
@@ -73,18 +63,16 @@ function useFirebaseStatus() {
         setStatus('ok');
         setDetail(`Firebase OK — ${w.firebase.apps[0]?.options?.projectId || '?'}`);
       } catch (e: any) {
-        if (attempts < maxAttempts) {
-          setTimeout(check, 500);
-          return;
-        }
+        if (attempts < maxAttempts) { scheduleCheck(500); return; }
         setStatus('error');
         setDetail(e.message || 'Error desconocido al verificar Firebase');
       }
     };
-    // Start checking after 1 second, retry every 500ms
-    const t = setTimeout(check, 1000);
-    return () => clearTimeout(t);
-  }, []);
+    // Reset and start checking
+    setStatus('checking');
+    scheduleCheck(1000);
+    return () => timers.forEach(clearTimeout);
+  }, [triggerKey]);
   return { status, detail };
 }
 
@@ -152,9 +140,11 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const [fbKey, setFbKey] = useState(0);
-  const fbStatus = useFirebaseStatus();
+  const fbStatus = useFirebaseStatus(fbKey);
 
   const retryFirebase = () => setFbKey(k => k + 1);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const handlePasswordReset = async () => {
     if (!doPasswordReset) return;
@@ -167,7 +157,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
       await doPasswordReset(resetEmail);
       setResetSent(true);
     } finally {
-      setTimeout(() => setAuthLoading(false), 2000);
+      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 2000);
     }
   };
 
@@ -179,7 +169,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
     try {
       await doLogin();
     } finally {
-      setTimeout(() => setAuthLoading(false), 2000);
+      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 2000);
     }
   };
 
@@ -198,7 +188,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
     try {
       await doRegister();
     } finally {
-      setTimeout(() => setAuthLoading(false), 2000);
+      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 2000);
     }
   };
 
@@ -214,7 +204,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
     try {
       await doGoogleLogin();
     } finally {
-      setTimeout(() => setAuthLoading(false), 3000);
+      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 3000);
     }
   };
 
@@ -223,7 +213,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
     try {
       await doMicrosoftLogin();
     } finally {
-      setTimeout(() => setAuthLoading(false), 3000);
+      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 3000);
     }
   };
 

@@ -62,15 +62,26 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // Wait for Firebase to be ready (initialized in layout.tsx)
   useEffect(() => {
+    let attempts = 0;
+    const MAX = 50; // 50 × 100ms = 5 seconds max wait
     const iv = setInterval(() => {
+      attempts++;
       try {
         const fb = getFirebase();
         if (fb && fb.apps && fb.apps.length > 0) {
           clearInterval(iv);
           setReady(true);
+        } else if (attempts >= MAX) {
+          clearInterval(iv);
+          console.error('[ArchiFlow Auth] Firebase init timed out after 5s');
+          setLoading(false);
         }
       } catch (e) {
-        // Firebase not loaded yet, keep waiting
+        if (attempts >= MAX) {
+          clearInterval(iv);
+          console.error('[ArchiFlow Auth] Firebase not available after 5s');
+          setLoading(false);
+        }
       }
     }, 100);
     return () => clearInterval(iv);
@@ -155,8 +166,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // ===== FUNCTIONS =====
 
+  // Use ref for forms to avoid recreating callbacks on every keystroke
+  const formsRef = useRef(forms);
+  formsRef.current = forms;
+
   const doLogin = useCallback(async () => {
-    const email = forms.loginEmail || '', pass = forms.loginPass || '';
+    const email = formsRef.current.loginEmail || '', pass = formsRef.current.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
@@ -172,10 +187,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       showToast(msgs[e.code] || `Error: ${e.code || e.message || 'No se pudo iniciar sesión'}`, 'error');
     }
-  }, [forms, showToast]);
+  }, [showToast]);
 
   const doRegister = useCallback(async () => {
-    const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
+    const name = formsRef.current.regName || '', email = formsRef.current.regEmail || '', pass = formsRef.current.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
@@ -194,7 +209,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       showToast(msgs[e.code] || `Error al registrar: ${e.code || e.message || ''}`, 'error');
     }
-  }, [forms, showToast]);
+  }, [showToast]);
 
   const doGoogleLogin = useCallback(async () => {
     try {
