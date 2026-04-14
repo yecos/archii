@@ -221,6 +221,59 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 02:30 | ETAPA 4 - Separacion de useApp() en hooks de dominio
+  Estado: COMPLETADA
+  Objetivo: Eliminar el patron useApp() monolitico que causaba re-renders
+    en TODOS los componentes cuando ANY contexto cambiaba
+  Commits realizados: 4
+
+  Tarea 4.1 - Crear hooks de dominio + migrar Phase 1 (15 archivos)
+    Archivo creado: src/hooks/useDomain.ts
+      12 hooks exportados: useUI, useAuth, useFirestore, useOneDrive,
+        useChat, useInventory, useGallery, useTimeTracking, useCalendar,
+        useInvoice, useComments, useNotif
+    Archivos migrados (15):
+      Layout: BottomNav, InstallBanner
+      Screens: InstallScreen, PortalScreen, FilesScreen
+      Modals: ApprovalModal, SupplierModal, ExpenseModal, CompanyModal,
+        ProjectModal, InvCategoryModal, InvProductModal, InvMovementModal,
+        InvTransferModal, TimeEntryModal
+    Commit: 36c51f4
+
+  Tarea 4.2 - Migrar Phase 2 (14 archivos)
+    Archivos migrados (14):
+      Layout: NotifPanel, TopBar
+      Modals: GalleryModal, MeetingModal, TaskModal
+      Screens: ObraScreen, BudgetScreen, CompaniesScreen, SuppliersScreen,
+        TeamScreen, GalleryScreen, TimeTrackingScreen, ProfileScreen
+      Features: LightboxViewer
+    Commit: a763c8a
+
+  Tarea 4.3 - Migrar Phase 3 (10 pantallas principales)
+    Archivos migrados (10):
+      TasksScreen, ProjectsScreen, ReportsScreen, CalendarScreen,
+      InvoicesScreen, DashboardScreen, AdminScreen, ChatScreen,
+      InventoryScreen, HomeContent
+    TasksScreen: eliminado patron useApp() as any
+    Commit: 8840302
+
+  Tarea 4.4 - Migrar ProjectDetailScreen (ultimo consumer)
+    Archivo migrado: ProjectDetailScreen.tsx (880 lineas, 95 props, 7 dominios)
+    Bug fix: auth.loading='lazy' revertido a loading='lazy' en 3 atributos
+    Commit: 961bba0
+
+  Resultado final:
+    - 40 de 40 consumers migrados de useApp() a hooks de dominio
+    - useApp() fully deprecated — 0 consumers activos
+    - Cada componente solo se re-renderiza cuando SUS dominios cambian
+    - 0 errores TypeScript en todo el proceso
+    - Total archivos modificados: 41 (useDomain.ts + 40 consumers)
+
+  Proximos pasos recomendados:
+    - ETAPA 5: Code splitting adicional (framer-motion → CSS transitions)
+    - ETAPA 6: Documentacion y tipos
+    - Opcional: Eliminar useApp.ts si se confirma estabilidad
+
 2026-04-15 01:30 | ETAPA 3 - UX/Performance Optimization (5 tareas)
   Estado: COMPLETADA (6 de 7 tareas — Task 3.6 diferida)
   Tag de respaldo: backup-pre-etapa3-performance-20260414
