@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
@@ -260,11 +260,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, [ready, selectedProjectId]);
 
   // AI project context
-  const currentProject = projects.find((p: any) => p.id === selectedProjectId);
-  const projectTasks = tasks.filter((t: any) => t.data.projectId === selectedProjectId);
-  const projectExpenses = expenses.filter((e: any) => e.data.projectId === selectedProjectId);
-  const projectBudget = currentProject?.data.budget || 0;
-  const projectSpent = projectExpenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+  const currentProject = useMemo(() => projects.find((p: any) => p.id === selectedProjectId), [projects, selectedProjectId]);
+  const projectTasks = useMemo(() => tasks.filter((t: any) => t.data.projectId === selectedProjectId), [tasks, selectedProjectId]);
+  const projectExpenses = useMemo(() => expenses.filter((e: any) => e.data.projectId === selectedProjectId), [expenses, selectedProjectId]);
+  const projectBudget = useMemo(() => currentProject?.data.budget || 0, [currentProject]);
+  const projectSpent = useMemo(() => projectExpenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [projectExpenses]);
 
   useEffect(() => {
     if (currentProject) {
@@ -491,26 +491,26 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const deleteApproval = async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   // ===== COMPUTED VALUES =====
-  const activeTasks = tasks.filter(t => t.data?.status !== 'Completado');
-  const completedTasks = tasks.filter(t => t.data?.status === 'Completado');
-  const overdueTasks = activeTasks.filter(t => t.data?.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
-  const urgentTasks = activeTasks.filter(t => t.data?.priority === 'Alta');
-  const pendingCount = tasks.filter(t => t.data?.status !== 'Completado').length;
+  const activeTasks = useMemo(() => tasks.filter(t => t.data?.status !== 'Completado'), [tasks]);
+  const completedTasks = useMemo(() => tasks.filter(t => t.data?.status === 'Completado'), [tasks]);
+  const overdueTasks = useMemo(() => activeTasks.filter(t => t.data?.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString())), [activeTasks]);
+  const urgentTasks = useMemo(() => activeTasks.filter(t => t.data?.priority === 'Alta'), [activeTasks]);
+  const pendingCount = useMemo(() => tasks.filter(t => t.data?.status !== 'Completado').length, [tasks]);
 
-  const adminFilteredTasks = activeTasks.filter(t => {
+  const adminFilteredTasks = useMemo(() => activeTasks.filter(t => {
     const ms = !adminTaskSearch || (t.data?.title || '').toLowerCase().includes(adminTaskSearch.toLowerCase());
     const ma = adminFilterAssignee === 'all' || t.data?.assigneeId === adminFilterAssignee;
     const mp = adminFilterProject === 'all' || t.data?.projectId === adminFilterProject;
     const mpr = adminFilterPriority === 'all' || t.data?.priority === adminFilterPriority;
     return ms && ma && mp && mpr;
-  });
+  }), [activeTasks, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority]);
 
   // ===== GANTT HELPERS (re-exported from @/lib/gantt-helpers) =====
   const _getGanttDays = (weekOffset: number) => _gantt.getGanttDays(weekOffset);
   const _getProjectColor = (projId: string) => _gantt.getProjectColor(projId, projects);
   const _getProjectColorLight = (projId: string) => _gantt.getProjectColorLight(projId, projects);
 
-  const value: FirestoreContextType = {
+  const value: FirestoreContextType = useMemo(() => ({
     // Collection state
     projects, setProjects, tasks, setTasks, expenses, setExpenses,
     suppliers, setSuppliers, companies, setCompanies,
@@ -538,7 +538,23 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     getTaskBar: _gantt.getTaskBar, buildGanttRows: _gantt.buildGanttRows, findOverlaps: _gantt.findOverlaps,
     getProjectColor: _getProjectColor, getProjectColorLight: _getProjectColorLight,
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
-  };
+  }), [
+    // Collection state
+    projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals,
+    // Admin state
+    adminTab, adminWeekOffset, adminTaskSearch, adminFilterAssignee, adminFilterProject, adminFilterPriority, adminTooltipTask, adminTooltipPos, adminPermSection, rolePerms,
+    // CRUD functions
+    toggleRolePerm, saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
+    saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask,
+    saveExpense, deleteExpense, saveSupplier, deleteSupplier, saveCompany,
+    uploadFile, deleteFile, initDefaultPhases, updatePhaseStatus,
+    saveApproval, updateApproval, deleteApproval, updateUserName, fileToBase64,
+    // Computed values
+    currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
+    projectExpenses, projectTasks, projectBudget, projectSpent,
+    // Gantt helper wrappers
+    _getGanttDays, _getProjectColor, _getProjectColorLight,
+  ]);
 
   return <FirestoreContext.Provider value={value}><CommentsProvider><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></CommentsProvider></FirestoreContext.Provider>;
 }

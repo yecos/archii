@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -78,12 +78,12 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
 
   // ===== PROVIDER =====
 
-  const value: InvoiceContextType = {
+  const value: InvoiceContextType = useMemo(() => ({
     invoices, setInvoices,
     invoiceTab, setInvoiceTab, invoiceItems, setInvoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
     invoices2: invoices,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
-  };
+  }), [invoices, invoiceTab, invoiceItems, invoiceFilterStatus, openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice]);
 
   return <InvoiceContext.Provider value={value}>{children}</InvoiceContext.Provider>;
 }

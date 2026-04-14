@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -389,7 +389,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   const fileIcon = (type: string) => { if (type.startsWith('image/')) return '🖼️'; if (type.includes('pdf')) return '📄'; if (type.startsWith('audio/')) return '🎵'; if (type.startsWith('video/')) return '🎬'; if (type.includes('word') || type.includes('document')) return '📝'; if (type.includes('sheet') || type.includes('excel')) return '📊'; if (type.includes('zip') || type.includes('rar')) return '📦'; return '📎'; };
   const fmtFileSize = fmtSize;
 
-  const value: ChatContextType = {
+  const value: ChatContextType = useMemo(() => ({
     messages, setMessages, chatProjectId, setChatProjectId, chatDmUser, setChatDmUser,
     isRecording, setIsRecording, isSavingTask, setIsSavingTask,
     recDuration, setRecDuration, recVolume, setRecVolume,
@@ -408,7 +408,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     sendPendingFiles, sendAll, toggleReaction, deleteMessage, copyMessageText,
     toggleAudioPlay,
     fmtRecTime, fileIcon, fmtFileSize,
-  };
+  }), [messages, chatProjectId, chatDmUser, isRecording, isSavingTask, recDuration, recVolume, audioPreviewUrl, audioPreviewDuration, pendingFiles, chatDropActive, playingAudio, audioProgress, audioCurrentTime, showEmojiPicker, chatReplyingTo, messageReactions, typingUsers, chatMenuMsg, chatMsgSearch, sendMessage, startRecording, stopRecording, cancelRecording, handleMicButton, sendVoiceNote, handleFileSelect, removePendingFile, sendPendingFiles, sendAll, toggleReaction, deleteMessage, copyMessageText, toggleAudioPlay]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }

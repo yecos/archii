@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -97,12 +97,12 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
 
   // ===== PROVIDER =====
 
-  const value: TimeTrackingContextType = {
+  const value: TimeTrackingContextType = useMemo(() => ({
     timeEntries, setTimeEntries,
     timeTab, setTimeTab, timeFilterProject, setTimeFilterProject,
     timeFilterDate, setTimeFilterDate, timeSession, setTimeSession, timeTimerMs, setTimeTimerMs,
     startTimeTracking, stopTimeTracking, saveManualTimeEntry,
-  };
+  }), [timeEntries, timeTab, timeFilterProject, timeFilterDate, timeSession, timeTimerMs, startTimeTracking, stopTimeTracking, saveManualTimeEntry]);
 
   return <TimeTrackingContext.Provider value={value}>{children}</TimeTrackingContext.Provider>;
 }

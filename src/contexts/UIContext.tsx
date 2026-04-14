@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 import { SCREEN_TITLES } from '@/lib/types';
@@ -142,29 +142,6 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
 
   // ===== FUNCTIONS =====
 
-  const handleInstall = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
-      setShowInstallBanner(false);
-    }
-  };
-
-  const dismissInstallBanner = () => {
-    setShowInstallBanner(false);
-    localStorage.setItem('archiflow-install-dismissed', String(Date.now()));
-  };
-
-  const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('archiflow-theme', next ? 'dark' : 'light');
-    showToast(next ? 'Modo nocturno activado' : 'Modo diurno activado');
-  };
-
   const openModal = useCallback((n: string) => setModals(p => ({ ...p, [n]: true })), []);
   const closeModal = useCallback((n: string) => { setModals(p => ({ ...p, [n]: false })); setEditingId(null); }, []);
 
@@ -175,13 +152,36 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     else toast.success(msg, opts);
   }, []);
 
-  const navigateTo = (s: string, projId?: string | null) => {
+  const handleInstall = useCallback(async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+      setShowInstallBanner(false);
+    }
+  }, [installPrompt, showToast]);
+
+  const dismissInstallBanner = useCallback(() => {
+    setShowInstallBanner(false);
+    localStorage.setItem('archiflow-install-dismissed', String(Date.now()));
+  }, [showToast]);
+
+  const toggleTheme = useCallback(() => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('archiflow-theme', next ? 'dark' : 'light');
+    showToast(next ? 'Modo nocturno activado' : 'Modo diurno activado');
+  }, [darkMode, showToast]);
+
+  const navigateTo = useCallback((s: string, projId?: string | null) => {
     setScreen(s);
     setSelectedProjectId(projId ?? selectedProjectId);
     setSidebarOpen(false);
     if (s !== 'chat') { setChatMobileShow(false); }
     useUIStore.getState().setCurrentScreen(s);
-  };
+  }, [selectedProjectId, showToast]);
   navigateToRef.current = navigateTo;
 
   // Get platform info
@@ -197,7 +197,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
 
   const screenTitles = SCREEN_TITLES;
 
-  const value: UIContextType = {
+  const value: UIContextType = useMemo(() => ({
     screen, setScreen,
     selectedProjectId, setSelectedProjectId,
     selectedCompanyId, setSelectedCompanyId,
@@ -219,7 +219,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     forms, setForms,
     showToast,
     screenTitles,
-  };
+  }), [screen, selectedProjectId, selectedCompanyId, navigateTo, sidebarOpen, sidebarCollapsed, chatMobileShow, taskViewMode, darkMode, installPrompt, showInstallBanner, isInstalled, showInstallGuide, isStandalone, handleInstall, dismissInstallBanner, modals, editingId, forms, showToast]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

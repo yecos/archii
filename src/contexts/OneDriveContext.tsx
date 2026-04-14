@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import type { OneDriveFile } from '@/lib/types';
@@ -501,7 +501,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     setGalleryLoading(false);
   }, [msAccessToken]);
 
-  const value: OneDriveContextType = {
+  const value: OneDriveContextType = useMemo(() => ({
     msAccessToken, setMsAccessToken,
     msConnected, setMsConnected,
     msLoading, setMsLoading,
@@ -533,7 +533,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     handleFileUpload, handleDroppedFiles,
     renameOneDriveFile, downloadOneDriveFile,
     searchOneDriveFiles, loadGalleryPhotos,
-  };
+  }), [msAccessToken, msConnected, msLoading, oneDriveFiles, odProjectFolder, showOneDrive, msRefreshToken, msTokenExpiry, odSearchQuery, odSearchResults, odSearching, odBreadcrumbs, odCurrentFolder, odViewMode, odRenaming, odRenameName, odUploading, odUploadProgress, odUploadFile, odDragOver, odTab, galleryLoading, odGalleryPhotos, disconnectMicrosoft, refreshMsToken, graphApiGet, ensureProjectFolder, loadOneDriveFiles, uploadToOneDrive, deleteFromOneDrive, openOneDriveForProject, formatFileSize, timeAgo, getFileIcon, navigateToFolder, uploadFileWithProgress, handleFileUpload, handleDroppedFiles, renameOneDriveFile, downloadOneDriveFile, searchOneDriveFiles, loadGalleryPhotos]);
 
   return <OneDriveContext.Provider value={value}>{children}</OneDriveContext.Provider>;
 }

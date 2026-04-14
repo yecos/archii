@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { getFirebase } from '@/lib/firebase-service';
 import { ADMIN_EMAILS } from '@/lib/types';
@@ -345,7 +345,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const isEmailAdmin = authUser ? ADMIN_EMAILS.includes(authUser.email || '') : false;
   const isAdmin = myRole === 'Admin' || myRole === 'Director' || isEmailAdmin;
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     ready, setReady,
     authUser, setAuthUser,
     loading, setLoading,
@@ -355,7 +355,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     updateUserRole, updateUserCompany,
     userName, initials, myRole, isAdmin, isEmailAdmin, getUserRole,
     msAuthCallbackRef,
-  };
+  }), [ready, authUser, loading, teamUsers, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout, getMyRole, getMyCompanyId, visibleProjects, getUserName, updateUserRole, updateUserCompany, userName, initials, myRole, isAdmin, isEmailAdmin, getUserRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

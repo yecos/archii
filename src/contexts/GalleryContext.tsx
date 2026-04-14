@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -118,7 +118,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
 
   // ===== PROVIDER =====
 
-  const value: GalleryContextType = {
+  const value: GalleryContextType = useMemo(() => ({
     galleryPhotos, setGalleryPhotos,
     galleryFilterProject, setGalleryFilterProject,
     galleryFilterCat, setGalleryFilterCat,
@@ -126,7 +126,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
     lightboxIndex, setLightboxIndex,
     saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect,
     openLightbox, closeLightbox, lightboxPrev, lightboxNext, getFilteredGalleryPhotos,
-  };
+  }), [galleryPhotos, galleryFilterProject, galleryFilterCat, lightboxPhoto, lightboxIndex, saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect, openLightbox, closeLightbox, lightboxPrev, lightboxNext, getFilteredGalleryPhotos]);
 
   return <GalleryContext.Provider value={value}>{children}</GalleryContext.Provider>;
 }

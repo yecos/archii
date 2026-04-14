@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -134,13 +134,13 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
 
   // ===== PROVIDER =====
 
-  const value: CommentsContextType = {
+  const value: CommentsContextType = useMemo(() => ({
     comments, setComments, dailyLogs, setDailyLogs,
     commentText, setCommentText, replyingTo, setReplyingTo,
     dailyLogTab, setDailyLogTab, selectedLogId, setSelectedLogId, logForm, setLogForm,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
     postComment,
-  };
+  }), [comments, dailyLogs, commentText, replyingTo, dailyLogTab, selectedLogId, logForm, saveDailyLog, deleteDailyLog, openEditLog, resetLogForm, postComment]);
 
   return <CommentsContext.Provider value={value}>{children}</CommentsContext.Provider>;
 }

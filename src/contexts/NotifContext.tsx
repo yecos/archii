@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useChatContext } from './ChatContext';
@@ -441,7 +441,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     showToast('Historial de notificaciones limpiado');
   };
 
-  const value: NotifContextType = {
+  const value: NotifContextType = useMemo(() => ({
     notifPermission, setNotifPermission,
     notifHistory, setNotifHistory,
     notifPrefs, setNotifPrefs,
@@ -456,7 +456,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     requestNotifPermission, dismissNotifBanner,
     toggleNotifPref, markNotifRead, markAllNotifRead, clearNotifHistory,
     navigateToRef, isTabVisibleRef,
-  };
+  }), [notifPermission, notifHistory, notifPrefs, showNotifPanel, unreadCount, notifSound, inAppNotifs, notifFilterCat, showNotifBanner, sendNotif, sendBrowserNotif, playNotifSound, vibrateNotif, requestNotifPermission, dismissNotifBanner, toggleNotifPref, markNotifRead, markAllNotifRead, clearNotifHistory]);
 
   return <NotifContext.Provider value={value}>{children}</NotifContext.Provider>;
 }

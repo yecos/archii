@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -285,7 +285,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
   // ===== PROVIDER =====
 
-  const value: InventoryContextType = {
+  const value: InventoryContextType = useMemo(() => ({
     invProducts, setInvProducts, invCategories, setInvCategories,
     invMovements, setInvMovements, invTransfers, setInvTransfers,
     invTab, setInvTab, invFilterCat, setInvFilterCat, invSearch, setInvSearch,
@@ -299,7 +299,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     getInvCategoryName, getInvCategoryColor, getInvProductName,
     handleInvProductImageSelect,
     invTotalValue, invLowStock, invTotalStock, invPendingTransfers, invAlerts,
-  };
+  }), [invProducts, invCategories, invMovements, invTransfers, invTab, invFilterCat, invSearch, invMovFilterType, invTransferFilterStatus, invWarehouseFilter, getWarehouseStock, getTotalStock, buildWarehouseStock, saveInvProduct, deleteInvProduct, openEditInvProduct, saveInvCategory, deleteInvCategory, openEditInvCategory, saveInvMovement, deleteInvMovement, saveInvTransfer, deleteInvTransfer, getInvCategoryName, getInvCategoryColor, getInvProductName, handleInvProductImageSelect, invTotalValue, invLowStock, invTotalStock, invPendingTransfers, invAlerts]);
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }

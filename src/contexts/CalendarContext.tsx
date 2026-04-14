@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase } from '@/lib/firebase-service';
@@ -76,12 +76,12 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
 
   // ===== PROVIDER =====
 
-  const value: CalendarContextType = {
+  const value: CalendarContextType = useMemo(() => ({
     calMonth, setCalMonth, calYear, setCalYear,
     calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
     meetings, setMeetings,
     saveMeeting, deleteMeeting, openEditMeeting,
-  };
+  }), [calMonth, calYear, calSelectedDate, calFilterProject, meetings, saveMeeting, deleteMeeting, openEditMeeting]);
 
   return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>;
 }
