@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
 import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
+import { AppProviders } from "@/components/layout/AppProviders";
 
 export const metadata: Metadata = {
   title: "ArchiFlow — Gestión de Proyectos",
@@ -107,6 +108,8 @@ export default function RootLayout({
           }
         ` }} />
         {children}
+        {/* Global providers: Toaster + ConfirmDialog */}
+        <AppProviders />
         {/* AI Assistant - Floating wrapper */}
         <AIFloatingWrapper />
         {/* Keyboard Shortcuts - Global initialization */}
