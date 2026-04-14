@@ -14,12 +14,6 @@ import { confirm } from '@/hooks/useConfirmDialog';
 import { logAudit, extractChanges } from '@/lib/audit-trail';
 import type { AuditEntityType } from '@/lib/audit-trail';
 import * as _gantt from '@/lib/gantt-helpers';
-import InventoryProvider from './InventoryContext';
-import GalleryProvider from './GalleryContext';
-import TimeTrackingProvider from './TimeTrackingContext';
-import CalendarProvider from './CalendarContext';
-import InvoiceProvider from './InvoiceContext';
-import CommentsProvider from './CommentsContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -643,7 +637,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     projectExpenses, projectTasks, projectBudget, projectSpent,
   ]);
 
-  return <FirestoreContext.Provider value={value}><CommentsProvider><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></CommentsProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}>{children}</FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {
