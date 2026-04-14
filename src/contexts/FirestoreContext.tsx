@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useMemo,
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
@@ -189,9 +189,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando projects:', err); });
+    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setProjects(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando projects:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -199,9 +199,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando tasks:', err); });
+    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setTasks(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando tasks:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -209,9 +209,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando expenses:', err); });
+    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setExpenses(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando expenses:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -220,12 +220,12 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsubs: any[] = [];
-    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando suppliers:', err); }));
-    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando companies:', err); }));
+    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setSuppliers(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando suppliers:', err); }));
+    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setCompanies(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando companies:', err); }));
     return () => unsubs.forEach(u => u());
   }, [ready, authUser]);
 
@@ -233,9 +233,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot((snap: any) => {
-      setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando workPhases:', err); });
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot((snap: QuerySnapshot) => {
+      setWorkPhases(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando workPhases:', err); });
     return () => { unsub(); setWorkPhases([]); };
   }, [ready, selectedProjectId]);
 
@@ -243,9 +243,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando files:', err); });
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setProjectFiles(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando files:', err); });
     return () => { unsub(); setProjectFiles([]); };
   }, [ready, selectedProjectId]);
 
@@ -253,9 +253,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setApprovals(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
 
@@ -439,7 +439,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       const db = getFirebase().firestore();
       await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
-    } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
+    } catch (err: unknown) { showToast('Error al subir: ' + (err instanceof Error ? err.message : ''), 'error'); }
     e.target.value = '';
   }, [selectedProjectId, authUser, showToast, fileToBase64]);
 

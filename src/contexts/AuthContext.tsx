@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { ADMIN_EMAILS } from '@/lib/types';
 import type { TeamUser, Project, Task } from '@/lib/types';
 import { getInitials } from '@/lib/helpers';
@@ -94,10 +94,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           if (result.credential.refreshToken) localStorage.setItem('msRefreshToken', result.credential.refreshToken);
         }
       }
-    }).catch((err: any) => {
-      if (err.code !== 'auth/no-pending-redirect') {
-        console.error('[ArchiFlow Auth] Redirect result error:', err.code, err.message);
-        setTimeout(() => showToast(`Error de autenticación: ${err.code || err.message}`, 'error'), 500);
+    }).catch((err: unknown) => {
+      const code = (err as { code?: string })?.code;
+      const message = (err as { message?: string })?.message;
+      if (code !== 'auth/no-pending-redirect') {
+        console.error('[ArchiFlow Auth] Redirect result error:', code, message);
+        setTimeout(() => showToast(`Error de autenticación: ${code || message}`, 'error'), 500);
       }
     });
 
@@ -130,9 +132,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('users').onSnapshot((snap: any) => {
-      setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando users:', err); });
+    const unsub = db.collection('users').onSnapshot((snap: QuerySnapshot) => {
+      setTeamUsers(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando users:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

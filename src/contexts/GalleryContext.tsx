@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== GALLERY CONTEXT ===== */
@@ -51,9 +51,9 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
+    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setGalleryPhotos(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

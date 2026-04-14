@@ -129,15 +129,19 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
       setInstallPrompt(e);
       setTimeout(() => setShowInstallBanner(true), 2000);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => {
+    const appInstalledHandler = () => {
       setInstallPrompt(null);
       setShowInstallBanner(false);
       setIsInstalled(true);
       localStorage.setItem('archiflow-installed', 'true');
       showToast('ArchiFlow instalado correctamente');
-    });
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', appInstalledHandler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', appInstalledHandler);
+    };
   }, []);
 
   // ===== FUNCTIONS =====

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 
 /* ===== INVOICE CONTEXT ===== */
@@ -44,9 +44,9 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
+    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+      setInvoices(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

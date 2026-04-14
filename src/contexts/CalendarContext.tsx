@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== CALENDAR + MEETINGS CONTEXT ===== */
@@ -42,9 +42,9 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: any) => {
-      setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
+    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: QuerySnapshot) => {
+      setMeetings(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, QuerySnapshot, QueryDocSnapshot } from '@/lib/firebase-service';
 import { fmtSize } from '@/lib/helpers';
 
 /* ===== CHAT CONTEXT ===== */
@@ -141,18 +141,18 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     const db = getFirebase().firestore();
     let unsub: any;
     if (chatProjectId === '__general__') {
-      unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: any) => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+      unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
       }, () => {});
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
-      unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: any) => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+      unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
       }, () => {});
     } else {
-      unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: any) => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+      unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() })));
       }, () => {});
     }
     return () => { unsub(); setMessages([]); };

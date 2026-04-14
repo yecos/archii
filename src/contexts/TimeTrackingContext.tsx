@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 
 /* ===== TIME TRACKING CONTEXT ===== */
@@ -46,9 +46,9 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: any) => {
-      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
+    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: QuerySnapshot) => {
+      setTimeEntries(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

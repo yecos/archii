@@ -136,5 +136,10 @@ export function getStorage() {
   return getFirebase().storage();
 }
 
+/** Type-safe snapshot mapper: converts Firestore QuerySnapshot to typed array. */
+export function snapToDocs<T = Record<string, any>>(snap: QuerySnapshot): Array<{ id: string; data: T }> {
+  return snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, data: (d.data() || {}) as T }));
+}
+
 /* ---- Re-export types for use in hooks/components ---- */
 export type { FirebaseApp, FirebaseUser, FirestoreDB, CollectionRef, DocRef, QuerySnapshot, QueryDocSnapshot, BatchWriter };

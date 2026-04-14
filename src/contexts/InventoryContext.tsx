@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
@@ -85,9 +85,9 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
+    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+      setInvProducts(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -95,9 +95,9 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: any) => {
-      setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
+    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: QuerySnapshot) => {
+      setInvCategories(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -105,9 +105,9 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
+    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+      setInvMovements(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -115,9 +115,9 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
+    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+      setInvTransfers(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
     return () => unsub();
   }, [ready, authUser]);
 

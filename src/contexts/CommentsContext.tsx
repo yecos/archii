@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { Comment } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -62,9 +62,9 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: any) => {
-      setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
+    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: QuerySnapshot) => {
+      setComments(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -72,9 +72,9 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     if (!ready || !authUser || !selectedProjectId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot((snap: any) => {
-      setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando dailyLogs:', err); });
+    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+      setDailyLogs(snapToDocs(snap));
+    }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando dailyLogs:', err); });
     return () => { unsub(); setDailyLogs([]); };
   }, [ready, authUser, selectedProjectId]);
 
