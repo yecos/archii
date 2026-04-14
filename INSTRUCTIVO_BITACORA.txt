@@ -221,6 +221,84 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 21:30 | ETAPA 1 - Limpieza y Estabilidad Inmediata (6 tareas)
+  Accion: Primera etapa del plan de transformacion premium
+  Tag de respaldo: backup-pre-etapa1-limpieza-20260414
+  Motivo: Limpieza de codigo muerto, seguridad y estabilidad
+  Commits realizados: 7
+
+  Tarea 1.1 - Eliminar useFirestoreData.ts (codigo muerto)
+    Archivo eliminado: src/hooks/useFirestoreData.ts (362 lineas)
+    Motivo: Duplicaba todos los listeners ya existentes en FirestoreContext
+    No era importado por ningun archivo activo
+    Commit: 5ae352b
+
+  Tarea 1.2 - Limpiar archivos .txt de respaldo en src/screens
+    Archivos eliminados: 29 archivos .txt
+    - 14 archivos de respaldo limpio (AdminScreen.txt, BudgetScreen.txt, etc.)
+    - 14 archivos _raw_ (respaldos originales antes de refactorizar)
+    - 1 archivo modals_section.txt
+    - 1 archivo lightbox_section.txt
+    Motivo: Limpieza del repo, los respaldos ya no son necesarios
+    Commit: 5ae352b (junto con tarea 1.1)
+    Total: 7,048 lineas eliminadas
+
+  Tarea 1.3 - Crear useConfirmDialog + Sonner Toaster + ConfirmDialog global
+    Archivos creados:
+      * src/hooks/useConfirmDialog.tsx - Hook que reemplaza window.confirm()
+      * src/components/layout/AppProviders.tsx - Proveedor global
+    Archivos modificados:
+      * src/app/layout.tsx - Montaje de AppProviders
+    Motivo: Reemplazar window.confirm() nativo por AlertDialog premium
+    Caracteristicas del hook:
+      - Retorna Promise<boolean> como window.confirm (migracion gradual)
+      - Soporta titulo, descripcion, textos custom, variante destructive
+      - ConfirmDialog montado globalmente con useSyncExternalStore
+      - Sonner Toaster montado globalmente (richColors, closeButton)
+    Commit: 7958cd0
+
+  Tarea 1.4 - Reemplazar 31 window.confirm() por useConfirmDialog
+    Archivos modificados: 8
+      * src/lib/firestore-actions.ts - 15 funciones delete
+      * src/contexts/FirestoreContext.tsx - 12 funciones delete
+      * src/contexts/AuthContext.tsx - 1 (doLogout)
+      * src/contexts/OneDriveContext.tsx - 1 (deleteFromOneDrive)
+      * src/screens/ProjectDetailScreen.tsx - 3 confirms
+      * src/screens/AdminScreen.tsx - 1 confirm
+      * src/screens/InstallScreen.tsx - 1 confirm
+      * src/screens/CompaniesScreen.tsx - 1 confirm
+    Motivo: UX premium, accesibilidad, consistencia visual
+    Todas las confirmaciones destructivas usan variante roja
+    Commit: e33471b
+
+  Tarea 1.5 - Sanitizar AIChatPanel con DOMPurify (anti-XSS)
+    Dependencias instaladas: dompurify, @types/dompurify
+    Archivos modificados:
+      * src/components/archiflow/AIChatPanel.tsx
+    Motivo: El dangerouslySetInnerHTML renderizaba HTML sin sanitizar
+    Aplicado DOMPurify.sanitize() al contenido de mensajes de IA
+    Verificado: 0 vulnerabilidades XSS restantes en contenido de usuario
+    Commit: 731b9a4
+
+  Tarea 1.6 - Fortalecer tipos TypeScript en types.ts
+    Archivos modificados: src/lib/types.ts
+    Cambios principales:
+      - Nuevo tipo FirestoreTimestamp (reemplaza 20+ campos `any`)
+      - Nueva interfaz FirestoreBase con campos comunes
+      - Nuevos tipos union: ProjectStatus, TaskPriority, TaskStatus, InvoiceStatus
+      - Nuevas interfaces: Meeting, ChatMessage (faltaban en el proyecto)
+      - Interfaces mejoradas: User, TeamUser, Project, Task, Expense, Supplier,
+        Approval, OneDriveFile, Company, InvMovement
+      - Campos opcionales agregados donde faltaban
+    Commit: de79a8c
+
+  Estado de la etapa: COMPLETADA
+  Total de lineas eliminadas: ~7,048 (limpieza)
+  Total de lineas agregadas: ~260 (nuevas funcionalidades)
+  Librerias nuevas: dompurify, @types/dompurify
+  Commits: 5ae352b, 7958cd0, e33471b, 731b9a4, de79a8c
+  Proximos pasos: Etapa 2 - Descomponer FirestoreContext
+
 2026-04-14 14:00 | SESION INICIAL - Creacion del instructivo
   Accion: Creacion del INSTRUCTIVO_BITACORA.txt
   Motivo: Establecer metodologia de trabajo para el proyecto Archiflow
