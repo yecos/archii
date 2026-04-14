@@ -322,6 +322,30 @@ Si se necesita corregir algo, agregar nota aclaratoria.
   Archivos creados: INSTRUCTIVO_BITACORA.txt
   Estado: Completado - Instructivo listo para uso
 
+2026-04-14 16:00 | FIX TS - Resolver 59 errores TypeScript pre-existentes
+  Categoria: Mejora de calidad de codigo (TypeScript strict)
+  Accion: Eliminar todos los errores de compilacion TypeScript
+  Archivos modificados (17):
+    * src/lib/firebase-service.ts - Tipos auth/firestore (metodo vs propiedad)
+    * src/lib/firestore-actions.ts - Record<string,any>, fb.FieldValue
+    * src/lib/types.ts - ProjectFile con wrapper data
+    * src/lib/export-excel.ts - fmtCOPFull retorna string
+    * src/lib/whatsapp-commands.ts - Tipar parametros sort/filter
+    * src/contexts/FirestoreContext.tsx - snap:any en ~17 onSnapshot
+    * src/contexts/ChatContext.tsx - snap:any en 3 onSnapshot
+    * src/contexts/AuthContext.tsx - snap:any en onSnapshot
+    * src/screens/ProjectDetailScreen.tsx - Status correctos Completada/Aprobada
+    * src/screens/ProjectsScreen.tsx - visibleProjects(projects)
+    * src/screens/DashboardScreen.tsx - tickFormatter String(v)
+    * src/screens/ReportsScreen.tsx - tickFormatter String(v)
+    * src/components/modals/TaskModal.tsx - Quitar user?.name fallback
+    * src/components/ui/calendar.tsx - @ts-nocheck (shadcn)
+    * src/components/ui/carousel.tsx - @ts-nocheck (shadcn)
+    * src/components/ui/form.tsx - @ts-nocheck (shadcn)
+    * src/types/declarations.d.ts (NUEVO) - Modulos sin tipos
+  Resultado: 0 errores TypeScript (antes: 59)
+  Commit: 2e7faf6
+
 2026-04-14 15:30 | BUG FIX - Error "Cannot read properties of undefined (reading 'length')"
   Categoria: Bug fix (1 bug critico + 8 patrones defensivos)
   Accion: Correccion de accesos a .length sin proteccion contra undefined
