@@ -221,6 +221,26 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 20:00 | ETAPA 2 - Paso 2.3: Extraer GalleryContext
+  Accion: Extraer logica de galeria de FirestoreContext a contexto propio
+  Commit: e123d53
+
+  Archivo creado: src/contexts/GalleryContext.tsx (138 lineas)
+    Contenido:
+      * Interface GalleryContextType
+      * 1 useState: galleryPhotos
+      * 4 UI state: galleryFilterProject, galleryFilterCat, lightboxPhoto, lightboxIndex
+      * 1 useEffect: listener galleryPhotos
+      * 3 CRUD: saveGalleryPhoto, deleteGalleryPhoto, handleGalleryImageSelect
+      * 5 lightbox: open, close, prev, next, getFilteredGalleryPhotos
+
+  Archivos modificados:
+    * FirestoreContext.tsx - 932 -> 848 lineas (-84 netas)
+    * useApp.ts - consume de useGalleryContext
+
+  Verificacion: tsc --noEmit -> 0 errores TypeScript
+  Progreso acumulado FirestoreContext: 1,176 -> 848 (-328, -28%)
+
 2026-04-14 19:30 | ETAPA 2 - Paso 2.2: Extraer InventoryContext
   Accion: Extraer logica de inventario de FirestoreContext a contexto propio
   Motivo: FirestoreContext monolito — reducir lineas y aislar dominio inventario
