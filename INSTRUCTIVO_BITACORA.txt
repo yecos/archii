@@ -221,6 +221,30 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 22:00 | ETAPA 2 - Paso 2.6: Extraer InvoiceContext
+  Accion: Conectar InvoiceContext existente y eliminar codigo duplicado de FirestoreContext
+  Motivo: InvoiceContext.tsx estaba creado pero sin importar ni consumir
+  Commit: b5366a5
+
+  Archivo ya existente: src/contexts/InvoiceContext.tsx (95 lineas)
+    Contenido:
+      * Interface InvoiceContextType
+      * 1 useState: invoices
+      * 3 UI state: invoiceTab, invoiceItems, invoiceFilterStatus
+      * 1 useEffect: listener invoices
+      * 4 CRUD: openNewInvoice, updateInvoiceItem, addInvoiceItem, saveInvoice
+      * 1 computed: invoices2
+
+  Archivos modificados:
+    * FirestoreContext.tsx - 724 -> 666 lineas (-58 netas)
+      - Eliminado: state invoices, 3 UI state invoice, 1 effect, 4 CRUD
+      - Eliminado de interface: invoices/setInvoices, invoice UI props, invoice CRUD
+      - Agregado: import InvoiceProvider + wrapper en return JSX
+    * useApp.ts - consume de useInvoiceContext para todas las props de invoice
+
+  Verificacion: tsc --noEmit -> 0 errores TypeScript
+  Progreso acumulado FirestoreContext: 1,254 -> 666 (-588, -47%)
+
 2026-04-14 20:00 | ETAPA 2 - Paso 2.3: Extraer GalleryContext
   Accion: Extraer logica de galeria de FirestoreContext a contexto propio
   Commit: e123d53
