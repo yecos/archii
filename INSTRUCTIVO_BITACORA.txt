@@ -221,6 +221,129 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 22:00 | FEATURE PACK v14 — Chat refactor, Inventory tabs, Calendar weekly, Project templates
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v14-chat-inv-calendar-20260415
+  Objetivo: 5 tareas de funcionalidad y UX (chat, inventario, calendario, proyectos)
+  Commit: f2f8552
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 14.1 — Fix busqueda de emojis + Chat refactor:
+    - ChatScreen refactorizado en componentes modulares:
+      ChatSidebar.tsx (114 lineas), MessageBubble.tsx (228 lineas),
+      MessageList.tsx (367 lineas), EmojiPicker.tsx (84 lineas)
+    - chat-helpers.ts: utilidades compartidas (formatTime, formatName, groupByDate)
+    - Typing indicator con dots animados
+    - Scroll automatico al ultimo mensaje
+    - Fix: busqueda de emojis funcionaba correctamente en EmojiPicker
+
+  Tarea 14.2 — Slider custom para progreso de proyecto:
+    - ProjectObra.tsx: slider nativo reemplazado con slider custom
+    - Gradiente visual (verde → amarillo → rojo) segun progreso
+    - Tooltip con porcentaje en tiempo real
+    - Feedback visual al arrastrar
+
+  Tarea 14.3 — Indicador animado de tab (sliding pill):
+    - AnimatedTabs.tsx: pill que se desliza entre tabs activos
+    - CSS transitions suaves con transform translateX
+    - Calculo automatico de posicion basado en tab activo
+    - Integrado en pantallas con tabs multiples
+
+  Tarea 14.4 — Vista semanal/agenda en calendario:
+    - CalendarScreen.tsx: modo semana con slots de tiempo (7am-10pm)
+    - Eventos coloridos por categoria con indicadores de duracion
+    - Toggle dia/semana con transicion suave
+    - Navegacion por semana con flechas
+    - +900 lineas agregadas en CalendarScreen
+
+  Tarea 14.5 — Plantillas de proyecto + Duplicar proyecto:
+    - ProjectModal.tsx: selector de plantillas con presets
+      (Residencial, Comercial, Renovacion, Interiorismo, Paisajismo)
+    - Cada plantilla preconfigura: tipo, fases, presupuesto estimado, plazos
+    - Boton "Duplicar proyecto" en ProjectDetailScreen
+    - Copia tareas, equipo asignado y estructura de fases
+
+  Bonus — InventoryScreen refactorizado en 7 tabs modulares:
+    - InvDashboardTab.tsx (129 lineas): resumen con KPIs
+    - InvProductsTab.tsx (123 lineas): gestion de productos
+    - InvCategoriesTab.tsx (49 lineas): categorias
+    - InvWarehouseTab.tsx (80 lineas): almacenes
+    - InvMovementsTab.tsx (74 lineas): movimientos
+    - InvTransfersTab.tsx (60 lineas): transferencias
+    - InvReportsTab.tsx (296 lineas): reportes con graficos
+
+  Archivos creados (12): ChatSidebar, MessageBubble, MessageList, EmojiPicker,
+    chat-helpers, InvDashboardTab, InvProductsTab, InvCategoriesTab,
+    InvWarehouseTab, InvMovementsTab, InvTransfersTab, InvReportsTab
+  Archivos modificados (17): HomeContent, AIChatPanel, QuickActions, ProjectObra,
+    AppProviders, ProjectModal, AnimatedTabs, FirestoreContext, InventoryContext,
+    UIContext, types, CalendarScreen, ChatScreen, InventoryScreen,
+    ProfileScreen, ProjectDetailScreen, TasksScreen
+  Total: +2,943 lineas agregadas, -1,543 eliminadas (29 archivos tocados)
+
+  Resumen:
+    - 1 commit: f2f8552
+    - 29 archivos tocados (12 creados, 17 modificados)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Total funcionalidades implementadas (v7-v14): 29 + 7 = 36 items
+
+2026-04-15 21:00 | FEATURE PACK v13 — Security & Platform Quality
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v13-security-platform-20260415
+  Objetivo: Hardening de seguridad, migracion Storage, SEO, export CSV, atajos teclado
+  Commit: d790760
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 13.1 — Security Hardening:
+    - rate-limit.ts: sliding window in-memory con auto-cleanup
+    - /api/ai-assistant: auth + rate limit 15 req/min (CRITICAL: antes sin auth)
+    - /api/ai-suggestions: rate limit 10 req/min
+    - /api/whatsapp/send: rate limit 5 req/min
+    - Eliminado /api/whatsapp/test (exponia tokens sin auth)
+    - /api root: health check con version + timestamp
+    - 5x error:any cambiados a error:unknown en WhatsApp routes
+
+  Tarea 13.2 — Gallery Storage Migration:
+    - GalleryContext: upload a Firebase Storage en vez de base64 en Firestore
+    - Compresion de imagenes (>800KB, max 1600px, JPEG 80%)
+    - Progress bar de subida en GalleryScreen
+    - Elimina archivo de Storage al borrar foto
+    - GalleryPhoto type ampliado (storagePath, fileName, fileSize, contentType)
+    - Max file size: 10MB (antes 5MB limitado por Firestore doc size)
+
+  Tarea 13.3 — SEO & Metadata:
+    - Open Graph tags en layout.tsx (og:type, locale, siteName)
+    - Twitter Card meta tags
+    - Keywords SEO para arquitectura/interiorismo
+    - Title template '%s | ArchiFlow'
+
+  Tarea 13.4 — CSV Export:
+    - export-csv.ts: 5 funciones (projects, tasks, expenses, suppliers, time)
+    - UTF-8 BOM para compatibilidad con Excel
+    - Zero dependencias externas
+
+  Tarea 13.5 — Keyboard Shortcuts Help:
+    - Ctrl+/ → Help overlay con todos los atajos
+    - Overlay adapta tema dark/light automaticamente
+    - Close on click outside
+
+  Tarea 13.6 — Config Cleanup:
+    - vercel.json: headers duplicados eliminados (ya en next.config.ts)
+
+  Archivos modificados: 15 (2 creados, 12 modificados, 1 eliminado)
+  Total: +701 lineas agregadas, -224 eliminadas
+
+  Resumen:
+    - 1 commit: d790760
+    - 3 API routes con rate limiting
+    - ai-assistant ahora protegido con auth (CRITICAL fix)
+    - Galeria sube a Firebase Storage con compresion
+    - SEO Open Graph + Twitter Cards
+    - 5 funciones CSV export
+    - Keyboard shortcuts help overlay (Ctrl+/)
+    - Build exitoso, Vercel deploy automatico
+
 2026-04-15 20:00 | FEATURE PACK v12 — Quality & Stability (Accessibility, Network, Responsive, Performance)
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v12-quality-stability-20260415
