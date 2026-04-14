@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -318,7 +319,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
               >
                 {msg.role === 'assistant' && !msg.isError ? (
                   <div className="relative">
-                    <div dangerouslySetInnerHTML={{ __html: formatMessage(msg.displayContent || msg.content) }} />
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMessage(msg.displayContent || msg.content)) }} />
                     {msg.isTyping && <TypingCursor />}
                   </div>
                 ) : (
