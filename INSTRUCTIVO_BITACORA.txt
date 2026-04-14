@@ -221,6 +221,52 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 19:30 | ETAPA 2 - Paso 2.2: Extraer InventoryContext
+  Accion: Extraer logica de inventario de FirestoreContext a contexto propio
+  Motivo: FirestoreContext monolito — reducir lineas y aislar dominio inventario
+  Commit: ada7915
+
+  Archivo creado: src/contexts/InventoryContext.tsx (311 lineas)
+    Contenido:
+      * Interface InventoryContextType con todos los tipos del dominio
+      * 4 useState: invProducts, invCategories, invMovements, invTransfers
+      * 6 useState UI: invTab, invFilterCat, invSearch, invMovFilterType,
+        invTransferFilterStatus, invWarehouseFilter
+      * 4 useEffect: listeners Firestore para las 4 colecciones
+      * 3 helpers: getWarehouseStock, getTotalStock, buildWarehouseStock
+      * 10 CRUD: saveInvProduct, deleteInvProduct, openEditInvProduct,
+        saveInvCategory, deleteInvCategory, openEditInvCategory,
+        saveInvMovement, deleteInvMovement, saveInvTransfer, deleteInvTransfer
+      * 3 lookups: getInvCategoryName, getInvCategoryColor, getInvProductName
+      * 1 image handler: handleInvProductImageSelect
+      * 5 computed: invTotalValue, invLowStock, invTotalStock,
+        invPendingTransfers, invAlerts
+
+  Archivos modificados:
+    * src/contexts/FirestoreContext.tsx - 1,176 -> 932 lineas (-244 netas)
+      - Eliminado: 4 state, 6 UI state, 4 effects, 10 CRUD, 3 helpers,
+        3 lookups, 1 image handler, 5 computed (todo inventario)
+      - Agregado: import InventoryProvider + wrapper en return
+    * src/hooks/useApp.ts -consume de useInventoryContext, re-exporta
+      todas las propiedades de inventario desde inv.* (antes fs.*)
+    * src/contexts/NotifContext.tsx - consume de useInventoryContext
+      para deteccion de cambios en inventario (movements, transfers, products)
+
+  Consumers NO modificados: InventoryScreen, InvProductModal, InvCategoryModal,
+    InvMovementModal, InvTransferModal — todos usan useApp() transparente
+
+  Verificacion: tsc --noEmit -> 0 errores TypeScript
+  Estrategia: InventoryProvider montado como hijo de FirestoreProvider
+    (los consumers acceden via useApp -> useInventoryContext)
+
+  Estado de FirestoreContext: 1,176 -> 932 lineas
+  Proximos pasos:
+    - Paso 2.3: Extraer GalleryContext (~60 lineas)
+    - Paso 2.4: Extraer TimeTrackingContext (~50 lineas)
+    - Paso 2.5: Extraer CalendarContext + Meetings (~40 lineas)
+    - Paso 2.6: Extraer InvoiceContext (~40 lineas)
+    - Paso 2.7: Evaluar si Projects/Tasks/Expenses pueden separarse
+
 2026-04-14 18:00 | ETAPA 2 - Descomponer FirestoreContext (paso 1: Gantt helpers)
   Accion: Extraer logica no-reactiva de FirestoreContext a modulos utils
   Tag de respaldo: backup-pre-bugfix-proyectos-auth-20260414 (reutilizado)
