@@ -6,11 +6,23 @@
 
 /* ===== INTERFACES ===== */
 
+/** Firebase Timestamp type for server timestamps */
+export type FirestoreTimestamp = ReturnType<typeof import('firebase/firestore').serverTimestamp>;
+
+/** Common base fields for Firestore documents */
+export interface FirestoreBase {
+  createdAt: FirestoreTimestamp | null;
+  updatedAt?: FirestoreTimestamp | null;
+  createdBy?: string;
+}
+
 export interface User {
   uid: string;
   displayName: string;
   email: string;
   photoURL?: string;
+  role?: string;
+  companyId?: string;
 }
 
 export interface TeamUser {
@@ -21,14 +33,18 @@ export interface TeamUser {
     role?: string;
     photoURL?: string;
     companyId?: string;
+    isActive?: boolean;
+    lastLogin?: FirestoreTimestamp | null;
   };
 }
+
+export type ProjectStatus = 'Concepto' | 'Anteproyecto' | 'Proyecto' | 'En ejecución' | 'Entrega' | 'Pausado' | 'Completado' | 'Cancelado';
 
 export interface Project {
   id: string;
   data: {
     name: string;
-    status: string;
+    status: ProjectStatus;
     client: string;
     location: string;
     budget: number;
@@ -37,11 +53,16 @@ export interface Project {
     endDate: string;
     progress: number;
     companyId?: string;
-    createdAt: any;
-    updatedAt?: any;
+    phase?: string;
+    color?: string;
+    createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
     createdBy?: string;
   };
 }
+
+export type TaskPriority = 'Baja' | 'Media' | 'Alta' | 'Urgente';
+export type TaskStatus = 'Por hacer' | 'En progreso' | 'En revisión' | 'Completado';
 
 export interface Task {
   id: string;
@@ -49,11 +70,13 @@ export interface Task {
     title: string;
     projectId: string;
     assigneeId: string;
-    priority: string;
-    status: string;
+    priority: TaskPriority;
+    status: TaskStatus;
     dueDate: string;
-    createdAt: any;
+    description?: string;
+    createdAt: FirestoreTimestamp | null;
     createdBy?: string;
+    completedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -65,7 +88,8 @@ export interface Expense {
     category: string;
     amount: number;
     date: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
+    createdBy?: string;
   };
 }
 
@@ -80,7 +104,8 @@ export interface Supplier {
     website: string;
     notes: string;
     rating: number;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
+    createdBy?: string;
   };
 }
 
@@ -89,8 +114,10 @@ export interface Approval {
   data: {
     title: string;
     description: string;
-    status: string;
-    createdAt: any;
+    status: 'Pendiente' | 'Aprobada' | 'Rechazada';
+    requestedBy?: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy?: string;
   };
 }
 
@@ -99,11 +126,11 @@ export interface WorkPhase {
   data: {
     name: string;
     description: string;
-    status: string;
+    status: 'Pendiente' | 'En progreso' | 'Completada';
     order: number;
     startDate: string;
     endDate: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
   };
 }
 
@@ -111,19 +138,19 @@ export interface DailyLog {
   id: string;
   data: {
     projectId: string;
-    date: string; // YYYY-MM-DD format
-    weather: string; // 'Soleado', 'Nublado', 'Lluvioso', 'Parcialmente nublado', 'Tormenta'
-    temperature: number; // Celsius
-    activities: string[]; // Array of activity descriptions
-    laborCount: number; // Number of workers
-    equipment: string[]; // Equipment used
-    materials: string[]; // Materials used/consumed
-    observations: string; // General observations/notes
-    photos: string[]; // Base64 photo strings
-    supervisor: string; // Supervisor name
-    createdBy: string; // User UID
-    createdAt: any;
-    updatedAt?: any;
+    date: string;
+    weather: string;
+    temperature: number;
+    activities: string[];
+    laborCount: number;
+    equipment: string[];
+    materials: string[];
+    observations: string;
+    photos: string[];
+    supervisor: string;
+    createdBy: string;
+    createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -133,7 +160,8 @@ export interface ProjectFile {
   type: string;
   size: number;
   url: string;
-  createdAt: any;
+  uploadedBy?: string;
+  createdAt: FirestoreTimestamp | null;
 }
 
 export interface OneDriveFile {
@@ -144,6 +172,7 @@ export interface OneDriveFile {
   webUrl: string;
   createdDateTime: string;
   '@microsoft.graph.downloadUrl'?: string;
+  thumbnailUrl?: string;
 }
 
 export interface GalleryPhoto {
@@ -153,7 +182,7 @@ export interface GalleryPhoto {
     categoryName: string;
     caption: string;
     imageData: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
     createdBy: string;
   };
 }
@@ -172,9 +201,9 @@ export interface InvProduct {
     imageData: string;
     warehouse: string;
     warehouseStock: Record<string, number>;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
     createdBy: string;
-    updatedAt?: any;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -184,7 +213,7 @@ export interface InvCategory {
     name: string;
     color: string;
     description: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
   };
 }
 
@@ -197,7 +226,8 @@ export interface InvMovement {
     reason: string;
     reference: string;
     date: string;
-    createdAt: any;
+    warehouse?: string;
+    createdAt: FirestoreTimestamp | null;
     createdBy: string;
   };
 }
@@ -210,12 +240,12 @@ export interface InvTransfer {
     fromWarehouse: string;
     toWarehouse: string;
     quantity: number;
-    status: string;
+    status: 'Pendiente' | 'En tránsito' | 'Completada' | 'Cancelada';
     date: string;
     notes: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
     createdBy: string;
-    completedAt?: any;
+    completedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -228,8 +258,41 @@ export interface Company {
     phone?: string;
     email?: string;
     legalName?: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp | null;
+    createdBy?: string;
   };
+}
+
+export interface Meeting {
+  id: string;
+  data: {
+    title: string;
+    projectId?: string;
+    date: string;
+    time: string;
+    duration: number;
+    location?: string;
+    description?: string;
+    attendees: string[];
+    createdBy?: string;
+    createdAt: FirestoreTimestamp | null;
+    createdByUid?: string;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  uid: string;
+  userName: string;
+  userPhoto?: string;
+  content: string;
+  type?: 'text' | 'image' | 'audio' | 'file';
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  replyTo?: string;
+  reactions?: Record<string, string[]>;
+  createdAt: FirestoreTimestamp | null;
 }
 
 export interface NotifEntry {
@@ -254,33 +317,12 @@ export interface TimeEntry {
     description: string;
     startTime: string;
     endTime: string;
-    duration: number; // minutos
+    duration: number;
     billable: boolean;
-    rate: number; // COP/hora
+    rate: number;
     date: string;
-    createdAt: any;
-    updatedAt?: any;
-  };
-}
-
-export interface Invoice {
-  id: string;
-  data: {
-    projectId: string;
-    projectName: string;
-    clientName: string;
-    number: string;
-    status: 'Borrador' | 'Enviada' | 'Pagada' | 'Vencida' | 'Cancelada';
-    items: InvoiceItem[];
-    subtotal: number;
-    tax: number;
-    total: number;
-    notes: string;
-    issueDate: string;
-    dueDate: string;
-    paidDate?: string;
-    createdAt: any;
-    createdBy: string;
+    createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -290,6 +332,29 @@ export interface InvoiceItem {
   hours: number;
   rate: number;
   amount: number;
+}
+
+export type InvoiceStatus = 'Borrador' | 'Enviada' | 'Pagada' | 'Vencida' | 'Cancelada';
+
+export interface Invoice {
+  id: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    clientName: string;
+    number: string;
+    status: InvoiceStatus;
+    items: InvoiceItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    notes: string;
+    issueDate: string;
+    dueDate: string;
+    paidDate?: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+  };
 }
 
 export interface Comment {
@@ -303,8 +368,8 @@ export interface Comment {
     text: string;
     mentions: string[];
     parentId?: string;
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
