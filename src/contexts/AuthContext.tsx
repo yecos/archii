@@ -105,19 +105,23 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       setAuthUser(user || null);
       if (user) {
-        const db = fb.firestore();
-        const ref = db.collection('users').doc(user.uid);
-        const snap = await ref.get();
-        const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-        console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
-        if (!snap.exists) {
-          await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: (fb as any).firestore.FieldValue.serverTimestamp() });
-        } else if (isAdminEmail) {
-          const current = snap.data()?.role;
-          if (current !== 'Admin') {
-            console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
-            await ref.update({ role: 'Admin' });
+        try {
+          const db = fb.firestore();
+          const ref = db.collection('users').doc(user.uid);
+          const snap = await ref.get();
+          const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
+          if (!snap.exists) {
+            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: (fb as any).firestore.FieldValue.serverTimestamp() });
+          } else if (isAdminEmail) {
+            const current = snap.data()?.role;
+            if (current !== 'Admin') {
+              console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
+              await ref.update({ role: 'Admin' });
+            }
           }
+        } catch (err) {
+          console.error('[ArchiFlow Auth] Error creando/cargando documento de usuario:', err);
         }
       }
       setLoading(false);
@@ -130,8 +134,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot((snap: any) => {
-      setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando users:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -326,7 +330,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       return projects;
     }
     if (myComp) {
-      return projects.filter(p => !p.data.companyId || p.data.companyId === myComp);
+      return projects.filter(p => !p.data?.companyId || p.data.companyId === myComp);
     }
     return projects;
   };

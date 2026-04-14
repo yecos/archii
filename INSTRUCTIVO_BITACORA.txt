@@ -221,6 +221,67 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 17:00 | BUG FIX - Pantalla Proyectos rota + Login Google/Windows no funciona
+  Categoria: Bug critico (2 bugs)
+  Tag de respaldo: backup-pre-bugfix-proyectos-auth-20260414
+  Motivo: Tras los fixes de TS y FieldValue, la pantalla de Proyectos seguia
+    presentando errores de undefined, y el login OAuth (Google/Microsoft)
+    dejaba la app congelada en pantalla de carga.
+
+  BUG-20260414-003: Proyectos roto (error en cascada desde FirestoreContext)
+    Severidad: CRITICA
+    Sintomas: La app mostraba "Error al cargar" o se congelaba al intentar
+      acceder a la pantalla de Proyectos.
+    Causa raiz: Los 16 listeners onSnapshot en FirestoreContext.tsx mapeaban
+      documentos con d.data() sin proteccion contra undefined. Si cualquier
+      documento Firestore devolvia datos corruptos o vacios, todo el provider
+      fallaba en cascada, rompiendo TODAS las pantallas.
+    Ademas, los computed values (activeTasks, overdueTasks, etc.) accedian
+      a t.data.status, t.data.dueDate sin optional chaining.
+    Archivos modificados:
+      * src/contexts/FirestoreContext.tsx - 16 listeners: d.data() -> d.data() || {}
+        + optional chaining en todos los computed values (lineas 1077-1099)
+        + logging de errores en todos los callbacks onSnapshot
+      * src/contexts/AuthContext.tsx - Listener de users: d.data() || {}
+        + optional chaining en visibleProjects (p.data?.companyId)
+    Fix aplicado:
+      1. d.data() || {} en los 16 onSnapshot callbacks (defensa contra undefined)
+      2. Optional chaining (?.) en 14 computed values
+      3. Error logging en vez de callbacks vacios () => {}
+    Estado: RESUELTO
+
+  BUG-20260414-004: Login con Google y Windows/Microsoft congelaba la app
+    Severidad: CRITICA
+    Sintomas: Al iniciar sesion con Google o Microsoft, la app quedaba
+      permanentemente en pantalla de carga (spinner infinito).
+    Causa raiz: El onAuthStateChanged en AuthContext.tsx (linea 105) NO tenia
+      try/catch alrededor de las operaciones Firestore (ref.get(), ref.set()).
+      Si estas fallaban (permisos, red), el error no se capturaba y
+      setLoading(false) NUNCA se ejecutaba, dejando la app congelada.
+    Causas secundarias:
+      - firebase-service.ts: FieldValue() retornaba getFirebase().FieldValue
+        (undefined en compat SDK, solo existe en firebase.firestore.FieldValue)
+      - firebase-service.ts: La interface FirebaseApp declaraba FieldValue como
+        propiedad directa, lo cual es incorrecto para el SDK compat
+      - next.config.ts: CSP connect-src no inclua apis.google.com (necesario
+        para Google Identity Services y token exchange)
+    Archivos modificados:
+      * src/contexts/AuthContext.tsx - try/catch en onAuthStateChanged
+      * src/lib/firebase-service.ts - FieldValue() -> firestore.FieldValue
+        + eliminada propiedad FieldValue de la interface FirebaseApp
+      * next.config.ts - CSP: agregado https://apis.google.com a connect-src
+    Fix aplicado:
+      1. try/catch envolviendo las operaciones Firestore en onAuthStateChanged
+      2. setLoading(false) SIEMPRE se ejecuta (fuera del try/catch)
+      3. console.error para logging del error
+      4. Corregido FieldValue() helper function
+      5. Limpieza de interface FirebaseApp (eliminar FieldValue falso)
+      6. CSP actualizada con apis.google.com
+    Estado: RESUELTO
+
+  Verificacion: npx tsc --noEmit -> 0 errores TypeScript
+  Commit pendiente: fix(BUG-20260414-003,004): reparar Proyectos + Auth OAuth
+
 2026-04-14 21:30 | ETAPA 1 - Limpieza y Estabilidad Inmediata (6 tareas)
   Accion: Primera etapa del plan de transformacion premium
   Tag de respaldo: backup-pre-etapa1-limpieza-20260414

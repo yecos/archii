@@ -363,8 +363,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando projects:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -373,8 +373,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando tasks:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -383,8 +383,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando expenses:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -394,11 +394,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const db = getFirebase().firestore();
     const unsubs: any[] = [];
     unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {}));
+      setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando suppliers:', err); }));
     unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {}));
+      setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando companies:', err); }));
     return () => unsubs.forEach(u => u());
   }, [ready, authUser]);
 
@@ -407,8 +407,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot((snap: any) => {
-      setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando workPhases:', err); });
     return () => { unsub(); setWorkPhases([]); };
   }, [ready, selectedProjectId]);
 
@@ -417,8 +417,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando files:', err); });
     return () => { unsub(); setProjectFiles([]); };
   }, [ready, selectedProjectId]);
 
@@ -427,8 +427,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
 
@@ -437,8 +437,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: any) => {
-      setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -447,8 +447,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -457,8 +457,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
-      setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -467,8 +467,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: any) => {
-      setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -477,8 +477,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -487,8 +487,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -497,8 +497,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: any) => {
-      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -507,8 +507,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: any) => {
-      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -517,8 +517,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: any) => {
-      setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -527,8 +527,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!ready || !authUser || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot((snap: any) => {
-      setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+      setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
+    }, (err: any) => { console.error('[ArchiFlow] Error escuchando dailyLogs:', err); });
     return () => { unsub(); setDailyLogs([]); };
   }, [ready, authUser, selectedProjectId]);
 
@@ -1074,28 +1074,28 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   };
 
   // ===== COMPUTED VALUES =====
-  const activeTasks = tasks.filter(t => t.data.status !== 'Completado');
-  const completedTasks = tasks.filter(t => t.data.status === 'Completado');
-  const overdueTasks = activeTasks.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
-  const urgentTasks = activeTasks.filter(t => t.data.priority === 'Alta');
-  const pendingCount = tasks.filter(t => t.data.status !== 'Completado').length;
+  const activeTasks = tasks.filter(t => t.data?.status !== 'Completado');
+  const completedTasks = tasks.filter(t => t.data?.status === 'Completado');
+  const overdueTasks = activeTasks.filter(t => t.data?.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
+  const urgentTasks = activeTasks.filter(t => t.data?.priority === 'Alta');
+  const pendingCount = tasks.filter(t => t.data?.status !== 'Completado').length;
 
   const adminFilteredTasks = activeTasks.filter(t => {
-    const ms = !adminTaskSearch || t.data.title.toLowerCase().includes(adminTaskSearch.toLowerCase());
-    const ma = adminFilterAssignee === 'all' || t.data.assigneeId === adminFilterAssignee;
-    const mp = adminFilterProject === 'all' || t.data.projectId === adminFilterProject;
-    const mpr = adminFilterPriority === 'all' || t.data.priority === adminFilterPriority;
+    const ms = !adminTaskSearch || (t.data?.title || '').toLowerCase().includes(adminTaskSearch.toLowerCase());
+    const ma = adminFilterAssignee === 'all' || t.data?.assigneeId === adminFilterAssignee;
+    const mp = adminFilterProject === 'all' || t.data?.projectId === adminFilterProject;
+    const mpr = adminFilterPriority === 'all' || t.data?.priority === adminFilterPriority;
     return ms && ma && mp && mpr;
   });
 
-  const invTotalValue = invProducts.reduce((s, p) => s + (Number(p.data.price) || 0) * getTotalStock(p), 0);
-  const invLowStock = invProducts.filter(p => getTotalStock(p) <= (Number(p.data.minStock) || 0));
+  const invTotalValue = invProducts.reduce((s, p) => s + (Number(p.data?.price) || 0) * getTotalStock(p), 0);
+  const invLowStock = invProducts.filter(p => getTotalStock(p) <= (Number(p.data?.minStock) || 0));
   const invTotalStock = invProducts.reduce((s, p) => s + getTotalStock(p), 0);
-  const invPendingTransfers = invTransfers.filter(t => t.data.status === 'Pendiente' || t.data.status === 'En tránsito').length;
+  const invPendingTransfers = invTransfers.filter(t => t.data?.status === 'Pendiente' || t.data?.status === 'En tránsito').length;
   const invAlerts = [
-    ...(invLowStock.map(p => ({ type: 'low_stock' as const, msg: `${p.data.name}: stock ${getTotalStock(p)} (mín: ${p.data.minStock})`, severity: 'high' as const }))),
-    ...(invTransfers.filter(t => t.data.status === 'Pendiente').map(t => ({ type: 'pending_transfer' as const, msg: `Transferencia pendiente: ${t.data.quantity} uds de ${t.data.fromWarehouse} → ${t.data.toWarehouse}`, severity: 'medium' as const }))),
-    ...(invProducts.filter(p => getTotalStock(p) === 0).map(p => ({ type: 'out_of_stock' as const, msg: `${p.data.name}: AGOTADO`, severity: 'critical' as const }))),
+    ...(invLowStock.map(p => ({ type: 'low_stock' as const, msg: `${p.data?.name || 'Producto'}: stock ${getTotalStock(p)} (mín: ${p.data?.minStock || 0})`, severity: 'high' as const }))),
+    ...(invTransfers.filter(t => t.data?.status === 'Pendiente').map(t => ({ type: 'pending_transfer' as const, msg: `Transferencia pendiente: ${t.data?.quantity || 0} uds de ${t.data?.fromWarehouse || '?'} → ${t.data?.toWarehouse || '?'}`, severity: 'medium' as const }))),
+    ...(invProducts.filter(p => getTotalStock(p) === 0).map(p => ({ type: 'out_of_stock' as const, msg: `${p.data?.name || 'Producto'}: AGOTADO`, severity: 'critical' as const }))),
   ];
 
   // ===== GANTT HELPERS =====

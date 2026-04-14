@@ -29,13 +29,6 @@ interface FirebaseApp {
   firestore: any;
   storage(): any;
   apps: any[];
-  FieldValue: {
-    serverTimestamp(): any;
-    arrayUnion(...items: any[]): any;
-    arrayRemove(...items: any[]): any;
-    increment(n: number): any;
-    delete(): any;
-  };
 }
 
 interface FirestoreDB {
@@ -130,7 +123,7 @@ export function getAuth() {
 
 /** Convenience: FieldValue helpers. */
 export function FieldValue() {
-  return getFirebase().FieldValue;
+  return getFirebase().firestore.FieldValue;
 }
 
 /** Convenience: Storage reference. */
