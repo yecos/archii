@@ -4,12 +4,12 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase } from '@/lib/firebase-service';
-import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, Comment } from '@/lib/types';
+import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
-import * as fbActions from '@/lib/firestore-actions';
+
 import { confirm } from '@/hooks/useConfirmDialog';
 import * as _gantt from '@/lib/gantt-helpers';
 import InventoryProvider from './InventoryContext';
@@ -17,6 +17,7 @@ import GalleryProvider from './GalleryContext';
 import TimeTrackingProvider from './TimeTrackingContext';
 import CalendarProvider from './CalendarContext';
 import InvoiceProvider from './InvoiceContext';
+import CommentsProvider from './CommentsContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -37,20 +38,6 @@ interface FirestoreContextType {
   setProjectFiles: React.Dispatch<React.SetStateAction<ProjectFile[]>>;
   approvals: Approval[];
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
-  comments: Comment[];
-  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  dailyLogs: any[];
-  setDailyLogs: React.Dispatch<React.SetStateAction<any[]>>;
-
-  // Domain UI state — Comments
-  commentText: string; setCommentText: React.Dispatch<React.SetStateAction<string>>;
-  replyingTo: string | null; setReplyingTo: React.Dispatch<React.SetStateAction<string | null>>;
-
-  // Domain UI state — Daily Logs
-  dailyLogTab: string; setDailyLogTab: React.Dispatch<React.SetStateAction<string>>;
-  selectedLogId: string | null; setSelectedLogId: React.Dispatch<React.SetStateAction<string | null>>;
-  logForm: Record<string, any>; setLogForm: React.Dispatch<React.SetStateAction<Record<string, any>>>;
-
   // Domain UI state — Admin
   adminTab: string; setAdminTab: React.Dispatch<React.SetStateAction<string>>;
   adminWeekOffset: number; setAdminWeekOffset: React.Dispatch<React.SetStateAction<number>>;
@@ -102,15 +89,6 @@ interface FirestoreContextType {
   updateApproval: (id: string, status: string) => Promise<void>;
   deleteApproval: (id: string) => Promise<void>;
 
-  // CRUD Functions — Daily Logs
-  saveDailyLog: () => Promise<void>;
-  deleteDailyLog: (logId: string) => Promise<void>;
-  openEditLog: (log: any) => void;
-  resetLogForm: () => void;
-
-  // CRUD Functions — Comments
-  postComment: (taskId: string, projectId: string) => void;
-
   // CRUD Functions — User
   updateUserName: (newName: string) => Promise<void>;
 
@@ -149,7 +127,7 @@ const FirestoreContext = createContext<FirestoreContextType | null>(null);
 
 export default function FirestoreProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms, openModal, closeModal, editingId, setEditingId, selectedProjectId, setSelectedProjectId, setScreen } = useUIContext();
-  const { ready, authUser, teamUsers } = useAuthContext();
+  const { ready, authUser } = useAuthContext();
   const { msConnected, msAccessToken, ensureProjectFolder } = useOneDriveContext();
 
   // ===== COLLECTION STATE =====
@@ -161,22 +139,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
-
-  // ===== DOMAIN UI STATE — Comments =====
-  const [commentText, setCommentText] = useState<string>('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-
-  // ===== DOMAIN UI STATE — Daily Logs =====
-  const [dailyLogTab, setDailyLogTab] = useState<string>('list');
-  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
-  const [logForm, setLogForm] = useState<Record<string, any>>({
-    date: new Date().toISOString().split('T')[0], weather: '', temperature: '',
-    activities: [''], laborCount: '', equipment: [''], materials: [''],
-    observations: '', photos: [], supervisor: '',
-  });
-
   // ===== DOMAIN UI STATE — Admin =====
   const [adminTab, setAdminTab] = useState<string>('timeline');
   const [adminWeekOffset, setAdminWeekOffset] = useState<number>(0);
@@ -296,26 +258,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
-
-  // Load comments
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: any) => {
-      setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
-  // Load daily logs
-  useEffect(() => {
-    if (!ready || !authUser || !selectedProjectId) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot((snap: any) => {
-      setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando dailyLogs:', err); });
-    return () => { unsub(); setDailyLogs([]); };
-  }, [ready, authUser, selectedProjectId]);
 
   // AI project context
   const currentProject = projects.find((p: any) => p.id === selectedProjectId);
@@ -548,58 +490,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const deleteApproval = async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
-  // --- Daily Logs ---
-  const saveDailyLog = async () => {
-    if (!selectedProjectId) { showToast('Selecciona un proyecto', 'error'); return; }
-    const lf = logForm;
-    if (!lf.date) { showToast('La fecha es obligatoria', 'error'); return; }
-    const db = getFirebase().firestore();
-    const data: Record<string, any> = {
-      projectId: selectedProjectId, date: lf.date, weather: lf.weather || '', temperature: Number(lf.temperature) || 0,
-      activities: (lf.activities || ['']).filter((a: string) => a.trim()), laborCount: Number(lf.laborCount) || 0,
-      equipment: (lf.equipment || ['']).filter((e: string) => e.trim()), materials: (lf.materials || ['']).filter((m: string) => m.trim()),
-      observations: lf.observations || '', photos: lf.photos || [], supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
-      createdBy: authUser?.uid, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(),
-    };
-    try {
-      if (selectedLogId) { await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(selectedLogId).update(data); showToast('Bitácora actualizada'); }
-      else { data.createdAt = (getFirebase() as any).firestore.FieldValue.serverTimestamp(); await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data); showToast('Bitácora creada'); }
-      setDailyLogTab('list'); setSelectedLogId(null); resetLogForm();
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al guardar', 'error'); }
-  };
-
-  const deleteDailyLog = async (logId: string) => {
-    if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId).delete(); showToast('Bitácora eliminada'); if (selectedLogId === logId) { setDailyLogTab('list'); setSelectedLogId(null); } }
-    catch { showToast('Error al eliminar', 'error'); }
-  };
-
-  const openEditLog = (log: any) => {
-    setSelectedLogId(log.id);
-    setLogForm({ date: log.data.date || '', weather: log.data.weather || '', temperature: log.data.temperature || '', activities: log.data.activities?.length > 0 ? log.data.activities : [''], laborCount: log.data.laborCount || '', equipment: log.data.equipment?.length > 0 ? log.data.equipment : [''], materials: log.data.materials?.length > 0 ? log.data.materials : [''], observations: log.data.observations || '', photos: log.data.photos || [], supervisor: log.data.supervisor || '' });
-    setDailyLogTab('create');
-  };
-
-  const resetLogForm = () => {
-    setLogForm({ date: new Date().toISOString().split('T')[0], weather: '', temperature: '', activities: [''], laborCount: '', equipment: [''], materials: [''], observations: '', photos: [], supervisor: '' });
-  };
-
-  // --- Comments ---
-  const postComment = (taskId: string, projectId: string) => {
-    if (!commentText.trim()) return;
-    const mentions: string[] = [];
-    const mentionRegex = /@(\w+)/g;
-    let match;
-    while ((match = mentionRegex.exec(commentText)) !== null) {
-      const mentionedName = match[1];
-      const mentionedUser = teamUsers.find(u => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
-      if (mentionedUser) mentions.push(mentionedUser.id);
-    }
-    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser);
-    setCommentText('');
-    setReplyingTo(null);
-  };
-
   // ===== COMPUTED VALUES =====
   const activeTasks = tasks.filter(t => t.data?.status !== 'Completado');
   const completedTasks = tasks.filter(t => t.data?.status === 'Completado');
@@ -626,11 +516,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals,
-    comments, setComments, dailyLogs, setDailyLogs,
-    // Comments
-    commentText, setCommentText, replyingTo, setReplyingTo,
-    // Daily Logs
-    dailyLogTab, setDailyLogTab, selectedLogId, setSelectedLogId, logForm, setLogForm,
     // Admin
     adminTab, setAdminTab, adminWeekOffset, setAdminWeekOffset, adminTaskSearch, setAdminTaskSearch, adminFilterAssignee, setAdminFilterAssignee, adminFilterProject, setAdminFilterProject, adminFilterPriority, setAdminFilterPriority, adminTooltipTask, setAdminTooltipTask, adminTooltipPos, setAdminTooltipPos, adminPermSection, setAdminPermSection, rolePerms, setRolePerms, toggleRolePerm,
     // CRUD
@@ -642,8 +527,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     uploadFile, deleteFile,
     initDefaultPhases, updatePhaseStatus,
     saveApproval, updateApproval, deleteApproval,
-    saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
-    postComment, updateUserName, fileToBase64,
+    updateUserName, fileToBase64,
     // Computed
     currentProject, pendingCount, activeTasks, completedTasks, overdueTasks, urgentTasks, adminFilteredTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
@@ -656,7 +540,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><CommentsProvider><InvoiceProvider><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></InvoiceProvider></CommentsProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {

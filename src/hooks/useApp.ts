@@ -8,6 +8,7 @@ import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useTimeTrackingContext } from '@/contexts/TimeTrackingContext';
 import { useCalendarContext } from '@/contexts/CalendarContext';
 import { useInvoiceContext } from '@/contexts/InvoiceContext';
+import { useCommentsContext } from '@/contexts/CommentsContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -26,6 +27,7 @@ export function useApp() {
   const tt = useTimeTrackingContext();
   const cal = useCalendarContext();
   const invCtx = useInvoiceContext();
+  const cmt = useCommentsContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -197,10 +199,10 @@ export function useApp() {
     setInvTransfers: inv.setInvTransfers,
     timeEntries: tt.timeEntries,
     setTimeEntries: tt.setTimeEntries,
-    comments: fs.comments,
-    setComments: fs.setComments,
-    dailyLogs: fs.dailyLogs,
-    setDailyLogs: fs.setDailyLogs,
+    comments: cmt.comments,
+    setComments: cmt.setComments,
+    dailyLogs: cmt.dailyLogs,
+    setDailyLogs: cmt.setDailyLogs,
 
     // Domain UI — Calendar
     calMonth: cal.calMonth,
@@ -259,18 +261,18 @@ export function useApp() {
     setInvoiceFilterStatus: invCtx.setInvoiceFilterStatus,
 
     // Domain UI — Comments
-    commentText: fs.commentText,
-    setCommentText: fs.setCommentText,
-    replyingTo: fs.replyingTo,
-    setReplyingTo: fs.setReplyingTo,
+    commentText: cmt.commentText,
+    setCommentText: cmt.setCommentText,
+    replyingTo: cmt.replyingTo,
+    setReplyingTo: cmt.setReplyingTo,
 
     // Domain UI — Daily Logs
-    dailyLogTab: fs.dailyLogTab,
-    setDailyLogTab: fs.setDailyLogTab,
-    selectedLogId: fs.selectedLogId,
-    setSelectedLogId: fs.setSelectedLogId,
-    logForm: fs.logForm,
-    setLogForm: fs.setLogForm,
+    dailyLogTab: cmt.dailyLogTab,
+    setDailyLogTab: cmt.setDailyLogTab,
+    selectedLogId: cmt.selectedLogId,
+    setSelectedLogId: cmt.setSelectedLogId,
+    logForm: cmt.logForm,
+    setLogForm: cmt.setLogForm,
 
     // Domain UI — Admin
     adminTab: fs.adminTab,
@@ -316,10 +318,10 @@ export function useApp() {
     saveApproval: fs.saveApproval,
     updateApproval: fs.updateApproval,
     deleteApproval: fs.deleteApproval,
-    saveDailyLog: fs.saveDailyLog,
-    deleteDailyLog: fs.deleteDailyLog,
-    openEditLog: fs.openEditLog,
-    resetLogForm: fs.resetLogForm,
+    saveDailyLog: cmt.saveDailyLog,
+    deleteDailyLog: cmt.deleteDailyLog,
+    openEditLog: cmt.openEditLog,
+    resetLogForm: cmt.resetLogForm,
     getWarehouseStock: inv.getWarehouseStock,
     getTotalStock: inv.getTotalStock,
     buildWarehouseStock: inv.buildWarehouseStock,
@@ -357,7 +359,7 @@ export function useApp() {
     addInvoiceItem: invCtx.addInvoiceItem,
     removeInvoiceItem: invCtx.removeInvoiceItem,
     saveInvoice: invCtx.saveInvoice,
-    postComment: fs.postComment,
+    postComment: cmt.postComment,
     fileToBase64: fs.fileToBase64,
 
     // Computed
