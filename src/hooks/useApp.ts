@@ -6,6 +6,7 @@ import { useFirestoreContext } from '@/contexts/FirestoreContext';
 import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useTimeTrackingContext } from '@/contexts/TimeTrackingContext';
+import { useCalendarContext } from '@/contexts/CalendarContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 
@@ -22,6 +23,7 @@ export function useApp() {
   const inv = useInventoryContext();
   const gal = useGalleryContext();
   const tt = useTimeTrackingContext();
+  const cal = useCalendarContext();
   const chat = useChatContext();
   const notif = useNotifContext();
 
@@ -179,8 +181,8 @@ export function useApp() {
     setProjectFiles: fs.setProjectFiles,
     approvals: fs.approvals,
     setApprovals: fs.setApprovals,
-    meetings: fs.meetings,
-    setMeetings: fs.setMeetings,
+    meetings: cal.meetings,
+    setMeetings: cal.setMeetings,
     galleryPhotos: gal.galleryPhotos,
     setGalleryPhotos: gal.setGalleryPhotos,
     invProducts: inv.invProducts,
@@ -201,14 +203,14 @@ export function useApp() {
     setDailyLogs: fs.setDailyLogs,
 
     // Domain UI — Calendar
-    calMonth: fs.calMonth,
-    setCalMonth: fs.setCalMonth,
-    calYear: fs.calYear,
-    setCalYear: fs.setCalYear,
-    calSelectedDate: fs.calSelectedDate,
-    setCalSelectedDate: fs.setCalSelectedDate,
-    calFilterProject: fs.calFilterProject,
-    setCalFilterProject: fs.setCalFilterProject,
+    calMonth: cal.calMonth,
+    setCalMonth: cal.setCalMonth,
+    calYear: cal.calYear,
+    setCalYear: cal.setCalYear,
+    calSelectedDate: cal.calSelectedDate,
+    setCalSelectedDate: cal.setCalSelectedDate,
+    calFilterProject: cal.calFilterProject,
+    setCalFilterProject: cal.setCalFilterProject,
 
     // Domain UI — Gallery
     galleryFilterProject: gal.galleryFilterProject,
@@ -332,9 +334,9 @@ export function useApp() {
     getInvCategoryName: inv.getInvCategoryName,
     getInvCategoryColor: inv.getInvCategoryColor,
     getInvProductName: inv.getInvProductName,
-    saveMeeting: fs.saveMeeting,
-    deleteMeeting: fs.deleteMeeting,
-    openEditMeeting: fs.openEditMeeting,
+    saveMeeting: cal.saveMeeting,
+    deleteMeeting: cal.deleteMeeting,
+    openEditMeeting: cal.openEditMeeting,
     openProject: fs.openProject,
     saveGalleryPhoto: gal.saveGalleryPhoto,
     deleteGalleryPhoto: gal.deleteGalleryPhoto,

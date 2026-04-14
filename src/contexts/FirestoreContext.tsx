@@ -15,6 +15,7 @@ import * as _gantt from '@/lib/gantt-helpers';
 import InventoryProvider from './InventoryContext';
 import GalleryProvider from './GalleryContext';
 import TimeTrackingProvider from './TimeTrackingContext';
+import CalendarProvider from './CalendarContext';
 
 /* ===== FIRESTORE CONTEXT ===== */
 interface FirestoreContextType {
@@ -35,20 +36,12 @@ interface FirestoreContextType {
   setProjectFiles: React.Dispatch<React.SetStateAction<ProjectFile[]>>;
   approvals: Approval[];
   setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
-  meetings: any[];
-  setMeetings: React.Dispatch<React.SetStateAction<any[]>>;
   invoices: Invoice[];
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   dailyLogs: any[];
   setDailyLogs: React.Dispatch<React.SetStateAction<any[]>>;
-
-  // Domain UI state — Calendar
-  calMonth: number; setCalMonth: React.Dispatch<React.SetStateAction<number>>;
-  calYear: number; setCalYear: React.Dispatch<React.SetStateAction<number>>;
-  calSelectedDate: string | null; setCalSelectedDate: React.Dispatch<React.SetStateAction<string | null>>;
-  calFilterProject: string; setCalFilterProject: React.Dispatch<React.SetStateAction<string>>;
 
   // Domain UI state — Invoices
   invoices2: Invoice[];
@@ -122,11 +115,6 @@ interface FirestoreContextType {
   openEditLog: (log: any) => void;
   resetLogForm: () => void;
 
-  // CRUD Functions — Meetings
-  saveMeeting: () => Promise<void>;
-  deleteMeeting: (id: string) => Promise<void>;
-  openEditMeeting: (m: any) => void;
-
   // CRUD Functions — Invoices
   openNewInvoice: () => void;
   updateInvoiceItem: (idx: number, field: string, value: any) => void;
@@ -187,16 +175,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [meetings, setMeetings] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [dailyLogs, setDailyLogs] = useState<any[]>([]);
-
-  // ===== DOMAIN UI STATE — Calendar =====
-  const [calMonth, setCalMonth] = useState(new Date().getMonth());
-  const [calYear, setCalYear] = useState(new Date().getFullYear());
-  const [calSelectedDate, setCalSelectedDate] = useState<string | null>(null);
-  const [calFilterProject, setCalFilterProject] = useState<string>('all');
 
   // ===== DOMAIN UI STATE — Invoices =====
   const [invoiceTab, setInvoiceTab] = useState<string>('list');
@@ -335,17 +316,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     }, (err: any) => { console.error('[ArchiFlow] Error escuchando approvals:', err); });
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
-
-  // Load meetings
-  useEffect(() => {
-    if (!ready || !authUser) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: any) => {
-      setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() || {} })));
-    }, (err: any) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
-    return () => unsub();
-  }, [ready, authUser]);
-
 
   // Load invoices
   useEffect(() => {
@@ -644,23 +614,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     setLogForm({ date: new Date().toISOString().split('T')[0], weather: '', temperature: '', activities: [''], laborCount: '', equipment: [''], materials: [''], observations: '', photos: [], supervisor: '' });
   };
 
-  // --- Meetings ---
-  const saveMeeting = async () => {
-    const title = forms.meetTitle || '';
-    if (!title) { showToast('El título es obligatorio', 'error'); return; }
-    try {
-      const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
-      const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
-      if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
-      else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
-      closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  };
-  const deleteMeeting = async (id: string) => { if (!(await confirm({ title: 'Eliminar reunión', description: '¿Eliminar reunión?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-  const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
-
-
   // --- Invoices ---
   const openNewInvoice = () => {
     setEditingId(null);
@@ -726,11 +679,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     projects, setProjects, tasks, setTasks, expenses, setExpenses,
     suppliers, setSuppliers, companies, setCompanies,
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
-    approvals, setApprovals, meetings, setMeetings,
+    approvals, setApprovals,
     invoices, setInvoices,
     comments, setComments, dailyLogs, setDailyLogs,
-    // Calendar
-    calMonth, setCalMonth, calYear, setCalYear, calSelectedDate, setCalSelectedDate, calFilterProject, setCalFilterProject,
     // Invoices
     invoices2: invoices, invoiceTab, setInvoiceTab, invoiceItems, setInvoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
     // Comments
@@ -749,7 +700,6 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     initDefaultPhases, updatePhaseStatus,
     saveApproval, updateApproval, deleteApproval,
     saveDailyLog, deleteDailyLog, openEditLog, resetLogForm,
-    saveMeeting, deleteMeeting, openEditMeeting,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
     postComment, updateUserName, fileToBase64,
     // Computed
@@ -764,7 +714,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
   };
 
-  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider><TimeTrackingProvider>{children}</TimeTrackingProvider></GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
+  return <FirestoreContext.Provider value={value}><InventoryProvider><GalleryProvider><TimeTrackingProvider><CalendarProvider>{children}</CalendarProvider></TimeTrackingProvider></GalleryProvider></InventoryProvider></FirestoreContext.Provider>;
 }
 
 export function useFirestoreContext() {
