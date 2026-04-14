@@ -61,6 +61,15 @@ export interface Project {
   };
 }
 
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  phases: string[];
+  tasks: string[];
+}
+
 export type TaskPriority = 'Baja' | 'Media' | 'Alta' | 'Urgente';
 export type TaskStatus = 'Por hacer' | 'En progreso' | 'En revisión' | 'Completado';
 

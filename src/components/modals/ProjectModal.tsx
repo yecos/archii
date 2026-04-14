@@ -3,6 +3,17 @@ import React from 'react';
 import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
+import type { ProjectTemplate } from '@/lib/types';
+
+const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  { id: '', name: 'Proyecto en blanco', icon: '📝', description: '', phases: [], tasks: [] },
+  { id: 'residencial', name: 'Residencial Nuevo', icon: '🏠', description: 'Proyecto de construcción residencial desde cero.', phases: ['Prediseño', 'Anteproyecto', 'Licencias', 'Construcción', 'Acabados', 'Entrega'], tasks: ['Levantamiento topográfico', 'Estudio de suelos', 'Diseño arquitectónico', 'Licencia de construcción', 'Ajuste de diseño', 'Obra negra', 'Obra blanca', 'Instalaciones', 'Acabados', 'Paisajismo'] },
+  { id: 'remodelacion', name: 'Remodelación', icon: '🔨', description: 'Remodelación de espacio existente.', phases: ['Diagnóstico', 'Diseño', 'Presupuesto', 'Obra', 'Entrega'], tasks: ['Inspección del espacio', 'Levantamiento planimétrico', 'Diseño de remodelación', 'Aprobación del cliente', 'Demoliciones', 'Construcción', 'Acabados', 'Limpieza y entrega'] },
+  { id: 'interiorismo', name: 'Interiorismo', icon: '🎨', description: 'Diseño y ejecución de interiores.', phases: ['Concepto', 'Diseño', 'Muebles', 'Obra', 'Decoración'], tasks: ['Brief del cliente', 'Moodboard y paleta', 'Planos de mobiliario', 'Selección de materiales', 'Cotización', 'Fabricación de muebles', 'Instalación', 'Styling final'] },
+  { id: 'consultoria', name: 'Consultoría', icon: '📋', description: 'Asesoría técnica o de diseño.', phases: ['Diagnóstico', 'Propuesta', 'Seguimiento', 'Entrega'], tasks: ['Solicitud del cliente', 'Visita técnica', 'Informe de diagnóstico', 'Propuesta de consultoría', 'Reunión de presentación', 'Seguimiento', 'Entrega de informe final'] },
+];
+
+export { PROJECT_TEMPLATES };
 
 export default function ProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
@@ -10,10 +21,41 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
   const { forms, setForms, editingId, closeModal } = ui;
   const { saveProject, companies } = fs;
 
+  const handleTemplateChange = (templateId: string) => {
+    const tpl = PROJECT_TEMPLATES.find(t => t.id === templateId);
+    setForms(p => ({
+      ...p,
+      projTemplate: templateId,
+      projDesc: tpl?.description || '',
+      projStatus: 'Concepto',
+    }));
+  };
+
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480} title={editingId ? 'Editar proyecto' : 'Nuevo proyecto'}>
 
       <div className="space-y-3">
+        {!editingId && (
+          <FormField label="Plantilla">
+            <div className="grid grid-cols-2 gap-2">
+              {PROJECT_TEMPLATES.map(tpl => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-all cursor-pointer ${forms.projTemplate === tpl.id ? 'border-[var(--af-accent)] bg-[var(--af-accent)]/5' : 'border-[var(--border)] bg-[var(--af-bg3)] hover:border-[var(--af-accent)]/30'}`}
+                  onClick={() => handleTemplateChange(tpl.id)}
+                >
+                  <span className="text-lg flex-shrink-0">{tpl.icon}</span>
+                  <div>
+                    <div className="text-[12px] font-medium text-[var(--foreground)]">{tpl.name}</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1">{tpl.description || 'Sin descripción'}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </FormField>
+        )}
+
         <FormField label="Nombre" required>
           <FormInput
             value={forms.projName || ''}
@@ -96,6 +138,24 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
             rows={3}
           />
         </FormField>
+
+        {!editingId && forms.projTemplate && (
+          <div className="bg-[var(--af-accent)]/5 border border-[var(--af-accent)]/20 rounded-lg p-3">
+            <div className="text-[11px] font-semibold text-[var(--af-accent)] mb-1.5">La plantilla creará automáticamente:</div>
+            <div className="text-[10px] text-[var(--muted-foreground)] space-y-0.5">
+              {(() => {
+                const tpl = PROJECT_TEMPLATES.find(t => t.id === forms.projTemplate);
+                if (!tpl) return null;
+                return (
+                  <>
+                    <div>📁 {tpl.phases.length} fases de trabajo</div>
+                    <div>📋 {tpl.tasks.length} tareas iniciales</div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
 
       <ModalFooter

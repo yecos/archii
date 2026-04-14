@@ -68,6 +68,8 @@ interface UIContextType {
   setChatMobileShow: React.Dispatch<React.SetStateAction<boolean>>;
   taskViewMode: 'list' | 'kanban';
   setTaskViewMode: React.Dispatch<React.SetStateAction<'list' | 'kanban'>>;
+  calView: 'monthly' | 'weekly';
+  setCalView: React.Dispatch<React.SetStateAction<'monthly' | 'weekly'>>;
 
   // Theme (derived from next-themes for backward compatibility)
   darkMode: boolean;
@@ -119,6 +121,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatMobileShow, setChatMobileShow] = useState(false);
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
+  const [calView, setCalView] = useState<'monthly' | 'weekly'>('monthly');
 
   // Theme — delegates to next-themes
   const { resolvedTheme, setTheme: setNextTheme } = useTheme();
@@ -247,6 +250,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     sidebarCollapsed, setSidebarCollapsed,
     chatMobileShow, setChatMobileShow,
     taskViewMode, setTaskViewMode,
+    calView, setCalView,
     darkMode, setDarkMode, toggleTheme, // derived from next-themes
     installPrompt, setInstallPrompt,
     showInstallBanner, setShowInstallBanner,
@@ -260,7 +264,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     forms, setForms,
     showToast,
     screenTitles,
-  }), [screen, selectedProjectId, selectedCompanyId, navigateTo, sidebarOpen, sidebarCollapsed, chatMobileShow, taskViewMode, darkMode, installPrompt, showInstallBanner, isInstalled, showInstallGuide, isStandalone, handleInstall, dismissInstallBanner, modals, editingId, forms, showToast]);
+  }), [screen, selectedProjectId, selectedCompanyId, navigateTo, sidebarOpen, sidebarCollapsed, chatMobileShow, taskViewMode, calView, darkMode, installPrompt, showInstallBanner, isInstalled, showInstallGuide, isStandalone, handleInstall, dismissInstallBanner, modals, editingId, forms, showToast]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

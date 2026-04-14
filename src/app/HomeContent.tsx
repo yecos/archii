@@ -10,7 +10,7 @@ import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useNotifContext } from '@/contexts/NotifContext';
 import AppProvider from '@/contexts/AppContext';
-import { Toaster } from 'sonner';
+
 import { Bell, X } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -68,27 +68,6 @@ const TimeTrackingScreen = dynamic(() => import('@/screens/TimeTrackingScreen'),
 const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 
-/* ─── Toaster config ─── */
-const TOASTER_PROPS = {
-  position: 'top-center' as const,
-  toastOptions: {
-    unstyled: false,
-    classNames: {
-      toast: 'af-sonner-toast',
-      title: 'af-sonner-title',
-      description: 'af-sonner-desc',
-      actionButton: 'af-sonner-action',
-      cancelButton: 'af-sonner-cancel',
-      success: '!bg-emerald-600 !text-white !border-emerald-500',
-      error: '!bg-red-500 !text-white !border-red-400',
-      warning: '!bg-amber-500 !text-white !border-amber-400',
-    },
-  },
-  richColors: true,
-  closeButton: true,
-  duration: 3500,
-};
-
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
   const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset, userName, initials } = useAuthContext();
@@ -102,25 +81,20 @@ function AppContent() {
 
   if (!ready || loading) return <LoadingScreen />;
   if (!authUser) return (
-    <>
-      <Toaster {...TOASTER_PROPS} />
-      <AuthScreen
-        forms={forms}
-        setForms={setForms}
-        doLogin={doLogin}
-        doRegister={doRegister}
-        doGoogleLogin={doGoogleLogin}
-        doMicrosoftLogin={doMicrosoftLogin}
-        doPasswordReset={doPasswordReset}
-        showToast={showToast}
-      />
-    </>
+    <AuthScreen
+      forms={forms}
+      setForms={setForms}
+      doLogin={doLogin}
+      doRegister={doRegister}
+      doGoogleLogin={doGoogleLogin}
+      doMicrosoftLogin={doMicrosoftLogin}
+      doPasswordReset={doPasswordReset}
+      showToast={showToast}
+    />
   );
 
   return (
     <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>
-      <Toaster {...TOASTER_PROPS} />
-
       <OfflineBanner />
       <InstallBanner />
       <Sidebar

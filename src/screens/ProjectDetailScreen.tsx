@@ -13,6 +13,8 @@ import ProjectPresupuesto from '@/components/features/project/ProjectPresupuesto
 import ProjectArchivos from '@/components/features/project/ProjectArchivos';
 import ProjectObra from '@/components/features/project/ProjectObra';
 import ProjectPortal from '@/components/features/project/ProjectPortal';
+import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
+import { Copy, Edit3, Trash2 } from 'lucide-react';
 
 export default function ProjectDetailScreen() {
   const ui = useUI();
@@ -24,6 +26,7 @@ export default function ProjectDetailScreen() {
 
   if (!fs.currentProject) return null;
 
+  const project = fs.currentProject;
   const tabs = ['Resumen', 'Tareas', 'Presupuesto', 'Archivos', 'Obra', 'Portal'] as const;
   const { detailTab, workView } = ui.forms;
 
@@ -43,21 +46,61 @@ export default function ProjectDetailScreen() {
             <div className="text-center"><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(fs.currentProject.data.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
             <div className="text-center"><div className="text-lg font-semibold text-emerald-400">{fmtCOP(fs.projectSpent)}</div><div className="text-[10px] text-[var(--af-text3)]">Gastado</div></div>
           </div>
+          {/* Action buttons */}
+          <div className="flex gap-1.5 flex-shrink-0">
+            <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" title="Duplicar proyecto" onClick={() => fs.duplicateProject(project.id)}>
+              <Copy className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
+            </button>
+            <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" title="Editar proyecto" onClick={() => fs.openEditProject(project)}>
+              <Edit3 className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
+            </button>
+            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center cursor-pointer hover:bg-red-500/20 transition-colors" title="Eliminar proyecto" onClick={() => { fs.deleteProject(project.id); ui.setForms(p => ({ ...p, selectedProjectId: null })); }}>
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            </button>
+          </div>
         </div>
         <div className="mt-4 flex items-center gap-3">
-          <div className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${(fs.currentProject.data.progress || 0) >= 80 ? 'bg-emerald-500' : (fs.currentProject.data.progress || 0) >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: (fs.currentProject.data.progress || 0) + '%' }} /></div>
-          <input type="number" min="0" max="100" className="w-14 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-sm text-[var(--foreground)] outline-none text-center focus:border-[var(--af-accent)]" value={fs.currentProject.data.progress || 0} onChange={e => { const v = Math.min(100, Math.max(0, Number(e.target.value) || 0)); fs.updateProjectProgress(v); }} />
-          <span className="text-sm font-medium text-[var(--muted-foreground)]">%</span>
+          {/* Interactive progress slider */}
+          <div
+            className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden cursor-pointer relative group"
+            onClick={e => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pct = Math.round(Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)));
+              fs.updateProjectProgress(pct);
+            }}
+            onMouseMove={e => {
+              if (e.buttons === 1) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pct = Math.round(Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)));
+                fs.updateProjectProgress(pct);
+              }
+            }}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-150 ${(fs.currentProject.data.progress || 0) >= 80 ? 'bg-emerald-500' : (fs.currentProject.data.progress || 0) >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`}
+              style={{ width: (fs.currentProject.data.progress || 0) + '%' }}
+            />
+            {/* Drag handle */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{ left: `calc(${(fs.currentProject.data.progress || 0)}% - 8px)`, background: (fs.currentProject.data.progress || 0) >= 80 ? '#10b981' : (fs.currentProject.data.progress || 0) >= 40 ? 'var(--af-accent)' : '#f59e0b' }}
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-1 py-0.5">
+            <input type="number" min="0" max="100" className="w-10 bg-transparent text-sm text-[var(--foreground)] outline-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={fs.currentProject.data.progress || 0} onChange={e => { const v = Math.min(100, Math.max(0, Number(e.target.value) || 0)); fs.updateProjectProgress(v); }} />
+            <span className="text-[11px] text-[var(--muted-foreground)]">%</span>
+          </div>
         </div>
         {fs.projectBudget > 0 && <div className="mt-3 text-xs text-[var(--muted-foreground)]">{fs.projectSpent > fs.projectBudget ? <span className="text-red-400 font-medium">⚠️ Excedido por {fmtCOP(fs.projectSpent - fs.projectBudget)}</span> : `Restante: ${fmtCOP(fs.projectBudget - fs.projectSpent)} (${Math.round((fs.projectSpent / fs.projectBudget) * 100)}% del presupuesto)`}</div>}
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
-        {tabs.map(tab => (
-          <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${detailTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => ui.setForms(p => ({ ...p, detailTab: tab }))}>{tab}</button>
-        ))}
-      </div>
+      <AnimatedTabs
+        tabs={tabs.map(t => ({ id: t, label: t }))}
+        activeTab={detailTab}
+        onTabChange={id => ui.setForms(p => ({ ...p, detailTab: id }))}
+        className="w-fit overflow-x-auto -mx-1 px-1 scrollbar-none"
+      />
 
       {/* Tab content */}
       {detailTab === 'Resumen' && (

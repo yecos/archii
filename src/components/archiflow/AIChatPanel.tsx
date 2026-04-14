@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import DOMPurify from 'dompurify';
+import { HelpCircle, X, Loader2, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -278,11 +279,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--af-bg4)]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[var(--af-accent)]/15 flex items-center justify-center">
-              <svg className="w-5 h-5 text-[var(--af-accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2Z" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <circle cx="12" cy="17" r="0.5" fill="currentColor" />
-              </svg>
+              <HelpCircle className="w-5 h-5 text-[var(--af-accent)]" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground">ArchiFlow AI</h3>
@@ -293,10 +290,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
             onClick={onClose}
             className="w-10 h-10 rounded-lg hover:bg-[var(--af-bg4)] active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -394,15 +388,9 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
               )}
             >
               {isLoading ? (
-                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2L11 13" />
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
+                <Send className="w-5 h-5" />
               )}
             </button>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useOneDrive } from '@/hooks/useDomain';
@@ -425,7 +426,7 @@ export default function ProfileScreen() {
               {/* Logout button */}
               <div className="pt-2 pb-4">
                 <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 text-[13px] font-medium cursor-pointer hover:bg-red-500/10 transition-colors flex items-center gap-2 justify-center" onClick={auth.doLogout}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <LogOut className="w-4 h-4" />
                   Cerrar sesión
                 </button>
               </div>

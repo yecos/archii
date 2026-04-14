@@ -4,6 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { PROJECT_TEMPLATES } from '@/components/modals/ProjectModal';
 import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, Company, Subtask } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
@@ -42,6 +43,7 @@ interface FirestoreContextType {
   openEditProject: (p: Project) => void;
   updateProjectProgress: (val: number) => Promise<void>;
   openProject: (id: string) => void;
+  duplicateProject: (id: string) => Promise<void>;
 
   // CRUD Functions — Tasks
   saveTask: () => Promise<void>;
@@ -270,8 +272,31 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
             if (!folderId) console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name);
           });
         }
+        // Create template tasks + phases if template selected
+        const tplId = forms.projTemplate;
+        if (tplId) {
+          const tpl = PROJECT_TEMPLATES.find(t => t.id === tplId);
+          if (tpl && (tpl.tasks.length > 0 || tpl.phases.length > 0)) {
+            const batch = db.batch();
+            tpl.tasks.forEach((taskTitle: string, idx: number) => {
+              batch.set(db.collection('tasks').doc(), {
+                projectId: ref.id, title: taskTitle, status: 'Por hacer', priority: 'Media',
+                assigneeId: '', dueDate: '', description: '', progress: 0,
+                createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order: idx,
+              });
+            });
+            tpl.phases.forEach((phaseName: string, idx: number) => {
+              batch.set(db.collection('workPhases').doc(), {
+                projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
+                startDate: '', endDate: '', description: '',
+                createdAt: ts, updatedAt: ts,
+              });
+            });
+            await batch.commit();
+          }
+        }
       }
-      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
+      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projTemplate: '' }));
     } catch { showToast('Error al guardar', 'error'); }
   }, [editingId, forms, authUser, projects, msConnected, msAccessToken, showToast, closeModal, setForms]);
 
@@ -282,6 +307,35 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     // Audit: delete
     logAudit('delete', 'project' as AuditEntityType, id, projName, undefined, id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
   } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }, [confirm, showToast, projects, authUser]);
+
+  const duplicateProject = useCallback(async (id: string) => {
+    const source = projects.find((p: any) => p.id === id);
+    if (!source) return;
+    const src = source.data;
+    try {
+      const db = getFirebase().firestore();
+      const ts = serverTimestamp();
+      const newName = `${src.name} (Copia)`;
+      const ref = await db.collection('projects').add({
+        name: newName, status: 'Concepto', client: src.client || '', location: src.location || '',
+        budget: 0, description: src.description || '', startDate: '', endDate: '',
+        companyId: src.companyId || '', progress: 0,
+        createdAt: ts, createdBy: authUser?.uid, updatedAt: ts, updatedBy: authUser?.uid,
+      });
+      // Copy tasks (without completion data)
+      const srcTasks = tasks.filter((t: any) => t.data.projectId === id);
+      if (srcTasks.length > 0) {
+        const batch = db.batch();
+        srcTasks.forEach((t: any) => {
+          const { id: _tid, createdAt: _ca, updatedAt: _ua, ...taskData } = t.data;
+          batch.set(db.collection('tasks').doc(), { ...taskData, projectId: ref.id, status: 'Pendiente', progress: 0, completedAt: null, createdAt: ts, updatedAt: ts });
+        });
+        await batch.commit();
+      }
+      showToast(`Proyecto duplicado: ${newName}`);
+      logAudit('create', 'project' as AuditEntityType, ref.id, newName, undefined, ref.id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
+    } catch (err: unknown) { console.error('[ArchiFlow]', err); showToast('Error al duplicar', 'error'); }
+  }, [projects, tasks, authUser, showToast]);
 
   const openEditProject = useCallback((p: Project) => {
     setEditingId(p.id);
@@ -609,7 +663,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     workPhases, setWorkPhases, projectFiles, setProjectFiles,
     approvals, setApprovals, allApprovals,
     // CRUD
-    saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
+    saveProject, deleteProject, duplicateProject, openEditProject, updateProjectProgress, openProject,
     saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense,
     saveSupplier, deleteSupplier,
@@ -627,7 +681,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     // Collection state
     projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals, allApprovals,
     // CRUD functions
-    saveProject, deleteProject, openEditProject, updateProjectProgress, openProject,
+    saveProject, deleteProject, duplicateProject, openEditProject, updateProjectProgress, openProject,
     saveTask, openEditTask, toggleTask, changeTaskStatus, deleteTask, toggleSubtask, deleteSubtask,
     saveExpense, deleteExpense, saveSupplier, deleteSupplier, saveCompany,
     uploadFile, deleteFile, initDefaultPhases, updatePhaseStatus,

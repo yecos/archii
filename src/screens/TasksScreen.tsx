@@ -4,6 +4,7 @@ import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
+import { confirm } from '@/hooks/useConfirmDialog';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck } from 'lucide-react';
@@ -213,8 +214,8 @@ export default function TasksScreen() {
     setBatchMode(false);
   }, [selectedIds, tasks, toggleTask, showToast]);
 
-  const batchDelete = useCallback(() => {
-    if (!confirm(`Eliminar ${selectedIds.size} tareas?`)) return;
+  const batchDelete = useCallback(async () => {
+    if (!(await confirm({ title: 'Eliminar tareas', description: `¿Eliminar ${selectedIds.size} tareas seleccionadas?`, confirmText: 'Eliminar', variant: 'destructive' }))) return;
     selectedIds.forEach(id => deleteTask(id));
     showToast(`${selectedIds.size} tareas eliminadas`);
     setSelectedIds(new Set());
