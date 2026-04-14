@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
 import { fmtCOP } from '@/lib/helpers';
 import { DollarSign, Download, Plus, TrendingDown, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
@@ -27,34 +28,33 @@ function PieTooltip({ active, payload }: any) {
 }
 
 export default function BudgetScreen() {
-  const {
-    deleteExpense, expenses, openModal, projects, setForms, showToast,
-  } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
 
-  const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
+  const totalExpenses = useMemo(() => fs.expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [fs.expenses]);
 
   const byCategory = useMemo(() => {
     const cats: Record<string, number> = {};
-    expenses.forEach((e: any) => {
+    fs.expenses.forEach((e: any) => {
       const cat = e.data.category || 'Otros';
       cats[cat] = (cats[cat] || 0) + (Number(e.data.amount) || 0);
     });
     return Object.entries(cats)
       .sort((a, b) => b[1] - a[1])
       .map(([name, value]) => ({ name, value, color: CAT_COLORS[name] || '#9a9b9e' }));
-  }, [expenses]);
+  }, [fs.expenses]);
 
   const byProject = useMemo(() => {
     const map: Record<string, any[]> = {};
-    expenses.forEach((e: any) => {
+    fs.expenses.forEach((e: any) => {
       const k = e.data.projectId || '_none';
       if (!map[k]) map[k] = [];
       map[k].push(e);
     });
     return map;
-  }, [expenses]);
+  }, [fs.expenses]);
 
-  const avgExpense = expenses.length > 0 ? totalExpenses / expenses.length : 0;
+  const avgExpense = fs.expenses.length > 0 ? totalExpenses / fs.expenses.length : 0;
   const topCategory = byCategory.length > 0 ? byCategory[0] : null;
 
   const exportCSV = () => {
@@ -62,12 +62,12 @@ export default function BudgetScreen() {
     const dq = '""';
     const headers = ['Concepto', 'Proyecto', 'Categoría', 'Monto', 'Fecha'];
     const esc = (v: string) => q + String(v).split(q).join(dq) + q;
-    const rows = expenses.map((e: any) => [e.data.concept, projects.find((p: any) => p.id === e.data.projectId)?.data?.name || '—', e.data.category, e.data.amount, e.data.date]);
+    const rows = fs.expenses.map((e: any) => [e.data.concept, fs.projects.find((p: any) => p.id === e.data.projectId)?.data?.name || '—', e.data.category, e.data.amount, e.data.date]);
     const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'presupuesto_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
-    showToast('Presupuesto exportado a CSV');
+    ui.showToast('Presupuesto exportado a CSV');
   };
 
   return (
@@ -79,7 +79,7 @@ export default function BudgetScreen() {
             <DollarSign size={20} className="text-[var(--af-accent)]" />
             Presupuesto
           </h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{expenses.length} gastos registrados</p>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{fs.expenses.length} gastos registrados</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -90,7 +90,7 @@ export default function BudgetScreen() {
           </button>
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-            onClick={() => { setForms((p: any) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); openModal('expense'); }}
+            onClick={() => { ui.setForms((p: any) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); ui.openModal('expense'); }}
           >
             <Plus size={15} /> Registrar gasto
           </button>
@@ -162,7 +162,7 @@ export default function BudgetScreen() {
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: cat.color }} />
                         <span className="text-[13px] font-medium">{cat.name}</span>
-                        <span className="text-[10px] text-[var(--af-text3)]">{expenses.filter((e: any) => (e.data.category || 'Otros') === cat.name).length} registros</span>
+                        <span className="text-[10px] text-[var(--af-text3)]">{fs.expenses.filter((e: any) => (e.data.category || 'Otros') === cat.name).length} registros</span>
                       </div>
                       <span className="text-[13px] font-semibold">{fmtCOP(cat.value)}</span>
                     </div>
@@ -181,7 +181,7 @@ export default function BudgetScreen() {
       {Object.keys(byProject).length > 0 && (
         <div className="space-y-3">
           {Object.entries(byProject).map(([pid, exps]: [string, any]) => {
-            const proj = projects.find((p: any) => p.id === pid);
+            const proj = fs.projects.find((p: any) => p.id === pid);
             const total = exps.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
             return (
               <div key={pid} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
@@ -200,7 +200,7 @@ export default function BudgetScreen() {
                       <div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div>
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
-                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteExpense(e.id)}>✕</button>
+                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => fs.deleteExpense(e.id)}>✕</button>
                   </div>
                 ))}
               </div>
@@ -210,7 +210,7 @@ export default function BudgetScreen() {
       )}
 
       {/* Empty state */}
-      {expenses.length === 0 && (
+      {fs.expenses.length === 0 && (
         <div className="text-center py-16 text-[var(--af-text3)]">
           <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
             <DollarSign size={24} className="text-[var(--af-text3)]" />

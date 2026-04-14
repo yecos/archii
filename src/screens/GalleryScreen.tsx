@@ -1,16 +1,17 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useGallery } from '@/hooks/useDomain';
+import { useOneDrive } from '@/hooks/useDomain';
 import { SkeletonGallery } from '@/components/ui/SkeletonLoaders';
 import { PHOTO_CATS } from '@/lib/types';
 
 export default function GalleryScreen() {
-  const {
-    projects, galleryFilterProject, setGalleryFilterProject, galleryLoading,
-    galleryFilterCat, setGalleryFilterCat,
-    setEditingId, setForms, openModal,
-    getFilteredGalleryPhotos, openLightbox, deleteGalleryPhoto,
-  } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const gallery = useGallery();
+  const od = useOneDrive();
 
   return (
     <div className="animate-fadeIn p-4 sm:p-6 space-y-4">
@@ -18,9 +19,9 @@ export default function GalleryScreen() {
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <h2 className="text-lg font-semibold">📸 Galería de proyectos</h2>
-      <p className="text-sm text-[var(--muted-foreground)]">{getFilteredGalleryPhotos().length} foto{getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
+      <p className="text-sm text-[var(--muted-foreground)]">{gallery.getFilteredGalleryPhotos().length} foto{gallery.getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
     </div>
-    <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); openModal('gallery'); }}>
+    <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); ui.openModal('gallery'); }}>
       <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Agregar foto
     </button>
@@ -28,21 +29,21 @@ export default function GalleryScreen() {
 
   {/* Filters */}
   <div className="flex flex-col sm:flex-row gap-2">
-    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={galleryFilterProject} onChange={e => setGalleryFilterProject(e.target.value)}>
+    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={gallery.galleryFilterProject} onChange={e => gallery.setGalleryFilterProject(e.target.value)}>
       <option value="all">Todos los proyectos</option>
-      {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+      {fs.projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
     </select>
-    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={galleryFilterCat} onChange={e => setGalleryFilterCat(e.target.value)}>
+    <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={gallery.galleryFilterCat} onChange={e => gallery.setGalleryFilterCat(e.target.value)}>
       <option value="all">Todas las categorías</option>
       {PHOTO_CATS.map(c => <option key={c} value={c}>{c}</option>)}
     </select>
   </div>
 
   {/* Loading skeleton */}
-  {galleryLoading && <SkeletonGallery />}
+  {od.galleryLoading && <SkeletonGallery />}
 
   {/* Photo Grid */}
-  {!galleryLoading && getFilteredGalleryPhotos().length === 0 ? (
+  {!od.galleryLoading && gallery.getFilteredGalleryPhotos().length === 0 ? (
     <div className="text-center py-16">
       <div className="text-4xl mb-3">🖼️</div>
       <div className="text-[var(--muted-foreground)]">No hay fotos en la galería</div>
@@ -50,10 +51,10 @@ export default function GalleryScreen() {
     </div>
   ) : (
     <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))' }}>
-      {getFilteredGalleryPhotos().map((photo, idx) => {
-        const proj = projects.find(p => p.id === photo.data.projectId);
+      {gallery.getFilteredGalleryPhotos().map((photo, idx) => {
+        const proj = fs.projects.find(p => p.id === photo.data.projectId);
         return (
-          <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>
+          <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => gallery.openLightbox(photo, idx)}>
             <img src={photo.data.imageData} alt={photo.data.caption || 'Foto'} className="w-full h-full object-cover opacity-0 transition-opacity duration-300" loading="lazy" onLoad={e => { (e.target as HTMLImageElement).style.opacity = '1' }} />
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -65,7 +66,7 @@ export default function GalleryScreen() {
                 </div>
               </div>
               <div className="absolute top-1.5 right-1.5 flex gap-1">
-                <button className="w-6 h-6 rounded-full bg-red-500/80 text-white flex items-center justify-center text-xs hover:bg-red-500 transition-colors" onClick={e => { e.stopPropagation(); deleteGalleryPhoto(photo.id); }}>✕</button>
+                <button className="w-6 h-6 rounded-full bg-red-500/80 text-white flex items-center justify-center text-xs hover:bg-red-500 transition-colors" onClick={e => { e.stopPropagation(); gallery.deleteGalleryPhoto(photo.id); }}>✕</button>
               </div>
             </div>
             {/* Category badge always visible */}

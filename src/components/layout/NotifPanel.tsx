@@ -1,36 +1,33 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useNotif } from '@/hooks/useDomain';
 import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle } from 'lucide-react';
 
 export default React.memo(function NotifPanel() {
-  const {
-    showNotifPanel, setShowNotifPanel, notifFilterCat, setNotifFilterCat,
-    notifHistory, notifPrefs, toggleNotifPref, notifSound, setNotifSound,
-    notifPermission, requestNotifPermission, markNotifRead, markAllNotifRead,
-    clearNotifHistory, unreadCount, navigateTo,
-  } = useApp();
+  const ui = useUI();
+  const notif = useNotif();
 
-  if (!showNotifPanel) return null;
+  if (!notif.showNotifPanel) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
+      <div className="fixed inset-0 z-40" onClick={() => notif.setShowNotifPanel(false)} />
       <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
         {/* Header */}
         <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="text-[15px] font-semibold">Notificaciones</div>
-              {unreadCount > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full px-1">{unreadCount}</span>}
+              {notif.unreadCount > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full px-1">{notif.unreadCount}</span>}
             </div>
             <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button className="text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={markAllNotifRead}>
+              {notif.unreadCount > 0 && (
+                <button className="text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={notif.markAllNotifRead}>
                   Leer todas
                 </button>
               )}
-              <button className="text-[11px] text-[var(--muted-foreground)] cursor-pointer hover:text-red-400" onClick={clearNotifHistory}>
+              <button className="text-[11px] text-[var(--muted-foreground)] cursor-pointer hover:text-red-400" onClick={notif.clearNotifHistory}>
                 Limpiar
               </button>
             </div>
@@ -49,15 +46,15 @@ export default React.memo(function NotifPanel() {
             ].map(f => (
               <button
                 key={f.key}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${notifFilterCat === f.key ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
-                onClick={() => setNotifFilterCat(f.key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${notif.notifFilterCat === f.key ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+                onClick={() => notif.setNotifFilterCat(f.key)}
               ><f.Icon size={12} /> {f.label}</button>
             ))}
           </div>
         </div>
 
         {/* Permission prompt */}
-        {notifPermission !== 'granted' && (
+        {notif.notifPermission !== 'granted' && (
           <div className="p-4 bg-amber-500/5 border-b border-[var(--border)] flex-shrink-0">
             <div className="flex items-center gap-3">
               <Bell size={20} className="stroke-[var(--af-accent)]" />
@@ -65,7 +62,7 @@ export default React.memo(function NotifPanel() {
                 <div className="text-[13px] font-medium">Activar notificaciones del sistema</div>
                 <div className="text-[11px] text-[var(--muted-foreground)]">Para recibir alertas incluso con la app cerrada</div>
               </div>
-              <button className="px-3 py-1.5 bg-[var(--af-accent)] text-background rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none flex-shrink-0" onClick={requestNotifPermission}>
+              <button className="px-3 py-1.5 bg-[var(--af-accent)] text-background rounded-lg text-[11px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none flex-shrink-0" onClick={notif.requestNotifPermission}>
                 Activar
               </button>
             </div>
@@ -75,11 +72,11 @@ export default React.memo(function NotifPanel() {
         {/* Notification list */}
         <div className="overflow-y-auto flex-1 min-h-0">
           {(() => {
-            const filtered = notifFilterCat === 'all' ? notifHistory : notifHistory.filter(n => n.type === notifFilterCat);
+            const filtered = notif.notifFilterCat === 'all' ? notif.notifHistory : notif.notifHistory.filter(n => n.type === notif.notifFilterCat);
             if (filtered.length === 0) return (
               <div className="p-8 text-center">
                 <Bell size={28} className="stroke-[var(--muted-foreground)] mb-2" />
-                <div className="text-sm text-[var(--muted-foreground)]">{notifFilterCat === 'all' ? 'Sin notificaciones' : 'Sin notificaciones de esta categoría'}</div>
+                <div className="text-sm text-[var(--muted-foreground)]">{notif.notifFilterCat === 'all' ? 'Sin notificaciones' : 'Sin notificaciones de esta categoría'}</div>
                 <div className="text-[11px] text-[var(--af-text3)] mt-1">Las alertas aparecerán aquí</div>
               </div>
             );
@@ -88,10 +85,10 @@ export default React.memo(function NotifPanel() {
                 key={n.id}
                 className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-[var(--af-bg3)] border-b border-[var(--border)]/50 ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}
                 onClick={() => {
-                  markNotifRead(n.id);
+                  notif.markNotifRead(n.id);
                   if (n.screen) {
-                    navigateTo(n.screen, n.itemId);
-                    setShowNotifPanel(false);
+                    ui.navigateTo(n.screen, n.itemId);
+                    notif.setShowNotifPanel(false);
                   }
                 }}
               >
@@ -134,26 +131,26 @@ export default React.memo(function NotifPanel() {
             ].map(p => (
               <button
                 key={p.key}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notifPrefs[p.key] ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
-                onClick={() => toggleNotifPref(p.key)}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifPrefs[p.key] ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                onClick={() => notif.toggleNotifPref(p.key)}
               >
                 <p.Icon size={11} /> {p.label}
-                {notifPrefs[p.key] && <Check size={10} className="stroke-current" strokeWidth={3} />}
+                {notif.notifPrefs[p.key] && <Check size={10} className="stroke-current" strokeWidth={3} />}
               </button>
             ))}
           </div>
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
             <div className="flex items-center gap-2">
               <button
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notifSound ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
-                onClick={() => setNotifSound(!notifSound)}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifSound ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                onClick={() => notif.setNotifSound(!notif.notifSound)}
               ><Volume2 size={12} className="inline mr-0.5" /> Sonido</button>
               <span className="text-[10px] text-[var(--af-text3)]">
-                {notifPermission === 'granted' ? <><CheckCircle size={10} className="inline mr-0.5 text-emerald-400" /> OS activas</> : notifPermission === 'denied' ? <><XCircle size={10} className="inline mr-0.5 text-red-400" /> OS bloqueadas</> : <><Loader size={10} className="inline mr-0.5 animate-spin" /> Sin activar OS</>}
+                {notif.notifPermission === 'granted' ? <><CheckCircle size={10} className="inline mr-0.5 text-emerald-400" /> OS activas</> : notif.notifPermission === 'denied' ? <><XCircle size={10} className="inline mr-0.5 text-red-400" /> OS bloqueadas</> : <><Loader size={10} className="inline mr-0.5 animate-spin" /> Sin activar OS</>}
               </span>
             </div>
             <span className="text-[10px] text-[var(--af-text3)]">
-              {notifHistory.length} total
+              {notif.notifHistory.length} total
             </span>
           </div>
         </div>

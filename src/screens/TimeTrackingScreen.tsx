@@ -1,57 +1,58 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useTimeTracking } from '@/hooks/useDomain';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, fmtTimer, getWeekStart } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
 export default function TimeTrackingScreen() {
-  const {
-    forms, openModal, projects, setForms, setTimeFilterDate,
-    setTimeFilterProject, setTimeTab, showToast, startTimeTracking, stopTimeTracking,
-    timeEntries, timeFilterDate, timeFilterProject, timeSession, timeTab,
-    timeTimerMs, userName,
-  } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
+  const tt = useTimeTracking();
 
   return (
 <div className="animate-fadeIn space-y-4">
         <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
           {[{ k: 'Tracker', v: 'tracker' as const }, { k: 'Registros', v: 'entries' as const }, { k: 'Resumen', v: 'summary' as const }].map(tab => (
-            <button key={tab.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${timeTab === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setTimeTab(tab.v)}>{tab.k}</button>
+            <button key={tab.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${tt.timeTab === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => tt.setTimeTab(tab.v)}>{tab.k}</button>
           ))}
         </div>
 
-        {timeTab === 'tracker' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {tt.timeTab === 'tracker' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Timer Card */}
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
             <h3 className="text-[15px] font-semibold mb-4">Cronometro</h3>
-            <div className={`text-center py-8 rounded-xl mb-4 ${timeSession.isRunning ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-[var(--af-bg3)]'}`}>
-              <div className={`text-5xl font-mono font-bold tracking-wider ${timeSession.isRunning ? 'text-emerald-400' : 'text-[var(--muted-foreground)]'}`}>{timeSession.isRunning ? fmtTimer(timeTimerMs) : '00:00'}</div>
-              <div className="text-xs text-[var(--muted-foreground)] mt-2">{timeSession.isRunning ? 'En curso...' : 'Detenido'}</div>
-              {timeSession.isRunning && <div className="w-3 h-3 bg-emerald-400 rounded-full mx-auto mt-2 animate-pulse" />}
+            <div className={`text-center py-8 rounded-xl mb-4 ${tt.timeSession.isRunning ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-[var(--af-bg3)]'}`}>
+              <div className={`text-5xl font-mono font-bold tracking-wider ${tt.timeSession.isRunning ? 'text-emerald-400' : 'text-[var(--muted-foreground)]'}`}>{tt.timeSession.isRunning ? fmtTimer(tt.timeTimerMs) : '00:00'}</div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-2">{tt.timeSession.isRunning ? 'En curso...' : 'Detenido'}</div>
+              {tt.timeSession.isRunning && <div className="w-3 h-3 bg-emerald-400 rounded-full mx-auto mt-2 animate-pulse" />}
             </div>
             <div className="space-y-3 mb-4">
-              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.teProject || ''} onChange={e => setForms(p => ({ ...p, teProject: e.target.value }))}>
+              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={ui.forms.teProject || ''} onChange={e => ui.setForms(p => ({ ...p, teProject: e.target.value }))}>
                 <option value="">Seleccionar proyecto</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+                {fs.projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
               </select>
-              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.tePhase || ''} onChange={e => setForms(p => ({ ...p, tePhase: e.target.value }))}>
+              <select className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={ui.forms.tePhase || ''} onChange={e => ui.setForms(p => ({ ...p, tePhase: e.target.value }))}>
                 <option value="">Fase (opcional)</option>
                 {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
               </select>
-              <input type="text" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" placeholder="Que vas a hacer?" value={forms.teQuickDesc || ''} onChange={e => setForms(p => ({ ...p, teQuickDesc: e.target.value }))} disabled={timeSession.isRunning} />
+              <input type="text" className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" placeholder="Que vas a hacer?" value={ui.forms.teQuickDesc || ''} onChange={e => ui.setForms(p => ({ ...p, teQuickDesc: e.target.value }))} disabled={tt.timeSession.isRunning} />
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--muted-foreground)]">Tarifa/h:</span>
-                <input type="number" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.teRate || 50000} onChange={e => setForms(p => ({ ...p, teRate: e.target.value }))} />
+                <input type="number" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={ui.forms.teRate || 50000} onChange={e => ui.setForms(p => ({ ...p, teRate: e.target.value }))} />
               </div>
             </div>
             <div className="flex gap-2">
-              {!timeSession.isRunning ? (
-                <button className="flex-1 bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-emerald-600 transition-colors" onClick={startTimeTracking}>Iniciar</button>
+              {!tt.timeSession.isRunning ? (
+                <button className="flex-1 bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-emerald-600 transition-colors" onClick={tt.startTimeTracking}>Iniciar</button>
               ) : (
-                <button className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-red-600 transition-colors" onClick={stopTimeTracking}>Detener</button>
+                <button className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-red-600 transition-colors" onClick={tt.stopTimeTracking}>Detener</button>
               )}
-              <button className="px-4 py-2.5 rounded-lg text-sm cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--af-bg4)]" onClick={() => { setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); openModal('timeEntry'); }}>+ Manual</button>
+              <button className="px-4 py-2.5 rounded-lg text-sm cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--af-bg4)]" onClick={() => { ui.setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); ui.openModal('timeEntry'); }}>+ Manual</button>
             </div>
           </div>
 
@@ -60,7 +61,7 @@ export default function TimeTrackingScreen() {
             <h3 className="text-[15px] font-semibold mb-4">Hoy</h3>
             {(() => {
               const today = new Date().toISOString().split('T')[0];
-              const todayEntries = timeEntries.filter(e => e.data.date === today);
+              const todayEntries = tt.timeEntries.filter(e => e.data.date === today);
               const totalToday = todayEntries.reduce((s, e) => s + (e.data.duration || 0), 0);
               const billableToday = todayEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
               return (
@@ -72,7 +73,7 @@ export default function TimeTrackingScreen() {
                   {todayEntries.length === 0 ? <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin registros hoy</div> : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
                       {todayEntries.map(e => {
-                        const proj = projects.find(p => p.id === e.data.projectId);
+                        const proj = fs.projects.find(p => p.id === e.data.projectId);
                         return (
                           <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--af-bg3)] rounded-lg">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(e.data.userId) }}>{getInitials(e.data.userName)}</div>
@@ -96,19 +97,19 @@ export default function TimeTrackingScreen() {
           </div>
         </div>)}
 
-        {timeTab === 'entries' && (<div>
+        {tt.timeTab === 'entries' && (<div>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={timeFilterProject} onChange={e => setTimeFilterProject(e.target.value)}>
+            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={tt.timeFilterProject} onChange={e => tt.setTimeFilterProject(e.target.value)}>
               <option value="all">Todos los proyectos</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+              {fs.projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
             </select>
-            <input type="date" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={timeFilterDate} onChange={e => setTimeFilterDate(e.target.value)} />
-            <button className="ml-auto flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); openModal('timeEntry'); }}>+ Registro manual</button>
+            <input type="date" className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={tt.timeFilterDate} onChange={e => tt.setTimeFilterDate(e.target.value)} />
+            <button className="ml-auto flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { ui.setForms(p => ({ ...p, teDescription: '', teProject: '', tePhase: '', teDate: new Date().toISOString().split('T')[0], teStartTime: '', teEndTime: '', teManualDuration: '', teBillable: true, teRate: 50000 })); ui.openModal('timeEntry'); }}>+ Registro manual</button>
           </div>
           {(() => {
-            let filtered = [...timeEntries];
-            if (timeFilterProject !== 'all') filtered = filtered.filter(e => e.data.projectId === timeFilterProject);
-            if (timeFilterDate) filtered = filtered.filter(e => e.data.date === timeFilterDate);
+            let filtered = [...tt.timeEntries];
+            if (tt.timeFilterProject !== 'all') filtered = filtered.filter(e => e.data.projectId === tt.timeFilterProject);
+            if (tt.timeFilterDate) filtered = filtered.filter(e => e.data.date === tt.timeFilterDate);
             const totalHrs = filtered.reduce((s, e) => s + (e.data.duration || 0), 0);
             const billableHrs = filtered.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0), 0);
             return filtered.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">⏱️</div><div className="text-sm">Sin registros de tiempo</div></div> : (
@@ -131,7 +132,7 @@ export default function TimeTrackingScreen() {
                       </tr></thead>
                       <tbody>
                         {filtered.map(e => {
-                          const proj = projects.find(p => p.id === e.data.projectId);
+                          const proj = fs.projects.find(p => p.id === e.data.projectId);
                           return (<tr key={e.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--af-bg3)] transition-colors">
                             <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.date}</td>
                             <td className="px-4 py-2.5"><div className="truncate max-w-[120px]">{proj?.data.name || '—'}</div></td>
@@ -139,7 +140,7 @@ export default function TimeTrackingScreen() {
                             <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.startTime} - {e.data.endTime}</td>
                             <td className="px-4 py-2.5 text-right font-semibold">{fmtDuration(e.data.duration)}</td>
                             <td className="px-4 py-2.5 text-center">{e.data.billable ? '✅' : '—'}</td>
-                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, showToast)}>🗑</button></td>
+                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, ui.showToast)}>🗑</button></td>
                           </tr>);
                         })}
                       </tbody>
@@ -150,18 +151,18 @@ export default function TimeTrackingScreen() {
           })()}
         </div>)}
 
-        {timeTab === 'summary' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {tt.timeTab === 'summary' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(() => {
-            const thisWeek = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const ws = getWeekStart(); return d >= ws; });
-            const thisMonth = timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
+            const thisWeek = tt.timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const ws = getWeekStart(); return d >= ws; });
+            const thisMonth = tt.timeEntries.filter(e => { if (!e.data.date) return false; const d = new Date(e.data.date); const now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
             const weekTotal = thisWeek.reduce((s, e) => s + (e.data.duration || 0), 0);
             const weekBillable = thisWeek.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
             const monthTotal = thisMonth.reduce((s, e) => s + (e.data.duration || 0), 0);
             const monthBillable = thisMonth.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
             const byProject: Record<string, number> = {};
-            timeEntries.forEach(e => { byProject[e.data.projectId] = (byProject[e.data.projectId] || 0) + (e.data.duration || 0); });
+            tt.timeEntries.forEach(e => { byProject[e.data.projectId] = (byProject[e.data.projectId] || 0) + (e.data.duration || 0); });
             const byPhase: Record<string, number> = {};
-            timeEntries.forEach(e => { if (e.data.phaseName) byPhase[e.data.phaseName] = (byPhase[e.data.phaseName] || 0) + (e.data.duration || 0); });
+            tt.timeEntries.forEach(e => { if (e.data.phaseName) byPhase[e.data.phaseName] = (byPhase[e.data.phaseName] || 0) + (e.data.duration || 0); });
             return (<>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Esta Semana</h3>
@@ -182,7 +183,7 @@ export default function TimeTrackingScreen() {
                 {Object.keys(byProject).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
                   <div className="space-y-2">
                     {Object.entries(byProject).sort((a, b) => b[1] - a[1]).map(([pid, mins]) => {
-                      const proj = projects.find(p => p.id === pid);
+                      const proj = fs.projects.find(p => p.id === pid);
                       return (<div key={pid}>
                         <div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{proj?.data.name || pid}</span><span className="text-[var(--muted-foreground)]">{fmtDuration(mins)}</span></div>
                         <div className="w-full bg-[var(--af-bg3)] rounded-full h-1.5"><div className="bg-[var(--af-accent)] rounded-full h-1.5" style={{ width: `${(mins / Math.max(...Object.values(byProject))) * 100}%` }} /></div>

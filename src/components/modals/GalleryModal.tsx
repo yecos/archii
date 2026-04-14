@@ -2,27 +2,31 @@
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { Camera, X, Image as ImageIcon } from 'lucide-react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useGallery } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, ModalFooter } from '@/components/common/FormField';
 import { PHOTO_CATS } from '@/lib/types';
 
 export default function GalleryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, projects, editingId, saveGalleryPhoto, handleGalleryImageSelect, closeModal } = useApp();
+  const ui = useUI();
+  const fs = useFirestore();
+  const gallery = useGallery();
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>
       <div className="text-lg font-semibold mb-5 flex items-center gap-2">
         <Camera className="w-5 h-5" />
-        {editingId ? 'Editar foto' : 'Agregar foto'}
+        {ui.editingId ? 'Editar foto' : 'Agregar foto'}
       </div>
 
       {/* Image preview / upload area */}
       <div className="mb-4">
         <FormField label="Foto" required>
-          {forms.galleryImageData ? (
+          {ui.forms.galleryImageData ? (
             <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
-              <img src={forms.galleryImageData} alt="Preview" className="w-full max-h-[200px] object-contain bg-[var(--af-bg3)]" />
-              <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center text-sm hover:bg-black/70 transition-colors" onClick={() => setForms(p => ({ ...p, galleryImageData: '' }))}>
+              <img src={ui.forms.galleryImageData} alt="Preview" className="w-full max-h-[200px] object-contain bg-[var(--af-bg3)]" />
+              <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center text-sm hover:bg-black/70 transition-colors" onClick={() => ui.setForms(p => ({ ...p, galleryImageData: '' }))}>
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -31,7 +35,7 @@ export default function GalleryModal({ open, onClose }: { open: boolean; onClose
               <ImageIcon className="w-8 h-8 text-[var(--muted-foreground)]" />
               <span className="text-sm text-[var(--muted-foreground)]">Toca para seleccionar una imagen</span>
               <span className="text-[10px] text-[var(--muted-foreground)]">JPG, PNG, WebP — máx. 5 MB</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageSelect} />
+              <input type="file" accept="image/*" className="hidden" onChange={gallery.handleGalleryImageSelect} />
             </label>
           )}
         </FormField>
@@ -39,23 +43,23 @@ export default function GalleryModal({ open, onClose }: { open: boolean; onClose
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <FormField label="Proyecto">
-          <FormSelect value={forms.galleryProject || ''} onChange={e => setForms(p => ({ ...p, galleryProject: e.target.value }))}>
+          <FormSelect value={ui.forms.galleryProject || ''} onChange={e => ui.setForms(p => ({ ...p, galleryProject: e.target.value }))}>
             <option value="">Sin proyecto</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            {fs.projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
           </FormSelect>
         </FormField>
         <FormField label="Categoría">
-          <FormSelect value={forms.galleryCategory || 'Otro'} onChange={e => setForms(p => ({ ...p, galleryCategory: e.target.value }))}>
+          <FormSelect value={ui.forms.galleryCategory || 'Otro'} onChange={e => ui.setForms(p => ({ ...p, galleryCategory: e.target.value }))}>
             {PHOTO_CATS.map(c => <option key={c} value={c}>{c}</option>)}
           </FormSelect>
         </FormField>
       </div>
 
       <FormField label="Descripción">
-        <FormInput placeholder="Ej: Vista frontal del proyecto" value={forms.galleryCaption || ''} onChange={e => setForms(p => ({ ...p, galleryCaption: e.target.value }))} />
+        <FormInput placeholder="Ej: Vista frontal del proyecto" value={ui.forms.galleryCaption || ''} onChange={e => ui.setForms(p => ({ ...p, galleryCaption: e.target.value }))} />
       </FormField>
 
-      <ModalFooter onCancel={() => closeModal('gallery')} onSubmit={saveGalleryPhoto} submitLabel={editingId ? 'Guardar' : 'Subir foto'} />
+      <ModalFooter onCancel={() => ui.closeModal('gallery')} onSubmit={gallery.saveGalleryPhoto} submitLabel={ui.editingId ? 'Guardar' : 'Subir foto'} />
     </CenterModal>
   );
 }

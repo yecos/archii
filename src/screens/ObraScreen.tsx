@@ -1,6 +1,9 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useComments } from '@/hooks/useDomain';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { FileText, ChevronDown, ChevronUp, Thermometer, Users, Wrench, Package } from 'lucide-react';
 import { exportDailyLogsPDF } from '@/lib/export-pdf';
@@ -14,26 +17,26 @@ const WEATHER_COLORS: Record<string, string> = {
 };
 
 export default function ObraScreen() {
-  const {
-    projects, setSelectedProjectId, setForms, navigateTo, dailyLogs, loading,
-    showToast, workPhases,
-  } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
+  const comments = useComments();
 
   const [selectedProjectLogs, setSelectedProjectLogs] = useState<string | null>(null);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
-  const activeProjects = projects.filter(p => p.data.status === 'Ejecucion');
+  const activeProjects = fs.projects.filter(p => p.data.status === 'Ejecucion');
 
   // Determine which logs to show
   const displayLogs = useMemo(() => {
     const logs = selectedProjectLogs
-      ? dailyLogs.filter(l => l.data.projectId === selectedProjectLogs)
-      : dailyLogs;
+      ? comments.dailyLogs.filter(l => l.data.projectId === selectedProjectLogs)
+      : comments.dailyLogs;
     return [...logs].sort((a, b) => (b.data.date || '').localeCompare(a.data.date || ''));
-  }, [dailyLogs, selectedProjectLogs]);
+  }, [comments.dailyLogs, selectedProjectLogs]);
 
   const selectedProject = selectedProjectLogs
-    ? projects.find(p => p.id === selectedProjectLogs)
+    ? fs.projects.find(p => p.id === selectedProjectLogs)
     : null;
 
   // Weather distribution
@@ -117,8 +120,8 @@ export default function ObraScreen() {
             <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => {
               try {
                 exportDailyLogsPDF({ logs: displayLogs, projectName: selectedProject?.data.name || 'Todos los proyectos' });
-                showToast('Bitácora PDF descargada');
-              } catch { showToast('Error al generar PDF', 'error'); }
+                ui.showToast('Bitácora PDF descargada');
+              } catch { ui.showToast('Error al generar PDF', 'error'); }
             }}>
               <FileText size={14} /> Exportar PDF
             </button>
@@ -145,7 +148,7 @@ export default function ObraScreen() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {activeProjects.map(p => {
-              const projLogs = dailyLogs.filter(l => l.data.projectId === p.id);
+              const projLogs = comments.dailyLogs.filter(l => l.data.projectId === p.id);
               const isSelected = selectedProjectLogs === p.id;
               return (
                 <div key={p.id} className={`bg-[var(--af-bg3)] border rounded-xl p-4 cursor-pointer transition-all group ${isSelected ? 'border-[var(--af-accent)]/50 ring-1 ring-[var(--af-accent)]/20' : 'border-[var(--border)] hover:border-[var(--af-accent)]/40'}`} onClick={() => {
@@ -273,7 +276,7 @@ export default function ObraScreen() {
               <div className="space-y-1">
                 {displayLogs.map((log, idx) => {
                   const isExpanded = expandedLog === log.id;
-                  const proj = projects.find(p => p.id === log.data.projectId);
+                  const proj = fs.projects.find(p => p.id === log.data.projectId);
                   return (
                     <div key={log.id} className="relative pl-10">
                       {/* Timeline dot */}
@@ -392,7 +395,7 @@ export default function ObraScreen() {
       )}
 
       {/* Empty state when no logs */}
-      {displayLogs.length === 0 && dailyLogs.length === 0 && (
+      {displayLogs.length === 0 && comments.dailyLogs.length === 0 && (
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-10 text-center">
           <div className="text-4xl mb-3">📝</div>
           <div className="text-sm text-[var(--muted-foreground)]">Sin registros de bitácora</div>

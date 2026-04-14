@@ -1,37 +1,39 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 
 export default function SuppliersScreen() {
-  const {
-    suppliers, setEditingId, setForms, openModal, deleteSupplier, loading,
-  } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
 
   return (
     <div className="animate-fadeIn">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="text-sm text-[var(--muted-foreground)]">{suppliers.length} proveedores</div>
-        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('supplier'); }}>
+        <div className="text-sm text-[var(--muted-foreground)]">{fs.suppliers.length} proveedores</div>
+        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { ui.setEditingId(null); ui.openModal('supplier'); }}>
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proveedor
         </button>
       </div>
-      {loading && (
+      {auth.loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       )}
-      {!loading && suppliers.length === 0 ? (
+      {!auth.loading && fs.suppliers.length === 0 ? (
         <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🏪</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proveedores</div><div className="text-[13px]">Agrega tu primer proveedor</div></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {suppliers.map(s => (
+          {fs.suppliers.map(s => (
             <div key={s.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
               <div className="flex items-start justify-between mb-2">
                 <div className="w-11 h-11 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg flex items-center justify-center text-lg">🏪</div>
                 <div className="flex gap-1.5">
-                  <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(s.id); setForms(p => ({ ...p, supName: s.data.name, supCategory: s.data.category, supPhone: s.data.phone, supEmail: s.data.email, supAddress: s.data.address, supWebsite: s.data.website, supNotes: s.data.notes, supRating: String(s.data.rating) })); openModal('supplier'); }}>✏️</button>
-                  <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => deleteSupplier(s.id)}>🗑</button>
+                  <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { ui.setEditingId(s.id); ui.setForms(p => ({ ...p, supName: s.data.name, supCategory: s.data.category, supPhone: s.data.phone, supEmail: s.data.email, supAddress: s.data.address, supWebsite: s.data.website, supNotes: s.data.notes, supRating: String(s.data.rating) })); ui.openModal('supplier'); }}>✏️</button>
+                  <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fs.deleteSupplier(s.id)}>🗑</button>
                 </div>
               </div>
               <div className="text-sm font-semibold mb-0.5">{s.data.name}</div>

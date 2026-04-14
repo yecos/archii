@@ -1,27 +1,29 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useOneDrive } from '@/hooks/useDomain';
+import { useCalendar } from '@/hooks/useDomain';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 
 export default function ProfileScreen() {
-  const {
-    approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
-    expenses, initials, meetings, msConnected, myRole,
-    openOneDriveForProject, projects, tasks, teamUsers, userName,
-  } = useApp();
+  const auth = useAuth();
+  const fs = useFirestore();
+  const od = useOneDrive();
+  const cal = useCalendar();
 
   return (
 (() => {
-            const myTasks = tasks.filter(t => t.data.assigneeId === authUser?.uid || !t.data.assigneeId);
+            const myTasks = fs.tasks.filter(t => t.data.assigneeId === auth.authUser?.uid || !t.data.assigneeId);
             const myPending = myTasks.filter(t => t.data.status !== 'Completado');
             const myCompleted = myTasks.filter(t => t.data.status === 'Completado');
             const myInProgress = myTasks.filter(t => t.data.status === 'En progreso');
             const myHighPrio = myPending.filter(t => t.data.priority === 'Alta');
             const myOverdue = myPending.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date());
             const totalRate = myTasks.length > 0 ? Math.round((myCompleted.length / myTasks.length) * 100) : 0;
-            const myProjects = projects.filter(p => p.data.createdBy === authUser?.uid || myTasks.some(t => t.data.projectId === p.id));
-            const myExpenses = expenses.filter(e => e.data.createdBy === authUser?.uid);
+            const myProjects = fs.projects.filter(p => p.data.createdBy === auth.authUser?.uid || myTasks.some(t => t.data.projectId === p.id));
+            const myExpenses = fs.expenses.filter(e => e.data.createdBy === auth.authUser?.uid);
             const totalSpent = myExpenses.reduce((s, e) => s + (Number(e.data.amount) || 0), 0);
 
             // Weekly activity (last 7 days)
@@ -60,14 +62,14 @@ export default function ProfileScreen() {
               {/* Profile Header Card */}
               <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden">
                 <div className="flex items-center gap-3 relative">
-                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold border-2 ${avatarColor(authUser?.uid)} flex-shrink-0`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>
-                    {authUser?.photoURL ? '' : initials}
+                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold border-2 ${avatarColor(auth.authUser?.uid)} flex-shrink-0`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>
+                    {auth.authUser?.photoURL ? '' : auth.initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-base sm:text-xl">{userName}</div>
-                    <div className="text-[11px] sm:text-sm text-[var(--muted-foreground)] truncate">{authUser?.email}</div>
+                    <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-base sm:text-xl">{auth.userName}</div>
+                    <div className="text-[11px] sm:text-sm text-[var(--muted-foreground)] truncate">{auth.authUser?.email}</div>
                     <div className="flex gap-1.5 mt-1">
-                      {(() => { const myRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro'; return <span className={`text-[9px] sm:text-[11px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[myRole]}`}>{ROLE_ICONS[myRole]} {myRole}</span>; })()}
+                      {(() => { const myRole = auth.teamUsers.find(u => u.id === auth.authUser?.uid)?.data?.role || 'Miembro'; return <span className={`text-[9px] sm:text-[11px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[myRole]}`}>{ROLE_ICONS[myRole]} {myRole}</span>; })()}
                       <span className="text-[9px] sm:text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">{myProjects.length} proyectos</span>
                     </div>
                   </div>
@@ -96,7 +98,7 @@ export default function ProfileScreen() {
 
                 // Overdue tasks (urgent)
                 myOverdue.forEach(t => {
-                  const proj = projects.find(p => p.id === t.data.projectId);
+                  const proj = fs.projects.find(p => p.id === t.data.projectId);
                   const daysOverdue = Math.floor((today.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
                   notifications.push({ icon: '⚡', text: `"${t.data.title}" venció hace ${daysOverdue} día${daysOverdue !== 1 ? 's' : ''}${proj ? ` — ${proj.data.name}` : ''}`, time: `Venció ${fmtDate(t.data.dueDate)}`, urgent: true });
                 });
@@ -104,15 +106,15 @@ export default function ProfileScreen() {
                 // High priority pending tasks
                 if (myHighPrio.length > 0) {
                   myHighPrio.forEach(t => {
-                    const proj = projects.find(p => p.id === t.data.projectId);
+                    const proj = fs.projects.find(p => p.id === t.data.projectId);
                     notifications.push({ icon: '🔴', text: `Tarea urgente: "${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}`, time: `Prioridad Alta · ${t.data.status}`, urgent: true });
                   });
                 }
 
                 // Meetings today or this week
-                meetings.forEach(m => {
+                cal.meetings.forEach(m => {
                   if (m.data.date && (m.data.date === todayStr || (m.data.date > todayStr && m.data.date <= weekLater.toISOString().split('T')[0]))) {
-                    const proj = projects.find(p => p.id === m.data.projectId);
+                    const proj = fs.projects.find(p => p.id === m.data.projectId);
                     const isToday = m.data.date === todayStr;
                     notifications.push({ icon: '📅', text: `Reunión "${m.data.title}"${isToday ? ' hoy' : ''} a las ${m.data.time || '09:00'}${proj ? ` — ${proj.data.name}` : ''}`, time: `${fmtDate(m.data.date)} · ${m.data.duration || 60} min`, urgent: isToday });
                   }
@@ -120,13 +122,13 @@ export default function ProfileScreen() {
 
                 // Pending approvals in my projects
                 const myProjectIds = myProjects.map(p => p.id);
-                const pendingApprovals = approvals.filter(a => a.data.status === 'Pendiente');
+                const pendingApprovals = fs.approvals.filter(a => a.data.status === 'Pendiente');
                 if (pendingApprovals.length > 0) {
                   notifications.push({ icon: '📋', text: `${pendingApprovals.length} aprobación${pendingApprovals.length > 1 ? 'es' : ''} pendiente${pendingApprovals.length > 1 ? 's' : ''}`, time: 'Requiere atención', urgent: false });
                 }
 
                 // Recent new projects (last 7 days)
-                const recentProjects = projects.filter(p => {
+                const recentProjects = fs.projects.filter(p => {
                   const cd = p.data.createdAt?.toDate ? p.data.createdAt.toDate() : new Date(p.data.createdAt);
                   return cd >= new Date(today.getTime() - 7 * 86400000);
                 });
@@ -137,7 +139,7 @@ export default function ProfileScreen() {
                 // Tasks in progress
                 if (myInProgress.length > 0) {
                   myInProgress.slice(0, 3).forEach(t => {
-                    const proj = projects.find(p => p.id === t.data.projectId);
+                    const proj = fs.projects.find(p => p.id === t.data.projectId);
                     notifications.push({ icon: '🔄', text: `"${t.data.title}" en progreso${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, time: t.data.status, urgent: false });
                   });
                 }
@@ -268,7 +270,7 @@ export default function ProfileScreen() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {myPending.slice(0, 10).map(t => {
-                      const proj = projects.find(p => p.id === t.data.projectId);
+                      const proj = fs.projects.find(p => p.id === t.data.projectId);
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date();
                       return (
                         <div key={t.id} className={`border border-[var(--border)] rounded-xl p-3.5 transition-all hover:border-[var(--input)] ${isOverdue ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--af-bg3)]'}`}>
@@ -304,9 +306,9 @@ export default function ProfileScreen() {
                     <svg viewBox="0 0 21 21" className="w-5 h-5"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
                     <div className="text-[13px] sm:text-[15px] font-semibold">Microsoft OneDrive</div>
                   </div>
-                  {msConnected && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Conectado</span>}
+                  {od.msConnected && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Conectado</span>}
                 </div>
-                {!msConnected ? (
+                {!od.msConnected ? (
                   <div>
                     <div className="text-xs text-[var(--muted-foreground)] mb-3">Conecta tu cuenta de Microsoft para gestionar archivos de proyectos directamente en OneDrive. Cada proyecto tendrá su propia carpeta en la nube.</div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
@@ -322,7 +324,7 @@ export default function ProfileScreen() {
                         </div>
                       ))}
                     </div>
-                    <button className="w-full bg-[#00a4ef] text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer hover:bg-[#0091d5] transition-colors flex items-center justify-center gap-2" onClick={doMicrosoftLogin}>
+                    <button className="w-full bg-[#00a4ef] text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer hover:bg-[#0091d5] transition-colors flex items-center justify-center gap-2" onClick={auth.doMicrosoftLogin}>
                       <svg viewBox="0 0 21 21" className="w-4 h-4"><rect x="1" y="1" width="9" height="9" fill="#fff"/><rect x="1" y="11" width="9" height="9" fill="#fff"/><rect x="11" y="1" width="9" height="9" fill="#fff"/><rect x="11" y="11" width="9" height="9" fill="#fff"/></svg>
                       Conectar con Microsoft
                     </button>
@@ -330,12 +332,12 @@ export default function ProfileScreen() {
                 ) : (
                   <div>
                     <div className="text-xs text-[var(--muted-foreground)] mb-3">Tu cuenta está vinculada. Los archivos de cada proyecto se guardan en <strong>OneDrive/ArchiFlow/[Nombre del proyecto]/</strong></div>
-                    {projects.length > 0 && (
+                    {fs.projects.length > 0 && (
                       <div className="mb-3">
                         <div className="text-[11px] font-semibold text-[var(--muted-foreground)] mb-2">Abrir carpeta de proyecto:</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {projects.slice(0, 6).map(p => (
-                            <button key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef] transition-all" onClick={() => openOneDriveForProject(p.data.name)}>
+                          {fs.projects.slice(0, 6).map(p => (
+                            <button key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef] transition-all" onClick={() => od.openOneDriveForProject(p.data.name)}>
                               <div className="text-[11px] font-medium truncate">{p.data.name}</div>
                               <div className="text-[9px] text-[var(--af-text3)]">{p.data.status}</div>
                             </button>
@@ -343,7 +345,7 @@ export default function ProfileScreen() {
                         </div>
                       </div>
                     )}
-                    <button className="w-full sm:w-auto px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-medium cursor-pointer hover:bg-red-500/10 transition-colors" onClick={disconnectMicrosoft}>
+                    <button className="w-full sm:w-auto px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-medium cursor-pointer hover:bg-red-500/10 transition-colors" onClick={od.disconnectMicrosoft}>
                       Desconectar Microsoft
                     </button>
                   </div>
@@ -367,7 +369,7 @@ export default function ProfileScreen() {
 
               {/* Logout button */}
               <div className="pt-2 pb-4">
-                <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 text-[13px] font-medium cursor-pointer hover:bg-red-500/10 transition-colors flex items-center gap-2 justify-center" onClick={doLogout}>
+                <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 text-[13px] font-medium cursor-pointer hover:bg-red-500/10 transition-colors flex items-center gap-2 justify-center" onClick={auth.doLogout}>
                   <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                   Cerrar sesión
                 </button>

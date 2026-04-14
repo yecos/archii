@@ -1,37 +1,38 @@
 'use client';
 import React from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
 import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getInitials, avatarColor } from '@/lib/helpers';
 
 export default function TeamScreen() {
-  const {
-    authUser, teamUsers, companies, tasks, forms, setForms,
-    getMyRole, updateUserRole, updateUserCompany,
-  } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
 
   return (
     <div className="animate-fadeIn">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         {/* Company filter for team */}
-        {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
+        {(auth.getMyRole() === 'Admin' || auth.getMyRole() === 'Director') && fs.companies.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
-            <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
+            <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!ui.forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
               👥 Todo el equipo
             </button>
-            {companies.map(c => (
-              <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
+            {fs.companies.map(c => (
+              <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${ui.forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => ui.setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
                 🏢 {c.data.name}
               </button>
             ))}
           </div>
         )}
-        <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</div>
+        <div className="text-sm text-[var(--muted-foreground)]">{auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).length} miembros</div>
       </div>
       {/* Role Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
         {USER_ROLES.slice(0, 4).map(role => {
-          const filtered = teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter);
+          const filtered = auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter);
           const count = filtered.filter(u => u.data.role === role).length;
           return (
             <div key={role} className={`border rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
@@ -44,15 +45,15 @@ export default function TeamScreen() {
       </div>
       {/* Team Members List */}
       <div className="space-y-2">
-        {teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).map(user => {
+        {auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).map(user => {
           const role = user.data.role || 'Miembro';
-          const isMe = user.id === authUser?.uid;
-          const myRole = getMyRole();
+          const isMe = user.id === auth.authUser?.uid;
+          const myRole = auth.getMyRole();
           const canChangeRole = myRole === 'Admin' || myRole === 'Director';
           const canChangeCompany = myRole === 'Admin' || myRole === 'Director';
-          const userTasks = tasks.filter(t => t.data.assigneeId === user.id);
+          const userTasks = fs.tasks.filter(t => t.data.assigneeId === user.id);
           const userPending = userTasks.filter(t => t.data.status !== 'Completado').length;
-          const userCompName = companies.find(c => c.id === user.data.companyId)?.data?.name;
+          const userCompName = fs.companies.find(c => c.id === user.data.companyId)?.data?.name;
           return (
             <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
               <div className="flex items-center gap-3">
@@ -74,18 +75,18 @@ export default function TeamScreen() {
                 </div>
                 <div className="flex-shrink-0 flex flex-col gap-1.5 items-end">
                   {canChangeCompany && !isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
+                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
                       <option value="">Sin empresa</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
+                      {fs.companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
                     </select>
                   ) : canChangeCompany && isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => updateUserCompany(user.id, e.target.value)} title="Tu empresa">
+                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Tu empresa">
                       <option value="">Sin empresa</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
+                      {fs.companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
                     </select>
                   ) : null}
                   {canChangeRole && !isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => updateUserRole(user.id, e.target.value)}>
+                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => auth.updateUserRole(user.id, e.target.value)}>
                       {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
                     </select>
                   ) : isMe ? (

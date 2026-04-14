@@ -1,51 +1,57 @@
 'use client';
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
-import { useApp } from '@/contexts/AppContext';
+import { useUI } from '@/hooks/useDomain';
+import { useAuth } from '@/hooks/useDomain';
+import { useFirestore } from '@/hooks/useDomain';
+import { useCalendar } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { UserPlus } from 'lucide-react';
 
 export default function MeetingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveMeeting, projects, teamUsers, authUser } = useApp();
+  const ui = useUI();
+  const auth = useAuth();
+  const fs = useFirestore();
+  const calendar = useCalendar();
 
   const toggleAttendee = (name: string) => {
-    const current = (forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const current = (ui.forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
     const idx = current.indexOf(name);
     if (idx >= 0) {
       current.splice(idx, 1);
     } else {
       current.push(name);
     }
-    setForms(p => ({ ...p, meetAttendees: current.join(', ') }));
+    ui.setForms(p => ({ ...p, meetAttendees: current.join(', ') }));
   };
 
   const isAttendeeInList = (name: string) => {
-    const current = (forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const current = (ui.forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
     return current.includes(name);
   };
 
-  const quickAddUsers = teamUsers.slice(0, 8);
+  const quickAddUsers = auth.teamUsers.slice(0, 8);
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>
-      <h2 className="text-lg font-semibold mb-4">{editingId ? 'Editar reunión' : 'Nueva reunión'}</h2>
+      <h2 className="text-lg font-semibold mb-4">{ui.editingId ? 'Editar reunión' : 'Nueva reunión'}</h2>
 
       <div className="space-y-3">
         <FormField label="Título" required>
           <FormInput
-            value={forms.meetTitle || ''}
-            onChange={(e) => setForms(p => ({ ...p, meetTitle: e.target.value }))}
+            value={ui.forms.meetTitle || ''}
+            onChange={(e) => ui.setForms(p => ({ ...p, meetTitle: e.target.value }))}
             placeholder="Título de la reunión"
           />
         </FormField>
 
         <FormField label="Proyecto">
           <FormSelect
-            value={forms.meetProject || ''}
-            onChange={(e) => setForms(p => ({ ...p, meetProject: e.target.value }))}
+            value={ui.forms.meetProject || ''}
+            onChange={(e) => ui.setForms(p => ({ ...p, meetProject: e.target.value }))}
           >
             <option value="">— Sin proyecto —</option>
-            {projects.map((p: any) => (
+            {fs.projects.map((p: any) => (
               <option key={p.id} value={p.id}>{p.data?.name || p.name}</option>
             ))}
           </FormSelect>
@@ -55,24 +61,24 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
           <FormField label="Fecha" required>
             <FormInput
               type="date"
-              value={forms.meetDate || ''}
-              onChange={(e) => setForms(p => ({ ...p, meetDate: e.target.value }))}
+              value={ui.forms.meetDate || ''}
+              onChange={(e) => ui.setForms(p => ({ ...p, meetDate: e.target.value }))}
             />
           </FormField>
 
           <FormField label="Hora">
             <FormInput
               type="time"
-              value={forms.meetTime || '09:00'}
-              onChange={(e) => setForms(p => ({ ...p, meetTime: e.target.value }))}
+              value={ui.forms.meetTime || '09:00'}
+              onChange={(e) => ui.setForms(p => ({ ...p, meetTime: e.target.value }))}
             />
           </FormField>
         </div>
 
         <FormField label="Duración">
           <FormSelect
-            value={forms.meetDuration || '60'}
-            onChange={(e) => setForms(p => ({ ...p, meetDuration: e.target.value }))}
+            value={ui.forms.meetDuration || '60'}
+            onChange={(e) => ui.setForms(p => ({ ...p, meetDuration: e.target.value }))}
           >
             <option value="15">15 min</option>
             <option value="30">30 min</option>
@@ -85,8 +91,8 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
 
         <FormField label="Participantes">
           <FormInput
-            value={forms.meetAttendees || ''}
-            onChange={(e) => setForms(p => ({ ...p, meetAttendees: e.target.value }))}
+            value={ui.forms.meetAttendees || ''}
+            onChange={(e) => ui.setForms(p => ({ ...p, meetAttendees: e.target.value }))}
             placeholder="Nombres separados por coma"
           />
           {quickAddUsers.length > 0 && (
@@ -116,8 +122,8 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
 
         <FormField label="Descripción">
           <FormTextarea
-            value={forms.meetDesc || ''}
-            onChange={(e) => setForms(p => ({ ...p, meetDesc: e.target.value }))}
+            value={ui.forms.meetDesc || ''}
+            onChange={(e) => ui.setForms(p => ({ ...p, meetDesc: e.target.value }))}
             placeholder="Agenda o notas de la reunión"
             rows={3}
           />
@@ -125,9 +131,9 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
       </div>
 
       <ModalFooter
-        onCancel={() => closeModal('meeting')}
-        onSubmit={saveMeeting}
-        submitLabel={editingId ? 'Actualizar' : 'Crear reunión'}
+        onCancel={() => ui.closeModal('meeting')}
+        onSubmit={calendar.saveMeeting}
+        submitLabel={ui.editingId ? 'Actualizar' : 'Crear reunión'}
       />
     </CenterModal>
   );
