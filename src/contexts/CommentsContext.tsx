@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import type { Comment } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -91,11 +91,11 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
       activities: (lf.activities || ['']).filter((a: string) => a.trim()), laborCount: Number(lf.laborCount) || 0,
       equipment: (lf.equipment || ['']).filter((e: string) => e.trim()), materials: (lf.materials || ['']).filter((m: string) => m.trim()),
       observations: lf.observations || '', photos: lf.photos || [], supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
-      createdBy: authUser?.uid, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(),
+      createdBy: authUser?.uid, updatedAt: serverTimestamp(),
     };
     try {
       if (selectedLogId) { await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(selectedLogId).update(data); showToast('Bitácora actualizada'); }
-      else { data.createdAt = (getFirebase() as any).firestore.FieldValue.serverTimestamp(); await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data); showToast('Bitácora creada'); }
+      else { data.createdAt = serverTimestamp(); await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data); showToast('Bitácora creada'); }
       setDailyLogTab('list'); setSelectedLogId(null); resetLogForm();
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al guardar', 'error'); }
   };

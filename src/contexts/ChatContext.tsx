@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import { fmtSize } from '@/lib/helpers';
 
 /* ===== CHAT CONTEXT ===== */
@@ -172,7 +172,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     if (!chatProjectId) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() };
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';

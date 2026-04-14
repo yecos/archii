@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
@@ -161,7 +161,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
@@ -192,7 +192,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
@@ -211,7 +211,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const type = forms.invMovType || 'Entrada';
       const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
       await db.collection('invMovements').add(data);
@@ -238,7 +238,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const product = invProducts.find(p => p.id === productId);
       const ws = product ? buildWarehouseStock(product) : {};
       const fromStock = ws[from] || 0;

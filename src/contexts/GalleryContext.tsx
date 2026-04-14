@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== GALLERY CONTEXT ===== */
@@ -75,7 +75,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
     if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }

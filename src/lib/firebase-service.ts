@@ -126,6 +126,11 @@ export function FieldValue() {
   return getFirebase().firestore.FieldValue;
 }
 
+/** Convenience: serverTimestamp() without `as any`. Returns a Firestore server timestamp sentinel. */
+export function serverTimestamp() {
+  return getFirebase().firestore.FieldValue.serverTimestamp();
+}
+
 /** Convenience: Storage reference. */
 export function getStorage() {
   return getFirebase().storage();

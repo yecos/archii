@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useMemo,
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
@@ -301,7 +301,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+    const ts = serverTimestamp();
     const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
@@ -328,7 +328,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const updateProjectProgress = useCallback(async (val: number) => {
     if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [selectedProjectId, showToast]);
 
   const openProject = useCallback((id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); }, [setSelectedProjectId, setScreen]);
@@ -338,7 +338,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+    const ts = serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const data: any = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
@@ -370,11 +370,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const toggleTask = useCallback(async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
   const changeTaskStatus = useCallback(async (id: string, newStatus: string) => {
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
   const deleteTask = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } }, [confirm]);
@@ -385,7 +385,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
     const amount = Number(forms.expAmount) || 0;
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: serverTimestamp(), createdBy: authUser?.uid };
     try {
       await db.collection('expenses').add(data);
       showToast('Gasto registrado');
@@ -405,7 +405,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: serverTimestamp(), createdBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
@@ -421,7 +421,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), updatedAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: authUser?.uid };
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
@@ -437,7 +437,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     try {
       const base64 = await fileToBase64(file);
       const db = getFirebase().firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
+      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: serverTimestamp(), uploadedBy: authUser?.uid });
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
@@ -452,7 +452,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const initDefaultPhases = useCallback(async () => {
     if (workPhases.length > 0) return;
     const db = getFirebase().firestore();
-    const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+    const ts = serverTimestamp();
     for (let i = 0; i < DEFAULT_PHASES.length; i++) {
       await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
     }
@@ -468,7 +468,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: serverTimestamp(), createdBy: authUser?.uid });
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
       const projName = currentProject?.data.name || 'Proyecto';
       notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});

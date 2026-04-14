@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useUIContext } from './UIContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import { ADMIN_EMAILS } from '@/lib/types';
 import type { TeamUser, Project, Task } from '@/lib/types';
 import { getInitials } from '@/lib/helpers';
@@ -110,7 +110,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const snap = await ref.get();
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
           if (!snap.exists) {
-            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: (fb as any).firestore.FieldValue.serverTimestamp() });
+            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
           } else if (isAdminEmail) {
             const current = snap.data()?.role;
             if (current !== 'Admin') {
@@ -164,7 +164,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
-      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: (getFirebase() as any).firestore.FieldValue.serverTimestamp() });
+      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: serverTimestamp() });
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Register error:', e.code, e.message, e);
       const msgs: Record<string, string> = {

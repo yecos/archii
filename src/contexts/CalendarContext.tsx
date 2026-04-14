@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== CALENDAR + MEETINGS CONTEXT ===== */
@@ -55,7 +55,7 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const ts = (getFirebase() as any).firestore.FieldValue.serverTimestamp();
+      const ts = serverTimestamp();
       const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
