@@ -221,6 +221,44 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-14 22:30 | ETAPA 2 - CIERRE: Descomposicion de FirestoreContext completada
+  Estado: COMPLETADA
+  Objetivo original: Reducir FirestoreContext monolito de 1,254 lineas
+  Resultado final: 550 lineas (-704, -56%)
+
+  Contextos extraidos (7):
+    2.1 gantt-helpers.ts (114 lineas) — funciones puras sin React
+    2.2 InventoryContext.tsx (311 lineas) — inventario, categorias, movimientos, transferencias
+    2.3 GalleryContext.tsx (138 lineas) — galeria de fotos, lightbox
+    2.4 TimeTrackingContext.tsx (114 lineas) — control de tiempo, timer
+    2.5 CalendarContext.tsx (93 lineas) — calendario, reuniones
+    2.6 InvoiceContext.tsx (95 lineas) — facturas, items
+    2.7 CommentsContext.tsx (152 lineas) — comentarios, bitacora diaria
+
+  Dominio restante en FirestoreContext (550 lineas):
+    - Projects: state + CRUD + openProject + progress (~80 lineas)
+    - Tasks: state + CRUD + toggle + changeStatus (~80 lineas)
+    - Expenses: state + CRUD (~30 lineas)
+    - Suppliers + Companies: state + CRUD (~40 lineas)
+    - Work Phases + Files + Approvals: subcolecciones de proyecto (~50 lineas)
+    - Admin UI state: filtros, permisos, tooltip (~35 lineas)
+    - Computed values: activeTasks, overdueTasks, etc. (~15 lineas)
+    - Gantt re-exports: wrappers para gantt-helpers (~15 lineas)
+    - AI project context: contexto para Gemini (~20 lineas)
+
+  Decision: No extraer mas. Los dominios restantes (Projects, Tasks, Expenses)
+    son el nucleo del negocio con alto acoplamiento a UIContext (forms),
+    OneDriveContext (folders), y WhatsApp notifications. La extraccion
+    adicional tendria rendimientos decrecientes y riesgo de regresiones.
+
+  Proximos pasos recomendados:
+    - ETAPA 3: Mejora de UX/Performance (lazy loading, memoizacion)
+    - ETAPA 4: Testing (unit tests para contextos extraidos)
+    - ETAPA 5: Optimizacion de bundles (code splitting)
+    - ETAPA 6: Documentacion y tipos
+
+  Commits ETAPA 2: c4c1315, ada7915, e123d53, 9657294, 569a9b3, b5366a5, 1cd4d00
+
 2026-04-14 22:15 | ETAPA 2 - Paso 2.7: Extraer CommentsContext + DailyLogs
   Accion: Extraer logica de comentarios y bitacora diaria de FirestoreContext
   Commit: 1cd4d00
