@@ -221,6 +221,56 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-15 20:00 | FEATURE PACK v12 — Quality & Stability (Accessibility, Network, Responsive, Performance)
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v12-quality-stability-20260415
+  Objetivo: Mejorar calidad del producto con accessibility, deteccion de red, responsive y paginacion
+  Commit: 6911146
+  Build: exitoso (14/14 paginas estaticas, 0 errores TypeScript)
+
+  Tarea 12.1 — Accessibility WCAG:
+    - CenterModal.tsx: agregada prop `title` opcional para DialogTitle accesible
+      Cuando se proporciona, renderiza titulo visible con padding; sino, fallback sr-only
+    - 13 modales actualizados: title prop pasado, heading duplicado eliminado
+      ProjectModal, TaskModal, ExpenseModal, MeetingModal, SupplierModal, CompanyModal,
+      ApprovalModal, GalleryModal, TimeEntryModal, InvCategoryModal, InvMovementModal,
+      InvProductModal, InvTransferModal
+    - Imports limpiados (Camera, ClipboardList, Package, ArrowLeftRight removidos donde no se usaban)
+    - TeamScreen.tsx: empty state agregado para lista de equipo vacia
+    - not-found.tsx: <a href> cambiado a Next.js <Link> para navegacion client-side
+
+  Tarea 12.2 — Network Status Detection:
+    - useNetworkStatus.ts creado: hook custom con navigator.onLine + event listeners
+    - Deteccion de online/offline con estado reactivo
+    - Banner auto-dismissible al reconectarse (3 segundos)
+    - OfflineBanner.tsx creado: banner fijo z-[200] con iconos WifiOff/Wifi
+    - ARIA role="alert" y aria-live="polite" para accesibilidad
+    - Integrado en HomeContent.tsx antes de InstallBanner
+    - globals.css: animacion slideDown agregada
+
+  Tarea 12.3 — Responsive Fix InvoicesScreen:
+    - Invoice item editor: grid-cols-12 ahora hidden en mobile, visible en sm+
+    - Mobile: layout apilado tipo card (Concepto, Fase+Horas, Tarifa+Eliminar)
+    - Desktop: grid original preservado exactamente
+    - Header de columnas oculto en mobile
+
+  Tarea 12.4 — Performance Pagination:
+    - BudgetScreen: gastos por proyecto limitados a 5, con "Ver X gastos mas"
+    - GalleryScreen: fotos limitadas a 24, con "Cargar mas fotos" button
+    - InventoryScreen productos: limitados a 20, con "Cargar mas productos"
+    - InventoryScreen movimientos: limitados a 20, con "Cargar mas movimientos"
+
+  Archivos creados (2): useNetworkStatus.ts, OfflineBanner.tsx
+  Archivos modificados (22): CenterModal, 13 modales, TeamScreen, not-found,
+    HomeContent, globals.css, InvoicesScreen, BudgetScreen, GalleryScreen, InventoryScreen
+  Total: +224 lineas agregadas, -93 eliminadas (24 archivos tocados)
+
+  Resumen:
+    - 1 commit, 24 archivos tocados
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Total funcionalidades implementadas (v7-v12): 24 + 5 mejoras de calidad = 29 items
+
 2026-04-15 18:00 | FEATURE PACK v11 — UX Enhancement + Productividad
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v11-ux-productivity-20260415
