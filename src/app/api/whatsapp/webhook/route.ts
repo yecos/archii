@@ -64,8 +64,9 @@ export async function POST(request: NextRequest) {
     await safeReply(message);
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en webhook POST:", error.message, error.stack);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    console.error("[ArchiFlow WhatsApp] Error en webhook POST:", msg);
     return NextResponse.json({ ok: true }); // Siempre 200 para Meta
   }
 }
@@ -107,8 +108,9 @@ async function safeReply(message: any) {
     if (!textResult.success) {
       console.error("[ArchiFlow WhatsApp] FALLO envio de texto a:", message.from, "Error:", textResult.error);
     }
-  } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en safeReply:", error.message, error.stack);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    console.error("[ArchiFlow WhatsApp] Error en safeReply:", msg);
   }
 }
 
@@ -187,8 +189,9 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       });
 
       return getLinkedSuccess(userName);
-    } catch (err: any) {
-      console.error("[ArchiFlow WhatsApp] Error vinculando:", err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error';
+      console.error("[ArchiFlow WhatsApp] Error vinculando:", msg);
       return { text: "Error al vincular la cuenta. Intenta de nuevo." };
     }
   }

@@ -217,7 +217,16 @@ export interface GalleryPhoto {
     projectId: string;
     categoryName: string;
     caption: string;
+    /** Download URL from Firebase Storage (preferred) or base64 data URL (legacy) */
     imageData: string;
+    /** Storage path in Firebase Storage (null for legacy base64 photos) */
+    storagePath?: string;
+    /** Original file name */
+    fileName?: string;
+    /** File size in bytes */
+    fileSize?: number;
+    /** MIME type */
+    contentType?: string;
     createdAt: FirestoreTimestamp | null;
     createdBy: string;
   };

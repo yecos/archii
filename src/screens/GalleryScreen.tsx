@@ -15,6 +15,8 @@ export default function GalleryScreen() {
   const od = useOneDrive();
   const [photoLimit, setPhotoLimit] = useState(24);
 
+  const uploadActive = gallery.uploadProgress > 0 && gallery.uploadProgress < 100;
+
   return (
     <div className="animate-fadeIn p-4 sm:p-6 space-y-4">
   {/* Header */}
@@ -40,6 +42,19 @@ export default function GalleryScreen() {
       {PHOTO_CATS.map(c => <option key={c} value={c}>{c}</option>)}
     </select>
   </div>
+
+  {/* Upload Progress */}
+  {uploadActive && (
+    <div className="rounded-xl bg-[var(--af-bg3)] border border-[var(--border)] p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">Subiendo foto...</span>
+        <span className="text-sm text-[var(--muted-foreground)]">{Math.round(gallery.uploadProgress)}%</span>
+      </div>
+      <div className="w-full h-2 rounded-full bg-[var(--af-bg4)] overflow-hidden">
+        <div className="h-full rounded-full bg-[var(--af-accent)] transition-all duration-300" style={{ width: `${gallery.uploadProgress}%` }} />
+      </div>
+    </div>
+  )}
 
   {/* Loading skeleton */}
   {od.galleryLoading && <SkeletonGallery />}

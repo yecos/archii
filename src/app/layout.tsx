@@ -7,13 +7,34 @@ import { AppProviders } from "@/components/layout/AppProviders";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "ArchiFlow — Gestión de Proyectos",
-  description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo",
+  title: {
+    default: "ArchiFlow — Gestión de Proyectos",
+    template: "%s | ArchiFlow",
+  },
+  description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo. Planifica, ejecuta y controla todos tus proyectos en un solo lugar.",
+  keywords: ["arquitectura", "interiorismo", "gestión de proyectos", "construcción", "presupuestos", "planificación de obra", "colombia"],
+  authors: [{ name: "ArchiFlow" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "ArchiFlow",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "ArchiFlow",
+    title: "ArchiFlow — Gestión de Proyectos de Arquitectura",
+    description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ArchiFlow — Gestión de Proyectos",
+    description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -73,13 +94,12 @@ export default function RootLayout({
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               firebase.initializeApp({
-                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0"}",
-                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "archiflow-c2855.firebaseapp.com"}",
-                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "archiflow-c2855"}",
-                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "archiflow-c2855.firebasestorage.app"}",
-                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "247246043394"}",
-                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:247246043394:web:408e1365957eea4ee2aa1b"}",
-                measurementId: "${process.env.GA_MEASUREMENT_ID || "G-9MHDE7DX1H"}"
+                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ""}",
+                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""}",
+                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ""}",
+                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || ""}",
+                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || ""}",
+                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ""}",
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }

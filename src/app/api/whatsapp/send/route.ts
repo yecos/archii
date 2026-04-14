@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/api-auth";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/whatsapp/send
@@ -11,6 +12,21 @@ export async function POST(request: NextRequest) {
   try {
     // Admin-only: broadcast and direct send require admin privileges
     const authResponse = await requireAdmin(request);
+
+    // Rate limit: 5 sends per minute
+    const rateLimit = checkRateLimit(request, { maxRequests: 5, windowSeconds: 60 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Demasiados envíos. Intenta de nuevo en un momento." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+            ...getRateLimitHeaders(rateLimit),
+          },
+        }
+      );
+    }
 
     const body = await request.json();
     const { type, userId, message } = body;
@@ -63,8 +79,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: sentCount > 0, sent: sentCount, errors: errorCount, errorDetails: errors });
-  } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en send:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    console.error("[ArchiFlow WhatsApp] Error en send:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

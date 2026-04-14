@@ -71,8 +71,9 @@ export async function POST(request: NextRequest) {
       ok: true,
       sent: result.success ? 1 : 0,
     });
-  } catch (error: any) {
-    console.error("[ArchiFlow Notify] Error:", error.message);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    console.error("[ArchiFlow Notify] Error:", message);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

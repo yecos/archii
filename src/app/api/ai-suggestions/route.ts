@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/ai-suggestions
@@ -175,6 +176,21 @@ export async function POST(request: NextRequest) {
       user = await requireAuth(request);
     } catch (authError) {
       return authError as NextResponse;
+    }
+
+    // Rate limit: 10 requests per minute
+    const rateLimit = checkRateLimit(request, { maxRequests: 10, windowSeconds: 60 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Demasiadas peticiones de IA.", suggestions: [], type: "overview" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+            ...getRateLimitHeaders(rateLimit),
+          },
+        }
+      );
     }
 
     const body = await request.json();

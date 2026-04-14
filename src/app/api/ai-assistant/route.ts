@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/ai-assistant
@@ -39,6 +41,29 @@ Si el usuario te pregunta sobre su proyecto (por el contexto proporcionado), usa
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth check — prevent unauthorized AI usage
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authError) {
+      return authError as NextResponse;
+    }
+
+    // Rate limit: 15 requests per minute per user
+    const rateLimit = checkRateLimit(request, { maxRequests: 15, windowSeconds: 60 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Demasiadas peticiones. Intenta de nuevo en un momento." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+            ...getRateLimitHeaders(rateLimit),
+          },
+        }
+      );
+    }
+
     const { messages, projectContext } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -128,7 +153,9 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const aiMessage = data.choices?.[0]?.message?.content || "No pude generar una respuesta.";
 
-    return NextResponse.json({ message: aiMessage });
+    return NextResponse.json({ message: aiMessage }, {
+      headers: getRateLimitHeaders(rateLimit),
+    });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor";
