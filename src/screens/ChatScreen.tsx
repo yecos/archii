@@ -186,7 +186,7 @@ export default function ChatScreen() {
                         className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold"
                         style={{ background: u.data.photoURL ? undefined : getAvatarHSL(u.id), color: '#fff' }}
                       >
-                        {u.data.photoURL ? <img src={u.data.photoURL} alt="" className="w-full h-full rounded-full object-cover" loading="lazy" /> : (u.data.name || u.data.email || '?')[0].toUpperCase()}
+                        {u.data.photoURL ? <img src={u.data.photoURL} alt={u.data.name || "Avatar"} className="w-full h-full rounded-full object-cover" loading="lazy" /> : (u.data.name || u.data.email || '?')[0].toUpperCase()}
                       </div>
                       <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[var(--card)]" />
                     </div>
@@ -545,7 +545,7 @@ export default function ChatScreen() {
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
               {pendingFiles.map(f => (
                 <div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden shadow-sm">
-                  {f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded-lg" alt="" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}
+                  {f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded-lg" alt={f.name || "Vista previa"} loading="lazy" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}
                   <button className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center cursor-pointer border-none leading-none shadow-md" onClick={() => removePendingFile(f.id)}>✕</button>
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white truncate px-0.5 py-px rounded-b-lg">{f.name}</div>
                 </div>

@@ -73,13 +73,13 @@ export default function RootLayout({
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               firebase.initializeApp({
-                apiKey: "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0",
-                authDomain: "archiflow-c2855.firebaseapp.com",
-                projectId: "archiflow-c2855",
-                storageBucket: "archiflow-c2855.firebasestorage.app",
-                messagingSenderId: "247246043394",
-                appId: "1:247246043394:web:408e1365957eea4ee2aa1b",
-                measurementId: "G-9MHDE7DX1H"
+                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0"}",
+                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "archiflow-c2855.firebaseapp.com"}",
+                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "archiflow-c2855"}",
+                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "archiflow-c2855.firebasestorage.app"}",
+                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "247246043394"}",
+                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:247246043394:web:408e1365957eea4ee2aa1b"}",
+                measurementId: "${process.env.GA_MEASUREMENT_ID || "G-9MHDE7DX1H"}"
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }
