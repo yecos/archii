@@ -6,6 +6,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { prioColor, taskStColor } from '@/lib/helpers';
+import { toSafeDate } from '@/lib/date-utils';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
 import { expandMeetingForMonth } from '@/lib/recurrence';
 import { Repeat, ChevronLeft, ChevronRight, Clock, FolderOpen, CalendarDays, Users, Zap, User, Folder, Pencil, X } from 'lucide-react';
@@ -318,8 +319,9 @@ export default function CalendarScreen() {
             {calTasks.filter(t => {
               const d = t.data.dueDate;
               if (!d) return false;
+              const dd = toSafeDate(d);
               const diff = Math.ceil(
-                (new Date(d).getTime() - today.getTime()) / 86400000,
+                (dd.getTime() - today.getTime()) / 86400000,
               );
               return diff >= 0 && diff <= 7;
             }).length}

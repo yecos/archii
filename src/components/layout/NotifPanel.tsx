@@ -2,6 +2,7 @@
 import React from 'react';
 import { useUIContext as useUI } from '@/contexts/UIContext';
 import { useNotifContext as useNotif } from '@/contexts/NotifContext';
+import { toSafeDate } from '@/lib/date-utils';
 import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle } from 'lucide-react';
 
 export default React.memo(function NotifPanel() {
@@ -102,8 +103,9 @@ export default React.memo(function NotifPanel() {
                   <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-2">{n.body}</div>
                   <div className="text-[10px] text-[var(--af-text3)] mt-1">
                     {(() => {
-                      const d = new Date(n.timestamp);
+                      const d = toSafeDate(n.timestamp);
                       const now = new Date();
+                      if (d.getTime() === 0) return '';
                       const diff = now.getTime() - d.getTime();
                       if (diff < 60000) return 'Ahora mismo';
                       if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} min`;

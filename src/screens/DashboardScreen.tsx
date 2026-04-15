@@ -7,6 +7,7 @@ import { useTimeTracking } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { useNotif } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
+import { toSafeDate } from '@/lib/date-utils';
 import AISuggestionsPanel from '@/components/archiflow/AISuggestionsPanel';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import dynamic from 'next/dynamic';
@@ -153,8 +154,8 @@ export default function DashboardScreen() {
       items.push({ id: l.id, type: 'log', title: `Bitácora ${l.data.date}`, subtitle: `${(l.data.activities || []).length} actividades`, time: l.data.createdAt, icon: '📝', color: 'bg-blue-500' });
     });
     items.sort((a, b) => {
-      const ta = a.time?.toDate?.() || new Date(a.time) || new Date(0);
-      const tb = b.time?.toDate?.() || new Date(b.time) || new Date(0);
+      const ta = a.time ? toSafeDate(a.time) : new Date(0);
+      const tb = b.time ? toSafeDate(b.time) : new Date(0);
       return tb.getTime() - ta.getTime();
     });
     return items.slice(0, 8);

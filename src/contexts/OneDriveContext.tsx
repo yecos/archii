@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import type { OneDriveFile } from '@/lib/types';
+import { toSafeDate } from '@/lib/date-utils';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 /* ===== ONEDRIVE CONTEXT ===== */
@@ -336,8 +337,10 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
   }, []);
 
   const timeAgo = useCallback((dateStr: string) => {
+    if (!dateStr) return '—';
     const now = new Date().getTime();
-    const date = new Date(dateStr).getTime();
+    const date = toSafeDate(dateStr).getTime();
+    if (date === 0) return '—';
     const diff = now - date;
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Ahora';

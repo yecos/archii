@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { toSafeDate } from '@/lib/date-utils';
 
 interface CalendarStatsProps {
   calTasks: Array<{ data: { dueDate?: string; priority: string } }>;
@@ -24,8 +25,9 @@ export default function CalendarStats({
   const thisWeekCount = calTasks.filter(t => {
     const d = t.data.dueDate;
     if (!d) return false;
+    const dd = toSafeDate(d);
     const diff = Math.ceil(
-      (new Date(d).getTime() - today.getTime()) / 86400000,
+      (dd.getTime() - today.getTime()) / 86400000,
     );
     return diff >= 0 && diff <= 7;
   }).length;

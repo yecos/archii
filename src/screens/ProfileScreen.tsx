@@ -7,6 +7,7 @@ import { useOneDrive } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
 import { useNotifPreferences } from '@/hooks/useDomain';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
+import { toSafeDate } from '@/lib/date-utils';
 import { ROLE_COLORS, ROLE_ICONS, NOTIF_EVENT_TYPES, NOTIF_EVENT_CONFIG } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 
@@ -76,7 +77,8 @@ export default function ProfileScreen() {
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const dayEnd = new Date(dayStart.getTime() + 86400000);
       const completed = myTasks.filter(t => t.data.status === 'Completado').filter(t => {
-        const cd = (t.data.createdAt as any)?.toDate ? (t.data.createdAt as any).toDate() : new Date(t.data.createdAt as any);
+        if (!t.data.createdAt) return false;
+        const cd = toSafeDate(t.data.createdAt);
         return cd >= dayStart && cd < dayEnd;
       }).length;
       return { label, count: completed, max: 5 };
@@ -122,7 +124,7 @@ export default function ProfileScreen() {
     // Overdue tasks (urgent)
     myOverdue.forEach(t => {
       const proj = fs.projects.find(p => p.id === t.data.projectId);
-      const daysOverdue = Math.floor((today.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
+      const daysOverdue = Math.floor((today.getTime() - toSafeDate(t.data.dueDate).getTime()) / 86400000);
       result.push({ icon: '⚡', text: `"${t.data.title}" venció hace ${daysOverdue} día${daysOverdue !== 1 ? 's' : ''}${proj ? ` — ${proj.data.name}` : ''}`, time: `Venció ${fmtDate(t.data.dueDate)}`, urgent: true });
     });
 
@@ -152,7 +154,8 @@ export default function ProfileScreen() {
 
     // Recent new projects (last 7 days)
     const recentProjects = fs.projects.filter(p => {
-      const cd = (p.data.createdAt as any)?.toDate ? (p.data.createdAt as any).toDate() : new Date(p.data.createdAt as any);
+      if (!p.data.createdAt) return false;
+      const cd = toSafeDate(p.data.createdAt);
       return cd >= new Date(today.getTime() - 7 * 86400000);
     });
     recentProjects.slice(0, 3).forEach(p => {
