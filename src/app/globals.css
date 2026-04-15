@@ -43,10 +43,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   NEO-SKEUOMORPHIC TACTILE SYSTEM — Design Tokens
+   Surfaces with physical depth: Base, Raised, Inset, Pressed
+   Directional light from top-left, orange/gold accents
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --radius: 0.625rem;
-  /* Light mode (default) */
-  --background: #f8f7f4;
+  --radius: 0.75rem;
+  /* Light mode — Neo-Skeuomorphic warm surfaces */
+  --background: #f0ece4;
   --foreground: #1a1a1a;
   --card: #ffffff;
   --card-foreground: #1a1a1a;
@@ -54,26 +60,26 @@
   --popover-foreground: #1a1a1a;
   --primary: #9e7c3e;
   --primary-foreground: #ffffff;
-  --secondary: #f0ece4;
+  --secondary: #e8e2d6;
   --secondary-foreground: #1a1a1a;
-  --muted: #e8e5dd;
+  --muted: #d9d3c7;
   --muted-foreground: #737373;
-  --accent: rgba(158,124,62,0.08);
+  --accent: rgba(158,124,62,0.1);
   --accent-foreground: #9e7c3e;
   --destructive: #dc3545;
-  --border: rgba(0,0,0,0.08);
-  --input: rgba(0,0,0,0.1);
+  --border: rgba(0,0,0,0.1);
+  --input: rgba(0,0,0,0.12);
   --ring: #9e7c3e;
   --chart-1: #9e7c3e;
   --chart-2: #2d8f5e;
   --chart-3: #c47a28;
   --chart-4: #3a7cc4;
   --chart-5: #7b5bbf;
-  --sidebar: #ffffff;
+  --sidebar: #faf7f2;
   --sidebar-foreground: #1a1a1a;
   --sidebar-primary: #9e7c3e;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(158,124,62,0.08);
+  --sidebar-accent: rgba(158,124,62,0.1);
   --sidebar-accent-foreground: #9e7c3e;
   --sidebar-border: rgba(0,0,0,0.08);
   --sidebar-ring: #9e7c3e;
@@ -82,102 +88,309 @@
   --af-red: #dc3545;
   --af-blue: #3a7cc4;
   --af-purple: #7b5bbf;
-  --af-bg3: #f0ece4;
-  --af-bg4: #e8e5dd;
+  --af-bg3: #e8e2d6;
+  --af-bg4: #d9d3c7;
   --af-text3: #a3a3a3;
   --af-accent: #9e7c3e;
   --af-accent2: #b8933f;
-  /* Shadow Scale */
-  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 3px 0 rgba(0,0,0,0.06);
-  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06), 0 2px 8px 0 rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.06), 0 4px 12px -2px rgba(0,0,0,0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.06), 0 8px 20px -4px rgba(0,0,0,0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 16px 32px -8px rgba(0,0,0,0.04);
-  --shadow-glow: 0 0 20px rgba(158,124,62,0.15);
+
+  /* ─── Neo-Skeuomorphic Surface Tokens (Light) ─── */
+  --skeuo-base: #e8e2d6;
+  --skeuo-raised: #f5f1eb;
+  --skeuo-inset: #d4cec2;
+  --skeuo-pressed: #ccc6ba;
+  --skeuo-highlight: rgba(255,255,255,0.6);
+  --skeuo-shadow: rgba(0,0,0,0.15);
+  --skeuo-shadow-deep: rgba(0,0,0,0.25);
+  --skeuo-edge-light: rgba(255,255,255,0.5);
+  --skeuo-edge-dark: rgba(0,0,0,0.08);
+  --skeuo-inset-top: rgba(0,0,0,0.08);
+  --skeuo-inset-bottom: rgba(255,255,255,0.4);
+  --skeuo-glow: rgba(158,124,62,0.2);
+
+  /* Shadow Scale — Neo-Skeuomorphic directional shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.05), 0 1px 3px 0 rgba(0,0,0,0.06);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.06);
+  --shadow-xl: 0 16px 32px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.08);
+  --shadow-glow: 0 0 24px rgba(158,124,62,0.18), 0 0 8px rgba(158,124,62,0.1);
+
+  /* Neo-Skeuomorphic directional shadows (top-left light) */
+  --skeuo-shadow-raised:
+    0 1px 0 var(--skeuo-highlight),
+    0 2px 4px var(--skeuo-shadow),
+    0 4px 12px rgba(0,0,0,0.06);
+  --skeuo-shadow-raised-sm:
+    0 1px 0 var(--skeuo-highlight),
+    0 1px 3px var(--skeuo-shadow);
+  --skeuo-shadow-raised-lg:
+    0 1px 0 var(--skeuo-highlight),
+    0 4px 8px var(--skeuo-shadow),
+    0 12px 24px rgba(0,0,0,0.08);
+  --skeuo-shadow-inset:
+    inset 0 2px 4px var(--skeuo-inset-top),
+    inset 0 -1px 2px var(--skeuo-inset-bottom);
+  --skeuo-shadow-inset-sm:
+    inset 0 1px 3px var(--skeuo-inset-top),
+    inset 0 -1px 1px var(--skeuo-inset-bottom);
+  --skeuo-shadow-pressed:
+    inset 0 2px 6px rgba(0,0,0,0.12),
+    inset 0 1px 2px rgba(0,0,0,0.08);
+  --skeuo-shadow-btn:
+    0 1px 0 var(--skeuo-highlight),
+    0 2px 0 var(--skeuo-edge-dark),
+    0 4px 8px var(--skeuo-shadow);
+  --skeuo-shadow-btn-active:
+    inset 0 2px 4px rgba(0,0,0,0.15),
+    inset 0 -1px 1px rgba(255,255,255,0.2);
 
   /* Typography Scale */
-  --text-xs: 0.6875rem;    /* 11px */
-  --text-sm: 0.8125rem;    /* 13px */
-  --text-base: 0.9375rem;  /* 15px */
-  --text-md: 1.0625rem;    /* 17px */
-  --text-lg: 1.25rem;      /* 20px */
-  --text-xl: 1.5rem;       /* 24px */
-  --text-2xl: 1.875rem;    /* 30px */
-  --text-3xl: 2.25rem;     /* 36px */
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.25rem;
 }
 
+/* ═══════════════════════════════════════════════
+   DARK MODE — Neo-Skeuomorphic Tactile System
+   Deep dark surfaces with dramatic depth
+   ═══════════════════════════════════════════════ */
 .dark {
-  --radius: 0.625rem;
-  --background: #0e0f11;
-  --foreground: #f0f0ee;
-  --card: #16181c;
-  --card-foreground: #f0f0ee;
-  --popover: #16181c;
-  --popover-foreground: #f0f0ee;
+  --radius: 0.75rem;
+  --background: #0c0d10;
+  --foreground: #e8e6e1;
+  --card: #14161b;
+  --card-foreground: #e8e6e1;
+  --popover: #181b21;
+  --popover-foreground: #e8e6e1;
   --primary: #c8a96e;
-  --primary-foreground: #0e0f11;
-  --secondary: #1e2128;
-  --secondary-foreground: #f0f0ee;
-  --muted: #252830;
-  --muted-foreground: #9a9b9e;
+  --primary-foreground: #0c0d10;
+  --secondary: #1c1f27;
+  --secondary-foreground: #e8e6e1;
+  --muted: #22262f;
+  --muted-foreground: #8a8d95;
   --accent: rgba(200,169,110,0.1);
   --accent-foreground: #e2c898;
   --destructive: #e05555;
-  --border: rgba(255,255,255,0.07);
-  --input: rgba(255,255,255,0.12);
+  --border: rgba(255,255,255,0.06);
+  --input: rgba(255,255,255,0.08);
   --ring: #c8a96e;
   --chart-1: #c8a96e;
   --chart-2: #4caf7d;
   --chart-3: #e09855;
   --chart-4: #5b9bd5;
   --chart-5: #9b7ed4;
-  --sidebar: #16181c;
-  --sidebar-foreground: #f0f0ee;
+  --sidebar: #12141a;
+  --sidebar-foreground: #e8e6e1;
   --sidebar-primary: #c8a96e;
-  --sidebar-primary-foreground: #0e0f11;
+  --sidebar-primary-foreground: #0c0d10;
   --sidebar-accent: rgba(200,169,110,0.1);
   --sidebar-accent-foreground: #e2c898;
-  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-border: rgba(255,255,255,0.05);
   --sidebar-ring: #c8a96e;
   --af-green: #4caf7d;
   --af-amber: #e09855;
   --af-red: #e05555;
   --af-blue: #5b9bd5;
   --af-purple: #9b7ed4;
-  --af-bg3: #1e2128;
-  --af-bg4: #252830;
-  --af-text3: #5e5f63;
+  --af-bg3: #1c1f27;
+  --af-bg4: #22262f;
+  --af-text3: #55585f;
   --af-accent: #c8a96e;
   --af-accent2: #e2c898;
+
+  /* ─── Neo-Skeuomorphic Surface Tokens (Dark) ─── */
+  --skeuo-base: #0c0d10;
+  --skeuo-raised: #181b22;
+  --skeuo-inset: #07080a;
+  --skeuo-pressed: #050607;
+  --skeuo-highlight: rgba(255,255,255,0.04);
+  --skeuo-shadow: rgba(0,0,0,0.5);
+  --skeuo-shadow-deep: rgba(0,0,0,0.7);
+  --skeuo-edge-light: rgba(255,255,255,0.06);
+  --skeuo-edge-dark: rgba(0,0,0,0.4);
+  --skeuo-inset-top: rgba(0,0,0,0.4);
+  --skeuo-inset-bottom: rgba(255,255,255,0.03);
+  --skeuo-glow: rgba(200,169,110,0.15);
+
+  /* Shadow Scale — Dark Mode */
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 3px 0 rgba(0,0,0,0.2);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+  --shadow-xl: 0 16px 32px rgba(0,0,0,0.6), 0 8px 16px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 24px rgba(200,169,110,0.2), 0 0 8px rgba(200,169,110,0.1);
+
+  /* Neo-Skeuomorphic directional shadows (Dark) */
+  --skeuo-shadow-raised:
+    0 1px 0 var(--skeuo-highlight),
+    0 4px 12px var(--skeuo-shadow),
+    0 8px 24px rgba(0,0,0,0.3);
+  --skeuo-shadow-raised-sm:
+    0 1px 0 var(--skeuo-highlight),
+    0 2px 6px var(--skeuo-shadow);
+  --skeuo-shadow-raised-lg:
+    0 1px 0 var(--skeuo-highlight),
+    0 8px 16px var(--skeuo-shadow),
+    0 20px 40px rgba(0,0,0,0.4);
+  --skeuo-shadow-inset:
+    inset 0 2px 6px var(--skeuo-inset-top),
+    inset 0 -1px 2px var(--skeuo-inset-bottom);
+  --skeuo-shadow-inset-sm:
+    inset 0 1px 4px var(--skeuo-inset-top),
+    inset 0 -1px 1px var(--skeuo-inset-bottom);
+  --skeuo-shadow-pressed:
+    inset 0 2px 8px rgba(0,0,0,0.5),
+    inset 0 -1px 2px rgba(255,255,255,0.02);
+  --skeuo-shadow-btn:
+    0 1px 0 var(--skeuo-highlight),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 6px 12px var(--skeuo-shadow);
+  --skeuo-shadow-btn-active:
+    inset 0 2px 6px rgba(0,0,0,0.4),
+    inset 0 -1px 1px rgba(255,255,255,0.05);
 }
 
-/* Card elevation variants */
+/* ═══════════════════════════════════════════════
+   NEO-SKEUOMORPHIC CARD ELEVATION VARIANTS
+   ═══════════════════════════════════════════════ */
+
+/* Raised — element sits above the surface */
 .card-elevated {
-  box-shadow: var(--shadow-sm);
-  border-color: transparent;
-  background: var(--card);
+  background: var(--skeuo-raised);
+  border: 1px solid var(--skeuo-edge-light);
+  box-shadow: var(--skeuo-shadow-raised);
+  border-radius: var(--radius);
 }
 .card-elevated:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--skeuo-shadow-raised-lg);
   transform: translateY(-1px);
-  transition: all 0.2s ease;
-}
-.card-sunken {
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
-  border-color: var(--border);
-}
-.card-glass {
-  background: rgba(255,255,255,0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.3);
-}
-.dark .card-glass {
-  background: rgba(22,24,28,0.7);
-  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Typography utilities */
+/* Inset — element is recessed into the surface */
+.card-sunken {
+  background: var(--skeuo-inset);
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: var(--skeuo-shadow-inset);
+  border-radius: var(--radius);
+}
+.dark .card-sunken {
+  border-color: rgba(0,0,0,0.3);
+}
+
+/* Glass — translucent with blur (kept for overlays) */
+.card-glass {
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  border-radius: var(--radius);
+}
+.dark .card-glass {
+  background: rgba(20,22,27,0.75);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* Pressed — element appears pressed down */
+.card-pressed {
+  background: var(--skeuo-pressed);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--skeuo-shadow-pressed);
+  border-radius: var(--radius);
+}
+
+/* ═══════════════════════════════════════════════
+   NEO-SKEUOMORPHIC COMPONENT CLASSES
+   ═══════════════════════════════════════════════ */
+
+/* Raised button base */
+.skeuo-btn {
+  background: linear-gradient(180deg, var(--skeuo-raised) 0%, var(--card) 100%);
+  border: 1px solid var(--skeuo-edge-light);
+  box-shadow: var(--skeuo-shadow-btn);
+  border-radius: calc(var(--radius) - 2px);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.skeuo-btn:hover {
+  box-shadow: var(--skeuo-shadow-raised-lg);
+}
+.skeuo-btn:active {
+  box-shadow: var(--skeuo-shadow-btn-active);
+  transform: translateY(1px);
+  background: var(--skeuo-pressed);
+}
+
+/* Inset / recessed input */
+.skeuo-input {
+  background: var(--skeuo-inset);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: var(--skeuo-shadow-inset-sm);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--foreground);
+  transition: all 0.2s ease;
+}
+.skeuo-input:focus {
+  box-shadow: var(--skeuo-shadow-inset), 0 0 0 2px rgba(200,169,110,0.3);
+  border-color: rgba(200,169,110,0.3);
+  outline: none;
+}
+.dark .skeuo-input {
+  border-color: rgba(0,0,0,0.3);
+}
+
+/* Raised panel */
+.skeuo-panel {
+  background: var(--skeuo-raised);
+  border: 1px solid var(--skeuo-edge-light);
+  box-shadow: var(--skeuo-shadow-raised);
+  border-radius: var(--radius);
+}
+
+/* Inset container */
+.skeuo-well {
+  background: var(--skeuo-inset);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--skeuo-shadow-inset-sm);
+  border-radius: var(--radius);
+}
+.dark .skeuo-well {
+  border-color: rgba(0,0,0,0.3);
+}
+
+/* Raised badge/chip */
+.skeuo-badge {
+  background: var(--skeuo-raised);
+  border: 1px solid var(--skeuo-edge-light);
+  box-shadow: var(--skeuo-shadow-raised-sm);
+  border-radius: 9999px;
+}
+
+/* Tactile separator */
+.skeuo-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeuo-edge-light) 15%,
+    var(--skeuo-edge-dark) 50%,
+    var(--skeuo-edge-light) 85%,
+    transparent 100%
+  );
+  border: none;
+}
+
+/* ═══════════════════════════════════════════════
+   TYPOGRAPHY UTILITIES
+   ═══════════════════════════════════════════════ */
 .af-text-xs { font-size: var(--text-xs); line-height: 1.4; }
 .af-text-sm { font-size: var(--text-sm); line-height: 1.5; }
 .af-text-base { font-size: var(--text-base); line-height: 1.5; }
@@ -212,13 +425,15 @@
 /* Responsive heading utility */
 .af-heading-responsive { font-size: clamp(1.25rem, 3.5vw, 1.75rem); font-weight: 700; }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+/* Custom scrollbar — Neo-Skeuomorphic thin groove */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--skeuo-inset); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--skeuo-raised); border-radius: 3px; border: 1px solid var(--skeuo-edge-light); box-shadow: var(--skeuo-shadow-raised-sm); }
+::-webkit-scrollbar-thumb:hover { background: var(--af-bg4); }
 
-/* Animations */
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -238,27 +453,33 @@
   from { transform: translateY(-100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+@keyframes skeuoPulse {
+  0%, 100% { box-shadow: var(--skeuo-shadow-raised); }
+  50% { box-shadow: var(--skeuo-shadow-raised), 0 0 12px var(--skeuo-glow); }
+}
 .animate-fadeIn { animation: fadeIn 0.2s ease; }
 .animate-slideIn { animation: slideIn 0.2s ease; }
 .animate-slideUp { animation: slideUp 0.3s ease; }
 .animate-slideDown { animation: slideDown 0.3s ease-out; }
 .animate-spin { animation: spin 0.7s linear infinite; }
+.animate-skeuoPulse { animation: skeuoPulse 2s ease-in-out infinite; }
 
-/* Toast (Sonner overrides) */
+/* Toast (Sonner overrides) — Neo-Skeuomorphic */
 [data-sonner-toaster][data-theme] {
-  --normal-bg: var(--card) !important;
+  --normal-bg: var(--skeuo-raised) !important;
   --normal-text: var(--popover-foreground) !important;
-  --normal-border: var(--border) !important;
+  --normal-border: var(--skeuo-edge-light) !important;
 }
 .af-sonner-toast {
   font-family: inherit !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--skeuo-shadow-raised-lg) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--skeuo-edge-light) !important;
   max-width: 420px !important;
   font-size: 13px !important;
   padding: 12px 16px !important;
+  background: var(--skeuo-raised) !important;
 }
 .af-sonner-title {
   font-weight: 600 !important;
@@ -285,7 +506,6 @@ input[type="file"] { display: none; }
     align-items: center;
     justify-content: center;
   }
-  /* Exception: small inline buttons in cards use 36px minimum */
   button[class*="text-"], button[class*="px-"] {
     min-height: 36px;
     min-width: 36px;
@@ -308,11 +528,9 @@ select {
   .h-\[calc\(100dvh-120px\)\] {
     height: 100dvh;
   }
-  /* Prevent iOS zoom on focus for ALL form inputs */
   input, select, textarea {
     font-size: 16px !important;
   }
-  /* Ensure chat container fills available space properly */
   [style*="100dvh"] {
     max-height: 100dvh;
   }
@@ -331,15 +549,15 @@ select {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Touch feedback for mobile — press effect on buttons */
+/* Touch feedback for mobile — Neo-Skeuomorphic press effect */
 @media (max-width: 768px) {
   button:not(:disabled), a:not(:disabled), [role="button"]:not(:disabled), select:not(:disabled) {
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.1s ease, opacity 0.1s ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
   button:active:not(:disabled), a:active:not(:disabled), [role="button"]:active:not(:disabled) {
-    transform: scale(0.96);
-    opacity: 0.85;
+    transform: translateY(1px) scale(0.98);
+    box-shadow: var(--skeuo-shadow-pressed) !important;
   }
 }
 
@@ -371,11 +589,11 @@ html {
 .af-skeleton {
   background: linear-gradient(
     90deg,
-    var(--af-bg4) 0%,
-    var(--af-bg3) 20%,
+    var(--skeuo-inset) 0%,
+    var(--skeuo-raised) 20%,
     hsl(var(--af-accent-h, 42) 30% 85% / 0.12) 40%,
-    var(--af-bg3) 60%,
-    var(--af-bg4) 100%
+    var(--skeuo-raised) 60%,
+    var(--skeuo-inset) 100%
   );
   background-size: 400% 100%;
   animation: af-shimmer 2s ease-in-out infinite;
@@ -385,11 +603,11 @@ html {
 .dark .af-skeleton {
   background: linear-gradient(
     90deg,
-    hsl(var(--af-accent-h, 42) 10% 16%) 0%,
-    hsl(var(--af-accent-h, 42) 10% 20%) 20%,
-    hsl(var(--af-accent-h, 42) 25% 25% / 0.2) 40%,
-    hsl(var(--af-accent-h, 42) 10% 20%) 60%,
-    hsl(var(--af-accent-h, 42) 10% 16%) 100%
+    hsl(var(--af-accent-h, 42) 10% 10%) 0%,
+    hsl(var(--af-accent-h, 42) 10% 16%) 20%,
+    hsl(var(--af-accent-h, 42) 25% 22% / 0.25) 40%,
+    hsl(var(--af-accent-h, 42) 10% 16%) 60%,
+    hsl(var(--af-accent-h, 42) 10% 10%) 100%
   );
   background-size: 400% 100%;
 }
