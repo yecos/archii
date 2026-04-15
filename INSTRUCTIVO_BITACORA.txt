@@ -1618,3 +1618,49 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Verificacion: npx next build -> exitoso (14/14 paginas)
   Push: Pendiente (esperando confirmacion del usuario sobre Vercel SSO)
+
+2026-04-15 08:00 | FEATURE PACK v17 — Sistema Multi-Tema + Pantalla de Configuracion
+  Estado: COMPLETADO
+  Objetivo: Implementar sistema de temas de color intercambiables con pantalla de configuracion
+  Alcance: [MEDIANO]
+  Commit: eb3547b
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 17.1 — Sistema de temas de color (themes.ts):
+    - 7 temas definidos con paletas extraidas de imagenes de referencia del usuario:
+      * Dorado (por defecto): Dorado clasico de ArchiFlow (#9e7c3e / #c8a96e)
+      * Pastel: Tonos pastel calidos, teal como acento (#5BA4A4 / #7BC5C5)
+      * Terracota: Naranja oscuro con texturas tactiles (#C05A18 / #D2691E)
+      * Electrico: Azul electrico con paneles translucidos (#3A7CC4 / #4A90E2)
+      * Neon: Rosa neon vibrante con alto contraste (#E0487A / #FF6B9D)
+      * Arena: Beige arena con tonos calidos suaves (#C07A50 / #E8956A)
+      * Menta: Verde menta fresco y limpio (#2EBD52 / #4CD964)
+    - Cada tema define 15 variables CSS para light + 15 para dark
+    - applyColorTheme() aplica overrides dinamicamente en document.documentElement
+    - Persistencia en localStorage (key: archiflow-color-theme)
+    - Coexiste con next-themes (light/dark/system) sin conflictos
+
+  Tarea 17.2 — Pantalla de configuracion (SettingsScreen.tsx):
+    - 3 secciones: Tema de Color, Modo de visualizacion, Informacion
+    - Grid responsive de 8 tarjetas con preview gradiente + checkmark activo
+    - Toggle Claro/Oscuro/Sistema via next-themes
+    - Hydration guard para evitar SSR/client mismatch
+    - Info card: version, tema activo, modo actual
+
+  Tarea 17.3 — Integracion en navegacion y layout:
+    - layout.tsx: Script anti-FOUC para tema de color (data-color-theme)
+    - HomeContent.tsx: Import dinamico de SettingsScreen + route
+    - Sidebar.tsx: Item "Configuracion" con icono Palette en seccion Principal
+    - types.ts: SCREEN_TITLES y NAV_ITEMS con settings
+
+  Archivos creados (2): src/lib/themes.ts, src/screens/SettingsScreen.tsx
+  Archivos modificados (4): layout.tsx, HomeContent.tsx, Sidebar.tsx, types.ts
+  Total: +603 lineas agregadas, -3 eliminadas (6 archivos tocados)
+
+  Resumen:
+    - 1 commit: eb3547b
+    - 7 temas de color (14 paletas light + dark)
+    - Pantalla de configuracion accesible desde sidebar
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Total funcionalidades/mejoras (v7-v17): 50 items
