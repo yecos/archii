@@ -73,11 +73,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-    const model = process.env.AI_MODEL || "gpt-4o-mini";
+    let apiKey = process.env.OPENAI_API_KEY;
+    let baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+    let model = process.env.AI_MODEL || "gpt-4o-mini";
 
-    // Si no hay API key configurada, dar instrucciones claras
+    // Si no hay API key OpenAI, intentar con ZAI (proveedor interno)
+    if (!apiKey) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const ZAI = require('z-ai-web-dev-sdk').default;
+        const zai = await ZAI.create();
+        apiKey = zai.config.apiKey || 'Z.ai';
+        baseUrl = zai.config.baseUrl;
+        model = 'default';
+        console.log('[ArchiFlow AI] Usando ZAI como proveedor (baseURL=' + baseUrl + ')');
+      } catch (zaiErr) {
+        console.warn('[ArchiFlow AI] ZAI no disponible:', zaiErr);
+      }
+    }
+
+    // Si no hay API key configurada (ni OpenAI ni ZAI), dar instrucciones claras
     if (!apiKey) {
       return NextResponse.json(
         {

@@ -12,6 +12,15 @@
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { getZAIProvider, getZAIModelName } from '@/lib/zai-provider';
+
+/* ===== ZAI Provider (Prioridad 0 — siempre disponible) ===== */
+function getZAIModel() {
+  const zai = getZAIProvider();
+  if (!zai) return null;
+  const modelName = getZAIModelName();
+  return { model: zai(modelName), provider: 'ZAI', modelName };
+}
 
 /* ===== Provider Config ===== */
 interface ProviderStatus {
@@ -136,6 +145,13 @@ export async function routeAIRequest(options: AIRequestOptions): Promise<{
   const temperature = options.temperature ?? 0.7;
   const needsReasoning = ['analysis', 'task_update', 'expense_create'].includes(taskType);
   const needsTools = !!tools && tools.length > 0;
+
+  // Attempt 0: ZAI (always available — internal provider)
+  const zaiAttempt = getZAIModel();
+  if (zaiAttempt) {
+    console.log(`[AI Router] Using ZAI (${zaiAttempt.modelName})`);
+    return zaiAttempt;
+  }
 
   // Attempt 1: Groq (primary — free, high volume)
   const groq = getGroqClientInstance();
