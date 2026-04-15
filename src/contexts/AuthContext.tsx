@@ -219,7 +219,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const authInstance = fb.auth();
       const provider = new authNS.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await authInstance.signInWithPopup(provider);
+      const result = await authInstance.signInWithRedirect(provider);
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
       if (e.code === 'auth/popup-closed-by-user') return;
