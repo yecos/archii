@@ -40,3 +40,6 @@ prisma/*.db
 
 # skills (external toolkit, not part of web app)
 skills/
+
+# lock files (usamos bun.lock exclusivamente)
+package-lock.json
