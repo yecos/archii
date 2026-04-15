@@ -1,9 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import type { TeamUser, Project, Task, GalleryPhoto, InvProduct } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Palette, Sparkles } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Palette, Sparkles, Timer, Receipt, BarChart3 } from 'lucide-react';
 
 /** Firebase auth user — loaded via CDN, so no npm type available. */
 interface FirebaseUser {
@@ -43,24 +43,29 @@ export default React.memo(function Sidebar({
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
 }: SidebarProps) {
+  const tasksWithDueDate = useMemo(() => tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado'), [tasks]);
+
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} className="stroke-current" /> },
     { id: 'profile', label: 'Mi Perfil', icon: <User size={18} className="stroke-current" /> },
     { id: 'projects', label: 'Proyectos', icon: <Folder size={18} className="stroke-current" />, badge: projects.length },
     { id: 'tasks', label: 'Tareas', icon: <ClipboardCheck size={18} className="stroke-current" />, badge: pendingCount > 0 ? pendingCount : undefined },
+    { id: 'timeTracking', label: 'Time Tracking', icon: <Timer size={18} className="stroke-current" /> },
     { id: 'chat', label: 'Chat', icon: <MessageCircle size={18} className="stroke-current" /> },
     { id: 'settings', label: 'Configuración', icon: <Palette size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'budget', label: 'Presupuestos', icon: <DollarSign size={18} className="stroke-current" /> },
+    { id: 'invoices', label: 'Facturación', icon: <Receipt size={18} className="stroke-current" /> },
     { id: 'files', label: 'Planos y archivos', icon: <FileText size={18} className="stroke-current" /> },
     { id: 'obra', label: 'Seguimiento obra', icon: <Camera size={18} className="stroke-current" /> },
     { id: 'gallery', label: 'Galería', icon: <Image size={18} className="stroke-current" />, badge: galleryPhotos.length > 0 ? galleryPhotos.length : undefined },
     { id: 'inventory', label: 'Inventario', icon: <Package size={18} className="stroke-current" />, badge: invLowStock.length > 0 ? invLowStock.length : undefined },
+    { id: 'reports', label: 'Reportes', icon: <BarChart3 size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'admin', label: 'Panel Admin', icon: <Settings size={18} className="stroke-current" /> },
     { id: 'suppliers', label: 'Proveedores', icon: <Store size={18} className="stroke-current" /> },
     { id: 'team', label: 'Equipo', icon: <Users size={18} className="stroke-current" />, badge: teamUsers.length },
-    { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
+    { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasksWithDueDate.length > 0 ? tasksWithDueDate.length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <Globe size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'companies', label: 'Empresas', icon: <Building2 size={18} className="stroke-current" /> },
@@ -85,7 +90,7 @@ export default React.memo(function Sidebar({
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
-          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 6).map((n) => (
+          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 7).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className={`flex-1 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
@@ -105,9 +110,9 @@ export default React.memo(function Sidebar({
           <button
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13px] bg-[var(--af-accent)]/10 text-[var(--af-accent)] hover:bg-[var(--af-accent)]/20 transition-all font-medium"
             onClick={() => {
-              const { useUIStore } = require('@/stores/ui-store');
-              const store = useUIStore.getState();
-              store.setAIAgentOpen(true);
+              import('@/stores/ui-store').then(({ useUIStore }) => {
+                useUIStore.getState().setAIAgentOpen(true);
+              });
               if (window.innerWidth < 768) setSidebarOpen(false);
             }}
           >

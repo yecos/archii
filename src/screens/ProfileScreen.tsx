@@ -176,7 +176,8 @@ export default function ProfileScreen() {
   return (
     <div className="animate-fadeIn space-y-4">
               {/* Profile Header Card */}
-              <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden">
+              <div className="card-elevated rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden">
+                <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-[var(--af-accent)]/30 to-transparent" />
                 <div className="flex items-center gap-3 relative">
                   <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold border-2 ${avatarColor(auth.authUser?.uid ?? '')} flex-shrink-0`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>
                     {auth.authUser?.photoURL ? '' : auth.initials}
@@ -197,7 +198,7 @@ export default function ProfileScreen() {
                     { val: myCompleted.length, lbl: 'Listas', c: 'text-emerald-400', bg: 'bg-emerald-500/10' },
                     { val: totalRate + '%', lbl: 'Cumplimiento', c: 'text-[var(--af-accent)]', bg: 'bg-[var(--af-accent)]/10' },
                   ].map((s, i) => (
-                    <div key={i} className={`${s.bg} rounded-lg p-2 text-center`}>
+                    <div key={i} className="skeuo-well rounded-lg p-2 text-center">
                       <div className={`text-base sm:text-xl font-bold ${s.c}`}>{s.val}</div>
                       <div className="text-[8px] sm:text-[11px] text-[var(--muted-foreground)] leading-tight">{s.lbl}</div>
                     </div>

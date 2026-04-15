@@ -15,8 +15,6 @@ interface InvoiceContextType {
   invoiceTab: string; setInvoiceTab: React.Dispatch<React.SetStateAction<string>>;
   invoiceItems: InvoiceItem[]; setInvoiceItems: React.Dispatch<React.SetStateAction<InvoiceItem[]>>;
   invoiceFilterStatus: string; setInvoiceFilterStatus: React.Dispatch<React.SetStateAction<string>>;
-  // Computed
-  invoices2: Invoice[];
   // CRUD
   openNewInvoice: () => void;
   updateInvoiceItem: (idx: number, field: string, value: string | number) => void;
@@ -82,7 +80,6 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
   const value: InvoiceContextType = useMemo(() => ({
     invoices, setInvoices,
     invoiceTab, setInvoiceTab, invoiceItems, setInvoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
-    invoices2: invoices,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
   }), [invoices, invoiceTab, invoiceItems, invoiceFilterStatus, openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice]);
 
