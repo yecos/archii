@@ -2494,3 +2494,58 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Archivos: 7 eliminados, 2 modificados (package.json, package-lock.json)
   Total: -627 lineas eliminadas, 19 paquetes removidos de node_modules
+
+2026-04-17 00:45 | REFACTOR — P5 Type Cleanup: imports, AI SDK bug fix, return types
+  Estado: COMPLETADO
+  Commit: 17590dd
+  Build: exitoso (Turbopack 6.5s, TypeScript 0 errores, 14 static pages)
+  Tag de respaldo: backup/pre-p5-docs-types
+
+  Contexto: Tarea P5 de la cola de prioridad — documentacion y tipos finales.
+    Incluyo auditoria completa del estado de tipos del proyecto (~420 any en 72 files)
+    y limpieza de alto impacto. Los ~420 any restantes son systematicos (forms como
+    Record<string,any>, Firestore shapes sin tipar) y requieren refactor mayor.
+
+  Tarea P5.1 — Auditoria completa de tipos:
+    * ~420 ': any' en 72 archivos (worst: whatsapp-commands 107, firestore-actions 31)
+    * ~100 'as any' en 27 archivos (worst: export-pdf 11, FirestoreContext 31)
+    * ~100 'Record<string, any>' en 27 archivos
+    * 3 directivas @ts-nocheck/@ts-expect-error
+    * 67 'import React from react' innecesarios (React 19 JSX transform)
+    * ~20 funciones exportadas sin return type
+    * 0 archivos .txt de respaldo muertos
+
+  Tarea P5.2 — Eliminar 51 imports React innecesarios:
+    * React 19 con automatic JSX runtime no necesita 'import React'
+    * 51 archivos limpiados (modals, calendar, files, portal, inventory, project, etc.)
+    * 13 archivos conservados (usen React.memo, React.ReactNode, React.FC, etc.)
+    * Archivos: 51 modificados
+
+  Tarea P5.3 — BUG CRITICO: AI SDK v6 parameters→inputSchema:
+    * @ts-nocheck en ai-tools.ts ocultaba un bug de compatibilidad AI SDK v5→v6
+    * Las 21 tool() calls usaban 'parameters:' (API v5) en vez de 'inputSchema:' (API v6)
+    * El runtime de AI SDK v6 lee 'inputSchema', NO 'parameters'
+    * Esto significaba que los schemas de tools NO se enviaban al LLM
+    * Las 10 herramientas del AI Agent estaban silenciosamente rotas
+    * Fix: renombrados los 21 campos + eliminado @ts-nocheck de ambos archivos
+    * Archivos: ai-tools.ts (21 cambios + @ts-nocheck removido),
+      ai-agent/route.ts (@ts-nocheck removido)
+
+  Tarea P5.4 — Return types agregados a 8 funciones:
+    * ai-router.ts: getProviderStats() con tipo de provider stats completo
+    * firebase-admin.ts: getAdminApp(): App, getAdminDb(): Firestore,
+      getAdminAuth(): Auth, getAdminFieldValue(): typeof FieldValue
+    * useThemeColors.ts: nueva interfaz ThemeColors + return type
+    * useNetworkStatus.ts: { isOnline, showBanner, dismissBanner }
+    * useKeyboardShortcuts.ts: void
+    * Archivos: 5 modificados
+
+  Nota sobre any restante (~420):
+    * Formularios usan Record<string, any> — requiere interfaces dedicadas por entidad
+    * Firestore document shapes (authUser, data) — requiere FirestoreXxx types
+    * export-pdf.ts: jsPDF internals requieren type declarations custom
+    * whatsapp-commands.ts: 107 any — peor archivo, requiere refactor completo
+    * Recomendacion: tarea separada P6 para type safety masiva
+
+  Archivos: 59 modificados (51 imports + 2 AI SDK + 5 return types + 1 test)
+  Total: +40 lineas, -85 eliminadas
