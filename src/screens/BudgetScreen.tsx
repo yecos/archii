@@ -168,29 +168,29 @@ export default function BudgetScreen() {
       })()}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="card-elevated rounded-xl p-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-children">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Total gastado</div>
-          <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalExpenses)}</div>
+          <div className="text-lg font-bold font-tabular text-[var(--af-accent)]">{fmtCOP(totalExpenses)}</div>
         </div>
-        <div className="card-elevated rounded-xl p-4">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Promedio por gasto</div>
-          <div className="text-lg font-bold">{fmtCOP(avgExpense)}</div>
+          <div className="text-lg font-bold font-tabular">{fmtCOP(avgExpense)}</div>
         </div>
-        <div className="card-elevated rounded-xl p-4">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Mayor categoría</div>
           <div className="text-lg font-bold">{topCategory ? topCategory.name : '—'}</div>
         </div>
-        <div className="card-elevated rounded-xl p-4">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Total en {topCategory?.name || '—'}</div>
-          <div className="text-lg font-bold">{topCategory ? fmtCOP(topCategory.value) : fmtCOP(0)}</div>
+          <div className="text-lg font-bold font-tabular">{topCategory ? fmtCOP(topCategory.value) : fmtCOP(0)}</div>
         </div>
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:gap-6 gap-4">
         {/* Pie chart */}
-        <div className="card-elevated rounded-xl p-5">
+        <div className="card-glass rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Distribución por Categoría</div>
           {byCategory.length === 0 ? (
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos</div>
@@ -237,7 +237,7 @@ export default function BudgetScreen() {
                       <span className="text-[13px] font-semibold">{fmtCOP(cat.value)}</span>
                     </div>
                     <div className="h-2 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: pct + '%', background: cat.color }} />
+                      <div className="h-full rounded-full progress-animated transition-all duration-500" style={{ width: pct + '%', background: cat.color }} />
                     </div>
                   </div>
                 );
@@ -256,7 +256,7 @@ export default function BudgetScreen() {
             const budget = Number(proj?.data?.budget) || 0;
             const pct = budget > 0 ? (total / budget) * 100 : -1;
             return (
-              <div key={pid} className={`card-elevated rounded-xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : ''}`}>
+              <div key={pid} className={`card-glass rounded-xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : ''}`}>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Receipt size={16} className="text-[var(--af-accent)]" />
@@ -277,7 +277,7 @@ export default function BudgetScreen() {
                   </div>
                 )}
                 {exps.slice(0, expandedProjects.has(pid) ? undefined : 5).map((e: any) => (
-                  <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group transition-colors duration-150 hover:bg-[var(--af-bg3)]">
+                  <div key={e.id} className="card-glass-subtle rounded-lg p-3 mb-2 flex items-center gap-3 group transition-colors duration-150">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0`} style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{e.data.concept}</div>

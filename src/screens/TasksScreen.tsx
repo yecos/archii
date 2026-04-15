@@ -26,6 +26,15 @@ function getSubtaskInfo(t: any): { total: number; completed: number } | null {
   return { total: subs.length, completed: subs.filter((s: any) => s.completed).length };
 }
 
+function TaskCount({ count }: { count: number }) {
+  const [display, setDisplay] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDisplay(count), 100);
+    return () => clearTimeout(timer);
+  }, [count]);
+  return <span className="font-tabular">{display}</span>;
+}
+
 function SubtaskBadge({ info }: { info: { total: number; completed: number } }) {
   const pct = info.total > 0 ? Math.round((info.completed / info.total) * 100) : 0;
   const allDone = info.completed === info.total;
@@ -416,14 +425,14 @@ export default function TasksScreen() {
             description={(searchQuery || filterPriority || filterAssignee) ? 'Intenta con otros filtros' : 'Las tareas aparecerán aquí cuando las crees'}
           />
         ) : (
-          <StaggerContainer>
+          <StaggerContainer className="stagger-children">
           {['Alta', 'Media', 'Baja'].map(prio => {
             const group = filteredTasks.filter((t: any) => t.data.priority === prio);
             if (!group.length) return null;
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
             return (
-              <StaggerItem key={prio}><div className="card-elevated p-4 mb-4">
+              <StaggerItem key={prio}><div className="card-glass p-4 mb-4 rounded-xl">
                 <div className={`inline-flex items-center gap-1.5 text-xs font-semibold mb-3 px-2.5 py-1 rounded-lg ${prioColorBg}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${prioDot}`} />
                   Prioridad {prio}
@@ -433,7 +442,7 @@ export default function TasksScreen() {
                   const proj = projects.find((p: any) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                   return (
-                    <div key={t.id} className={`flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group transition-colors duration-150 hover:bg-[var(--af-bg3)] ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5 -mx-2 px-2 rounded-lg' : ''}`}>
+                    <div key={t.id} className={`card-glass-subtle rounded-lg p-3 mb-2 flex items-start gap-3 group transition-colors duration-150 hover:bg-[var(--af-bg3)] ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5' : ''}`}>
                       {batchMode && (
                         <div
                           className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center transition-all ${selectedIds.has(t.id) ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`}
@@ -475,7 +484,7 @@ export default function TasksScreen() {
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {(() => { const si = getSubtaskInfo(t); return si && si.total > 0 && (
                           <div className="w-12 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${si.completed === si.total ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`} style={{ width: `${(si.completed / si.total) * 100}%` }} />
+                            <div className={`h-full rounded-full progress-animated ${si.completed === si.total ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`} style={{ width: `${(si.completed / si.total) * 100}%` }} />
                           </div>
                         ); })()}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
@@ -574,7 +583,7 @@ export default function TasksScreen() {
                         return (
                           <div
                             key={t.id}
-                            className="card-elevated p-3 cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
+                            className="card-glass-subtle tilt-hover p-3 cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
                             onClick={() => openEditTask(t)}
                           >
                             {proj && (
@@ -620,10 +629,10 @@ export default function TasksScreen() {
               return (
                 <div
                   key={col.status}
-                  className={`flex-shrink-0 w-[270px] sm:w-[290px] xl:w-[320px] rounded-xl transition-all ${
+                  className={`flex-shrink-0 w-[270px] sm:w-[290px] xl:w-[320px] card-glass rounded-xl transition-all ${
                     isDragOver
                       ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20`
-                      : 'skeuo-panel'
+                      : ''
                   } p-3 flex flex-col`}
                   onDragEnter={e => handleDragEnter(e, col.status)}
                   onDragLeave={e => handleDragLeave(e, col.status)}
@@ -633,13 +642,13 @@ export default function TasksScreen() {
                   {/* Column Header */}
                   <div className="flex items-center gap-2 mb-3 px-1">
                     <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
-                    <span className="text-[13px] font-semibold flex-1">{col.status}</span>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                    <span className="text-[13px] font-semibold flex-1 text-label">{col.status}</span>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium badge-gradient ${
                       col.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' :
                       col.status === 'En progreso' ? 'bg-blue-500/10 text-blue-400' :
                       'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'
                     }`}>
-                      {colTasks.length}
+                      <TaskCount count={colTasks.length} />
                     </span>
                   </div>
 
@@ -672,8 +681,8 @@ export default function TasksScreen() {
                           draggable
                           onDragStart={e => handleDragStart(e, t.id)}
                           onDragEnd={handleDragEnd}
-                          className={`card-elevated p-3 cursor-grab active:cursor-grabbing transition-all duration-200 ease-out hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 active:scale-[0.99] group/card ${
-                            isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'hover:border-[var(--input)]'
+                          className={`card-glass-subtle tilt-hover p-3 cursor-grab active:cursor-grabbing transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99] group/card ${
+                            isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : ''
                           }`}
                           onClick={() => openEditTask(t)}
                         >

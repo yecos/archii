@@ -31,7 +31,7 @@ export default function InvoicesScreen() {
             <button className="skeuo-btn flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={openNewInvoice}>+ Nueva Factura</button>
           </div>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="aurora-bg card-glass rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             {(() => {
               const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
               const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
@@ -43,8 +43,8 @@ export default function InvoicesScreen() {
                 { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-[var(--af-blue)]' },
                 { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-[var(--af-red)]' },
               ].map((c, i) => (
-                <div key={i} className="card-elevated rounded-xl xl:p-4 p-3">
-                  <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
+                <div key={i} className="card-glass-subtle rounded-xl xl:p-4 p-3">
+                  <div className={`text-lg font-bold font-tabular text-gradient ${c.color}`}>{c.val}</div>
                   <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
                 </div>
               ));
@@ -58,7 +58,7 @@ export default function InvoicesScreen() {
                 {filtered.map(inv => {
                   const statusColors: Record<string, string> = { Borrador: 'bg-[var(--skeuo-raised)] text-[var(--muted-foreground)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Enviada: 'bg-[var(--skeuo-raised)] text-[var(--af-blue)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Pagada: 'bg-[var(--skeuo-raised)] text-[var(--af-green)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Vencida: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Cancelada: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] line-through opacity-60' };
                   const proj = projects.find(p => p.id === inv.data.projectId);
-                  return (<div key={inv.id} className="card-elevated rounded-xl xl:p-5 p-4 cursor-pointer transition-all">
+                  return (<div key={inv.id} className="card-glass-subtle rounded-xl p-4 mb-3 card-glass-hover cursor-pointer transition-all">
                     <div className="flex items-center gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -68,7 +68,7 @@ export default function InvoicesScreen() {
                       <div className="text-xs text-[var(--muted-foreground)] truncate">{inv.data.projectName}{inv.data.clientName ? ' · ' + inv.data.clientName : ''}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-base sm:text-lg font-bold text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
+                      <div className="text-base sm:text-lg font-bold font-tabular text-gradient text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">{inv.data.issueDate}{inv.data.dueDate ? ' → ' + inv.data.dueDate : ''}</div>
                     </div>
                     </div>
