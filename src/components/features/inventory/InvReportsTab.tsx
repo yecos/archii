@@ -151,7 +151,6 @@ export default function InvReportsTab({
           <div className="space-y-2">
             {[...invProducts].sort((a, b) => ((Number(b.data.price) || 0) * getTotalStock(b)) - ((Number(a.data.price) || 0) * getTotalStock(a))).slice(0, 10).map((p, i) => {
               const val = (Number(p.data.price) || 0) * getTotalStock(p);
-              const maxVal = Math.max((Number(invProducts[0]?.data.price) || 0) * getTotalStock(invProducts[0]), 1);
               return (
                 <div key={p.id} className="flex items-center gap-3">
                   <span className="text-xs font-bold text-[var(--muted-foreground)] w-5 text-right">{i + 1}</span>

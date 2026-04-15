@@ -194,9 +194,15 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     try {
       const db = getFirebase().firestore();
       const ts = serverTimestamp();
-      const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
-      if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
-      else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
+      const color = forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length];
+      const description = forms.invCatDesc || '';
+      if (editingId) {
+        await db.collection('invCategories').doc(editingId).update({ name, color, description, updatedAt: ts });
+        showToast('Categoría actualizada');
+      } else {
+        await db.collection('invCategories').add({ name, color, description, createdAt: ts });
+        showToast('Categoría creada');
+      }
       closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
     } catch (err) { console.error('[ArchiFlow] Inventory: save category failed:', err); showToast('Error al guardar', 'error'); }
   };
@@ -238,7 +244,43 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     }
   };
 
-  const deleteInvMovement = async (id: string) => { if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar movimiento?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvMovement = async (id: string) => {
+    if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar movimiento? El stock se revertirá automáticamente.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
+    try {
+      const db = getFirebase().firestore();
+      await db.runTransaction(async (transaction: any) => {
+        const movRef = db.collection('invMovements').doc(id);
+        const movDoc = await transaction.get(movRef);
+        if (!movDoc.exists) throw new Error('Movimiento no encontrado');
+        const movData = movDoc.data();
+        const productId = movData.productId;
+        const type = movData.type;
+        const qty = movData.quantity || 0;
+        const warehouse = movData.warehouse;
+        if (!productId || !qty) throw new Error('Datos de movimiento inválidos');
+        // Reverse stock: Entrada added stock → subtract; Salida removed stock → add back
+        const productRef = db.collection('invProducts').doc(productId);
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists) throw new Error('Producto no encontrado');
+        const productData = productDoc.data();
+        const ws = productData.warehouseStock && typeof productData.warehouseStock === 'object' ? { ...productData.warehouseStock } : {};
+        INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
+        if (type === 'Entrada') {
+          ws[warehouse] = Math.max(0, (ws[warehouse] || 0) - qty);
+        } else {
+          ws[warehouse] = (ws[warehouse] || 0) + qty;
+        }
+        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+        const fbTs = getFirebase().firestore.FieldValue.serverTimestamp();
+        transaction.delete(movRef);
+        transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: fbTs });
+      });
+      showToast('Movimiento eliminado — stock revertido');
+    } catch (err) {
+      console.error('[ArchiFlow] Error eliminando movimiento:', err);
+      showToast('Error al eliminar movimiento', 'error');
+    }
+  };
 
   // --- Transfers (with runTransaction for atomicity) ---
   const saveInvTransfer = async () => {
@@ -282,7 +324,46 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     }
   };
 
-  const deleteInvTransfer = async (id: string) => { if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar registro de transferencia?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvTransfer = async (id: string) => {
+    if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar transferencia? El stock se revertirá automáticamente.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
+    try {
+      const db = getFirebase().firestore();
+      await db.runTransaction(async (transaction: any) => {
+        const trRef = db.collection('invTransfers').doc(id);
+        const trDoc = await transaction.get(trRef);
+        if (!trDoc.exists) throw new Error('Transferencia no encontrada');
+        const trData = trDoc.data();
+        const productId = trData.productId;
+        const qty = trData.quantity || 0;
+        const fromWarehouse = trData.fromWarehouse;
+        const toWarehouse = trData.toWarehouse;
+        const status = trData.status;
+        if (!productId || !qty || !fromWarehouse || !toWarehouse) throw new Error('Datos de transferencia inválidos');
+        // Only reverse stock for completed transfers
+        if (status === 'Completada') {
+          const productRef = db.collection('invProducts').doc(productId);
+          const productDoc = await transaction.get(productRef);
+          if (!productDoc.exists) throw new Error('Producto no encontrado');
+          const productData = productDoc.data();
+          const ws = productData.warehouseStock && typeof productData.warehouseStock === 'object' ? { ...productData.warehouseStock } : {};
+          INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
+          // Reverse: add back to source, subtract from destination
+          ws[fromWarehouse] = (ws[fromWarehouse] || 0) + qty;
+          ws[toWarehouse] = Math.max(0, (ws[toWarehouse] || 0) - qty);
+          const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+          const fbTs = getFirebase().firestore.FieldValue.serverTimestamp();
+          transaction.delete(trRef);
+          transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: fbTs });
+        } else {
+          transaction.delete(trRef);
+        }
+      });
+      showToast('Transferencia eliminada — stock revertido');
+    } catch (err) {
+      console.error('[ArchiFlow] Error eliminando transferencia:', err);
+      showToast('Error al eliminar transferencia', 'error');
+    }
+  };
 
   // ===== LOOKUP FUNCTIONS =====
 
