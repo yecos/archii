@@ -221,6 +221,76 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 20:00 | FEATURE — Barra de Acción Flotante Premium (v25)
+  Estado: COMPLETADO
+  Commit: 323cddf
+  Build: exitoso (15 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: El usuario solicitó mejorar la burbuja de chat flotante.
+    Antes era un solo botón circular con ícono de chat. Se transformó en
+    una barra vertical premium con 3 botones apilados, arrastrable.
+
+  Tarea 25.1 — Rediseño completo de FloatingChatBubble.tsx:
+    * Barra vertical con 3 botones circulares apilados (48px c/u)
+    * Contenedor con glassmorphism: backdrop-blur(16px), bordes suaves
+    * Fondo: var(--skeuo-sunken) con borde var(--skeuo-edge-light)
+    * Sombra: 0 4px 24px rgba(0,0,0,0.1)
+
+  Tarea 25.2 — Botón Chat (superior):
+    * Ícono MessageCircle (lucide-react)
+    * Badge rojo con count de mensajes no leídos (gradiente #ef4444 → #dc2626)
+    * Animación shimmer cuando hay mensajes nuevos
+    * Animación fabPulse (glow pulsante) cuando hay unread
+    * Color: gradiente accent cuando hay unread, transparente si no
+    * Popup de chat preservado (mensajes, quick reply, abrir chat completo)
+
+  Tarea 25.3 — Botón Crear / + (central):
+    * Ícono Plus (lucide-react) con strokeWidth 2.5
+    * Rotación 45° con scale cuando el menú está abierto
+    * Menú de creación rápida con 6 opciones:
+      - Proyecto (Briefcase) → abre modal 'project'
+      - Tarea (ClipboardList) → abre modal 'task'
+      - Gasto (Receipt) → abre modal 'expense'
+      - Factura (CreditCard) → navega a invoices
+      - Proveedor (Users) → abre modal 'supplier'
+      - Foto (Camera) → navega a photoLog
+    * Animación slide-in escalonada (40ms entre items)
+    * Fondo: var(--af-bg2) inactivo, var(--af-accent) activo
+
+  Tarea 25.4 — Botón IA / Sparkles (inferior):
+    * Ícono Sparkles (lucide-react)
+    * Toggle del panel AIAgentPanel via useUIStore.aiAgentOpen
+    * Color: gradiente accent cuando el panel está abierto
+    * Integración directa con el estado global del agente IA
+
+  Tarea 25.5 — Drag & Drop de la barra completa:
+    * Toda la barra es arrastrable (no solo un botón)
+    * Snap automático al borde más cercano (izq/der) al soltar
+    * Umbral de 8px para distinguir click de drag
+    * Posición guardada en localStorage (key: archiflow-fab-pos-v3)
+    * Resize handler para re-clamp en cambio de viewport
+    * Detección de botón clickeado por posición Y relativa
+
+  Tarea 25.6 — Animaciones premium:
+    * fabBarIn: entrada con translateY(20px) + scale(0.9)
+    * chatPopupIn: popup con scale(0.85) + bounce
+    * createMenuIn: menú con scale(0.9) + translateX
+    * Hover scale(1.08) en cada botón
+    * chatBubbleShimmer: brillo animado en chat con unread
+    * fabPulse: glow pulsante en botón chat con unread
+
+  Tarea 25.7 — Comportamiento inteligente:
+    * Auto-ocultar en pantalla de chat (return null)
+    * Cerrar menús al cambiar de pantalla (useEffect en screen)
+    * Cerrar al click fuera (document mousedown listener)
+    * Auto-open popup al recibir primer mensaje no leído
+    * Auto-close popup tras 4s sin interacción
+
+  Archivo modificado: src/components/layout/FloatingChatBubble.tsx
+  Total: +396 lineas, -214 eliminadas (1 archivo)
+  Dependencias: lucide-react (Plus, Sparkles, FolderPlus, ClipboardList,
+    Receipt, CreditCard, Users, Briefcase, Camera)
+
 2026-04-16 23:00 | FIX — Unificación del sistema de colores light/dark mode
   Estado: COMPLETADO
   Commit: e759697
