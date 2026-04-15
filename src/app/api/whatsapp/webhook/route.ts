@@ -12,6 +12,7 @@ import {
 } from "@/lib/whatsapp-commands";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import type { WhatsAppLinkedUser } from "@/lib/types";
 
 // ─── GET: Verificacion del webhook (Meta envia esto al configurar) ───
 export async function GET(request: NextRequest) {
@@ -89,7 +90,7 @@ async function safeReply(message: any) {
     if (linkSnap.empty) {
       reply = await handleLinkingFlow(message, db);
     } else {
-      const linkData = { id: linkSnap.docs[0].id, ...linkSnap.docs[0].data() };
+      const linkData = { id: linkSnap.docs[0].id, ...linkSnap.docs[0].data() } as WhatsAppLinkedUser;
       reply = await processCommand(message.body, linkData, db);
     }
 

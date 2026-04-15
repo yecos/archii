@@ -631,6 +631,62 @@ export interface TimeSession {
   isRunning: boolean;
 }
 
+/* ===== FIRESTORE FLAT DOCUMENT TYPES ===== */
+/** Flattened Firestore document types (id merged with data fields).
+ *  Used in server-side code where documents are accessed as { id, ...doc.data() }.
+ *  Fields are optional because Firestore documents may not have all fields. */
+
+export interface ProjectFlat {
+  id: string;
+  name?: string;
+  status?: string;
+  progress?: number;
+  budget?: number;
+  phase?: string;
+  client?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface TaskFlat {
+  id: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  assigneeId?: string;
+  dueDate?: string;
+  completedAt?: unknown;
+  projectId?: string;
+}
+
+export interface ExpenseFlat {
+  id: string;
+  amount?: number | string;
+  date?: string;
+  category?: string;
+  concept?: string;
+  projectId?: string;
+}
+
+export interface MemberFlat {
+  id: string;
+  name?: string;
+  displayName?: string;
+  role?: string;
+  active?: boolean;
+}
+
+export interface WhatsAppLinkedUser {
+  id: string;
+  whatsappPhone?: string;
+  userId: string;
+  userEmail?: string;
+  userName?: string;
+  linkedAt?: unknown;
+  active?: boolean;
+}
+
 /* ===== NOTIFICATION EVENT TYPES ===== */
 
 /** Granular notification event categories for per-event preference control. */

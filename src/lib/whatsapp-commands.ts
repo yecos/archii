@@ -5,6 +5,8 @@
  */
 
 import { fmtCOP, fmtDate } from './helpers';
+import { type Firestore } from 'firebase-admin/firestore';
+import type { ProjectFlat, TaskFlat, ExpenseFlat, MemberFlat, WhatsAppLinkedUser } from './types';
 
 // ─── Types ───
 
@@ -28,34 +30,34 @@ function fmtCOPFull(n: number): string {
 }
 
 /** Busca un proyecto por nombre con coincidencia difusa (case-insensitive substring). */
-async function findProjectByName(query: string, db: any): Promise<any | null> {
+async function findProjectByName(query: string, db: Firestore): Promise<ProjectFlat | null> {
   if (!query) return null;
 
   const snap = await db.collection('projects').limit(100).get();
   if (snap.empty) return null;
 
-  const projects = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  const projects = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ProjectFlat[];
 
   // 1. Coincidencia exacta (case-insensitive)
-  const exact = projects.find((p: any) => p.name?.toLowerCase() === query.toLowerCase());
+  const exact = projects.find(p => p.name?.toLowerCase() === query.toLowerCase());
   if (exact) return exact;
 
   // 2. El query es substring del nombre del proyecto
-  const substr = projects.find((p: any) =>
+  const substr = projects.find(p =>
     p.name?.toLowerCase().includes(query.toLowerCase())
   );
   if (substr) return substr;
 
   // 3. El nombre del proyecto es substring del query
-  const reverse = projects.find((p: any) =>
-    query.toLowerCase().includes(p.name?.toLowerCase())
+  const reverse = projects.find(p =>
+    query.toLowerCase().includes(p.name?.toLowerCase() ?? '')
   );
   if (reverse) return reverse;
 
   // 4. Palabras individuales del query
   const queryWords = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (queryWords.length > 0) {
-    const wordMatch = projects.find((p: any) =>
+    const wordMatch = projects.find(p =>
       queryWords.some((w: string) => p.name?.toLowerCase().includes(w) && w.length >= 3)
     );
     if (wordMatch) return wordMatch;
@@ -65,11 +67,11 @@ async function findProjectByName(query: string, db: any): Promise<any | null> {
 }
 
 /** Carga un mapa de userId → nombre de todos los usuarios. */
-async function loadUserNames(db: any): Promise<Record<string, string>> {
+async function loadUserNames(db: Firestore): Promise<Record<string, string>> {
   try {
     const snap = await db.collection('users').limit(200).get();
     const map: Record<string, string> = {};
-    snap.docs.forEach((d: any) => {
+    snap.docs.forEach(d => {
       const data = d.data();
       map[d.id] = data.name || data.displayName || 'Desconocido';
     });
@@ -80,13 +82,14 @@ async function loadUserNames(db: any): Promise<Record<string, string>> {
 }
 
 /** Obtiene el nombre de un usuario por ID. */
-async function getUserName(userId: string, db: any, cache?: Record<string, string>): Promise<string> {
+async function getUserName(userId: string, db: Firestore, cache?: Record<string, string>): Promise<string> {
   if (!userId) return 'Sin asignar';
   if (cache && cache[userId]) return cache[userId];
   try {
     const snap = await db.collection('users').doc(userId).get();
     if (!snap.exists) return 'Desconocido';
     const data = snap.data();
+    if (!data) return 'Desconocido';
     return data.name || data.displayName || 'Desconocido';
   } catch {
     return 'Desconocido';
@@ -130,8 +133,8 @@ export function getMainMenu(): CommandResult {
 
 export async function processCommand(
   rawMessage: string,
-  link: any,
-  db: any
+  link: WhatsAppLinkedUser,
+  db: Firestore
 ): Promise<CommandResult> {
   const msg = rawMessage.toLowerCase().trim();
 
@@ -217,47 +220,47 @@ export async function processCommand(
 // ═══════════════════════════════════════════════════════════
 
 // ─── COMANDO: Resumen diario ───
-async function cmdResumen(db: any): Promise<CommandResult> {
+async function cmdResumen(db: Firestore): Promise<CommandResult> {
   try {
     const today = new Date().toISOString().split('T')[0];
     const userNames = await loadUserNames(db);
 
     // ── Proyectos activos ──
     const projectsSnap = await db.collection('projects').limit(100).get();
-    const allProjects = projectsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const allProjects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ProjectFlat[];
     const activeProjects = allProjects.filter(
-      (p: any) => p.status !== 'Completado' && p.status !== 'Cancelado'
+      p => p.status !== 'Completado' && p.status !== 'Cancelado'
     );
 
     // ── Todas las tareas ──
     const tasksSnap = await db.collection('tasks').limit(500).get();
-    const allTasks = tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const allTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })) as TaskFlat[];
     const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
-    const activeTasks = allTasks.filter((t: any) => activeStatuses.includes(t.status));
+    const activeTasks = allTasks.filter(t => activeStatuses.includes(t.status ?? ''));
 
     // Tareas vencidas (dueDate < hoy, no completadas)
-    const overdueTasks = activeTasks.filter((t: any) => t.dueDate && t.dueDate < today);
+    const overdueTasks = activeTasks.filter(t => t.dueDate && t.dueDate < today);
 
     // Tareas para hoy
-    const dueTodayTasks = activeTasks.filter((t: any) => t.dueDate === today);
+    const dueTodayTasks = activeTasks.filter(t => t.dueDate === today);
 
     // Tareas de alta prioridad
     const highPriorityTasks = activeTasks.filter(
-      (t: any) => t.priority === 'Alta' || t.priority === 'Urgente'
+      t => t.priority === 'Alta' || t.priority === 'Urgente'
     );
 
     // ── Gastos de hoy ──
     const expensesSnap = await db.collection('expenses').limit(200).get();
-    const allExpenses = expensesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-    const todayExpenses = allExpenses.filter((e: any) => e.date === today);
-    const todaySpent = todayExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+    const allExpenses = expensesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ExpenseFlat[];
+    const todayExpenses = allExpenses.filter(e => e.date === today);
+    const todaySpent = todayExpenses.reduce((sum: number, e: ExpenseFlat) => sum + (Number(e.amount) || 0), 0);
 
     // ── Gastos del mes ──
     const monthStart = today.substring(0, 7) + '-01';
     const monthExpenses = allExpenses.filter(
-      (e: any) => e.date && e.date >= monthStart && e.date <= today
+      e => e.date && e.date >= monthStart && e.date <= today
     );
-    const monthSpent = monthExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+    const monthSpent = monthExpenses.reduce((sum: number, e: ExpenseFlat) => sum + (Number(e.amount) || 0), 0);
 
     // ── Construir mensaje ──
     let text = `📊 *RESUMEN DIARIO ARCHIFLOW*\n`;
@@ -266,7 +269,7 @@ async function cmdResumen(db: any): Promise<CommandResult> {
 
     text += `📁 *Proyectos activos: ${activeProjects.length}*\n`;
     const completedToday = allTasks.filter(
-      (t: any) => t.status === 'Completado' && t.completedAt
+      t => t.status === 'Completado' && t.completedAt
     );
     text += `✅ Tareas completadas hoy: ${completedToday.length}\n\n`;
 
@@ -282,12 +285,12 @@ async function cmdResumen(db: any): Promise<CommandResult> {
     if (overdueTasks.length > 0) {
       text += `🔴 *TAREAS VENCIDAS (${overdueTasks.length})*\n`;
       const topOverdue = overdueTasks
-        .sort((a: any, b: any) => (a.dueDate || '').localeCompare(b.dueDate || ''))
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
         .slice(0, 5);
-      topOverdue.forEach((t: any, i: number) => {
-        const assignee = userNames[t.assigneeId] || 'Sin asignar';
-        text += `  ${i + 1}. ${priorityEmoji(t.priority)} *${t.title}*\n`;
-        text += `     👤 ${assignee} — Vencio: ${fmtDate(t.dueDate)}\n`;
+      topOverdue.forEach((t, i: number) => {
+        const assignee = userNames[t.assigneeId ?? ''] || 'Sin asignar';
+        text += `  ${i + 1}. ${priorityEmoji(t.priority ?? '')} *${t.title}*\n`;
+        text += `     👤 ${assignee} — Vencio: ${fmtDate(t.dueDate ?? '')}\n`;
       });
       text += '\n';
     }
@@ -296,9 +299,9 @@ async function cmdResumen(db: any): Promise<CommandResult> {
     if (dueTodayTasks.length > 0) {
       text += `📌 *TAREAS PARA HOY (${dueTodayTasks.length})*\n`;
       const topToday = dueTodayTasks.slice(0, 5);
-      topToday.forEach((t: any, i: number) => {
-        const assignee = userNames[t.assigneeId] || 'Sin asignar';
-        text += `  ${i + 1}. ${priorityEmoji(t.priority)} *${t.title}*\n`;
+      topToday.forEach((t, i: number) => {
+        const assignee = userNames[t.assigneeId ?? ''] || 'Sin asignar';
+        text += `  ${i + 1}. ${priorityEmoji(t.priority ?? '')} *${t.title}*\n`;
         text += `     👤 ${assignee}\n`;
       });
       text += '\n';
@@ -308,14 +311,14 @@ async function cmdResumen(db: any): Promise<CommandResult> {
     text += `Escribe *ayuda* para ver todos los comandos`;
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd resumen:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd resumen:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al generar el resumen. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Estado de proyecto(s) ───
-async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> {
+async function cmdEstado(projectQuery: string, db: Firestore): Promise<CommandResult> {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -327,12 +330,12 @@ async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> 
         return { text: 'No hay proyectos registrados aun.' };
       }
 
-      const projects = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const projects = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ProjectFlat[];
 
       let text = `📁 *ESTADO DE PROYECTOS (${projects.length})*\n\n`;
 
-      projects.forEach((p: any, i: number) => {
-        const emoji = projectStatusEmoji(p.status);
+      projects.forEach((p, i: number) => {
+        const emoji = projectStatusEmoji(p.status ?? '');
         const progress = p.progress !== undefined ? `${p.progress}%` : 'N/A';
         const budget = p.budget ? ` — ${fmtCOP(p.budget)}` : '';
         const phase = p.phase ? `\n     Fase: ${p.phase}` : '';
@@ -359,7 +362,7 @@ async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> 
     // Detalle del proyecto
     let text = `📁 *${project.name}*\n`;
     text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    text += `${projectStatusEmoji(project.status)} *Estado:* ${project.status}\n`;
+    text += `${projectStatusEmoji(project.status ?? '')} *Estado:* ${project.status}\n`;
 
     if (project.phase) {
       text += `🏗️ *Fase:* ${project.phase}\n`;
@@ -386,7 +389,7 @@ async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> 
     const budget = Number(project.budget) || 0;
     if (budget > 0) {
       const expensesSnap = await db.collection('expenses').where('projectId', '==', project.id).get();
-      const spent = expensesSnap.docs.reduce((sum: number, d: any) => sum + (Number(d.data().amount) || 0), 0);
+      const spent = expensesSnap.docs.reduce((sum: number, d) => sum + (Number(d.data().amount) || 0), 0);
       const pct = Math.round((spent / budget) * 100);
       const bar = pct > 90 ? '🔴' : pct > 70 ? '🟡' : '🟢';
       const remaining = budget - spent;
@@ -400,12 +403,12 @@ async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> 
     // Tareas del proyecto
     const tasksSnap = await db.collection('tasks').where('projectId', '==', project.id).limit(50).get();
     if (!tasksSnap.empty) {
-      const tasks = tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-      const completed = tasks.filter((t: any) => t.status === 'Completado').length;
-      const inProgress = tasks.filter((t: any) => t.status === 'En progreso').length;
-      const pending = tasks.filter((t: any) => t.status === 'Pendiente' || t.status === 'Por hacer').length;
+      const tasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })) as TaskFlat[];
+      const completed = tasks.filter(t => t.status === 'Completado').length;
+      const inProgress = tasks.filter(t => t.status === 'En progreso').length;
+      const pending = tasks.filter(t => t.status === 'Pendiente' || t.status === 'Por hacer').length;
       const overdue = tasks.filter(
-        (t: any) => t.dueDate && t.dueDate < today && t.status !== 'Completado'
+        t => t.dueDate && t.dueDate < today && t.status !== 'Completado'
       ).length;
 
       text += `\n📋 *TAREAS DEL PROYECTO*\n`;
@@ -422,14 +425,14 @@ async function cmdEstado(projectQuery: string, db: any): Promise<CommandResult> 
     text += `Escribe *menu* para volver al menu principal`;
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd estado:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd estado:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al consultar el estado. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Reporte de gastos ───
-async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> {
+async function cmdGastos(projectQuery: string, db: Firestore): Promise<CommandResult> {
   try {
     const today = new Date().toISOString().split('T')[0];
     const monthStart = today.substring(0, 7) + '-01';
@@ -437,9 +440,9 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
     if (!projectQuery) {
       // Gastos totales del mes por categoria
       const expensesSnap = await db.collection('expenses').limit(500).get();
-      const allExpenses = expensesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const allExpenses = expensesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ExpenseFlat[];
       const monthExpenses = allExpenses.filter(
-        (e: any) => e.date && e.date >= monthStart && e.date <= today
+        e => e.date && e.date >= monthStart && e.date <= today
       );
 
       if (monthExpenses.length === 0) {
@@ -450,7 +453,7 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
       const byCategory: Record<string, { total: number; count: number }> = {};
       let totalMonth = 0;
 
-      monthExpenses.forEach((e: any) => {
+      monthExpenses.forEach(e => {
         const cat = e.category || 'Sin categoria';
         if (!byCategory[cat]) byCategory[cat] = { total: 0, count: 0 };
         byCategory[cat].total += Number(e.amount) || 0;
@@ -477,17 +480,17 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
       });
 
       // Gastos de hoy
-      const todayExpenses = allExpenses.filter((e: any) => e.date === today);
-      const todayTotal = todayExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+      const todayExpenses = allExpenses.filter(e => e.date === today);
+      const todayTotal = todayExpenses.reduce((sum: number, e: ExpenseFlat) => sum + (Number(e.amount) || 0), 0);
 
       if (todayTotal > 0) {
         text += `📌 *Gastos de hoy: ${fmtCOPFull(todayTotal)}* (${todayExpenses.length} transacciones)\n\n`;
       }
 
       // Top 3 gastos del mes
-      const topExpenses = [...monthExpenses].sort((a: any, b: any) => (Number(b.amount) || 0) - (Number(a.amount) || 0)).slice(0, 3);
+      const topExpenses = [...monthExpenses].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0)).slice(0, 3);
       text += `🔥 *Top 3 gastos:*\n`;
-      topExpenses.forEach((e: any, i: number) => {
+      topExpenses.forEach((e, i: number) => {
         text += `  ${i + 1}. ${fmtCOPFull(Number(e.amount) || 0)} — ${e.concept || 'Sin concepto'}\n`;
       });
 
@@ -516,13 +519,13 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
       return { text: `No hay gastos registrados para *${project.name}*.` };
     }
 
-    const expenses = expensesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const expenses = expensesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ExpenseFlat[];
 
     // Agrupar por categoria
     const byCategory: Record<string, { total: number; count: number }> = {};
     let totalAll = 0;
 
-    expenses.forEach((e: any) => {
+    expenses.forEach(e => {
       const cat = e.category || 'Sin categoria';
       if (!byCategory[cat]) byCategory[cat] = { total: 0, count: 0 };
       byCategory[cat].total += Number(e.amount) || 0;
@@ -532,7 +535,7 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
 
     const sorted = Object.entries(byCategory).sort((a, b) => b[1].total - a[1].total);
 
-    let text = `💰 *GASTOS: ${project.name.toUpperCase()}*\n`;
+    let text = `💰 *GASTOS: ${project.name!.toUpperCase()}*\n`;
     text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     text += `📊 *Total: ${fmtCOPFull(totalAll)}*\n`;
@@ -558,9 +561,9 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
 
     // Gastos del mes para este proyecto
     const monthExpenses = expenses.filter(
-      (e: any) => e.date && e.date >= monthStart && e.date <= today
+      e => e.date && e.date >= monthStart && e.date <= today
     );
-    const monthTotal = monthExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+    const monthTotal = monthExpenses.reduce((sum: number, e: ExpenseFlat) => sum + (Number(e.amount) || 0), 0);
 
     if (monthTotal > 0) {
       text += `📌 *Este mes: ${fmtCOPFull(monthTotal)}* (${monthExpenses.length} gastos)\n\n`;
@@ -568,11 +571,11 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
 
     // Ultimos 5 gastos
     const recentExpenses = [...expenses]
-      .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       .slice(0, 5);
 
     text += `🕐 *Ultimos gastos:*\n`;
-    recentExpenses.forEach((e: any, i: number) => {
+    recentExpenses.forEach((e, i: number) => {
       const date = e.date ? fmtDate(e.date) : '—';
       text += `  ${i + 1}. ${fmtCOPFull(Number(e.amount) || 0)} — ${e.concept || 'Sin concepto'} (${date})\n`;
     });
@@ -581,14 +584,14 @@ async function cmdGastos(projectQuery: string, db: any): Promise<CommandResult> 
     text += `Escribe *menu* para volver al menu principal`;
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd gastos:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd gastos:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al consultar gastos. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Resumen de tareas ───
-async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> {
+async function cmdTareas(projectQuery: string, db: Firestore): Promise<CommandResult> {
   try {
     const today = new Date().toISOString().split('T')[0];
     const userNames = await loadUserNames(db);
@@ -601,26 +604,26 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
         return { text: 'No hay tareas registradas.' };
       }
 
-      const allTasks = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })) as TaskFlat[];
       const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
-      const activeTasks = allTasks.filter((t: any) => activeStatuses.includes(t.status));
+      const activeTasks = allTasks.filter(t => activeStatuses.includes(t.status ?? ''));
 
       // Tareas vencidas
       const overdueTasks = activeTasks
-        .filter((t: any) => t.dueDate && t.dueDate < today)
-        .sort((a: any, b: any) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+        .filter(t => t.dueDate && t.dueDate < today)
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
 
       // Alta prioridad (no vencidas ya listadas)
-      const overdueIds = new Set(overdueTasks.map((t: any) => t.id));
+      const overdueIds = new Set(overdueTasks.map(t => t.id));
       const highPriorityTasks = activeTasks
         .filter(
-          (t: any) =>
+          t =>
             (t.priority === 'Alta' || t.priority === 'Urgente') &&
             !overdueIds.has(t.id)
         )
-        .sort((a: any, b: any) => {
+        .sort((a, b) => {
           const pOrder: Record<string, number> = { Urgente: 0, Alta: 1 };
-          return ((pOrder as any)[a.priority] ?? 2) - ((pOrder as any)[b.priority] ?? 2);
+          return (pOrder[a.priority ?? ''] ?? 2) - (pOrder[b.priority ?? ''] ?? 2);
         });
 
       if (overdueTasks.length === 0 && highPriorityTasks.length === 0) {
@@ -634,10 +637,10 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
       // Vencidas
       if (overdueTasks.length > 0) {
         text += `🔴 *VENCIDAS (${overdueTasks.length})*\n`;
-        overdueTasks.slice(0, 10).forEach((t: any, i: number) => {
-          const assignee = userNames[t.assigneeId] || 'Sin asignar';
-          const daysAgo = Math.ceil((Date.now() - new Date(t.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-          text += `  ${i + 1}. ${priorityEmoji(t.priority)} *${t.title}*\n`;
+        overdueTasks.slice(0, 10).forEach((t, i: number) => {
+          const assignee = userNames[t.assigneeId ?? ''] || 'Sin asignar';
+          const daysAgo = Math.ceil((Date.now() - new Date(t.dueDate ?? '').getTime()) / (1000 * 60 * 60 * 24));
+          text += `  ${i + 1}. ${priorityEmoji(t.priority ?? '')} *${t.title}*\n`;
           text += `     👤 ${assignee} — Vencio hace ${daysAgo} dia(s)\n\n`;
         });
       }
@@ -645,10 +648,10 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
       // Alta prioridad
       if (highPriorityTasks.length > 0) {
         text += `\n🟠 *ALTA PRIORIDAD (${highPriorityTasks.length})*\n`;
-        highPriorityTasks.slice(0, 10).forEach((t: any, i: number) => {
-          const assignee = userNames[t.assigneeId] || 'Sin asignar';
+        highPriorityTasks.slice(0, 10).forEach((t, i: number) => {
+          const assignee = userNames[t.assigneeId ?? ''] || 'Sin asignar';
           const due = t.dueDate ? ` — Vence: ${fmtDate(t.dueDate)}` : '';
-          text += `  ${i + 1}. ${priorityEmoji(t.priority)} *${t.title}*\n`;
+          text += `  ${i + 1}. ${priorityEmoji(t.priority ?? '')} *${t.title}*\n`;
           text += `     👤 ${assignee}${due}\n\n`;
         });
       }
@@ -675,13 +678,13 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
       return { text: `No hay tareas registradas para *${project.name}*.` };
     }
 
-    const tasks = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const tasks = snap.docs.map(d => ({ id: d.id, ...d.data() })) as TaskFlat[];
     const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
     const pendingTasks = tasks
-      .filter((t: any) => activeStatuses.includes(t.status))
-      .sort((a: any, b: any) => {
+      .filter(t => activeStatuses.includes(t.status ?? ''))
+      .sort((a, b) => {
         const pOrder: Record<string, number> = { Urgente: 0, Alta: 1, Media: 2, Baja: 3 };
-        const pDiff = (pOrder[a.priority] ?? 4) - (pOrder[b.priority] ?? 4);
+        const pDiff = (pOrder[a.priority ?? ''] ?? 4) - (pOrder[b.priority ?? ''] ?? 4);
         if (pDiff !== 0) return pDiff;
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
@@ -693,19 +696,19 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
       return { text: `Todas las tareas de *${project.name}* estan completadas.` };
     }
 
-    const completedTasks = tasks.filter((t: any) => t.status === 'Completado').length;
+    const completedTasks = tasks.filter(t => t.status === 'Completado').length;
 
-    let text = `📋 *TAREAS: ${project.name.toUpperCase()}*\n`;
+    let text = `📋 *TAREAS: ${project.name!.toUpperCase()}*\n`;
     text += `━━━━━━━━━━━━━━━━━━━━\n`;
     text += `✅ Completadas: ${completedTasks} | ⬜ Pendientes: ${pendingTasks.length}\n\n`;
 
-    pendingTasks.forEach((t: any, i: number) => {
-      const assignee = userNames[t.assigneeId] || 'Sin asignar';
+    pendingTasks.forEach((t, i: number) => {
+      const assignee = userNames[t.assigneeId ?? ''] || 'Sin asignar';
       const due = t.dueDate ? ` — ${fmtDate(t.dueDate)}` : '';
       const isOverdue = t.dueDate && t.dueDate < today;
       const overdueTag = isOverdue ? ' ⚠️VENCIDA' : '';
 
-      text += `${i + 1}. ${priorityEmoji(t.priority)} *${t.title}*${overdueTag}\n`;
+      text += `${i + 1}. ${priorityEmoji(t.priority ?? '')} *${t.title}*${overdueTag}\n`;
       text += `   👤 ${assignee} — ${t.status}${due}\n\n`;
     });
 
@@ -713,14 +716,14 @@ async function cmdTareas(projectQuery: string, db: any): Promise<CommandResult> 
     text += `Escribe *menu* para volver al menu principal`;
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd tareas:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd tareas:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al consultar tareas. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Equipo (mejorado con conteo de tareas) ───
-async function cmdEquipo(db: any): Promise<CommandResult> {
+async function cmdEquipo(db: Firestore): Promise<CommandResult> {
   try {
     // Cargar miembros del equipo
     const usersSnap = await db.collection('users').limit(100).get();
@@ -728,7 +731,7 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
       return { text: 'No hay miembros en el equipo.' };
     }
 
-    const members = usersSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const members = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as MemberFlat[];
 
     // Cargar tareas para conteo
     const tasksSnap = await db.collection('tasks').limit(500).get();
@@ -738,7 +741,7 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
     const taskCounts: Record<string, { total: number; overdue: number }> = {};
     const today = new Date().toISOString().split('T')[0];
 
-    tasksSnap.docs.forEach((d: any) => {
+    tasksSnap.docs.forEach(d => {
       const t = d.data();
       const assigneeId = d.data().assigneeId || d.ref?.id;
       if (!assigneeId) return;
@@ -753,20 +756,20 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
 
     // Ordenar: activos primero, luego por cantidad de tareas
     const activeMembers = members
-      .filter((m: any) => m.active !== false)
-      .sort((a: any, b: any) => {
+      .filter(m => m.active !== false)
+      .sort((a, b) => {
         const aCount = taskCounts[a.id]?.total || 0;
         const bCount = taskCounts[b.id]?.total || 0;
         return bCount - aCount;
       });
 
-    const inactiveMembers = members.filter((m: any) => m.active === false);
+    const inactiveMembers = members.filter(m => m.active === false);
 
     let text = `👥 *EQUIPO DE TRABAJO*\n`;
     text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     text += `🟢 *Activos (${activeMembers.length})*\n\n`;
-    activeMembers.forEach((m: any, i: number) => {
+    activeMembers.forEach((m, i: number) => {
       const role = m.role || 'Miembro';
       const tasks = taskCounts[m.id];
       const taskStr = tasks ? `${tasks.total} tareas` : 'Sin tareas';
@@ -779,7 +782,7 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
 
     if (inactiveMembers.length > 0) {
       text += `❌ *Inactivos (${inactiveMembers.length})*\n\n`;
-      inactiveMembers.slice(0, 5).forEach((m: any, i: number) => {
+      inactiveMembers.slice(0, 5).forEach((m, i: number) => {
         const role = m.role || 'Miembro';
         const name = m.name || m.displayName || 'Sin nombre';
         text += `${i + 1}. *${name}* — ${role}\n`;
@@ -796,8 +799,8 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
     text += `\nEscribe *menu* para volver al menu principal`;
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd equipo:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd equipo:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al consultar el equipo. Intenta de nuevo.' };
   }
 }
@@ -836,7 +839,7 @@ function cmdAyuda(): CommandResult {
 // ═══════════════════════════════════════════════════════════
 
 // ─── COMANDO: Mis tareas pendientes ───
-async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
+async function cmdMisTareas(link: WhatsAppLinkedUser, db: Firestore): Promise<CommandResult> {
   try {
     const snap = await db
       .collection('tasks')
@@ -849,10 +852,10 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
     }
 
     const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
-    const tasks = snap.docs
-      .map((d: any) => ({ id: d.id, ...d.data() }))
-      .filter((t: any) => activeStatuses.includes(t.status))
-      .sort((a: any, b: any) => {
+    const tasks = (snap.docs
+      .map(d => ({ id: d.id, ...d.data() })) as TaskFlat[])
+      .filter(t => activeStatuses.includes(t.status ?? ''))
+      .sort((a, b) => {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
@@ -866,8 +869,8 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
 
     let text = `*Tus tareas pendientes (${tasks.length})*\n\n`;
 
-    tasks.forEach((t: any, i: number) => {
-      const prio = priorityEmoji(t.priority);
+    tasks.forEach((t, i: number) => {
+      const prio = priorityEmoji(t.priority ?? '');
       const status = t.status === 'En progreso' ? '🔄' : t.status === 'En revisión' ? '👀' : '⬜';
       const due = t.dueDate ? ` — Vence: ${fmtDate(t.dueDate)}` : '';
       text += `${i + 1}. ${prio} ${status} *${t.title}*${due}\n`;
@@ -876,14 +879,14 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
     text += '\nEscribe *tareas* para ver tareas criticas o *menu* para volver al menu principal';
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd tareas:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd tareas:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al obtener tus tareas. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Estado de proyectos ───
-async function cmdProyectos(db: any): Promise<CommandResult> {
+async function cmdProyectos(db: Firestore): Promise<CommandResult> {
   try {
     const snap = await db
       .collection('projects')
@@ -895,12 +898,12 @@ async function cmdProyectos(db: any): Promise<CommandResult> {
       return { text: 'No hay proyectos registrados aun.' };
     }
 
-    const projects = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const projects = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ProjectFlat[];
 
     let text = `*Proyectos (${projects.length})*\n\n`;
 
-    projects.forEach((p: any, i: number) => {
-      const emoji = projectStatusEmoji(p.status);
+    projects.forEach((p, i: number) => {
+      const emoji = projectStatusEmoji(p.status ?? '');
       const progress = p.progress !== undefined ? `${p.progress}%` : 'N/A';
       const budget = p.budget ? ` — ${fmtCOP(p.budget)}` : '';
       text += `${i + 1}. ${emoji} *${p.name}* [${progress}]${budget}\n`;
@@ -909,14 +912,14 @@ async function cmdProyectos(db: any): Promise<CommandResult> {
     text += '\nEscribe *estado nombre* para ver el detalle de un proyecto';
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd proyectos:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd proyectos:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al obtener proyectos. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Presupuesto ───
-async function cmdPresupuesto(db: any): Promise<CommandResult> {
+async function cmdPresupuesto(db: Firestore): Promise<CommandResult> {
   try {
     const projectsSnap = await db
       .collection('projects')
@@ -928,7 +931,7 @@ async function cmdPresupuesto(db: any): Promise<CommandResult> {
       return { text: 'No hay proyectos con presupuesto.' };
     }
 
-    const projects = projectsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as ProjectFlat[];
 
     let text = '*Resumen de presupuestos*\n\n';
 
@@ -940,7 +943,7 @@ async function cmdPresupuesto(db: any): Promise<CommandResult> {
         .where('projectId', '==', p.id)
         .get();
 
-      const spent = expensesSnap.docs.reduce((sum: number, d: any) => {
+      const spent = expensesSnap.docs.reduce((sum: number, d) => {
         return sum + (Number(d.data().amount) || 0);
       }, 0);
 
@@ -956,14 +959,14 @@ async function cmdPresupuesto(db: any): Promise<CommandResult> {
     text += 'Escribe *gastos* para un reporte detallado o *menu* para volver';
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd presupuesto:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd presupuesto:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al obtener presupuesto. Intenta de nuevo.' };
   }
 }
 
 // ─── COMANDO: Proximos vencimientos ───
-async function cmdVencimientos(db: any): Promise<CommandResult> {
+async function cmdVencimientos(db: Firestore): Promise<CommandResult> {
   try {
     const now = new Date().toISOString().split('T')[0];
 
@@ -978,9 +981,9 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
       return { text: 'No hay tareas con fecha limite proxima.' };
     }
 
-    const tasks = snap.docs
-      .map((d: any) => ({ id: d.id, ...d.data() }))
-      .filter((t: any) => t.dueDate && t.dueDate >= now);
+    const tasks = (snap.docs
+      .map(d => ({ id: d.id, ...d.data() })) as TaskFlat[])
+      .filter(t => t.dueDate && t.dueDate >= now);
 
     if (tasks.length === 0) {
       return { text: 'No hay tareas con fecha limite proxima.' };
@@ -988,17 +991,17 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
 
     let text = `*Proximos vencimientos (${tasks.length})*\n\n`;
 
-    tasks.forEach((t: any, i: number) => {
-      const daysLeft = Math.ceil((new Date(t.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    tasks.forEach((t, i: number) => {
+      const daysLeft = Math.ceil((new Date(t.dueDate ?? '').getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       const urgent = daysLeft <= 1 ? '🔴 URGENTE' : daysLeft <= 3 ? '🟡 Pronto' : '📅';
-      text += `${i + 1}. ${urgent} *${t.title}*\n   Vence: ${fmtDate(t.dueDate)} (${daysLeft} dias)\n\n`;
+      text += `${i + 1}. ${urgent} *${t.title}*\n   Vence: ${fmtDate(t.dueDate ?? '')} (${daysLeft} dias)\n\n`;
     });
 
     text += 'Escribe *menu* para volver';
 
     return { text: truncateMessage(text) };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd vencimientos:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error cmd vencimientos:', err instanceof Error ? err.message : String(err));
     return { text: 'Error al obtener vencimientos. Intenta de nuevo.' };
   }
 }
