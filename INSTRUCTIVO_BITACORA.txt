@@ -2445,3 +2445,52 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     - 1 bug critico corregido (afectaba toda la autenticacion del servidor)
     - 0 errores TypeScript
     - Build exitoso, Vercel deploy automatico
+
+2026-04-16 00:15 | REFACTOR — Code Splitting: eliminacion de dependencias muertas + limpieza de UI wrappers
+  Estado: COMPLETADO
+  Commit: 9ce0fd3
+  Build: exitoso (Turbopack 6.5s, TypeScript 9.6s, 0 errores)
+  Tag de respaldo: backup/pre-p4-code-splitting (local)
+
+  Contexto: Tarea P4 de la cola de prioridad — code splitting y reduccion de bundle.
+    framer-motion ya habia sido eliminado en sesiones previas (v18 Zero-Debt Foundation)
+    y reemplazado por tailwindcss-animate + tw-animate-css. Todas las pantallas,
+    modales, features y graficos ya usan dynamic() con ssr: false. jspdf y xlsx
+    se cargan via import() dinamico en funciones de exportacion. Recharts se carga
+    lazy desde pantallas que ya son lazy-loaded.
+
+  Tarea P4.1 — Auditoria completa de dependencias:
+    * Analizadas 16 dependencias principales por uso real en src/
+    * 11 confirmadas como activas (alert-dialog, dialog, slot, switch, dompurify,
+      firebase-admin, next-themes, recharts, cva, tailwind-merge, zod)
+    * 5 identificadas como muertas (ningun import en src/)
+    * 7 archivos UI wrapper sin consumidores eliminados
+    * 1 archivo wrapper (sheet.tsx) muerto eliminado
+
+  Tarea P4.2 — Dependencias eliminadas de package.json:
+    * @radix-ui/react-label — label.tsx nunca importado
+    * @radix-ui/react-separator — separator.tsx nunca importado
+    * @radix-ui/react-toast — toast.tsx/use-toast.ts nunca importados
+      (el proyecto usa Sonner como sistema de toasts)
+    * @radix-ui/react-toggle — toggle.tsx nunca importado
+    * @radix-ui/react-tooltip — tooltip.tsx nunca importado
+
+  Tarea P4.3 — Archivos eliminados (627 lineas):
+    * src/components/ui/label.tsx
+    * src/components/ui/separator.tsx
+    * src/components/ui/sheet.tsx
+    * src/components/ui/toast.tsx
+    * src/components/ui/toggle.tsx
+    * src/components/ui/tooltip.tsx
+    * src/hooks/use-toast.ts
+
+  Tarea P4.4 — Code splitting existente verificado como completo:
+    * 60+ imports dynamic() con ssr: false (pantallas, modales, features)
+    * jsPDF y xlsx cargados via import() dinamico solo cuando se exporta
+    * Recharts aislado en chunks lazy via dynamic parents
+    * Animaciones: CSS puro (tailwindcss-animate + tw-animate-css)
+    * firebase-admin: solo server-side (API routes)
+    * Sin oportunidades adicionales de code splitting identificadas
+
+  Archivos: 7 eliminados, 2 modificados (package.json, package-lock.json)
+  Total: -627 lineas eliminadas, 19 paquetes removidos de node_modules
