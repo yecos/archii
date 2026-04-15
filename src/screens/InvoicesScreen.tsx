@@ -58,19 +58,21 @@ export default function InvoicesScreen() {
                 {filtered.map(inv => {
                   const statusColors: Record<string, string> = { Borrador: 'bg-[var(--skeuo-raised)] text-[var(--muted-foreground)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Enviada: 'bg-[var(--skeuo-raised)] text-[var(--af-blue)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Pagada: 'bg-[var(--skeuo-raised)] text-[var(--af-green)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Vencida: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Cancelada: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] line-through opacity-60' };
                   const proj = projects.find(p => p.id === inv.data.projectId);
-                  return (<div key={inv.id} className="card-elevated rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-all">
+                  return (<div key={inv.id} className="card-elevated rounded-xl p-4 cursor-pointer transition-all">
+                    <div className="flex items-center gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-semibold">{inv.data.number}</span>
                         <span className={`skeuo-badge text-[10px] px-2 py-0.5 ${statusColors[inv.data.status] || ''}`}>{inv.data.status}</span>
                       </div>
-                      <div className="text-xs text-[var(--muted-foreground)]">{inv.data.projectName}{inv.data.clientName ? ' · ' + inv.data.clientName : ''}</div>
+                      <div className="text-xs text-[var(--muted-foreground)] truncate">{inv.data.projectName}{inv.data.clientName ? ' · ' + inv.data.clientName : ''}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
+                      <div className="text-base sm:text-lg font-bold text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">{inv.data.issueDate}{inv.data.dueDate ? ' → ' + inv.data.dueDate : ''}</div>
                     </div>
-                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    </div>
+                    <div className="flex gap-1 shrink-0 flex-wrap mt-2 pt-2 border-t border-[var(--border)] sm:mt-0 sm:pt-0 sm:border-t-0" onClick={e => e.stopPropagation()}>
                       {/* NEW: PDF Download */}
                       <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-[var(--af-accent)] hover:opacity-80 transition-opacity" onClick={() => {
                         try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { console.error('[ArchiFlow] Invoices: export invoice PDF failed:', err); showToast('Error al generar PDF', 'error'); }

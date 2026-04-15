@@ -70,7 +70,7 @@ function DisplayModeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap">
       {DISPLAY_MODES.map((mode) => {
         const isActive = theme === mode.value;
         const Icon = mode.icon;
@@ -79,7 +79,7 @@ function DisplayModeToggle() {
             key={mode.value}
             onClick={() => setTheme(mode.value)}
             className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium
+              flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium
               transition-all duration-200 cursor-pointer border
               ${
                 isActive

@@ -42,10 +42,10 @@ export default function SuppliersScreen() {
               <div className="text-[11px] text-[var(--af-text3)] mb-2">{s.data.category}</div>
               <div className="text-[11px] text-[var(--af-accent)] mb-2">{'★'.repeat(s.data.rating || 5)}{'☆'.repeat(5 - (s.data.rating || 5))}</div>
               <div className="text-xs text-[var(--muted-foreground)] space-y-0.5">
-                {s.data.phone && <div>📞 {s.data.phone}</div>}
-                {s.data.email && <div>✉️ {s.data.email}</div>}
-                {s.data.address && <div>📍 {s.data.address}</div>}
-                {s.data.website && <div>🌐 {s.data.website}</div>}
+                {s.data.phone && <div className="truncate">📞 {s.data.phone}</div>}
+                {s.data.email && <div className="truncate">✉️ {s.data.email}</div>}
+                {s.data.address && <div className="truncate">📍 {s.data.address}</div>}
+                {s.data.website && <div className="truncate">🌐 {s.data.website}</div>}
               </div>
             </div></StaggerItem>
           ))}

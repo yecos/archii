@@ -262,7 +262,7 @@ export default function TasksScreen() {
               placeholder="Buscar tarea..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 w-[160px] transition-all"
+              className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 w-[120px] sm:w-[160px] transition-all"
             />
             {searchQuery && (
               <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--af-text3)] cursor-pointer" onClick={() => setSearchQuery('')}>
@@ -468,7 +468,7 @@ export default function TasksScreen() {
                         ); })()}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
                         <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
                           <X size={12} />
@@ -565,7 +565,7 @@ export default function TasksScreen() {
 
                           {/* Task title */}
                           <div className="flex items-start gap-2">
-                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 opacity-100 sm:opacity-0 sm:group-hover/card:opacity-100 transition-opacity" />
                             <div className={`text-[13px] font-medium flex-1 leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
                               {t.data.title}
                             </div>
@@ -590,7 +590,7 @@ export default function TasksScreen() {
                           {/* Footer: assignees */}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
                             <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
-                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
+                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer opacity-100 sm:opacity-0 sm:group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
                               <X size={12} />
                             </button>
                           </div>

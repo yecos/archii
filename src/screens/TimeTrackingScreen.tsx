@@ -119,7 +119,32 @@ export default function TimeTrackingScreen() {
                   <span>Total: <b className="text-[var(--foreground)]">{fmtDuration(totalHrs)}</b></span>
                   <span>Facturable: <b className="text-[var(--af-green)]">{fmtDuration(billableHrs)}</b></span>
                 </div>
-                <div className="card-elevated rounded-xl overflow-hidden">
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-2">
+                  {filtered.map(e => {
+                    const proj = fs.projects.find(p => p.id === e.data.projectId);
+                    return (
+                      <div key={e.id} className="card-elevated rounded-xl p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-medium truncate">{e.data.description || 'Sin descripcion'}</div>
+                            <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{proj?.data.name || '—'}</div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-semibold">{fmtDuration(e.data.duration)}</div>
+                            {e.data.billable && <div className="text-[10px] text-[var(--af-green)]">Facturable</div>}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--skeuo-edge-light)]">
+                          <span className="text-[11px] text-[var(--muted-foreground)]">{e.data.date} · {e.data.startTime} - {e.data.endTime}</span>
+                          <button className="text-xs text-[var(--af-red)] cursor-pointer hover:opacity-70 px-1" onClick={() => fbActions.deleteTimeEntry(e.id, ui.showToast)}>Eliminar</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden sm:block card-elevated rounded-xl overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead><tr className="skeuo-divider text-[var(--muted-foreground)]">
                         <th className="text-left px-4 py-3 font-medium">Fecha</th>

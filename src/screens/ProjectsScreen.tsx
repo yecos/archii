@@ -424,7 +424,7 @@ export default function ProjectsScreen() {
                     </div>
 
                     {/* Actions */}
-                    <div className="hidden sm:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <div className="sm:flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                       <button
                         className="text-[11px] px-2 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20"
                         onClick={e => { e.stopPropagation(); openEditProject(p); }}

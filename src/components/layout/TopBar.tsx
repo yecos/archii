@@ -91,21 +91,21 @@ export default React.memo(function TopBar() {
           )}
         </button>
         {ui.screen === 'projects' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); ui.openModal('project'); }}>
+          <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 sm:px-3.5 sm:py-2 rounded-lg sm:text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); ui.openModal('project'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
-            Nuevo proyecto
+            <span className="hidden sm:inline">Nuevo proyecto</span>
           </button>
         )}
         {ui.screen === 'tasks' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); ui.openModal('task'); }}>
+          <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 sm:px-3.5 sm:py-2 rounded-lg sm:text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); ui.openModal('task'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
-            Nueva tarea
+            <span className="hidden sm:inline">Nueva tarea</span>
           </button>
         )}
         {ui.screen === 'suppliers' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); ui.openModal('supplier'); }}>
+          <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 sm:px-3.5 sm:py-2 rounded-lg sm:text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); ui.openModal('supplier'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
-            Nuevo proveedor
+            <span className="hidden sm:inline">Nuevo proveedor</span>
           </button>
         )}
         <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] flex-shrink-0 ${avatarColor(auth.authUser?.uid ?? '')}`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{auth.authUser?.photoURL ? '' : auth.initials}</div>
