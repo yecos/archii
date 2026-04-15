@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, User, Sparkles, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Send, Bot, User, Sparkles, Loader2, CheckCircle, AlertCircle, RefreshCw, Settings } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useFirestoreContext } from '@/contexts/FirestoreContext';
 import { useUIStore } from '@/stores/ui-store';
@@ -16,18 +16,24 @@ interface AgentMessage {
   isStreaming?: boolean;
 }
 
+interface DebugInfo {
+  ok: boolean;
+  summary: string;
+  checks?: Array<{ name: string; ok: boolean; message: string }>;
+}
+
 interface AIAgentPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const QUICK_PROMPTS = [
-  'Crear tarea para revisar planos',
-  '¿Qué tareas vencen esta semana?',
-  'Registrar gasto de materiales',
   '¿Cuál es el estado del proyecto?',
+  '¿Qué tareas vencen esta semana?',
+  '¿Qué materiales tienen stock bajo?',
   '¿Cuánto presupuesto queda?',
-  'Listar gastos del proyecto',
+  'Dame el reporte del proyecto',
+  '¿Qué facturas están pendientes?',
 ];
 
 export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
@@ -38,9 +44,12 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [projectContext, setProjectContext] = useState(aiProjectContext || '');
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const hasCheckedDebug = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,6 +62,36 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
+
+  // Run diagnostic when panel opens
+  const runDebug = useCallback(async () => {
+    if (hasCheckedDebug.current) return;
+    hasCheckedDebug.current = true;
+    setDebugLoading(true);
+    try {
+      const fb = getFirebase();
+      const currentUser = fb.auth().currentUser;
+      if (!currentUser) {
+        setDebugInfo({ ok: false, summary: 'No hay sesión de Firebase activa.' });
+        setDebugLoading(false);
+        return;
+      }
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/ai-debug', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setDebugInfo(data);
+    } catch {
+      setDebugInfo({ ok: false, summary: 'No se pudo verificar el estado de la IA.' });
+    } finally {
+      setDebugLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) runDebug();
+  }, [isOpen, runDebug]);
 
   // Send message to AI agent
   const sendMessage = useCallback(async (content: string) => {
@@ -84,7 +123,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       if (!authUser) throw new Error('No autenticado');
       const fb = getFirebase();
       const currentUser = fb.auth().currentUser;
-      if (!currentUser) throw new Error('No hay sesión activa');
+      if (!currentUser) throw new Error('No hay sesión activa. Recarga la página e intenta de nuevo.');
       const token = await currentUser.getIdToken();
 
       abortRef.current = new AbortController();
@@ -101,19 +140,28 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             content: m.content,
           })),
           projectContext: projectContext || undefined,
-          taskType: 'chat',
         }),
         signal: abortRef.current.signal,
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: 'Error de conexión' }));
-        throw new Error(errData.error || `Error ${response.status}`);
+        const errMsg = errData.error || `Error ${response.status}`;
+        // Provide helpful error messages
+        let helpfulMsg = errMsg;
+        if (errMsg.includes('API keys') || errMsg.includes('api keys')) {
+          helpfulMsg = 'No hay API keys configuradas en Vercel. Ve a Vercel > Settings > Environment Variables y agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY.';
+        } else if (errMsg.includes('límite de tasa') || errMsg.includes('rate limit')) {
+          helpfulMsg = 'Todos los proveedores están en límite de tasa. Espera unos segundos e intenta de nuevo.';
+        } else if (response.status === 401) {
+          helpfulMsg = 'Tu sesión expiró. Recarga la página para reautenticar.';
+        }
+        throw new Error(helpfulMsg);
       }
 
       // Read streaming response
       const reader = response.body?.getReader();
-      if (!reader) throw new Error('No se pudo leer la respuesta');
+      if (!reader) throw new Error('No se pudo leer la respuesta del servidor.');
 
       const decoder = new TextDecoder();
       let fullContent = '';
@@ -123,7 +171,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        // Parse SSE-like data stream from Vercel AI SDK
+        // Parse Vercel AI SDK data stream protocol
         const lines = chunk.split('\n');
         for (const line of lines) {
           if (line.startsWith('0:')) {
@@ -138,7 +186,6 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             try {
               const toolData = JSON.parse(line.slice(2));
               if (toolData.toolName) {
-                // Update messages with tool call info
                 setMessages(prev => prev.map(m =>
                   m.id === assistantId
                     ? { ...m, toolCalls: [...(m.toolCalls || []), { name: toolData.toolName, args: toolData.args || {} }] }
@@ -164,12 +211,12 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: '⚠️ Respuesta cancelada', isStreaming: false } : m
+          m.id === assistantId ? { ...m, content: 'Respuesta cancelada.', isStreaming: false } : m
         ));
       } else {
         const msg = err instanceof Error ? err.message : 'Error desconocido';
         setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: `❌ Error: ${msg}`, isStreaming: false } : m
+          m.id === assistantId ? { ...m, content: `Error: ${msg}`, isStreaming: false } : m
         ));
       }
     } finally {
@@ -192,6 +239,8 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
 
   if (!isOpen) return null;
 
+  const isAIOK = debugInfo?.ok === true;
+
   return (
     <div className="fixed inset-0 z-[150] flex">
       {/* Backdrop */}
@@ -207,7 +256,12 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold">Agente IA</h3>
-              <p className="text-[11px] text-[var(--muted-foreground)]">Groq + Mistral — Gratis</p>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${debugLoading ? 'bg-yellow-400 animate-pulse' : isAIOK ? 'bg-emerald-400' : debugInfo ? 'bg-red-400' : 'bg-[var(--muted-foreground)]'}`} />
+                <p className="text-[11px] text-[var(--muted-foreground)]">
+                  {debugLoading ? 'Verificando...' : isAIOK ? 'Conectado' : debugInfo ? 'Sin conexión' : '18 herramientas'}
+                </p>
+              </div>
             </div>
           </div>
           <button
@@ -242,21 +296,76 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
                 <Bot className="w-7 h-7 text-[var(--af-accent)]" />
               </div>
               <h3 className="text-sm font-semibold mb-1">Agente IA de ArchiFlow</h3>
-              <p className="text-xs text-[var(--muted-foreground)] mb-4">
-                Creo tareas, registro gastos, consulto presupuestos y más. IA gratuita + Mistral.
+              <p className="text-xs text-[var(--muted-foreground)] mb-3 max-w-[280px] mx-auto">
+                Tareas, inventario, facturación, cotizaciones, reuniones y reportes. Todo desde este chat.
               </p>
-              {/* Quick prompts */}
-              <div className="flex flex-wrap gap-1.5 justify-center">
-                {QUICK_PROMPTS.slice(0, 4).map((prompt, i) => (
+
+              {/* Debug status banner */}
+              {debugLoading && (
+                <div className="flex items-center justify-center gap-2 text-xs text-yellow-400 mb-3">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Verificando conexión con IA...
+                </div>
+              )}
+
+              {!debugLoading && debugInfo && !isAIOK && (
+                <div className="mx-auto max-w-[300px] mb-3">
+                  <div className="px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 text-left leading-relaxed mb-2">
+                    <div className="flex items-center gap-1.5 mb-1 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      IA no disponible
+                    </div>
+                    <p>{debugInfo.summary}</p>
+                  </div>
+                  {debugInfo.checks && (
+                    <div className="space-y-1 text-left">
+                      {debugInfo.checks.map(c => (
+                        <div key={c.name} className="flex items-center gap-1.5 text-[10px]">
+                          {c.ok ? (
+                            <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                          )}
+                          <span className="text-[var(--muted-foreground)]">
+                            <span className="font-mono">{c.name}</span>: {c.message}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <button
-                    key={i}
-                    className="px-3 py-1.5 rounded-lg text-[11px] bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--af-accent)]/30 transition-colors cursor-pointer"
-                    onClick={() => sendMessage(prompt)}
+                    onClick={() => { hasCheckedDebug.current = false; runDebug(); }}
+                    className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--af-accent)] hover:underline cursor-pointer"
                   >
-                    {prompt}
+                    <RefreshCw className="w-3 h-3" />
+                    Reintentar verificación
                   </button>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {!debugLoading && isAIOK && (
+                <div className="mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 mb-1">
+                    <CheckCircle className="w-3 h-3" />
+                    {debugInfo.summary}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick prompts */}
+              {isAIOK && (
+                <div className="flex flex-wrap gap-1.5 justify-center">
+                  {QUICK_PROMPTS.slice(0, 4).map((prompt, i) => (
+                    <button
+                      key={i}
+                      className="px-3 py-1.5 rounded-lg text-[11px] bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--af-accent)]/30 transition-colors cursor-pointer"
+                      onClick={() => sendMessage(prompt)}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -272,8 +381,8 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
                   ? 'bg-[var(--af-accent)] text-background'
                   : 'bg-[var(--af-bg3)] border border-[var(--border)]'
               }`}>
-                {msg.role === 'assistant' && msg.content.startsWith('❌') ? (
-                  <span className="text-red-400 text-xs">{msg.content}</span>
+                {msg.role === 'assistant' && msg.content.startsWith('Error:') ? (
+                  <span className="text-red-400 text-xs leading-relaxed">{msg.content}</span>
                 ) : (
                   <span className={msg.isStreaming ? 'opacity-80' : ''}>
                     {msg.content || (
