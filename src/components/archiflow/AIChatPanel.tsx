@@ -185,9 +185,19 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     setIsLoading(true);
 
     try {
+      // Obtener token de autenticación Firebase directamente
+      const fb = (window as any).firebase;
+      if (!fb?.auth?.()) throw new Error('Firebase no disponible');
+      const currentUser = fb.auth().currentUser;
+      if (!currentUser) throw new Error('No autenticado. Inicia sesión para usar el asistente.');
+      const token = await currentUser.getIdToken();
+
       const response = await fetch('/api/ai-assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           messages: [
             ...messages
