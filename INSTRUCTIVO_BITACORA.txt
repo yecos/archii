@@ -221,6 +221,74 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 15:00 | FEATURE PACK v19 — Responsive Mobile & Desktop
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v19-responsive-mobile-desktop-20260416
+  Objetivo: Revisar y mejorar la experiencia responsive en telefonos y computadoras
+  Commit: bab0f3d
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 19.1 — Botones hover-only ahora visibles en movil (touch):
+    * Patron opacity-0 group-hover:opacity-100 reemplazado por
+      opacity-100 sm:opacity-0 sm:group-hover:opacity-100
+    * En mobile los botones siempre son visibles, en desktop se muestran al hover
+    * Archivos: TasksScreen (lista: editar/eliminar, kanban: drag handle + delete),
+      BudgetScreen (eliminar gasto), ProjectsScreen (lista: editar/eliminar)
+    * Total: 5 elementos hover-only corregidos
+
+  Tarea 19.2 — TopBar botones de accion visibles en telefonos:
+    * "Nuevo proyecto", "Nueva tarea", "Nuevo proveedor" usaban hidden sm:flex
+    * Ahora siempre visibles con icono; texto oculto en mobile (hidden sm:inline)
+    * En telefonos se ve solo el icono +, en desktop icono + texto
+    * Archivo: TopBar.tsx
+
+  Tarea 19.3 — TimeTrackingScreen tabla responsive:
+    * Tabla de registros de tiempo no tenia adaptacion para mobile
+    * Creada vista mobile: cards con descripcion, proyecto, duracion, botones
+    * Vista desktop: tabla original preservada (hidden sm:block)
+    * Archivo: TimeTrackingScreen.tsx
+
+  Tarea 19.4 — ReportsScreen grid financiero mejorado:
+    * Resumen financiero: grid-cols-2 md:grid-cols-5 muy ajustado en md (768px)
+    * Cambiado a grid-cols-2 sm:grid-cols-3 lg:grid-cols-5
+    * En mobile: 2 columnas, tablet: 3 columnas, desktop: 5 columnas
+    * Archivo: ReportsScreen.tsx
+
+  Tarea 19.5 — SettingsScreen botones de modo de visualizacion:
+    * Botones "Claro/Oscuro/Sistema" podrian overflow en 320px
+    * Agregado flex-wrap y tamaños responsivos (text-[12px] sm:text-[13px])
+    * Padding reducido en mobile (px-3 sm:px-4)
+    * Archivo: SettingsScreen.tsx
+
+  Tarea 19.6 — InvoicesScreen filas de factura responsive:
+    * Fila plana con 4+ botones de accion causaba overflow en pantallas angostas
+    * En mobile: info principal + monto en fila superior, botones debajo con separador
+    * En desktop: layout horizontal original preservado (sin borde superior)
+    * Archivo: InvoicesScreen.tsx
+
+  Tarea 19.7 — SuppliersScreen truncamiento de info de contacto:
+    * Telefono, email, direccion y website sin truncamiento
+    * Agregado className="truncate" a cada campo de contacto
+    * Archivo: SuppliersScreen.tsx
+
+  Tarea 19.8 — TasksScreen search input responsivo:
+    * w-[160px] fijo cambiado a w-[120px] sm:w-[160px]
+    * Archivo: TasksScreen.tsx
+
+  Archivos modificados (9): TopBar.tsx, TasksScreen.tsx, BudgetScreen.tsx,
+    ProjectsScreen.tsx, TimeTrackingScreen.tsx, ReportsScreen.tsx,
+    SettingsScreen.tsx, InvoicesScreen.tsx, SuppliersScreen.tsx
+  Total: +51 lineas agregadas, -24 eliminadas (9 archivos tocados)
+
+  Resumen:
+    - 1 commit: bab0f3d
+    - 9 archivos tocados
+    - 5 hover-only elements corregidos para touch devices
+    - 1 tabla convertida a vista mobile cards
+    - 3 layouts mejorados para pantallas pequenas
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+
 2026-04-16 00:00 | FEATURE PACK v16 — Potenciacion Visual
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v16-visual-20260415
