@@ -2654,3 +2654,34 @@ Si se necesita corregir algo, agregar nota aclaratoria.
   Archivos: 6 modificados (types.ts, firestore-actions.ts, CommentsContext,
     ProjectObra, TaskModal, FirestoreContext)
   Total: +211 lineas, -35 eliminadas
+
+2026-04-17 02:45 | REFACTOR — P8 whatsapp-commands.ts: 110 any → 0 (peor archivo fully typed)
+  Estado: COMPLETADO
+  Commit: 63f9e50
+  Build: exitoso (Turbopack 6.4s, TypeScript 10s, 0 errores)
+  Tag de respaldo: backup/pre-p8-whatsapp-types
+
+  Contexto: whatsapp-commands.ts era el peor archivo del proyecto con 107-110
+    instancias de any. Este refactor lo lleva a 0 any sin cambiar logica.
+
+  Tarea P8.1 — 5 nuevos tipos en types.ts:
+    * ProjectFlat: documento aplanado de proyecto (id + campos data)
+    * TaskFlat: documento aplanado de tarea
+    * ExpenseFlat: documento aplanado de gasto
+    * MemberFlat: documento aplanado de miembro/usuario
+    * WhatsAppLinkedUser: usuario vinculado a WhatsApp
+
+  Tarea P8.2 — Refactor completo de whatsapp-commands.ts:
+    * db: any → db: Firestore (14 funciones)
+    * link: any → link: WhatsAppLinkedUser (2 funciones)
+    * Todos los callback params tipados (p, t, e, m, d) — 60+ ocurrencias
+    * catch (err: any) → catch (err: unknown) con narrowing (11 bloques)
+    * Casts inseguros reemplazados con nullish coalescing
+    * Resultados .map() anotados con as ProjectFlat[] etc.
+    * Archivo: whatsapp-commands.ts (193+/-133 lineas)
+
+  Tarea P8.3 — Caller update:
+    * webhook/route.ts: WhatsAppLinkedUser type assertion en linkData
+
+  Archivos: 3 modificados (types.ts, whatsapp-commands.ts, webhook/route.ts)
+  Total: +193 lineas, -133 eliminadas, 110 any eliminados
