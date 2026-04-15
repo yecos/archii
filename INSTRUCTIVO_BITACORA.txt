@@ -221,6 +221,34 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 22:45 | REFACTOR — Tipos Firestore sincronizados + Code Splitting verificado
+  Estado: COMPLETADO
+  Commit: c0931da
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Tarea 24.1 — Sincronizar interfaces Firestore en types.ts:
+    * Project: agregado updatedBy
+    * Task: agregados assigneeIds[], progress, order, phase, updatedAt, updatedBy
+    * Expense: agregado supplier, updatedAt
+    * Company: agregado updatedAt, updatedBy
+    * WorkPhase: agregado projectId, updatedAt
+    * ProjectFile: data y url ahora ambos opcionales (compat con ambos write paths)
+    * InvProduct: agregado updatedBy
+    * InvCategory: agregado updatedAt
+    * Archivo: src/lib/types.ts (17 lineas agregadas, 1 eliminada)
+
+  Tarea 24.2 — Code Splitting verificado (ya completado en v18):
+    * No se usa framer-motion (removido en v18 Zero-Debt Foundation)
+    * 60+ imports con dynamic() + ssr: false ya implementados
+    * jspdf, xlsx, recharts se cargan via dynamic imports
+    * Animaciones: tailwindcss-animate + tw-animate-css
+    * Bundle .next/: 18MB con chunks lazy-loaded
+    * Sin cambios necesarios — tarea marcada como verificada
+
+  Nota: El tipo mas grande es `data?: string` en ProjectFile. El contexto
+    activo escribe `data` (base64) pero el tipo legacy tiene `url`. Ambos
+    son opcionales para no romper ningun camino de lectura.
+
 2026-04-17 22:15 | FEATURE PACK v23 — AI Agent Fase 2 (Mistral + Tools Nivel 2)
   Estado: COMPLETADO
   Commit: c40dc97
