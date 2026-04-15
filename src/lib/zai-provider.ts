@@ -2,15 +2,14 @@
  * zai-provider.ts
  * Integración de z-ai-web-dev-sdk como proveedor de IA para ArchiFlow.
  *
- * z-ai-web-dev-sdk expone una API compatible con OpenAI en:
- *   baseURL = http://172.25.136.193:8080/v1
- *   apiKey  = "Z.ai"
+ * IMPORTANTE: z-ai-web-dev-sdk usa una URL interna que SOLO funciona dentro
+ * del entorno de Z.ai. NO es accesible desde Vercel ni otros servidores externos.
  *
- * Se usa createOpenAICompatible del Vercel AI SDK para que funcione
- * transparentemente con streamText(), tools, y todo el ecosistema AI SDK.
+ * Para activar ZAI en producción, debes configurar ZAI_BASE_URL con una URL
+ * accesible públicamente. Sin esa variable, ZAI se desactiva automáticamente.
  *
- * Variables de entorno (opcionales):
- *   ZAI_BASE_URL — URL base (por defecto la del SDK)
+ * Variables de entorno:
+ *   ZAI_BASE_URL — URL base pública (obligatoria para usar ZAI fuera de Z.ai)
  *   ZAI_MODEL    — Modelo a usar (por defecto "default")
  */
 
@@ -20,28 +19,26 @@ let zaiClient: ReturnType<typeof createOpenAICompatible> | null = null;
 
 /**
  * Crea (o reutiliza) el cliente ZAI compatible con Vercel AI SDK.
- * Devuelve null si falla la inicialización (sin romper la app).
+ * Devuelve null si no hay ZAI_BASE_URL configurada (no usable desde Vercel).
  */
 export function getZAIProvider() {
+  // Solo activar ZAI si se configuró explícitamente una URL externa.
+  // La IP interna 172.25.x.x solo funciona dentro del entorno Z.ai.
+  const baseURL = process.env.ZAI_BASE_URL;
+  if (!baseURL) {
+    return null;
+  }
+
   if (zaiClient) return zaiClient;
 
   try {
-    // Importar z-ai-web-dev-sdk dinámicamente para no fallar si no está disponible
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const ZAI = require('z-ai-web-dev-sdk').default;
-
-    // create() es async, pero necesitamos config síncrono para el provider.
-    // El SDK expone la config directamente. Como create() inicializa internamente,
-    // usamos los valores conocidos del entorno interno.
-    const baseURL = process.env.ZAI_BASE_URL || 'http://172.25.136.193:8080/v1';
-    const model = process.env.ZAI_MODEL || 'default';
-
     zaiClient = createOpenAICompatible({
       name: 'zai',
       apiKey: 'Z.ai',
       baseURL,
     });
 
+    const model = process.env.ZAI_MODEL || 'default';
     console.log(`[ZAI] Provider inicializado (baseURL=${baseURL}, model=${model})`);
     return zaiClient;
   } catch (err: unknown) {
