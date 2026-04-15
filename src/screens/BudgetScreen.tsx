@@ -8,6 +8,7 @@ import { DollarSign, Download, Plus, TrendingDown, Receipt, AlertTriangle, Uploa
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
+import type { Expense, Project } from '@/lib/types';
 
 const CAT_COLORS: Record<string, string> = {
   'Materiales': 'var(--af-accent)',
@@ -20,7 +21,7 @@ const CAT_COLORS: Record<string, string> = {
   'Servicios': '#ec4899',
 };
 
-function PieTooltip({ active, payload }: any) {
+function PieTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="card-elevated rounded-lg px-3 py-2 text-[12px]">
@@ -44,11 +45,11 @@ export default function BudgetScreen() {
     });
   }, []);
 
-  const totalExpenses = useMemo(() => fs.expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [fs.expenses]);
+  const totalExpenses = useMemo(() => fs.expenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [fs.expenses]);
 
   const byCategory = useMemo(() => {
     const cats: Record<string, number> = {};
-    fs.expenses.forEach((e: any) => {
+    fs.expenses.forEach((e: Expense) => {
       const cat = e.data.category || 'Otros';
       cats[cat] = (cats[cat] || 0) + (Number(e.data.amount) || 0);
     });
@@ -58,8 +59,8 @@ export default function BudgetScreen() {
   }, [fs.expenses]);
 
   const byProject = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    fs.expenses.forEach((e: any) => {
+    const map: Record<string, Expense[]> = {};
+    fs.expenses.forEach((e: Expense) => {
       const k = e.data.projectId || '_none';
       if (!map[k]) map[k] = [];
       map[k].push(e);
@@ -74,9 +75,9 @@ export default function BudgetScreen() {
     const q = '"';
     const dq = '""';
     const headers = ['Concepto', 'Proyecto', 'Categoría', 'Monto', 'Fecha'];
-    const esc = (v: string) => q + String(v).split(q).join(dq) + q;
-    const rows = fs.expenses.map((e: any) => [e.data.concept, fs.projects.find((p: any) => p.id === e.data.projectId)?.data?.name || '—', e.data.category, e.data.amount, e.data.date]);
-    const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
+    const esc = (v: string | number) => q + String(v).split(q).join(dq) + q;
+    const rows = fs.expenses.map((e: Expense) => [e.data.concept, fs.projects.find((p: Project) => p.id === e.data.projectId)?.data?.name || '—', e.data.category, e.data.amount, e.data.date]);
+    const csv = [headers, ...rows].map((r: (string | number)[]) => r.map(esc).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'presupuesto_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
@@ -109,7 +110,7 @@ export default function BudgetScreen() {
           </button>
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] hover:bg-[var(--af-accent2)] transition-all"
-            onClick={() => { ui.setForms((p: any) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); ui.openModal('expense'); }}
+            onClick={() => { ui.setForms((p) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); ui.openModal('expense'); }}
           >
             <Plus size={15} /> Registrar gasto
           </button>
@@ -119,7 +120,7 @@ export default function BudgetScreen() {
       {/* Large Expense Approval Suggestion */}
       {(() => {
         const HIGH_EXPENSE_THRESHOLD = 5000000; // $5M COP
-        const recentLargeExpenses = fs.expenses.filter((e: any) => Number(e.data.amount) >= HIGH_EXPENSE_THRESHOLD).slice(0, 3);
+        const recentLargeExpenses = fs.expenses.filter((e: Expense) => Number(e.data.amount) >= HIGH_EXPENSE_THRESHOLD).slice(0, 3);
         if (recentLargeExpenses.length === 0) return null;
         return (
           <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
@@ -130,7 +131,7 @@ export default function BudgetScreen() {
             <div className="text-xs text-[var(--muted-foreground)] mb-3">Los siguientes gastos superan los {fmtCOP(HIGH_EXPENSE_THRESHOLD)}. Considere solicitar aprobación para gastos grandes.</div>
             <div className="space-y-2">
               {recentLargeExpenses.map(e => {
-                const proj = fs.projects.find((p: any) => p.id === e.data.projectId);
+                const proj = fs.projects.find((p: Project) => p.id === e.data.projectId);
                 return (
                   <div key={e.id} className="flex items-center gap-3 p-2.5 card-elevated rounded-lg transition-colors duration-150 hover:bg-[var(--skeuo-pressed)]">
                     <div className="flex-1 min-w-0">
@@ -141,7 +142,7 @@ export default function BudgetScreen() {
                     <button
                       className="text-[10px] px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 cursor-pointer hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap"
                       onClick={() => {
-                        ui.setForms((p: any) => ({
+                        ui.setForms((p) => ({
                           ...p,
                           appType: 'expense_approval',
                           appTitle: `Aprobar gasto: ${e.data.concept}`,
@@ -199,13 +200,13 @@ export default function BudgetScreen() {
               <ResponsiveContainer width="100%" className="xl:h-[200px]" height={160}>
                 <PieChart>
                   <Pie data={byCategory} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
-                    {byCategory.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                    {byCategory.map((entry: { name: string; value: number; color: string }, i: number) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
-                {byCategory.map((d: any, i: number) => (
+                {byCategory.map((d: { name: string; value: number; color: string }, i: number) => (
                   <div key={i} className="flex items-center gap-1 text-[10px]">
                     <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
                     <span className="text-[var(--muted-foreground)]">{d.name}</span>
@@ -224,7 +225,7 @@ export default function BudgetScreen() {
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin gastos</div>
           ) : (
             <div className="space-y-3">
-              {byCategory.map((cat: any, i: number) => {
+              {byCategory.map((cat: { name: string; value: number; color: string }, i: number) => {
                 const pct = totalExpenses > 0 ? (cat.value / totalExpenses) * 100 : 0;
                 return (
                   <div key={i}>
@@ -232,7 +233,7 @@ export default function BudgetScreen() {
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: cat.color }} />
                         <span className="text-[13px] font-medium">{cat.name}</span>
-                        <span className="text-[10px] text-[var(--af-text3)]">{fs.expenses.filter((e: any) => (e.data.category || 'Otros') === cat.name).length} registros</span>
+                        <span className="text-[10px] text-[var(--af-text3)]">{fs.expenses.filter((e: Expense) => (e.data.category || 'Otros') === cat.name).length} registros</span>
                       </div>
                       <span className="text-[13px] font-semibold">{fmtCOP(cat.value)}</span>
                     </div>
@@ -250,9 +251,9 @@ export default function BudgetScreen() {
       {/* Expenses by Project */}
       {Object.keys(byProject).length > 0 && (
         <div className="space-y-3">
-          {Object.entries(byProject).map(([pid, exps]: [string, any]) => {
-            const proj = fs.projects.find((p: any) => p.id === pid);
-            const total = exps.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+          {Object.entries(byProject).map(([pid, exps]: [string, Expense[]]) => {
+            const proj = fs.projects.find((p: Project) => p.id === pid);
+            const total = exps.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
             const budget = Number(proj?.data?.budget) || 0;
             const pct = budget > 0 ? (total / budget) * 100 : -1;
             return (
@@ -276,7 +277,7 @@ export default function BudgetScreen() {
                     <BudgetProgressBar spent={total} budget={budget} showThresholds showLabel={!exps.length} />
                   </div>
                 )}
-                {exps.slice(0, expandedProjects.has(pid) ? undefined : 5).map((e: any) => (
+                {exps.slice(0, expandedProjects.has(pid) ? undefined : 5).map((e: Expense) => (
                   <div key={e.id} className="card-glass-subtle rounded-lg p-3 mb-2 flex items-center gap-3 group transition-colors duration-150">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0`} style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />
                     <div className="flex-1 min-w-0">

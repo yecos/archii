@@ -12,6 +12,7 @@ import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 import EmptyState from '@/components/ui/EmptyState';
 import TimeProgressBar from '@/components/ui/TimeProgressBar';
+import type { Task, Project, Subtask } from '@/lib/types';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -20,10 +21,10 @@ const KANBAN_COLS = [
   { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 ];
 
-function getSubtaskInfo(t: any): { total: number; completed: number } | null {
+function getSubtaskInfo(t: Task): { total: number; completed: number } | null {
   const subs = t.data?.subtasks;
   if (!Array.isArray(subs) || subs.length === 0) return null;
-  return { total: subs.length, completed: subs.filter((s: any) => s.completed).length };
+  return { total: subs.length, completed: subs.filter((s: Subtask) => s.completed).length };
 }
 
 function TaskCount({ count }: { count: number }) {
@@ -46,13 +47,13 @@ function SubtaskBadge({ info }: { info: { total: number; completed: number } }) 
   );
 }
 
-function getAssigneeIds(t: any): string[] {
+function getAssigneeIds(t: Task): string[] {
   if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
   if (t.data.assigneeId) return [t.data.assigneeId];
   return [];
 }
 
-function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
+function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: Task; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
   const ids = getAssigneeIds(task);
   if (ids.length === 0) {
     return (
@@ -155,20 +156,20 @@ export default function TasksScreen() {
 
   // Multi-filter
   const filteredTasks = useMemo(() => {
-    let result = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
+    let result = taskFilterProject ? tasks.filter((t: Task) => t.data.projectId === taskFilterProject) : tasks;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((t: any) => t.data.title.toLowerCase().includes(q));
+      result = result.filter((t: Task) => t.data.title.toLowerCase().includes(q));
     }
-    if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
-    if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
+    if (filterPriority) result = result.filter((t: Task) => t.data.priority === filterPriority);
+    if (filterAssignee) result = result.filter((t: Task) => getAssigneeIds(t).includes(filterAssignee));
     return result;
   }, [tasks, taskFilterProject, searchQuery, filterPriority, filterAssignee]);
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       getAssigneeIds(t).forEach((uid: string) => {
         if (uid) {
           const name = getUserName(uid);
@@ -182,9 +183,9 @@ export default function TasksScreen() {
   // Stats
   const taskStats = useMemo(() => ({
     total: filteredTasks.length,
-    completed: filteredTasks.filter((t: any) => t.data.status === 'Completado').length,
-    inProgress: filteredTasks.filter((t: any) => t.data.status === 'En progreso').length,
-    overdue: filteredTasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length,
+    completed: filteredTasks.filter((t: Task) => t.data.status === 'Completado').length,
+    inProgress: filteredTasks.filter((t: Task) => t.data.status === 'En progreso').length,
+    overdue: filteredTasks.filter((t: Task) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length,
   }), [filteredTasks]);
 
   const viewMode = forms.taskView || 'list';
@@ -202,13 +203,13 @@ export default function TasksScreen() {
     if (selectedIds.size === filteredTasks.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredTasks.map((t: any) => t.id)));
+      setSelectedIds(new Set(filteredTasks.map((t: Task) => t.id)));
     }
   }, [filteredTasks, selectedIds.size]);
 
   const batchComplete = useCallback(() => {
     selectedIds.forEach(id => {
-      const t = tasks.find((x: any) => x.id === id);
+      const t = tasks.find((x: Task) => x.id === id);
       if (t && t.data.status !== 'Completado') toggleTask(id, t.data.status);
     });
     showToast(`${selectedIds.size} tareas completadas`);
@@ -218,7 +219,7 @@ export default function TasksScreen() {
 
   const batchReset = useCallback(() => {
     selectedIds.forEach(id => {
-      const t = tasks.find((x: any) => x.id === id);
+      const t = tasks.find((x: Task) => x.id === id);
       if (t && t.data.status === 'Completado') toggleTask(id, t.data.status);
     });
     showToast(`${selectedIds.size} tareas reiniciadas`);
@@ -243,13 +244,13 @@ export default function TasksScreen() {
           <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms((p: any) => ({ ...p, taskView: 'list' }))}
+              onClick={() => setForms((p) => ({ ...p, taskView: 'list' }))}
             >
               <LayoutList size={14} /> Lista
             </button>
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'kanban' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms((p: any) => ({ ...p, taskView: 'kanban' }))}
+              onClick={() => setForms((p) => ({ ...p, taskView: 'kanban' }))}
             >
               <KanbanSquare size={14} /> Kanban
             </button>
@@ -259,10 +260,10 @@ export default function TasksScreen() {
           <select
             className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
             value={taskFilterProject}
-            onChange={e => setForms((p: any) => ({ ...p, taskFilterProject: e.target.value }))}
+            onChange={e => setForms((p) => ({ ...p, taskFilterProject: e.target.value }))}
           >
             <option value="">Todos los proyectos</option>
-            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            {projects.map((p: Project) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
           </select>
 
           {/* Search */}
@@ -327,7 +328,7 @@ export default function TasksScreen() {
           {/* New task */}
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-            onClick={() => { setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}
+            onClick={() => { setForms((p) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}
           >
             <Plus size={15} /> Nueva tarea
           </button>
@@ -427,7 +428,7 @@ export default function TasksScreen() {
         ) : (
           <StaggerContainer className="stagger-children">
           {['Alta', 'Media', 'Baja'].map(prio => {
-            const group = filteredTasks.filter((t: any) => t.data.priority === prio);
+            const group = filteredTasks.filter((t: Task) => t.data.priority === prio);
             if (!group.length) return null;
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
@@ -438,8 +439,8 @@ export default function TasksScreen() {
                   Prioridad {prio}
                   <span className="text-[var(--af-text3)] ml-1">({group.length})</span>
                 </div>
-                {group.map((t: any) => {
-                  const proj = projects.find((p: any) => p.id === t.data.projectId);
+                {group.map((t: Task) => {
+                  const proj = projects.find((p: Project) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                   return (
                     <div key={t.id} className={`card-glass-subtle rounded-lg p-3 mb-2 flex items-start gap-3 group transition-colors duration-150 hover:bg-[var(--af-bg3)] ${batchMode && selectedIds.has(t.id) ? 'bg-[var(--af-accent)]/5' : ''}`}>
@@ -529,7 +530,7 @@ export default function TasksScreen() {
               </button>
               <div className="flex gap-1 flex-1 overflow-x-auto scrollbar-none">
                 {KANBAN_COLS.map(col => {
-                  const count = filteredTasks.filter((t: any) => t.data.status === col.status).length;
+                  const count = filteredTasks.filter((t: Task) => t.data.status === col.status).length;
                   return (
                     <button
                       key={col.status}
@@ -563,7 +564,7 @@ export default function TasksScreen() {
             {(() => {
               const col = KANBAN_COLS.find(c => c.status === selectedKanbanColumn);
               if (!col) return null;
-              const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
+              const colTasks = filteredTasks.filter((t: Task) => t.data.status === col.status);
               return (
                 <div className="min-h-[60vh]">
                   {colTasks.length > 0 && (
@@ -577,8 +578,8 @@ export default function TasksScreen() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {colTasks.map((t: any) => {
-                        const proj = projects.find((p: any) => p.id === t.data.projectId);
+                      {colTasks.map((t: Task) => {
+                        const proj = projects.find((p: Project) => p.id === t.data.projectId);
                         const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                         return (
                           <div
@@ -624,7 +625,7 @@ export default function TasksScreen() {
           {/* Desktop Kanban: horizontal scroll */}
           <div className="hidden md:flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
             {KANBAN_COLS.map(col => {
-              const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
+              const colTasks = filteredTasks.filter((t: Task) => t.data.status === col.status);
               const isDragOver = dragOverCol === col.status;
               return (
                 <div
@@ -671,8 +672,8 @@ export default function TasksScreen() {
                         Soltar aqui
                       </div>
                     )}
-                    {colTasks.map((t: any) => {
-                      const proj = projects.find((p: any) => p.id === t.data.projectId);
+                    {colTasks.map((t: Task) => {
+                      const proj = projects.find((p: Project) => p.id === t.data.projectId);
                       const isDragging = dragTaskId === t.id;
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
                       return (

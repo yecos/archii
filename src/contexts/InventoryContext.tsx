@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot, type Transaction } from '@/lib/firebase-service';
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
@@ -50,7 +50,7 @@ interface InventoryContextType {
   getInvProductName: (prodId: string) => string;
 
   // Image handler
-  handleInvProductImageSelect: (e: any) => Promise<void>;
+  handleInvProductImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 
   // Computed values
   invTotalValue: number;
@@ -124,17 +124,17 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
   // ===== HELPER FUNCTIONS =====
 
-  const getWarehouseStock = (product: any, warehouse: string) => {
+  const getWarehouseStock = (product: InvProduct, warehouse: string) => {
     if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') return Number(product.data.warehouseStock[warehouse]) || 0;
     return product.data.warehouse === warehouse ? (Number(product.data.stock) || 0) : 0;
   };
 
-  const getTotalStock = (product: any) => {
-    if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') return Object.values(product.data.warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+  const getTotalStock = (product: InvProduct) => {
+    if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') return Object.values(product.data.warehouseStock).reduce((s: number, v: number) => s + (Number(v) || 0), 0);
     return Number(product.data.stock) || 0;
   };
 
-  const buildWarehouseStock = (product: any) => {
+  const buildWarehouseStock = (product: InvProduct) => {
     if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') {
       const ws = { ...product.data.warehouseStock };
       INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
@@ -145,7 +145,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     return ws;
   };
 
-  const fileToBase64 = (file: any): Promise<string> => {
+  const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -165,12 +165,12 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       const ts = serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
-      const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+      const totalStock = Object.values(warehouseStock).reduce((s: number, v: number) => s + (Number(v) || 0), 0);
       const data = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser?.uid };
       if (editingId) { await db.collection('invProducts').doc(editingId).update(data); showToast('Producto actualizado'); }
       else { await db.collection('invProducts').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
       closeModal('invProduct'); setEditingId(null);
-      const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
+      const resetForms: Record<string, string> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
       setForms(p => ({ ...p, ...resetForms }));
     } catch (err) { console.error('[ArchiFlow] Inventory: save product failed:', err); showToast('Error al guardar', 'error'); }
@@ -178,10 +178,10 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
   const deleteInvProduct = async (id: string) => { if (!(await confirm({ title: 'Eliminar producto', description: '¿Eliminar este producto del inventario?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
-  const openEditInvProduct = (p: any) => {
+  const openEditInvProduct = (p: InvProduct) => {
     setEditingId(p.id);
     const ws = buildWarehouseStock(p);
-    const f: Record<string, any> = { invProdName: p.data.name, invProdSku: p.data.sku || '', invProdCat: p.data.categoryId || '', invProdUnit: p.data.unit || 'Unidad', invProdPrice: String(p.data.price || ''), invProdMinStock: String(p.data.minStock || '5'), invProdDesc: p.data.description || '', invProdImage: p.data.imageData || '', invProdWarehouse: p.data.warehouse || 'Almacén Principal' };
+    const f: Record<string, string> = { invProdName: p.data.name, invProdSku: p.data.sku || '', invProdCat: p.data.categoryId || '', invProdUnit: p.data.unit || 'Unidad', invProdPrice: String(p.data.price || ''), invProdMinStock: String(p.data.minStock || '5'), invProdDesc: p.data.description || '', invProdImage: p.data.imageData || '', invProdWarehouse: p.data.warehouse || 'Almacén Principal' };
     INV_WAREHOUSES.forEach(w => { f[`invProdWS_${w.replace(/\s/g, '_')}`] = String(ws[w] || 0); });
     setForms(prev => ({ ...prev, ...f }));
     openModal('invProduct');
@@ -208,7 +208,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
   };
 
   const deleteInvCategory = async (id: string) => { if (!(await confirm({ title: 'Eliminar categoría', description: '¿Eliminar categoría?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-  const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
+  const openEditInvCategory = (c: InvCategory) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   // --- Movements (with runTransaction for atomicity) ---
   const saveInvMovement = async () => {
@@ -223,7 +223,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       const movementData = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
 
       // Atomic transaction: create movement + update product stock
-      await db.runTransaction(async (transaction: any) => {
+      await db.runTransaction(async (transaction: Transaction) => {
         const productRef = db.collection('invProducts').doc(productId);
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists) throw new Error('Producto no encontrado');
@@ -231,16 +231,16 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         const ws = productData.warehouseStock && typeof productData.warehouseStock === 'object' ? { ...productData.warehouseStock } : {};
         INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
         ws[warehouse] = type === 'Entrada' ? (ws[warehouse] || 0) + qty : Math.max(0, (ws[warehouse] || 0) - qty);
-        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+        const newTotal = Object.values(ws).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0);
         transaction.set(db.collection('invMovements').doc(), { ...movementData, createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
         transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() });
       });
 
       showToast(`${type === 'Entrada' ? 'Entrada' : 'Salida'} registrada en ${warehouse}: ${qty} uds`);
       closeModal('invMovement'); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ArchiFlow] Error en movimiento:', err);
-      showToast(err?.message || 'Error al registrar movimiento', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al registrar movimiento', 'error');
     }
   };
 
@@ -248,7 +248,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!(await confirm({ title: 'Eliminar movimiento', description: '¿Eliminar movimiento? El stock se revertirá automáticamente.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     try {
       const db = getFirebase().firestore();
-      await db.runTransaction(async (transaction: any) => {
+      await db.runTransaction(async (transaction: Transaction) => {
         const movRef = db.collection('invMovements').doc(id);
         const movDoc = await transaction.get(movRef);
         if (!movDoc.exists) throw new Error('Movimiento no encontrado');
@@ -270,7 +270,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         } else {
           ws[warehouse] = (ws[warehouse] || 0) + qty;
         }
-        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+        const newTotal = Object.values(ws).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0);
         const fbTs = getFirebase().firestore.FieldValue.serverTimestamp();
         transaction.delete(movRef);
         transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: fbTs });
@@ -295,7 +295,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       const transferNotes = forms.invTrNotes || '';
 
       // Atomic transaction: update stock + create transfer record
-      await db.runTransaction(async (transaction: any) => {
+      await db.runTransaction(async (transaction: Transaction) => {
         const productRef = db.collection('invProducts').doc(productId);
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists) throw new Error('Producto no encontrado');
@@ -306,7 +306,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         if (qty > fromStock) throw new Error(`Stock insuficiente en ${from}. Disponible: ${fromStock}`);
         ws[from] = Math.max(0, fromStock - qty);
         ws[to] = (ws[to] || 0) + qty;
-        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+        const newTotal = Object.values(ws).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0);
         const fbTs = getFirebase().firestore.FieldValue.serverTimestamp();
         transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: fbTs });
         transaction.set(db.collection('invTransfers').doc(), {
@@ -318,9 +318,9 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
       showToast(`Transferencia completada: ${qty} uds de ${from} → ${to}`);
       closeModal('invTransfer'); setForms(p => ({ ...p, invTrProduct: '', invTrFrom: '', invTrTo: '', invTrQty: '', invTrDate: '', invTrNotes: '' }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ArchiFlow] Error en transferencia:', err);
-      showToast(err?.message || 'Error en transferencia', 'error');
+      showToast(err instanceof Error ? err.message : 'Error en transferencia', 'error');
     }
   };
 
@@ -328,7 +328,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     if (!(await confirm({ title: 'Eliminar transferencia', description: '¿Eliminar transferencia? El stock se revertirá automáticamente.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     try {
       const db = getFirebase().firestore();
-      await db.runTransaction(async (transaction: any) => {
+      await db.runTransaction(async (transaction: Transaction) => {
         const trRef = db.collection('invTransfers').doc(id);
         const trDoc = await transaction.get(trRef);
         if (!trDoc.exists) throw new Error('Transferencia no encontrada');
@@ -350,7 +350,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
           // Reverse: add back to source, subtract from destination
           ws[fromWarehouse] = (ws[fromWarehouse] || 0) + qty;
           ws[toWarehouse] = Math.max(0, (ws[toWarehouse] || 0) - qty);
-          const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+          const newTotal = Object.values(ws).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0);
           const fbTs = getFirebase().firestore.FieldValue.serverTimestamp();
           transaction.delete(trRef);
           transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: fbTs });
@@ -373,7 +373,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
   // ===== IMAGE HANDLER =====
 
-  const handleInvProductImageSelect = async (e: any) => {
+  const handleInvProductImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { showToast('Solo imágenes', 'error'); return; }

@@ -18,6 +18,7 @@ const DashboardCharts = dynamic(() => import('@/components/features/DashboardCha
 });
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
+import type { Task, Expense, Invoice, TeamUser, DailyLog, Project, FirestoreTimestamp, NotifEntry } from '@/lib/types';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, TrendingUp, AlertCircle, ChevronRight, Sparkles, ShieldCheck, Bell, MoreHorizontal } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
@@ -53,16 +54,16 @@ export default function DashboardScreen() {
   }, [toolbarMenuOpen]);
 
   // Computed data
-  const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
-  const totalInvoiced = useMemo(() => invoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [invoices]);
-  const totalPaid = useMemo(() => invoices.filter((i: any) => i.data.status === 'Pagada').reduce((s: number, i: any) => s + (Number(i.data.total) || 0), 0), [invoices]);
-  const overdueTasks = useMemo(() => tasks.filter((t: any) => {
+  const totalExpenses = useMemo(() => expenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [expenses]);
+  const totalInvoiced = useMemo(() => invoices.reduce((s: number, inv: Invoice) => s + (Number(inv.data.total) || 0), 0), [invoices]);
+  const totalPaid = useMemo(() => invoices.filter((i: Invoice) => i.data.status === 'Pagada').reduce((s: number, i: Invoice) => s + (Number(i.data.total) || 0), 0), [invoices]);
+  const overdueTasks = useMemo(() => tasks.filter((t: Task) => {
     if (t.data.status === 'Completado' || !t.data.dueDate) return false;
     return new Date(t.data.dueDate) < new Date();
   }), [tasks]);
 
   // Budget alerts
-  const budgetAlerts = useMemo(() => getActiveAlerts(projects as any, expenses as any), [projects, expenses]);
+  const budgetAlerts = useMemo(() => getActiveAlerts(projects, expenses), [projects, expenses]);
 
   // Burndown chart data
   const burndownData = useMemo(() => {
@@ -80,18 +81,18 @@ export default function DashboardScreen() {
         const dj = new Date(today);
         dj.setDate(today.getDate() + mondayOffset + j);
         const djStr = dj.toISOString().split('T')[0];
-        doneSoFar += tasks.filter((t: any) => {
+        doneSoFar += tasks.filter((t: Task) => {
           if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
-          try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === djStr : false; } catch (err) { console.error('[ArchiFlow] Dashboard: task date parsing failed:', err); return false; }
+          try { return toSafeDate(t.data.updatedAt).toISOString().split('T')[0] === djStr; } catch (err) { console.error('[ArchiFlow] Dashboard: task date parsing failed:', err); return false; }
         }).length;
       }
       const done = i === 0 ? doneSoFar : doneSoFar - days.slice(0, i).reduce((acc, _, k) => {
         const dk = new Date(today);
         dk.setDate(today.getDate() + mondayOffset + k);
         const dkStr = dk.toISOString().split('T')[0];
-        return acc + tasks.filter((t: any) => {
+        return acc + tasks.filter((t: Task) => {
           if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
-          try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === dkStr : false; } catch (err) { console.error('[ArchiFlow] Dashboard: task date parsing failed:', err); return false; }
+          try { return toSafeDate(t.data.updatedAt).toISOString().split('T')[0] === dkStr; } catch (err) { console.error('[ArchiFlow] Dashboard: task date parsing failed:', err); return false; }
         }).length;
       }, 0);
       return { name: label, pendientes: Math.max(total - doneSoFar, 0), completadas: done };
@@ -101,14 +102,14 @@ export default function DashboardScreen() {
   // Task status distribution
   const taskStatusData = useMemo(() => {
     const statuses: Record<string, number> = {};
-    tasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
+    tasks.forEach((t: Task) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
     return Object.entries(statuses).map(([name, value]) => ({ name, value }));
   }, [tasks]);
 
   // Expenses by category
   const expenseByCategory = useMemo(() => {
     const cats: Record<string, number> = {};
-    expenses.forEach((e: any) => { cats[e.data.category] = (cats[e.data.category] || 0) + (Number(e.data.amount) || 0); });
+    expenses.forEach((e: Expense) => { cats[e.data.category] = (cats[e.data.category] || 0) + (Number(e.data.amount) || 0); });
     return Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value })).slice(0, 5);
   }, [expenses]);
 
@@ -120,11 +121,11 @@ export default function DashboardScreen() {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const monthInvoiced = invoices.filter((inv: any) => {
+      const monthInvoiced = invoices.filter((inv: Invoice) => {
         if (!inv.data.issueDate || inv.data.status === 'Cancelada') return false;
         return inv.data.issueDate.startsWith(key);
       }).reduce((s, inv) => s + (inv.data.total || 0), 0);
-      const monthPaid = invoices.filter((inv: any) => {
+      const monthPaid = invoices.filter((inv: Invoice) => {
         if (!inv.data.paidDate) return false;
         return inv.data.paidDate.startsWith(key);
       }).reduce((s, inv) => s + (inv.data.total || 0), 0);
@@ -137,10 +138,10 @@ export default function DashboardScreen() {
   const teamWorkload = useMemo(() => {
     const byUser: Record<string, { total: number; active: number; done: number }> = {};
     teamUsers.forEach(u => { byUser[u.id] = { total: 0, active: 0, done: 0 }; });
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       if (t.data.assigneeId && byUser[t.data.assigneeId]) {
         byUser[t.data.assigneeId].total++;
-        if (t.data.status === 'En progreso' || t.data.status === 'Revision') byUser[t.data.assigneeId].active++;
+        if (t.data.status === 'En progreso' || String(t.data.status) === 'Revision') byUser[t.data.assigneeId].active++;
         if (t.data.status === 'Completado') byUser[t.data.assigneeId].done++;
       }
     });
@@ -149,7 +150,7 @@ export default function DashboardScreen() {
       .sort((a, b) => b[1].active - a[1].active)
       .slice(0, 6)
       .map(([uid, data]) => {
-        const user = teamUsers.find((u: any) => u.id === uid);
+        const user = teamUsers.find((u: TeamUser) => u.id === uid);
         return {
           name: (user?.data.name || 'Sin nombre').split(' ')[0],
           activas: data.active,
@@ -161,14 +162,14 @@ export default function DashboardScreen() {
 
   // Recent activity
   const recentActivity = useMemo(() => {
-    const items: { id: string; type: string; title: string; subtitle: string; time: any; icon: string; color: string }[] = [];
-    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 5).forEach((t: any) => {
-      items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Tarea completada · ${projects.find((p: any) => p.id === t.data.projectId)?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
+    const items: { id: string; type: string; title: string; subtitle: string; time: FirestoreTimestamp | null | undefined; icon: string; color: string }[] = [];
+    tasks.filter((t: Task) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 5).forEach((t: Task) => {
+      items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Tarea completada · ${projects.find((p: Project) => p.id === t.data.projectId)?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
     });
-    expenses.slice(0, 5).forEach((e: any) => {
+    expenses.slice(0, 5).forEach((e: Expense) => {
       items.push({ id: e.id, type: 'expense', title: e.data.concept, subtitle: `${fmtCOP(Number(e.data.amount))} · ${e.data.category}`, time: e.data.createdAt, icon: '$', color: 'bg-[var(--af-accent)]' });
     });
-    dailyLogs.slice(0, 3).forEach((l: any) => {
+    dailyLogs.slice(0, 3).forEach((l: DailyLog) => {
       items.push({ id: l.id, type: 'log', title: `Bitácora ${l.data.date}`, subtitle: `${(l.data.activities || []).length} actividades`, time: l.data.createdAt, icon: '📝', color: 'bg-blue-500' });
     });
     items.sort((a, b) => {
@@ -292,7 +293,7 @@ export default function DashboardScreen() {
       <div className="aurora-bg card-glass rounded-2xl p-5">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 stagger-children">
         {[
-          { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
+          { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: Project) => String(p.data.status) === 'Ejecucion').length} en ejecución` },
           { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
           { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
           { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
@@ -322,7 +323,7 @@ export default function DashboardScreen() {
           </div>
           {projects.length === 0 ? (
             <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
-          ) : projects.slice(0, 4).map((p: any) => {
+          ) : projects.slice(0, 4).map((p: Project) => {
             const prog = p.data.progress || 0;
             return (
               <div key={p.id} className="p-3 skeuo-well mb-2 cursor-pointer hover:bg-[var(--skeuo-pressed)] transition-all duration-150" onClick={() => openProject(p.id)}>
@@ -405,7 +406,7 @@ export default function DashboardScreen() {
           </div>
           <div className="flex flex-col gap-2 max-h-[130px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
             {notifHistory.length === 0 ? <div className="text-center py-4 text-[var(--af-text3)] text-[12px]">Sin notificaciones</div> :
-            notifHistory.slice(0, 5).map((n: any) => (
+            notifHistory.slice(0, 5).map((n: NotifEntry) => (
               <div key={n.id} className={`flex items-start gap-2 p-2 rounded-lg ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}>
                 <span className="mt-0.5 flex-shrink-0">{n.icon || <Bell size={14} />}</span>
                 <div className="flex-1 min-w-0">
