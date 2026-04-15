@@ -504,6 +504,108 @@ export interface Quotation {
   };
 }
 
+// Purchase Order
+export type PurchaseOrderStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Parcial' | 'Recibida' | 'Cancelada';
+
+export interface PurchaseOrderItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  data: {
+    number: string;
+    projectId: string;
+    projectName: string;
+    supplierId?: string;
+    supplierName: string;
+    status: PurchaseOrderStatus;
+    items: PurchaseOrderItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    deliveryDate: string;
+    deliveryAddress: string;
+    notes: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
+// Field Note (Minuta)
+export interface FieldNote {
+  id: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    date: string;
+    weather: string;
+    participants: string[];
+    activities: string[];
+    observations: string;
+    commitments: string[];
+    photos: string[];
+    supervisor: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
+// Photo Log Entry
+export interface PhotoLogEntry {
+  id: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    space: string;
+    phase: string;
+    beforePhoto?: string;
+    afterPhoto?: string;
+    caption: string;
+    progress: number;
+    date: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+  };
+}
+
+// Inspection
+export type InspectionStatus = 'Pendiente' | 'En progreso' | 'Aprobada' | 'Rechazada';
+
+export interface InspectionItem {
+  id: string;
+  description: string;
+  status: 'Aprobado' | 'Rechazado' | 'Pendiente' | 'N/A';
+  score: number;
+  notes: string;
+  photo?: string;
+}
+
+export interface Inspection {
+  id: string;
+  data: {
+    projectId: string;
+    projectName: string;
+    title: string;
+    type: string; // structural, electrical, finishes, etc
+    status: InspectionStatus;
+    inspector: string;
+    date: string;
+    items: InspectionItem[];
+    overallScore: number;
+    observations: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
 export interface Comment {
   id: string;
   data: {
@@ -879,4 +981,116 @@ export const SCREEN_TITLES: Record<string, string> = {
   reports: 'Reportes',
   admin: 'Panel de Administración',
   settings: 'Configuración',
+  gantt: 'Cronograma',
+  purchaseOrders: 'Órdenes de Compra',
+  fieldNotes: 'Minutas de Obra',
+  photoLog: 'Bitácora Fotográfica',
+  inspections: 'Inspecciones',
+  templates: 'Templates de Proyecto',
 };
+
+/* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
+
+/** Navigation groups for collapsible sidebar */
+export interface NavGroupItem {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface NavGroup {
+  id: string;
+  label: string;
+  icon: string;
+  items: NavGroupItem[];
+  defaultOpen?: boolean;
+}
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'principal',
+    label: 'Principal',
+    icon: '📊',
+    defaultOpen: true,
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+      { id: 'profile', label: 'Mi Perfil', icon: '👤' },
+    ],
+  },
+  {
+    id: 'projects',
+    label: 'Proyectos',
+    icon: '📁',
+    defaultOpen: true,
+    items: [
+      { id: 'projects', label: 'Proyectos', icon: '📁' },
+      { id: 'tasks', label: 'Tareas', icon: '✅' },
+      { id: 'gantt', label: 'Cronograma', icon: '🗓️' },
+      { id: 'timeTracking', label: 'Time Tracking', icon: '⏱️' },
+    ],
+  },
+  {
+    id: 'finances',
+    label: 'Finanzas',
+    icon: '💰',
+    defaultOpen: true,
+    items: [
+      { id: 'budget', label: 'Presupuestos', icon: '💰' },
+      { id: 'quotations', label: 'Cotizaciones', icon: '📋' },
+      { id: 'invoices', label: 'Facturación', icon: '🧾' },
+      { id: 'purchaseOrders', label: 'Órdenes de Compra', icon: '🛒' },
+    ],
+  },
+  {
+    id: 'field',
+    label: 'Obra / Campo',
+    icon: '🏗️',
+    items: [
+      { id: 'obra', label: 'Seguimiento Obra', icon: '🏗️' },
+      { id: 'fieldNotes', label: 'Minutas de Obra', icon: '📝' },
+      { id: 'photoLog', label: 'Bitácora Fotográfica', icon: '📸' },
+      { id: 'inspections', label: 'Inspecciones', icon: '🔍' },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operaciones',
+    icon: '📦',
+    items: [
+      { id: 'inventory', label: 'Inventario', icon: '📦' },
+      { id: 'suppliers', label: 'Proveedores', icon: '🏪' },
+      { id: 'companies', label: 'Empresas', icon: '🏢' },
+    ],
+  },
+  {
+    id: 'communication',
+    label: 'Comunicación',
+    icon: '💬',
+    items: [
+      { id: 'chat', label: 'Chat', icon: '💬' },
+      { id: 'calendar', label: 'Calendario', icon: '📅' },
+      { id: 'portal', label: 'Portal Cliente', icon: '🤝' },
+    ],
+  },
+  {
+    id: 'tools',
+    label: 'Herramientas',
+    icon: '🛠️',
+    items: [
+      { id: 'files', label: 'Archivos', icon: '📂' },
+      { id: 'gallery', label: 'Galería', icon: '🖼️' },
+      { id: 'reports', label: 'Reportes', icon: '📈' },
+      { id: 'templates', label: 'Templates', icon: '📐' },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'Sistema',
+    icon: '⚙️',
+    items: [
+      { id: 'team', label: 'Equipo', icon: '👥' },
+      { id: 'settings', label: 'Configuración', icon: '🎨' },
+      { id: 'admin', label: 'Admin', icon: '⚙️' },
+    ],
+  },
+];

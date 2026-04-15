@@ -70,6 +70,12 @@ const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: 
 const QuotationScreen = dynamic(() => import('@/screens/QuotationScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 const SettingsScreen = dynamic(() => import('@/screens/SettingsScreen'), { ssr: false });
+const GanttScreen = dynamic(() => import('@/screens/GanttScreen'), { ssr: false });
+const PurchaseOrdersScreen = dynamic(() => import('@/screens/PurchaseOrdersScreen'), { ssr: false });
+const FieldNotesScreen = dynamic(() => import('@/screens/FieldNotesScreen'), { ssr: false });
+const PhotoLogScreen = dynamic(() => import('@/screens/PhotoLogScreen'), { ssr: false });
+const InspectionsScreen = dynamic(() => import('@/screens/InspectionsScreen'), { ssr: false });
+const TemplatesScreen = dynamic(() => import('@/screens/TemplatesScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -210,6 +216,12 @@ function AppContent() {
             {displayScreen === 'quotations' && <ErrorBoundary label="Cotizaciones"><QuotationScreen /></ErrorBoundary>}
             {displayScreen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
             {displayScreen === 'settings' && <ErrorBoundary label="Configuración"><SettingsScreen /></ErrorBoundary>}
+            {displayScreen === 'gantt' && <ErrorBoundary label="Cronograma"><GanttScreen /></ErrorBoundary>}
+            {displayScreen === 'purchaseOrders' && <ErrorBoundary label="Órdenes de Compra"><PurchaseOrdersScreen /></ErrorBoundary>}
+            {displayScreen === 'fieldNotes' && <ErrorBoundary label="Minutas de Obra"><FieldNotesScreen /></ErrorBoundary>}
+            {displayScreen === 'photoLog' && <ErrorBoundary label="Bitácora Fotográfica"><PhotoLogScreen /></ErrorBoundary>}
+            {displayScreen === 'inspections' && <ErrorBoundary label="Inspecciones"><InspectionsScreen /></ErrorBoundary>}
+            {displayScreen === 'templates' && <ErrorBoundary label="Templates"><TemplatesScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

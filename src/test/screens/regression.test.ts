@@ -184,8 +184,9 @@ describe('Regression: NAV_ITEMS and SCREEN_TITLES consistency', () => {
     const expectedIds = [
       'dashboard', 'profile', 'projects', 'tasks', 'timeTracking',
       'chat', 'budget', 'files', 'obra', 'suppliers', 'team',
-      'companies', 'invoices', 'calendar', 'portal', 'gallery',
+      'companies', 'invoices', 'quotations', 'calendar', 'portal', 'gallery',
       'inventory', 'reports', 'admin', 'settings',
+      'gantt', 'purchaseOrders', 'fieldNotes', 'photoLog', 'inspections', 'templates',
     ];
     for (const id of expectedIds) {
       expect(

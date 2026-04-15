@@ -170,8 +170,8 @@ describe('types constants', () => {
   });
 
   describe('NAV_ITEMS', () => {
-    it('has 20 items', () => {
-      expect(NAV_ITEMS).toHaveLength(20);
+    it('has 21 items', () => {
+      expect(NAV_ITEMS).toHaveLength(21);
     });
 
     it('first item is dashboard', () => {
@@ -188,8 +188,8 @@ describe('types constants', () => {
   });
 
   describe('SCREEN_TITLES', () => {
-    it('matches NAV_ITEMS count', () => {
-      expect(Object.keys(SCREEN_TITLES)).toHaveLength(NAV_ITEMS.length);
+    it('has entries for all nav items plus new screens', () => {
+      expect(Object.keys(SCREEN_TITLES).length).toBeGreaterThanOrEqual(NAV_ITEMS.length);
     });
 
     it('has a title for every nav item id', () => {

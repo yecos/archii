@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
-import { NAV_ITEMS } from '@/lib/types';
+import { NAV_ITEMS, NAV_GROUPS } from '@/lib/types';
 import { Search, ArrowRight, FolderKanban, CheckSquare, Users, Store, Building2, Layout } from 'lucide-react';
 
 /* ===== Types ===== */
@@ -89,9 +89,13 @@ export default function CommandPalette({ isOpen, onClose }: { isOpen: boolean; o
     const items: SearchResultItem[] = [];
     const MAX = 5;
 
-    // Navigation
-    const navMatches = NAV_ITEMS.filter(item => !q || matches(item.label, q));
+    // Navigation — search across NAV_ITEMS and NAV_GROUPS items
+    const seenIds = new Set<string>();
+    const allNavItems = [...NAV_ITEMS, ...NAV_GROUPS.flatMap(g => g.items)];
+    const navMatches = allNavItems.filter(item => !q || matches(item.label, q));
     for (const item of navMatches.slice(0, MAX)) {
+      if (seenIds.has(item.id)) continue;
+      seenIds.add(item.id);
       items.push({
         id: `nav-${item.id}`,
         category: 'nav',
