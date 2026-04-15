@@ -2549,3 +2549,55 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Archivos: 59 modificados (51 imports + 2 AI SDK + 5 return types + 1 test)
   Total: +40 lineas, -85 eliminadas
+
+2026-04-17 01:30 | REFACTOR — P6 Type Safety: eliminar 54 as any + tipar authUser en 18 funciones
+  Estado: COMPLETADO
+  Commit: 77a4d9d
+  Build: exitoso (Turbopack 6.5s, TypeScript 0 errores, 15 pages)
+  Tag de respaldo: backup/pre-p6-type-safety
+
+  Contexto: Tarea P6 de type safety masiva. La auditoria de P5 identifico ~420 any
+    en 72 archivos. Este commit ataca los any criticos: authUser en todas las
+    funciones de persistencia, y ~54 as any innecesarios en 3 archivos core.
+
+  Tarea P6.1 — Tipos base corregidos:
+    * Task.data: agregado startDate?: string (usado en AdminScreen tooltip)
+    * AuthContext.tsx: FirebaseUserInfo ahora es export interface (antes privada)
+    * Archivos: types.ts, AuthContext.tsx
+
+  Tarea P6.2 — authUser tipado en firestore-actions.ts:
+    * 18 funciones cambiaron de authUser: any a authUser: FirebaseUserInfo | null
+    * Funciones: saveProject, saveTask, sendMessage, saveExpense, saveSupplier,
+      saveCompany, uploadProjectFile, saveApproval, saveMeeting, saveGalleryPhoto,
+      saveInvProduct, saveInvMovement, saveInvTransfer, saveTimeEntry,
+      saveInvoice, saveQuotation, duplicateQuotation, saveComment
+    * Import agregado: FirebaseUserInfo desde @/contexts/AuthContext
+    * Archivo: firestore-actions.ts
+
+  Tarea P6.3 — Eliminacion de as any innecesarios (54 total):
+    * FirestoreContext.tsx (~30):
+      - (p: any) → (p: Project) en 7 find/filter callbacks
+      - (t: any) → (t: Task) en 6 callbacks
+      - (e: any) → (e: Expense) en 2 callbacks
+      - (task.data as any).field → task.data.field (8 instancias)
+      - (approval?.data as any)?.field → approval?.data?.field (12 instancias)
+    * ApprovalModal.tsx (14):
+      - forms.reviewingApproval as any → as Approval (1 cast tipado)
+      - Eliminados 13 (reviewApproval.data as any)?.field
+      - Fallback ?? 0 agregado para amount (number | undefined)
+    * AdminScreen.tsx (10):
+      - Eliminados (a.data as any).field para Approval (8 instancias)
+      - Eliminados (t.data as any).startDate para Task (2 instancias)
+      - Fallback ?? 0 para amount
+
+  Nota sobre any restante (~366):
+    * firestore-actions.ts: data: Record<string, any> en save functions (requiere
+      FormData interfaces por entidad — tarea P7)
+    * forms state: Record<string, any> en UIContext (requiere FormsState tipado)
+    * export-pdf.ts: jsPDF internals (requiere type declarations custom)
+    * whatsapp-commands.ts: 107 any (peor archivo, requiere refactor completo)
+    * Keepers: uploadFile(e: any), fileToBase64(file: any), unsubs: any[],
+      setForms callbacks, Firestore Timestamp .toDate()
+
+  Archivos: 6 modificados
+  Total: ~54 as any eliminados, 18 funciones tipadas, 1 campo agregado
