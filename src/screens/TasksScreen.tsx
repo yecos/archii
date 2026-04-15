@@ -465,7 +465,7 @@ export default function TasksScreen() {
                           <div className="mt-2">
                             <TimeProgressBar
                               dueDate={t.data.dueDate}
-                              createdAt={(t.data.createdAt as any)?.toDate?.() || t.data.createdAt || null}
+                              createdAt={t.data.createdAt}
                               isCompleted={t.data.status === 'Completado'}
                             />
                           </div>
@@ -603,7 +603,7 @@ export default function TasksScreen() {
                             <div className="mt-2">
                               <TimeProgressBar
                                 dueDate={t.data.dueDate}
-                                createdAt={(t.data.createdAt as any)?.toDate?.() || t.data.createdAt || null}
+                                createdAt={t.data.createdAt}
                                 isCompleted={t.data.status === 'Completado'}
                                 compact
                               />

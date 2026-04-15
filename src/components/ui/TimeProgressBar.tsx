@@ -1,18 +1,45 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, AlertTriangle, CheckCircle2, Flame } from 'lucide-react';
 
 interface TimeProgressBarProps {
-  /** Fecha límite de la tarea (string ISO o Date) */
-  dueDate: string;
-  /** Fecha de creación de la tarea (string ISO o Date) — si no se pasa, se asume 7 días antes */
-  createdAt?: string | null;
+  /** Fecha límite de la tarea (string, Date, o Firestore Timestamp) */
+  dueDate: any;
+  /** Fecha de creación de la tarea (string, Date, o Firestore Timestamp) — si no se pasa, se asume 7 días antes */
+  createdAt?: any;
   /** Si la tarea ya está completada */
   isCompleted?: boolean;
   /** Clase CSS adicional para el contenedor */
   className?: string;
   /** Modo compacto para Kanban cards */
   compact?: boolean;
+}
+
+/**
+ * Convierte cualquier tipo de fecha a milisegundos (number).
+ * Soporta: string ISO, Date nativo, Firestore Timestamp ({toDate, seconds, nanoseconds}), number.
+ */
+function toMs(value: any): number | null {
+  if (value == null) return null;
+  // Ya es un number
+  if (typeof value === 'number') return value;
+  // String
+  if (typeof value === 'string') {
+    const n = new Date(value).getTime();
+    return isNaN(n) ? null : n;
+  }
+  // Firestore Timestamp — tiene .toDate()
+  if (typeof value?.toDate === 'function') {
+    try { return value.toDate().getTime(); } catch (_) { /* fall through */ }
+  }
+  // Tiene .seconds (Firestore Timestamp parcial / serializado)
+  if (typeof value?.seconds === 'number') {
+    return (value.seconds * 1000) + (value.nanoseconds || 0) / 1e6;
+  }
+  // Date nativo
+  if (value instanceof Date) return value.getTime();
+  // Último intento
+  try { const n = new Date(value).getTime(); return isNaN(n) ? null : n; } catch (_) { return null; }
 }
 
 /**
@@ -34,24 +61,18 @@ export default function TimeProgressBar({
     return () => clearInterval(interval);
   }, []);
 
-  const dueTime = new Date(dueDate).getTime();
-  const dueEndOfDay = new Date(dueDate);
+  const dueMs = useMemo(() => toMs(dueDate), [dueDate]);
+
+  // No tenemos fecha válida → no renderizar nada
+  if (dueMs == null) return null;
+
+  const dueEndOfDay = new Date(dueMs);
   dueEndOfDay.setHours(23, 59, 59, 999);
   const dueEndMs = dueEndOfDay.getTime();
 
   // Fecha de creación o inicio del rango (default: 7 días antes del due date)
-  let startMs: number;
-  if (createdAt) {
-    const created = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
-    // Handle Firestore Timestamp
-    if ((createdAt as any)?.toDate) {
-      startMs = (createdAt as any).toDate().getTime();
-    } else {
-      startMs = created.getTime();
-    }
-  } else {
-    startMs = dueEndMs - 7 * 24 * 60 * 60 * 1000; // 7 días antes
-  }
+  const createdMs = toMs(createdAt);
+  const startMs = createdMs != null ? createdMs : dueEndMs - 7 * 24 * 60 * 60 * 1000;
 
   const totalDuration = dueEndMs - startMs;
   const elapsed = now - startMs;
