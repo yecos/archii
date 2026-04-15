@@ -221,6 +221,91 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 21:00 | FEATURE PACK v22 — Sistema de Tests como Registro Diagnóstico
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v22-test-diagnostic-20260416
+  Commit: b3245b9
+  Build: exitoso (0 errores TypeScript)
+  Objetivo: Crear un sistema de testing que funcione como registro completo
+    y navegable para diagnosticar la salud del código y priorizar arreglos.
+
+  Tarea 22.1 — Stack de testing instalado:
+    * vitest 4.1.4 + @testing-library/react 16 + @testing-library/jest-dom 6
+    * @testing-library/user-event 14 + jsdom 29 + msw 2.13 + @vitest/coverage-v8
+    * Todas como devDependencies (0 impacto en bundle de producción)
+    * Scripts: test, test:run, test:coverage, test:diagnostic
+
+  Tarea 22.2 — Configuración Vitest:
+    * vitest.config.ts: jsdom, globals, setupFiles, paths aliases (@/)
+    * src/test/setup.ts: mocks globales (Firebase CDN, Firebase Admin,
+      Next.js navigation, next-themes, console.error suprimido)
+    * tsconfig.json: src/test/** excluido del build Next.js
+    * .gitignore: test-reports/ y coverage/ ignorados
+
+  Tarea 22.3 — Reporte Diagnóstico (JSON + HTML):
+    * vitest JSON reporter genera test-reports/vitest.json
+    * src/test/generate-report.ts: parser + generador HTML navegable
+    * test-reports/diagnostic-summary.json: datos estructurados por módulo/categoría
+    * test-reports/test-report.html: dashboard con KPIs, tablas por módulo,
+      tests fallidos con error detail, tests lentos (>2s)
+    * Comando un comando: bun run test:diagnostic
+
+  Tarea 22.4 — Tests unitarios helpers/utils (164 tests):
+    * helpers.test.ts (58): fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials,
+      statusColor, prioColor, taskStColor, avatarColor, fmtRecTime,
+      fmtDuration, fmtTimer, getWeekStart, uniqueId
+    * budget-alerts.test.ts (30): getBudgetColorClass, checkBudgetAlerts,
+      getActiveAlerts, formatBudgetAlertMessage, resetProjectAlerts
+    * gantt-helpers.test.ts (27): getMonday, getGanttDays, getTaskBar,
+      buildGanttRows, findOverlaps, getProjectColor, calcGanttDays/Offset
+    * recurrence.test.ts (15): generateRecurringDates, expandMeetingForMonth
+    * rate-limit.test.ts (11): checkRateLimit, getRateLimitHeaders
+    * audit-trail.test.ts (23): extractChanges, formatChange, formatValue
+
+  Tarea 22.5 — Tests unitarios lib (102 tests):
+    * export-csv.test.ts (13): 5 funciones de export CSV con verificación BOM
+    * types-schemas.test.ts (45): todas las constantes y tipos exportados
+    * themes.test.ts (15): 7 temas de color, CSS vars, applyColorTheme
+    * utils.test.ts (14): cn() (clsx + tailwind-merge)
+    * toast-dom.test.ts (15): sistema de toasts DOM puro
+
+  Tarea 22.6 — Tests hooks (33 tests):
+    * useNetworkStatus.test.ts (6): online/offline events, cleanup
+    * auth-store.test.ts (8): AuthContext state, login/logout
+    * ui-store.test.ts (19): Zustand store completo (sidebar, panels, tema, etc)
+
+  Tarea 22.7 — Tests integración (63 tests):
+    * ai-router.test.ts (11): routeo multi-proveedor, rate tracking, fallbacks
+    * firestore-actions.test.ts (52): CRUD completo de 13 entidades Firestore
+
+  Tarea 22.8 — Tests regresión (43 tests):
+    * regression.test.ts: 22 pantallas importables, helpers exportados,
+      NAV_ITEMS consistente con SCREEN_TITLES, tipos y constantes íntegros
+
+  Tarea 22.9 — Coverage config:
+    * Provider v8 con umbrales mínimos (statements/functions/lines: 25%, branches: 20%)
+    * Comando: bun run test:coverage
+
+  Tarea 22.10 — Guía de uso:
+    * bun run test — modo watch interactivo
+    * bun run test:run — ejecución única
+    * bun run test:coverage — con coverage HTML
+    * bun run test:diagnostic — tests + reporte JSON + dashboard HTML
+
+  Archivos creados (21): vitest.config.ts, setup.ts, diagnostic-reporter.ts,
+    generate-report.ts, 17 archivos de test (.test.ts)
+  Archivos modificados (4): package.json, tsconfig.json, .gitignore, bun.lock
+  Total: +5,006 lineas agregadas, -10 eliminadas (25 archivos tocados)
+
+  Resumen:
+    - 1 commit: b3245b9
+    - 25 archivos tocados (21 creados, 4 modificados)
+    - 405 tests, 0 fallos, 8.8s de ejecución
+    - 7 dependencias nuevas (todas devDependencies)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automático
+    - Comando un comando para diagnóstico: bun run test:diagnostic
+
 2026-04-16 23:00 | FEATURE PACK v21 — Agente IA Gratuito (Fase 1)
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v21-ai-agent-free-20260416
