@@ -49,10 +49,10 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative flex gap-1 bg-[var(--af-bg3)] p-1 rounded-xl ${className}`}>
+    <div ref={containerRef} className={`relative flex gap-1 skeuo-well p-1 ${className}`}>
       {/* Sliding pill indicator */}
       <div
-        className="absolute top-1 h-[calc(100%-8px)] bg-[var(--card)] rounded-lg shadow-sm transition-all duration-200 ease-out pointer-events-none z-0"
+        className="absolute top-1 h-[calc(100%-8px)] card-elevated rounded-lg transition-all duration-200 ease-out pointer-events-none z-0"
         style={{
           left: pillStyle.left,
           width: pillStyle.width,

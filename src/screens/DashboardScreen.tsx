@@ -12,7 +12,7 @@ import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import dynamic from 'next/dynamic';
 const ActivityTimeline = dynamic(() => import('@/components/features/ActivityTimeline'), { ssr: false });
 const DashboardCharts = dynamic(() => import('@/components/features/DashboardCharts'), {
-  loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[300px]" />,
+  loading: () => <div className="skeuo-panel h-[300px] animate-pulse" />,
   ssr: false
 });
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
 
       {/* ─── Budget Alert Banner ─── */}
       {budgetAlerts.length > 0 && (
-        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} className="text-amber-400" />
@@ -267,7 +267,7 @@ export default function DashboardScreen() {
 
       {/* ─── Row 2: Projects + Activity ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Proyectos recientes</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
@@ -277,12 +277,12 @@ export default function DashboardScreen() {
           ) : projects.slice(0, 4).map((p: any) => {
             const prog = p.data.progress || 0;
             return (
-              <div key={p.id} className="p-3 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--skeuo-pressed)] transition-all duration-150" onClick={() => openProject(p.id)}>
+              <div key={p.id} className="p-3 skeuo-well mb-2 cursor-pointer hover:bg-[var(--skeuo-pressed)] transition-all duration-150" onClick={() => openProject(p.id)}>
                 <div className="flex justify-between mb-2">
                   <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
                 </div>
-                <div className="h-1.5 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
+                <div className="h-1.5 skeuo-well rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
                 </div>
                 <div className="flex justify-between mt-1.5">
@@ -294,7 +294,7 @@ export default function DashboardScreen() {
           })}
         </div>
 
-        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Actividad reciente</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Ver reportes →</button>
@@ -306,7 +306,7 @@ export default function DashboardScreen() {
       {/* ─── Row 3: Mini widgets ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Sprint Progress Ring */}
-        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
           <div className="flex items-center justify-center">
             <div className="relative w-[100px] h-[100px]">
@@ -326,7 +326,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Financial Summary */}
-        <div className="bg-gradient-to-br from-[var(--skeuo-raised)] to-[var(--skeuo-base)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -341,7 +341,7 @@ export default function DashboardScreen() {
               <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[13px]">Gastado</span></div>
               <span className="text-[13px] font-semibold text-red-400">{fmtCOP(totalExpenses)}</span>
             </div>
-            <div className="border-t border-[var(--skeuo-edge-light)]/30 pt-2 flex items-center justify-between">
+            <div className="skeuo-divider mt-3 pt-2 flex items-center justify-between">
               <span className="text-[12px] text-[var(--muted-foreground)]">Balance</span>
               <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
             </div>
@@ -350,7 +350,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Notifications */}
-        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
+        <div className="skeuo-panel p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-semibold">Notificaciones</div>
             {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}

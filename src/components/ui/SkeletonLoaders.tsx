@@ -9,7 +9,7 @@ const Skeleton = ({ className = '', rounded = 'lg', style }: { className?: strin
 
 /* ─── KPI Card Skeleton ─── */
 export const SkeletonKPI = () => (
-  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5">
+  <div className="card-elevated p-4 md:p-5">
     <div className="flex items-center justify-between mb-3">
       <Skeleton className="w-8 h-8" rounded="lg" />
     </div>
@@ -33,7 +33,7 @@ export const SkeletonListItem = ({ hasAvatar = false, hasTag = false, lines = 2 
 
 /* ─── Card Skeleton ─── */
 export const SkeletonCard = () => (
-  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+  <div className="card-elevated p-4 space-y-3">
     <div className="flex justify-between">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-5 w-16" rounded="full" />
@@ -58,7 +58,7 @@ export const SkeletonTableRow = ({ cols = 5 }: { cols?: number }) => (
 
 /* ─── Chart Placeholder Skeleton ─── */
 export const SkeletonChart = ({ height = 200 }: { height?: number }) => (
-  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+  <div className="card-elevated p-5">
     <Skeleton className="h-4 w-32 mb-4" />
     <div className="flex items-end gap-2" style={{ height }}>
       {[40, 65, 45, 80, 55, 70, 30].map((h, i) => (
@@ -84,11 +84,11 @@ export const SkeletonDashboard = () => (
       {Array.from({ length: 4 }).map((_, i) => <SkeletonKPI key={i} />)}
     </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="skeuo-panel p-5">
         <Skeleton className="h-4 w-32 mb-4" />
         {Array.from({ length: 4 }).map((_, i) => <SkeletonListItem key={i} hasTag lines={1} />)}
       </div>
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="skeuo-panel p-5">
         <Skeleton className="h-4 w-32 mb-4" />
         {Array.from({ length: 4 }).map((_, i) => <SkeletonListItem key={i} lines={1} />)}
       </div>
@@ -108,7 +108,7 @@ export const SkeletonProjects = ({ count = 6 }: { count?: number }) => (
 export const SkeletonTasks = () => (
   <div className="space-y-4">
     {['Alta', 'Media', 'Baja'].map(prio => (
-      <div key={prio} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+      <div key={prio} className="card-elevated p-4">
         <Skeleton className="h-3 w-24 mb-3" />
         {Array.from({ length: 3 }).map((_, i) => <SkeletonListItem key={i} hasAvatar hasTag lines={1} />)}
       </div>
