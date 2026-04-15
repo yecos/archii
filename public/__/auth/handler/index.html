@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Autenticando...</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <style>
+    body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: sans-serif; background: #0f172a; color: #e2e8f0; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(200,169,110,0.2); border-top-color: #c8a96e; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <p>Completando autenticacion...</p>
+  </div>
+  <script>
+    try {
+      firebase.initializeApp({
+        apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
+        authDomain: "archiflow-prod-2026.firebaseapp.com",
+        projectId: "archiflow-prod-2026",
+        storageBucket: "archiflow-prod-2026.firebasestorage.app",
+        messagingSenderId: "1090724963650",
+        appId: "1:1090724963650:web:28468b10aef5e89c0f54db"
+      });
+      firebase.auth().getRedirectResult().then(function(result) {
+        if (result.credential || result.user) {
+          if (window.opener) {
+            window.opener.postMessage({ type: 'firebase-auth-success' }, window.location.origin);
+          }
+        }
+      }).catch(function(err) {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'firebase-auth-error', error: err.message }, window.location.origin);
+        }
+      });
+      if (window.opener) {
+        try {
+          var p = new URLSearchParams(window.location.search);
+          var e = p.get("authEvent");
+          if (e) window.opener.postMessage(JSON.parse(decodeURIComponent(e)), location.origin);
+        } catch(err) {}
+      }
+      setTimeout(function(){ try { window.close(); } catch(e) { window.location.href = '/'; } }, 2000);
+    } catch(e) {}
+  </script>
+</body>
+</html>
