@@ -129,6 +129,22 @@ export default function RootLayout({
             document.documentElement.classList.add('dark');
           }
         ` }} />
+
+        {/* Color theme init - set data attribute before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `
+(function(){
+  try {
+    var ct = localStorage.getItem('archiflow-color-theme');
+    var dm = localStorage.getItem('archiflow-theme');
+    var isDark = false;
+    if (dm === 'dark') isDark = true;
+    else if (dm === 'system' || !dm) isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (ct && ct !== 'dorado') {
+      document.documentElement.setAttribute('data-color-theme', ct);
+    }
+  } catch(e) {}
+})();
+        ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
         <ThemeProvider>

@@ -3,7 +3,7 @@ import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import type { TeamUser, Project, Task, GalleryPhoto, InvProduct } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Palette } from 'lucide-react';
 
 /** Firebase auth user — loaded via CDN, so no npm type available. */
 interface FirebaseUser {
@@ -49,6 +49,7 @@ export default React.memo(function Sidebar({
     { id: 'projects', label: 'Proyectos', icon: <Folder size={18} className="stroke-current" />, badge: projects.length },
     { id: 'tasks', label: 'Tareas', icon: <ClipboardCheck size={18} className="stroke-current" />, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: 'chat', label: 'Chat', icon: <MessageCircle size={18} className="stroke-current" /> },
+    { id: 'settings', label: 'Configuración', icon: <Palette size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'budget', label: 'Presupuestos', icon: <DollarSign size={18} className="stroke-current" /> },
     { id: 'files', label: 'Planos y archivos', icon: <FileText size={18} className="stroke-current" /> },
@@ -84,7 +85,7 @@ export default React.memo(function Sidebar({
         </div>
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
-          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 5).map((n) => (
+          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 6).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className={`flex-1 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
@@ -92,7 +93,7 @@ export default React.memo(function Sidebar({
             </div>
           ))}
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Gestión</div>
-          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(5).map((n) => (
+          {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(6).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>
               {n.icon}
               <span className={`transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>

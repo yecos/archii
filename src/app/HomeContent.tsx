@@ -67,6 +67,7 @@ const InstallScreen = dynamic(() => import('@/screens/InstallScreen'), { ssr: fa
 const TimeTrackingScreen = dynamic(() => import('@/screens/TimeTrackingScreen'), { ssr: false });
 const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
+const SettingsScreen = dynamic(() => import('@/screens/SettingsScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -184,6 +185,7 @@ function AppContent() {
             {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
             {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
             {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
+            {screen === 'settings' && <ErrorBoundary label="Configuración"><SettingsScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>
