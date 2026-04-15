@@ -58,6 +58,7 @@ export interface Project {
     createdAt: FirestoreTimestamp | null;
     updatedAt?: FirestoreTimestamp | null;
     createdBy?: string;
+    updatedBy?: string;
   };
 }
 
@@ -85,13 +86,19 @@ export interface Task {
     title: string;
     projectId: string;
     assigneeId: string;
+    assigneeIds?: string[];
     priority: TaskPriority;
     status: TaskStatus;
     dueDate: string;
     description?: string;
     subtasks?: Subtask[];
+    progress?: number;
+    order?: number;
+    phase?: string;
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
+    updatedAt?: FirestoreTimestamp | null;
+    updatedBy?: string;
     completedAt?: FirestoreTimestamp | null;
   };
 }
@@ -104,8 +111,10 @@ export interface Expense {
     category: string;
     amount: number;
     date: string;
+    supplier?: string;
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -173,7 +182,9 @@ export interface WorkPhase {
     order: number;
     startDate: string;
     endDate: string;
+    projectId?: string;
     createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -203,7 +214,8 @@ export interface ProjectFile {
     name: string;
     type: string;
     size: number;
-    url: string;
+    data?: string;
+    url?: string;
     uploadedBy?: string;
     createdAt: FirestoreTimestamp | null;
   };
@@ -258,6 +270,7 @@ export interface InvProduct {
     createdAt: FirestoreTimestamp | null;
     createdBy: string;
     updatedAt?: FirestoreTimestamp | null;
+    updatedBy?: string;
   };
 }
 
@@ -268,6 +281,7 @@ export interface InvCategory {
     color: string;
     description: string;
     createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
   };
 }
 
@@ -314,6 +328,8 @@ export interface Company {
     legalName?: string;
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
+    updatedAt?: FirestoreTimestamp | null;
+    updatedBy?: string;
   };
 }
 
