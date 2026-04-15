@@ -221,6 +221,57 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 01:00 | REFACTOR — P8 Type Safety: 88 any eliminados en 4 archivos
+  Estado: COMPLETADO
+  Commit: 89ad84c
+  Build: exitoso (15 static + 15 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-p8-whatsapp-types-20260416
+
+  Contexto: Continuacion de la campaña de type safety. Se identificaron los
+    4 archivos con mayor deuda tipada (: any) y se reemplazaron todas las
+    instancias por tipos concretos importados de types.ts y firebase-service.ts.
+
+  Tarea 8.1 — TasksScreen.tsx (30 any → 0):
+    * Importados: Task, Project, Subtask desde @/lib/types
+    * (t: any) → (t: Task) en ~20 filter/map/find callbacks
+    * (s: any) → (s: Subtask) en filtro de subtareas
+    * (p: any) → (p: Project) en ~5 callbacks de proyectos
+    * task: any → task: Task en props de AssigneeAvatars
+    * Eliminada anotacion : any en 4 setForms() (TS infiere el tipo)
+
+  Tarea 8.2 — DashboardScreen.tsx (20 any → 0):
+    * Importados: Task, Expense, Invoice, TeamUser, DailyLog, Project,
+      FirestoreTimestamp, NotifEntry
+    * (e: any) → (e: Expense), (inv: any) → (inv: Invoice), etc.
+    * time: any → time: FirestoreTimestamp | null | undefined
+    * Eliminados 'as any' en llamada a getActiveAlerts (acepta tipos correctos)
+    * Corregido burndown: toDate() reemplazado por toSafeDate()
+
+  Tarea 8.3 — InventoryContext.tsx (20 any → 0):
+    * Importado: Transaction desde @/lib/firebase-service
+    * (product: any) → (product: InvProduct) en 3 helpers
+    * (file: any) → (file: File) en fileToBase64
+    * (transaction: any) → (transaction: Transaction) en 4 runTransaction
+    * (e: any) → (e: React.ChangeEvent<HTMLInputElement>) en image handler
+    * (p: any) → (p: InvProduct), (c: any) → (c: InvCategory) en edit openers
+    * err: any → err: unknown con guardia instanceof Error en 2 catch blocks
+    * Record<string, any> → Record<string, string> en 2 form reset builders
+    * v: any → v: number en Object.values().reduce() (5 instancias)
+
+  Tarea 8.4 — BudgetScreen.tsx (17 any → 0):
+    * Importados: Expense, Project desde @/lib/types
+    * PieTooltip: any → { active?: boolean; payload?: Array<{...}> }
+    * (e: any) → (e: Expense) en ~9 filter/map/reduce callbacks
+    * (p: any) → (p: Project) en ~3 find callbacks
+    * (entry: any) → tipado inline { name, value, color } (3 instancias)
+    * Record<string, any[]> → Record<string, Expense[]> en byProject
+    * (r: any) → (r: (string | number)[]) en export CSV
+    * Eliminada anotacion : any en 2 ui.setForms() (TS infiere)
+
+  Archivos: 4 modificados
+  Total: 102 lineas agregadas, 99 eliminadas
+  Deuda tipada restante: 258 :any + 50 as any = 308 (de 345 + 51 = 396)
+
 2026-04-16 20:00 | FEATURE — Barra de Acción Flotante Premium (v25)
   Estado: COMPLETADO
   Commit: 323cddf
