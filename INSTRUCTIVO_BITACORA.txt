@@ -1930,3 +1930,80 @@ Si se necesita corregir algo, agregar nota aclaratoria.
   Nota: Durante esta sesion, otra sesion paralela hizo commits que fueron
   rebaseados exitosamente: Neo-Skeuomorphic Fase 3, v19 Responsive Mobile
   & Desktop, y actualizacion de bitacora. No hubo conflictos.
+
+2026-04-17 01:00 | FEATURE PACK v20 — Code Health & Screen Decomposition
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v20-code-health-20260416
+  Objetivo: Descomponer los 3 screens mas pesados en subcomponentes modulares
+  Commit: 7b7369e
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  Tarea 20.1 — CalendarScreen descompuesto (947 → 312 lineas):
+    * 6 subcomponentes extraidos a src/components/features/calendar/:
+      - CalendarHeader.tsx (97 lineas): barra de navegacion con prev/next,
+        toggle Mensual/Semanal, filtro proyecto, boton Hoy
+      - CalendarStats.tsx (64 lineas): boton + Reunion, contador reuniones,
+        3 KPI cards (Urgentes, Vencidas, Esta semana)
+      - CalendarWeeklyMobile.tsx (208 lineas): agenda mobile con day chips
+        horizontales y lista de eventos del dia seleccionado
+      - CalendarWeeklyDesktop.tsx (214 lineas): grid 7-columnas con slots
+        de tiempo (7am-10pm), bloques de reuniones, indicador "ahora"
+      - CalendarMonthlyView.tsx (132 lineas): grid mensual con celdas de dia,
+        tasks y meetings por dia
+      - SelectedDayDetail.tsx (176 lineas): panel de detalle del dia
+        seleccionado (tasks + meetings con acciones editar/eliminar)
+    * El orchestrator mantiene: hooks, estado, valores computados,
+      helpers (getMonday, formatDateISO, formatTime12), constantes
+    * Reduccion: 67% menos lineas en el archivo principal
+
+  Tarea 20.2 — PortalScreen descompuesto (914 → 29 lineas):
+    * 13 archivos extraidos a src/components/features/portal/:
+      - statusHelpers.ts (30 lineas): utilidades compartidas + tipos
+      - WelcomeHeader.tsx (35 lineas): banner de bienvenida
+      - KpiCards.tsx (69 lineas): grid de 3 KPI cards
+      - ProjectCard.tsx (141 lineas): card de proyecto individual
+      - ProjectCardsGrid.tsx (59 lineas): grid de ProjectCards
+      - OverviewView.tsx (118 lineas): vista principal con hooks + composicion
+      - ProjectDetailHeader.tsx (79 lineas): header de detalle de proyecto
+      - DetailTabBar.tsx (36 lineas): barra de navegacion de tabs
+      - ProjectDetailView.tsx (105 lineas): vista detalle con tabs
+      - ResumenTab.tsx (160 lineas): tab resumen con progreso y gastos
+      - FotosTab.tsx (76 lineas): tab galeria de fotos con lightbox
+      - FacturasTab.tsx (87 lineas): tab facturas
+      - ActividadTab.tsx (117 lineas): tab feed de actividad
+    * El orchestrator ahora solo tiene 29 lineas: router entre overview y detail
+    * Reduccion: 97% menos lineas en el archivo principal
+
+  Tarea 20.3 — FilesScreen descompuesto (729 → 350 lineas):
+    * 11 archivos extraidos a src/components/features/files/:
+      - types.ts (62 lineas): tipos, constantes, helpers compartidos
+      - FileIcon.tsx (25 lineas): icono por tipo de archivo
+      - SourceBadge.tsx (21 lineas): badge de origen (Local/OneDrive/Galeria)
+      - StatsBar.tsx (38 lineas): grid de estadisticas por categoria
+      - ProjectSidebar.tsx (70 lineas): sidebar de filtro por proyecto
+      - FilesToolbar.tsx (180 lineas): toolbar con busqueda, sort, tabs, view toggle
+      - FileGridCard.tsx (78 lineas): card individual para grid view
+      - FileListRow.tsx (52 lineas): fila individual para list view
+      - FilesEmpty.tsx (34 lineas): empty state contextual
+      - Lightbox.tsx (41 lineas): visor de imagenes fullscreen
+      - index.ts (11 lineas): barrel exports
+    * El orchestrator mantiene: hooks, estado, logica de filtrado/ordenamiento
+    * Reduccion: 52% menos lineas en el archivo principal
+
+  Archivos creados (30): 6 calendar + 13 portal + 11 files
+  Archivos modificados (3): CalendarScreen.tsx, PortalScreen.tsx, FilesScreen.tsx
+  Total: +2,767 lineas agregadas, -2,051 eliminadas (33 archivos tocados)
+
+  Resumen:
+    - 1 commit: 7b7369e
+    - 33 archivos tocados (30 creados, 3 modificados)
+    - CalendarScreen: 947 → 312 lineas (-67%)
+    - PortalScreen: 914 → 29 lineas (-97%)
+    - FilesScreen: 729 → 350 lineas (-52%)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+    - Merge limpio con cambios paralelos de otra sesion (bug fixes inventario,
+      TimeProgressBar, TasksScreen updates)
+
+  Nota: La otra sesion hizo 4 commits durante esta sesion (bug fixes de inventario,
+  TimeProgressBar, TasksScreen) que fueron mergeados via fast-forward sin conflictos.
