@@ -267,7 +267,7 @@ export default function ProjectsScreen() {
       )}
 
       {!loading && filteredProjects.length > 0 && viewMode === 'grid' && (
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger-children">
           {filteredProjects.map(p => {
             const d = p.data;
             const prog = d.progress || 0;
@@ -276,13 +276,13 @@ export default function ProjectsScreen() {
             return (
               <StaggerItem key={p.id}>
                 <div
-                  className="card-elevated rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out hover:border-[var(--input)] hover:-translate-y-0.5 active:scale-[0.99] relative overflow-hidden"
+                  className="card-glass card-glass-hover tilt-hover rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99] relative overflow-hidden"
                   onClick={() => openProject(p.id)}
                 >
                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
                   <div className="flex justify-between items-start mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full badge-gradient ${statusColor(d.status)}`}>
                         {d.status || 'Concepto'}
                       </span>
                       {compName && (
@@ -322,7 +322,7 @@ export default function ProjectsScreen() {
                   </div>
                   <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`}
+                      className={`h-full rounded-full progress-animated ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`}
                       style={{ width: prog + '%' }}
                     />
                   </div>
@@ -381,7 +381,7 @@ export default function ProjectsScreen() {
 
                     {/* Status */}
                     <div className="hidden sm:block">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full badge-gradient ${statusColor(d.status)}`}>
                         {d.status || 'Concepto'}
                       </span>
                     </div>
@@ -405,7 +405,7 @@ export default function ProjectsScreen() {
                       {meta.totalTasks > 0 && (
                         <div className="w-full h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden mt-1">
                           <div
-                            className={`h-full rounded-full ${meta.completedTasks === meta.totalTasks ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`}
+                            className={`h-full rounded-full progress-animated ${meta.completedTasks === meta.totalTasks ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`}
                             style={{ width: `${(meta.completedTasks / meta.totalTasks) * 100}%` }}
                           />
                         </div>
@@ -416,7 +416,7 @@ export default function ProjectsScreen() {
                     <div className="hidden sm:flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`}
+                          className={`h-full rounded-full progress-animated ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`}
                           style={{ width: prog + '%' }}
                         />
                       </div>
@@ -441,7 +441,7 @@ export default function ProjectsScreen() {
 
                     {/* Mobile: status badge visible inline */}
                     <div className="sm:hidden flex items-center gap-2 mt-0.5">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full badge-gradient ${statusColor(d.status)}`}>
                         {d.status || 'Concepto'}
                       </span>
                       <span className="text-[11px] text-[var(--af-text3)]">

@@ -289,7 +289,8 @@ export default function DashboardScreen() {
       )}
 
       {/* ─── Row 1: KPI Cards ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="aurora-bg card-glass rounded-2xl p-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 stagger-children">
         {[
           { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
           { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
@@ -297,23 +298,24 @@ export default function DashboardScreen() {
           { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
           { val: pendingApprovals.length, lbl: 'Aprobaciones pendientes', icon: <ShieldCheck size={16} />, bg: 'bg-amber-500/10', iconColor: 'text-amber-400', sub: pendingApprovals.length === 0 ? 'Sin solicitudes' : 'Requiere revisión', badge: pendingApprovals.length > 0 },
         ].map((m, i) => (
-          <div key={i} className="card-elevated rounded-xl p-4 md:p-5 relative overflow-hidden cursor-default">
+          <div key={i} className="card-glass card-glass-hover rounded-xl p-4 md:p-5 relative overflow-hidden cursor-default">
             <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-[var(--af-accent)]/30 to-transparent" />
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
-              {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-              {m.badge && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+              {i === 3 && overdueTasks.length > 0 && <span className="status-pulse w-2 h-2 rounded-full bg-red-500" />}
+              {m.badge && <span className="status-pulse w-2 h-2 rounded-full bg-amber-500" />}
             </div>
-            <div className="text-xl md:text-2xl font-bold leading-tight">{m.val}</div>
+            <div className="text-xl md:text-2xl font-bold leading-tight font-tabular">{m.val}</div>
             <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5">{m.lbl}</div>
             <div className="text-[10px] text-[var(--af-text3)] mt-0.5">{m.sub}</div>
           </div>
         ))}
       </div>
 
+      </div>
       {/* ─── Row 2: Projects + Activity ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:gap-6 gap-4">
-        <div className="skeuo-panel p-5">
+        <div className="card-glass rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Proyectos recientes</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
@@ -329,7 +331,7 @@ export default function DashboardScreen() {
                   <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
                 </div>
                 <div className="h-1.5 skeuo-well rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
+                  <div className={`h-full rounded-full progress-animated ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
                 </div>
                 <div className="flex justify-between mt-1.5">
                   <span className="text-[11px] text-[var(--muted-foreground)]">{prog}% completado</span>
@@ -340,7 +342,7 @@ export default function DashboardScreen() {
           })}
         </div>
 
-        <div className="skeuo-panel p-5">
+        <div className="card-glass rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Actividad reciente</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Ver reportes →</button>
@@ -350,9 +352,9 @@ export default function DashboardScreen() {
       </div>
 
       {/* ─── Row 3: Mini widgets ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 stagger-children">
         {/* Sprint Progress Ring */}
-        <div className="skeuo-panel p-5">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
           <div className="flex items-center justify-center">
             <div className="relative w-[100px] h-[100px]">
@@ -372,7 +374,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Financial Summary */}
-        <div className="skeuo-panel p-5">
+        <div className="card-glass rounded-xl p-4">
           <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -389,14 +391,14 @@ export default function DashboardScreen() {
             </div>
             <div className="skeuo-divider mt-3 pt-2 flex items-center justify-between">
               <span className="text-[12px] text-[var(--muted-foreground)]">Balance</span>
-              <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
+              <span className={`text-[14px] font-bold font-tabular ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
             </div>
           </div>
           <button className="w-full mt-3 text-xs text-[var(--af-accent)] cursor-pointer hover:underline text-center" onClick={() => navigateTo('invoices')}>Ver facturas →</button>
         </div>
 
         {/* Notifications */}
-        <div className="skeuo-panel p-5">
+        <div className="card-glass rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-semibold">Notificaciones</div>
             {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
