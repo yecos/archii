@@ -2192,3 +2192,28 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     - 1 bug corregido (alto)
     - 0 errores TypeScript
     - Build exitoso, Vercel deploy automatico
+
+2026-04-17 01:30 | BUG FIX — FIREBASE_PROJECT_ID incorrecto en firebase-admin
+  Estado: RESUELTO
+  Tag de respaldo: backup-pre-fix-firebase-admin-projectid-20260417
+  Commit: d487b76
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  BUG-20260417-002 [CRITICO] — firebase-admin.ts usaba project ID incorrecto:
+    * Antes: FIREBASE_PROJECT_ID = "archiflow-c2855" (proyecto viejo/incorrecto)
+      El cliente envia tokens de "archiflow-prod-2026", pero el servidor admin
+      intentaba verificarlos contra "archiflow-c2855". Resultado: verifyIdToken
+      fallaba silenciosamente y TODOS los endpoints con requireAuth() devolvian
+      401 "No autenticado. Se requiere un token valido."
+    * Ahora: FIREBASE_PROJECT_ID = "archiflow-prod-2026" (coincide con layout.tsx)
+    * Archivo: src/lib/firebase-admin.ts (linea 14)
+    * Impacto: Este bug afectaba a TODOS los endpoints protegidos:
+      /api/ai-agent, /api/ai-assistant, /api/ai-suggestions, /api/whatsapp/*
+    * Cambios: 1 linea modificada
+
+  Resumen:
+    - 1 commit: d487b76
+    - 1 archivo tocado
+    - 1 bug critico corregido (afectaba toda la autenticacion del servidor)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
