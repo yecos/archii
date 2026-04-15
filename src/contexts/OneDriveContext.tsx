@@ -138,9 +138,17 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     }
   }, []);
 
+  // ===== FUNCTION REFS (for cross-function calls without circular deps) =====
+
+  const disconnectMicrosoftRef = useRef<() => void>(() => {});
+  const graphApiGetRef = useRef<(endpoint: string, useToken?: string) => Promise<any>>(async () => null);
+  const loadOneDriveFilesRef = useRef<(folderId: string) => Promise<void>>(async () => {});
+  const ensureProjectFolderRef = useRef<(projectName: string) => Promise<string | null>>(async () => null);
+  const uploadFileWithProgressRef = useRef<(file: File) => Promise<void>>(async () => {});
+
   // ===== FUNCTIONS =====
 
-  const disconnectMicrosoft = () => {
+  const disconnectMicrosoft = useCallback(() => {
     setMsAccessToken(null);
     setMsConnected(false);
     setMsRefreshToken(null);
@@ -155,7 +163,8 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     localStorage.removeItem('msConnected');
     localStorage.removeItem('msRefreshToken');
     showToast('Microsoft desconectado');
-  };
+  }, [showToast]);
+  disconnectMicrosoftRef.current = disconnectMicrosoft;
 
   const refreshMsToken = useCallback(async () => {
     if (!msRefreshToken) return null;
@@ -206,19 +215,20 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       if (res.status === 401 && !useToken) {
         const newToken = await refreshMsToken();
         if (newToken) return graphApiGet(endpoint, newToken);
-        disconnectMicrosoft();
+        disconnectMicrosoftRef.current();
         return null;
       }
       if (!res.ok) return null;
       return await res.json();
     } catch (err) { console.error('[ArchiFlow] OneDrive: Graph API request failed:', err); return null; }
   }, [msAccessToken, refreshMsToken]);
+  graphApiGetRef.current = graphApiGet;
 
-  const ensureProjectFolder = async (projectName: string) => {
+  const ensureProjectFolder = useCallback(async (projectName: string) => {
     if (!msAccessToken) return null;
     setMsLoading(true);
     try {
-      const root = await graphApiGet('/me/drive/root/children');
+      const root = await graphApiGetRef.current('/me/drive/root/children');
       if (!root) { setMsLoading(false); return null; }
       const archiFolder = root.value?.find((f: any) => f.name === 'ArchiFlow' && f.folder);
       let archiFolderId: string;
@@ -234,7 +244,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         const createdData = await created.json();
         archiFolderId = createdData.id;
       }
-      const projChildren = await graphApiGet(`/me/drive/items/${archiFolderId}/children`);
+      const projChildren = await graphApiGetRef.current(`/me/drive/items/${archiFolderId}/children`);
       if (!projChildren) { setMsLoading(false); return null; }
       const projFolder = projChildren.value?.find((f: any) => f.name === projectName && f.folder);
       let projFolderId: string;
@@ -254,21 +264,23 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       setMsLoading(false);
       return projFolderId;
     } catch (err) { console.error('[ArchiFlow] OneDrive: ensure project folder failed:', err); setMsLoading(false); return null; }
-  };
+  }, [msAccessToken]);
+  ensureProjectFolderRef.current = ensureProjectFolder;
 
-  const loadOneDriveFiles = async (folderId: string) => {
+  const loadOneDriveFiles = useCallback(async (folderId: string) => {
     if (!msAccessToken) return;
     setMsLoading(true);
     try {
-      const data = await graphApiGet(`/me/drive/items/${folderId}/children?$top=50&orderby=name`);
+      const data = await graphApiGetRef.current(`/me/drive/items/${folderId}/children?$top=50&orderby=name`);
       if (data?.value) {
         setOneDriveFiles(data.value);
       }
     } catch (err) { console.error('[ArchiFlow] OneDrive: load files failed:', err); showToast('Error al cargar archivos', 'error'); }
     setMsLoading(false);
-  };
+  }, [msAccessToken, showToast]);
+  loadOneDriveFilesRef.current = loadOneDriveFiles;
 
-  const uploadToOneDrive = async (file: File, folderId: string) => {
+  const uploadToOneDrive = useCallback(async (file: File, folderId: string) => {
     if (!msAccessToken) return;
     setMsLoading(true);
     try {
@@ -279,15 +291,15 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       });
       if (res.ok) {
         showToast('Archivo subido a OneDrive');
-        loadOneDriveFiles(folderId);
+        loadOneDriveFilesRef.current(folderId);
       } else {
         showToast('Error al subir archivo', 'error');
       }
     } catch (err) { console.error('[ArchiFlow] OneDrive: upload file failed:', err); showToast('Error al subir', 'error'); }
     setMsLoading(false);
-  };
+  }, [msAccessToken, showToast]);
 
-  const deleteFromOneDrive = async (fileId: string, folderId: string) => {
+  const deleteFromOneDrive = useCallback(async (fileId: string, folderId: string) => {
     if (!(await confirm({ title: 'Eliminar archivo', description: '¿Eliminar archivo de OneDrive?', confirmText: 'Eliminar', variant: 'destructive' }))) return;
     setMsLoading(true);
     try {
@@ -295,16 +307,16 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         method: 'DELETE',
         headers: { Authorization: `Bearer ${msAccessToken}` }
       });
-      if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); }
+      if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFilesRef.current(folderId); }
       else { showToast('Error al eliminar', 'error'); }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
     setMsLoading(false);
-  };
+  }, [msAccessToken, showToast]);
 
-  const openOneDriveForProject = async (projectName: string) => {
-    const folderId = await ensureProjectFolder(projectName);
+  const openOneDriveForProject = useCallback(async (projectName: string) => {
+    const folderId = await ensureProjectFolderRef.current(projectName);
     if (folderId) {
-      await loadOneDriveFiles(folderId);
+      await loadOneDriveFilesRef.current(folderId);
       setOdCurrentFolder(folderId);
       setOdBreadcrumbs([{ id: folderId, name: projectName }]);
       setShowOneDrive(true);
@@ -314,16 +326,16 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     } else {
       showToast('No se pudo crear la carpeta del proyecto', 'error');
     }
-  };
+  }, [showToast]);
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = useCallback((bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  };
+  }, []);
 
-  const timeAgo = (dateStr: string) => {
+  const timeAgo = useCallback((dateStr: string) => {
     const now = new Date().getTime();
     const date = new Date(dateStr).getTime();
     const diff = now - date;
@@ -335,9 +347,9 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     const days = Math.floor(hours / 24);
     if (days < 30) return `hace ${days}d`;
     return new Date(dateStr).toLocaleDateString('es');
-  };
+  }, []);
 
-  const getFileIcon = (mimeType: string, name?: string) => {
+  const getFileIcon = useCallback((mimeType: string, name?: string) => {
     if (mimeType.includes('folder')) return '📁';
     if (mimeType.includes('pdf')) return '📄';
     if (mimeType.includes('image')) return '🖼️';
@@ -355,17 +367,17 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     if (name?.match(/\.(zip|rar)$/i)) return '📦';
     if (name?.match(/\.(mp4|mov|avi|mkv)$/i)) return '🎬';
     return '📎';
-  };
+  }, []);
 
-  const navigateToFolder = async (folderId: string, breadcrumbIndex?: number) => {
+  const navigateToFolder = useCallback(async (folderId: string, breadcrumbIndex?: number) => {
     setOdCurrentFolder(folderId);
     if (breadcrumbIndex !== undefined) {
       setOdBreadcrumbs(prev => prev.slice(0, breadcrumbIndex + 1));
     }
-    await loadOneDriveFiles(folderId);
-  };
+    await loadOneDriveFilesRef.current(folderId);
+  }, []);
 
-  const uploadFileWithProgress = async (file: File) => {
+  const uploadFileWithProgress = useCallback(async (file: File) => {
     setOdUploading(true);
     setOdUploadProgress(0);
     setOdUploadFile(file.name);
@@ -384,7 +396,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         setOdUploadProgress(100);
         if (res.ok) {
           showToast('Archivo subido a OneDrive');
-          await loadOneDriveFiles(odCurrentFolder);
+          await loadOneDriveFilesRef.current(odCurrentFolder);
         } else {
           showToast('Error al subir archivo', 'error');
         }
@@ -414,7 +426,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
           setOdUploadProgress(Math.round((offset / file.size) * 100));
         }
         showToast('Archivo subido a OneDrive');
-        await loadOneDriveFiles(odCurrentFolder);
+        await loadOneDriveFilesRef.current(odCurrentFolder);
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -422,22 +434,23 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     } finally {
       setTimeout(() => { setOdUploading(false); setOdUploadProgress(0); setOdUploadFile(''); }, 500);
     }
-  };
+  }, [msAccessToken, showToast, odCurrentFolder, selectedProjectId]);
+  uploadFileWithProgressRef.current = uploadFileWithProgress;
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !odCurrentFolder) return;
-    await uploadFileWithProgress(file);
+    await uploadFileWithProgressRef.current(file);
     e.target.value = '';
-  };
+  }, [odCurrentFolder]);
 
-  const handleDroppedFiles = async (files: FileList) => {
+  const handleDroppedFiles = useCallback(async (files: FileList) => {
     for (let i = 0; i < files.length; i++) {
-      await uploadFileWithProgress(files[i]);
+      await uploadFileWithProgressRef.current(files[i]);
     }
-  };
+  }, []);
 
-  const renameOneDriveFile = async (fileId: string, newName: string) => {
+  const renameOneDriveFile = useCallback(async (fileId: string, newName: string) => {
     if (!newName.trim()) { setOdRenaming(null); return; }
     try {
       const res = await fetch(`/api/onedrive/files/${fileId}`, {
@@ -448,14 +461,14 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       if (res.ok) {
         showToast('Archivo renombrado');
         setOdRenaming(null);
-        await loadOneDriveFiles(odCurrentFolder);
+        await loadOneDriveFilesRef.current(odCurrentFolder);
       } else {
         showToast('Error al renombrar', 'error');
       }
     } catch (err) { console.error('[ArchiFlow] OneDrive: rename file failed:', err); showToast('Error al renombrar', 'error'); }
-  };
+  }, [msAccessToken, showToast, odCurrentFolder]);
 
-  const downloadOneDriveFile = async (fileId: string, fileName: string) => {
+  const downloadOneDriveFile = useCallback(async (fileId: string, fileName: string) => {
     try {
       const res = await fetch(`/api/onedrive/files/${fileId}`, {
         headers: { 'Authorization': `Bearer ${msAccessToken}` }
@@ -470,7 +483,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         showToast('Error al descargar', 'error');
       }
     } catch (err) { console.error('[ArchiFlow] OneDrive: download file failed:', err); showToast('Error al descargar', 'error'); }
-  };
+  }, [msAccessToken, showToast]);
 
   const searchOneDriveFiles = useCallback(async (query: string) => {
     if (!query.trim()) { setOdSearchResults([]); return; }

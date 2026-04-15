@@ -435,7 +435,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     prevExpensesRef.current = expenses;
   }, [expenses, projects, notifPrefs.projects, sendNotif]);
 
-  const requestNotifPermission = async () => {
+  const requestNotifPermission = useCallback(async () => {
     if (!('Notification' in window)) { showToast('Tu navegador no soporta notificaciones', 'error'); return; }
     const perm = await Notification.requestPermission();
     setNotifPermission(perm);
@@ -447,7 +447,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     } else {
       showToast('Notificaciones bloqueadas por el navegador', 'error');
     }
-  };
+  }, [showToast]);
 
   const dismissNotifBanner = () => {
     setShowNotifBanner(false);
