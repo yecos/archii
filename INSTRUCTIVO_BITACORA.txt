@@ -221,6 +221,81 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 23:00 | FEATURE PACK v21 — Agente IA Gratuito (Fase 1)
+  Estado: COMPLETADO
+  Tag de respaldo: backup-pre-v21-ai-agent-free-20260416
+  Commit: 8e23617
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+  Nota: Se instaló @ai-sdk/groq y @ai-sdk/openai-compatible (paq extras, no reemplazo)
+
+  Tarea 21.1 — AI Router multi-proveedor (ai-router.ts):
+    * Router inteligente que selecciona proveedor óptimo según tipo de tarea
+    * Groq Llama 3.1 8B para operaciones de alto volumen (14,400 req/día)
+    * Groq Llama 3.1 70B para razonamiento complejo (30 RPM)
+    * OpenAI-compatible como fallback (usa OPENAI_API_KEY existente)
+    * Rate tracking: conteo en memoria por proveedor (RPM y RPD)
+    * Threshold al 80% antes de redirigir a fallback
+    * createOpenAICompatible como cliente unificado para todos los proveedores
+
+  Tarea 21.2 — 6 herramientas function calling Nivel 1 (ai-tools.ts):
+    * createTask: Crear tarea en proyecto (title, priority, dueDate, phase)
+    * changeTaskStatus: Cambiar estado (Pendiente/En progreso/En revisión/Completado)
+    * createExpense: Registrar gasto (concept, amount, category)
+    * queryProject: Estado completo de proyecto (progreso, tareas completadas)
+    * queryTasks: Listar tareas con filtros (proyecto, estado)
+    * queryDeadlines: Tareas venciendo en próximos 7 días
+    * Todas usan Firestore via firebase-admin con serverTimestamp
+    * Todas incluyen manejo de errores con logging
+
+  Tarea 21.3 — Endpoint /api/ai-agent (streaming + function calling):
+    * POST endpoint con auth Firebase + rate limit 20 req/min
+    * Integración con AI SDK v6 streamText + tool()
+    * System prompt contextual con proyecto actual del usuario
+    * Tool wrapping dinámico con user ID para auditoría
+    * Streaming de respuestas (toTextStreamResponse)
+    * Logging de tool calls ejecutados
+    * Manejo de errores con fallback user-friendly
+
+  Tarea 21.4 — Panel UI (AIAgentPanel.tsx):
+    * Panel lateral derecho con backdrop blur y animación slideInRight
+    * Streaming de respuestas del LLM en tiempo real
+    * Indicadores visuales de tool calls ejecutados (CheckCircle + nombre)
+    * Selector de contexto de proyecto (dropdown con proyectos activos)
+    * 4 quick prompts para primer uso (crear tarea, vencimientos, gastos, estado)
+    * Botón cancelar generación con AbortController
+    * Auto-focus en input al abrir el panel
+    * Mensajes con formato: user (derecha, accent), assistant (izquierda, bg3)
+
+  Tarea 21.5 — Integración en la app:
+    * Botón "Agente IA" con badge "FREE" en la parte inferior del Sidebar
+    * Estado aiAgentOpen/toggleAIAgent en ui-store.ts (Zustand)
+    * Dynamic import lazy del AIAgentPanel en HomeContent.tsx
+    * Import Sparkles icon en Sidebar.tsx
+
+  Tarea 21.6 — Configuración y variables:
+    * .env.example actualizado con GROQ_API_KEY + instrucciones
+    * Documentación: https://console.groq.com/keys para obtener API key gratis
+    * Fallback automático a OPENAI_API_KEY si Groq está en límite
+
+  Archivos creados (4): ai-router.ts, ai-tools.ts, route.ts (api/ai-agent), AIAgentPanel.tsx
+  Archivos modificados (6): .env.example, package.json, HomeContent.tsx,
+    globals.css, Sidebar.tsx, ui-store.ts
+  Total: +985 lineas agregadas, -1 eliminada (10 archivos tocados)
+
+  Resumen:
+    - 1 commit: 8e23617
+    - 10 archivos tocados (4 creados, 6 modificados)
+    - 6 herramientas function calling
+    - 1 endpoint API con streaming
+    - 1 panel UI completo
+    - 2 dependencias nuevas (ai, @ai-sdk/groq, @ai-sdk/openai-compatible)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automático
+    - Ruta nueva: /api/ai-agent
+
+  Siguiente (Fase 2): Integrar Mistral como proveedor de calidad crítica,
+    agregar herramientas Nivel 2, modo supervisado con confirmaciones.
+
 2026-04-16 22:00 | BUG FIX — 4 bugs en Inventario corregidos
   Estado: RESUELTO
   Tag de respaldo: backup-pre-bug-inv-delete-stock-20260416-2200
