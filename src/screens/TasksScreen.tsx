@@ -11,6 +11,7 @@ import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Downlo
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 import EmptyState from '@/components/ui/EmptyState';
+import TimeProgressBar from '@/components/ui/TimeProgressBar';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -459,6 +460,16 @@ export default function TasksScreen() {
                           <AssigneeAvatars task={t} getUserName={getUserName} />
                           {(() => { const si = getSubtaskInfo(t); return si && <SubtaskBadge info={si} />; })()}
                         </div>
+                        {/* Barra de progreso temporal */}
+                        {t.data.dueDate && (
+                          <div className="mt-2">
+                            <TimeProgressBar
+                              dueDate={t.data.dueDate}
+                              createdAt={(t.data.createdAt as any)?.toDate?.() || t.data.createdAt || null}
+                              isCompleted={t.data.status === 'Completado'}
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {(() => { const si = getSubtaskInfo(t); return si && si.total > 0 && (
@@ -586,6 +597,18 @@ export default function TasksScreen() {
                               )}
                             </div>
                           </div>
+
+                          {/* Barra de progreso temporal (compacta) */}
+                          {t.data.dueDate && (
+                            <div className="mt-2">
+                              <TimeProgressBar
+                                dueDate={t.data.dueDate}
+                                createdAt={(t.data.createdAt as any)?.toDate?.() || t.data.createdAt || null}
+                                isCompleted={t.data.status === 'Completado'}
+                                compact
+                              />
+                            </div>
+                          )}
 
                           {/* Footer: assignees */}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
