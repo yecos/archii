@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { BarChart3, AlertTriangle, Building2 } from 'lucide-react';
+import { BarChart3, AlertTriangle, Building2, Package, Plus, Tag, ArrowRight } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement } from '@/lib/types';
@@ -21,56 +21,56 @@ interface InvDashboardTabProps {
   getWarehouseStock: (product: InvProduct, warehouse: string) => number;
   getInvProductName: (productId: string) => string;
   getTotalStock: (product: InvProduct) => number;
+  onNavigate?: (tab: string) => void;
 }
 
 export default function InvDashboardTab({
   invProducts, invCategories, invMovements, invAlerts, invTotalValue, invTotalStock,
-  getWarehouseStock, getInvProductName, getTotalStock,
+  getWarehouseStock, getInvProductName, getTotalStock, onNavigate,
 }: InvDashboardTabProps) {
-  // ─── DIAGNÓSTICO: muestra estado de datos en tiempo real ───
-  const [showDiag, setShowDiag] = React.useState(false);
-  const diag = React.useMemo(() => {
-    if (!showDiag) return null;
-    const samples = invProducts.slice(0, 2).map(p => ({
-      id: p.id.slice(0, 8),
-      name: p.data.name,
-      price: p.data.price,
-      stock: p.data.stock,
-      minStock: p.data.minStock,
-      warehouseStock: p.data.warehouseStock,
-      categoryId: p.data.categoryId,
-      unit: p.data.unit,
-      totalCalc: getTotalStock(p),
-      hasImage: !!p.data.imageData,
-    }));
-    return { prodCount: invProducts.length, catCount: invCategories.length, movCount: invMovements.length, alertCount: invAlerts.length, totalValue: invTotalValue, totalStock: invTotalStock, samples };
-  }, [showDiag, invProducts, invCategories, invMovements, invAlerts, invTotalValue, invTotalStock, getTotalStock]);
+  const isEmpty = invProducts.length === 0 && invCategories.length === 0 && invMovements.length === 0;
+
+  /* ─── Empty State: primer uso ─── */
+  if (isEmpty) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
+        <div className="skeuo-panel rounded-2xl p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-4">
+            <Package size={32} className="text-[var(--af-text3)]" />
+          </div>
+          <h4 className="text-base font-semibold mb-1">Inventario vacío</h4>
+          <p className="text-sm text-[var(--muted-foreground)] max-w-sm mx-auto mb-6">
+            Comienza registrando tus primeras categorías y productos para activar el control de stock, movimientos y valoración.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => onNavigate?.('categories')}
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 justify-center"
+            >
+              <Tag size={16} />Crear categoría
+            </button>
+            <button
+              onClick={() => onNavigate?.('products')}
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold cursor-pointer skeuo-btn transition-colors flex items-center gap-2 justify-center"
+            >
+              <Plus size={16} />Registrar producto
+            </button>
+          </div>
+          <div className="mt-6 pt-4 border-t border-[var(--border)]">
+            <p className="text-[11px] text-[var(--muted-foreground)]">
+              ArchiFlow maneja 3 almacenes automáticos: Almacén Principal, Obra en Curso y Bodega Reserva.
+              Puedes registrar entradas, salidas y transferencias entre almacenes.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
-        <button onClick={() => setShowDiag(!showDiag)} className="text-[10px] px-2 py-1 rounded bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer border-none">🔍 Diagnóstico</button>
-      </div>
-      {/* DIAGNÓSTICO */}
-      {diag && (
-        <details open className="skeuo-panel rounded-xl p-3 text-xs font-mono">
-          <summary className="cursor-pointer text-[var(--af-accent)] font-semibold mb-2">Estado de datos (Firestore)</summary>
-          <div className="space-y-1 text-[var(--muted-foreground)]">
-            <div>Productos: {diag.prodCount} | Categorías: {diag.catCount} | Movimientos: {diag.movCount} | Alertas: {diag.alertCount}</div>
-            <div>Valor total: {diag.totalValue} | Stock total: {diag.totalStock}</div>
-            {diag.prodCount === 0 && <div className="text-red-400 font-bold">⚠️ No hay productos cargados — Firestore listeners podrían no estar recibiendo datos</div>}
-            {diag.samples.length > 0 && diag.samples.map((s, i) => (
-              <div key={i} className="bg-[var(--af-bg4)] rounded p-2 mt-1">
-                <div className="text-[var(--foreground)]">Producto {i + 1}: {s.name} (ID: {s.id})</div>
-                <div>price={s.price} | stock={s.stock} | minStock={s.minStock} | unit={s.unit}</div>
-                <div>categoryId={s.categoryId} | warehouseStock={JSON.stringify(s.warehouseStock)}</div>
-                <div>getTotalStock()={s.totalCalc} | hasImage={s.hasImage}</div>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+      <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="skeuo-panel rounded-xl p-4">
@@ -122,9 +122,19 @@ export default function InvDashboardTab({
       </div>
       {/* Recent Movements */}
       <div>
-        <h4 className="text-sm font-semibold mb-2">Últimos movimientos</h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold">Últimos movimientos</h4>
+          {invMovements.length === 0 && onNavigate && (
+            <button onClick={() => onNavigate('movements')} className="text-[11px] text-[var(--af-accent)] flex items-center gap-1 cursor-pointer bg-transparent border-none">
+              Registrar movimiento <ArrowRight size={12} />
+            </button>
+          )}
+        </div>
         {invMovements.length === 0 ? (
-          <div className="text-center py-6 text-[var(--muted-foreground)] text-sm">Sin movimientos</div>
+          <div className="skeuo-panel rounded-xl p-6 text-center">
+            <div className="text-[var(--muted-foreground)] text-sm">Sin movimientos registrados</div>
+            <div className="text-[11px] text-[var(--muted-foreground)] mt-1">Registra entradas y salidas para rastrear el flujo de materiales</div>
+          </div>
         ) : (
           <div className="space-y-1.5">
             {invMovements.slice(0, 6).map(m => (
@@ -144,9 +154,19 @@ export default function InvDashboardTab({
       </div>
       {/* Categories */}
       <div>
-        <h4 className="text-sm font-semibold mb-2">Por categoría</h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold">Por categoría</h4>
+          {invCategories.length === 0 && onNavigate && (
+            <button onClick={() => onNavigate('categories')} className="text-[11px] text-[var(--af-accent)] flex items-center gap-1 cursor-pointer bg-transparent border-none">
+              Crear categoría <ArrowRight size={12} />
+            </button>
+          )}
+        </div>
         {invCategories.length === 0 ? (
-          <div className="text-center py-4 text-[var(--muted-foreground)] text-sm">Sin categorías</div>
+          <div className="skeuo-panel rounded-xl p-6 text-center">
+            <div className="text-[var(--muted-foreground)] text-sm">Sin categorías creadas</div>
+            <div className="text-[11px] text-[var(--muted-foreground)] mt-1">Agrupa tus productos por tipo para mejor organización</div>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {invCategories.map(c => {

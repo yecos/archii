@@ -56,7 +56,7 @@ export default function InvProductsTab({
           return ms && mc;
         });
         return filtered.length === 0 ? (
-          <div className="text-center py-12"><div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3"><Package size={28} className="text-[var(--af-text3)]" /></div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
+          <div className="text-center py-12"><div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3"><Package size={28} className="text-[var(--af-text3)]" /></div><div className="text-[var(--muted-foreground)] text-sm">{invProducts.length === 0 ? 'Aún no hay productos registrados' : 'No se encontraron productos con ese filtro'}</div><div className="text-[11px] text-[var(--muted-foreground)] mt-1">{invProducts.length === 0 ? 'Crea tu primer producto para empezar a gestionar el inventario' : 'Intenta con otra búsqueda o categoría'}</div></div>
         ) : (
           <div className="space-y-2">
             {filtered.slice(0, productLimit).map(p => {

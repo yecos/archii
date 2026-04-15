@@ -23,7 +23,7 @@ export default function InvCategoriesTab({
         <h3 className="text-lg font-semibold">🏷️ Categorías ({invCategories.length})</h3>
         <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2" onClick={() => { setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' })); openModal('invCategory'); }}><Plus className="w-4 h-4" strokeWidth={2} />Nueva categoría</button>
       </div>
-      {invCategories.length === 0 ? (<div className="text-center py-12"><div className="text-4xl mb-2">🏷️</div><div className="text-[var(--muted-foreground)]">No hay categorías</div></div>) : (
+      {invCategories.length === 0 ? (<div className="text-center py-12"><div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3"><div className="text-2xl">🏷️</div></div><div className="text-[var(--muted-foreground)] text-sm">Aún no hay categorías</div><div className="text-[11px] text-[var(--muted-foreground)] mt-1">Crea categorías para organizar tus productos por tipo</div></div>) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {invCategories.map(c => {
             const count = invProducts.filter(p => p.data.categoryId === c.id).length;

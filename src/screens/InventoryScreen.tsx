@@ -2,7 +2,7 @@
 import React from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useInventory } from '@/hooks/useDomain';
-import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
+
 import InvDashboardTab from '@/components/features/inventory/InvDashboardTab';
 import InvProductsTab from '@/components/features/inventory/InvProductsTab';
 import InvCategoriesTab from '@/components/features/inventory/InvCategoriesTab';
@@ -36,15 +36,7 @@ export default function InventoryScreen() {
               ))}
             </div>
 
-            {/* Loading skeleton */}
-            {!invProducts.length && !invCategories.length && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => <SkeletonKPI key={i} />)}
-                </div>
-                <SkeletonTableRow cols={5} />
-              </div>
-            )}
+
 
             {invTab === 'dashboard' && <InvDashboardTab
               invProducts={invProducts}
@@ -56,6 +48,7 @@ export default function InventoryScreen() {
               getWarehouseStock={getWarehouseStock}
               getInvProductName={getInvProductName}
               getTotalStock={getTotalStock}
+              onNavigate={setInvTab}
             />}
 
             {invTab === 'products' && <InvProductsTab
