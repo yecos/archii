@@ -221,6 +221,58 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 21:45 | BUG FIX — 6 bugs de fecha NaN/Invalid Date corregidos
+  Estado: RESUELTO
+  Tag de respaldo: backup-pre-fix-gettime-bugs-20260417-2146
+  Commit: 34d1201
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  BUG-20260417-003 [CRITICO] — DashboardScreen timeline sort con dead-code fallback:
+    * Antes: `a.time?.toDate?.() || new Date(a.time) || new Date(0)` — el
+      `|| new Date(0)` NUNCA se ejecutaba porque `new Date(anything)` siempre
+      es truthy (incluso Invalid Date). Si a.time era undefined, new Date(undefined)
+      creaba la fecha ACTUAL en vez de epoch, causando orden incorrecto.
+    * Ahora: usa `toSafeDate(a.time)` que maneja undefined, Firestore Timestamps,
+      strings invalidos y fallback seguro a epoch.
+    * Archivo: DashboardScreen.tsx
+
+  BUG-20260417-004 [ALTO] — ProfileScreen weekly chart tasks sin createdAt:
+    * Antes: `new Date(undefined)` se creaba como fecha actual, inflando
+      el contador del dia de hoy en la grafica semanal.
+    * Ahora: se agrega guard `if (!t.data.createdAt) return false;` y se
+      usa `toSafeDate()` para parsing seguro.
+    * Archivo: ProfileScreen.tsx
+
+  BUG-20260417-005 [MEDIO] — ProfileScreen overdue days NaN:
+    * Antes: `new Date(t.data.dueDate).getTime()` podia producir NaN si
+      dueDate tenia formato inesperado, mostrando "NaN dia(s)".
+    * Ahora: usa `toSafeDate(t.data.dueDate).getTime()`.
+    * Archivo: ProfileScreen.tsx
+
+  BUG-20260417-006 [MEDIO] — CalendarStats/Screen "esta semana" NaN silent:
+    * Antes: tareas con dueDate malformado eran silenciosamente excluidas
+      del conteo "esta semana" porque NaN >= 0 && NaN <= 7 = false.
+    * Ahora: usa `toSafeDate(d)` para parsing consistente.
+    * Archivo: CalendarStats.tsx, CalendarScreen.tsx
+
+  BUG-20260417-007 [MEDIO] — OneDriveContext timeAgo sin NaN guard:
+    * Antes: `new Date(dateStr).getTime()` sin validacion, podia mostrar
+      "Invalid Date" en listado de archivos.
+    * Ahora: `toSafeDate(dateStr)` con early return si date === 0.
+    * Archivo: OneDriveContext.tsx
+
+  BUG-20260417-008 [BAJA] — NotifPanel timestamps sin defensa:
+    * Antes: `new Date(n.timestamp)` podia fallar con timestamps corruptos.
+    * Ahora: `toSafeDate(n.timestamp)` con guard si getTime() === 0.
+    * Archivo: NotifPanel.tsx
+
+  Nuevo archivo creado:
+    * src/lib/date-utils.ts — Utilidad centralizada `toSafeDate()` y `toMs()`
+      que reemplaza todos los patrones de parsing de fecha inconsistentes.
+      Soporta: string ISO, Date nativo, Firestore Timestamp (.toDate()),
+      timestamp serializado (.seconds/.nanoseconds), number (ms),
+      null, undefined. Siempre retorna Date valido (fallback: epoch).
+
 2026-04-16 23:30 | CI — Automatizacion de Tests Diagnosticos
   Estado: PARCIAL (cron OK, GitHub Actions pendiente permisos)
 
