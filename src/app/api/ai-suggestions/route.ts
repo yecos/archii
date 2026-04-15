@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateText } from "ai";
 import { requireAuth } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { routeAIRequest } from "@/lib/ai-router";
 
 /**
  * POST /api/ai-suggestions
@@ -59,76 +61,50 @@ interface AISuggestion {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DocData = Record<string, any>;
 
-async function callAI(userPrompt: string): Promise<AISuggestion[]> {
-  let apiKey = process.env.OPENAI_API_KEY;
-  let baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-  let model = process.env.AI_MODEL || "gpt-4o-mini";
-
-  // Si no hay API key OpenAI, intentar con ZAI (proveedor interno)
-  if (!apiKey) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const ZAI = require('z-ai-web-dev-sdk').default;
-      const zai = await ZAI.create();
-      apiKey = zai.config.apiKey || 'Z.ai';
-      baseUrl = zai.config.baseUrl;
-      model = 'default';
-      console.log('[AI Suggestions] Usando ZAI como proveedor (baseURL=' + baseUrl + ')');
-    } catch (zaiErr) {
-      console.warn('[AI Suggestions] ZAI no disponible:', zaiErr);
-    }
-  }
-
-  if (!apiKey) {
-    throw new Error("API_KEY_NOT_CONFIGURED");
-  }
-
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 1500,
-      temperature: 0.6,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[ArchiFlow AI Suggestions] API error:", response.status, errorText);
-    throw new Error(`API_ERROR_${response.status}`);
-  }
-
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content || "";
-
-  // Try to parse JSON from the response
+async function callAI(userPrompt: string, userId: string): Promise<AISuggestion[]> {
   try {
-    // Handle possible markdown code blocks
-    const jsonStr = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
-    const parsed = JSON.parse(jsonStr);
-    return parsed.suggestions || parsed || [];
-  } catch {
-    console.warn("[ArchiFlow AI Suggestions] Could not parse AI response as JSON:", rawContent.substring(0, 200));
-    // Fallback: return a generic suggestion
-    return [
-      {
-        id: "fallback-1",
-        title: "Revisa tus proyectos",
-        description: "La IA no pudo generar sugerencias específicas. Revisa tus proyectos y tareas manualmente.",
-        actionType: "navigate",
-        actionLabel: "Ir a Proyectos",
-        priority: "media",
-        projectId: null,
-      },
-    ];
+    // Usar el router multi-proveedor (Groq, Mistral, OpenAI)
+    const { model, provider } = await routeAIRequest({
+      taskType: 'analysis',
+      messages: [{ role: 'user', content: userPrompt }],
+      maxTokens: 1500,
+      temperature: 0.6,
+      userId,
+    });
+
+    console.log(`[AI Suggestions] Usando ${provider}`);
+
+    const { text } = await generateText({
+      model,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+      maxOutputTokens: 1500,
+      temperature: 0.6,
+    });
+
+    // Parsear JSON de la respuesta
+    try {
+      const jsonStr = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+      const parsed = JSON.parse(jsonStr);
+      return parsed.suggestions || parsed || [];
+    } catch {
+      console.warn("[AI Suggestions] No se pudo parsear JSON:", text.substring(0, 200));
+      return [
+        {
+          id: "fallback-1",
+          title: "Revisa tus proyectos",
+          description: "La IA no pudo generar sugerencias específicas. Revisa tus proyectos y tareas manualmente.",
+          actionType: "navigate",
+          actionLabel: "Ir a Proyectos",
+          priority: "media",
+          projectId: null,
+        },
+      ];
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('[AI Suggestions] Error con proveedor:', msg);
+    throw new Error(`PROVIDER_ERROR: ${msg}`);
   }
 }
 
@@ -396,8 +372,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call AI
-    const suggestions = await callAI(prompt);
+    // Call AI via router multi-proveedor
+    const suggestions = await callAI(prompt, uid);
 
     // Add fallback suggestions if AI returned empty
     const enrichedSuggestions = suggestions.length > 0
@@ -429,12 +405,12 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     console.error("[ArchiFlow AI Suggestions] Error:", message);
 
-    if (message === "API_KEY_NOT_CONFIGURED") {
+    if (message === "API_KEY_NOT_CONFIGURED" || message.startsWith("PROVIDER_ERROR")) {
+      const detail = message.startsWith("PROVIDER_ERROR") ? message.replace("PROVIDER_ERROR: ", "") : message;
       return NextResponse.json(
         {
-          error: "IA no configurada",
-          message: "Configura OPENAI_API_KEY en las variables de entorno.",
-          setupRequired: true,
+          error: "IA no disponible",
+          message: `No se pudo conectar con los proveedores de IA. ${detail}`,
           suggestions: [],
           type: "overview",
         },
