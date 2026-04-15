@@ -347,6 +347,12 @@
   border-color: rgba(0,0,0,0.3);
 }
 
+/* Select options inherit input styling */
+.skeuo-input option {
+  background: var(--skeuo-raised);
+  color: var(--foreground);
+}
+
 /* Raised panel */
 .skeuo-panel {
   background: var(--skeuo-raised);
