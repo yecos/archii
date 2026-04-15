@@ -221,6 +221,46 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 22:15 | FEATURE PACK v23 — AI Agent Fase 2 (Mistral + Tools Nivel 2)
+  Estado: COMPLETADO
+  Commit: c40dc97
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Tarea 23.1 — Integrar Mistral como proveedor de calidad critica:
+    * Nuevo proveedor: Mistral (mistral-small-latest) via OpenAI-compatible SDK
+    * Orden de routing: Groq 8B (free) → Mistral → Groq 70B → OpenAI fallback
+    * Rate tracking: 50 RPM, 5,000 RPD para Mistral
+    * Env var nueva: MISTRAL_API_KEY
+    * Archivo: ai-router.ts
+
+  Tarea 23.2 — Consolidar herramientas (eliminar duplicacion):
+    * Antes: ai-tools.ts tenia tools con .execute(params, userId) pero NO se usaban.
+      route.ts tenia 6 tools duplicadas inline con tool() wrapper.
+    * Ahora: ai-tools.ts exporta createAgentTools(userId) factory que retorna
+      todas las tools usando SDK tool() con userId inyectado.
+    * route.ts simplificado de 130 a 65 lineas.
+    * Archivos: ai-tools.ts, route.ts
+
+  Tarea 23.3 — Herramientas Nivel 2 (4 tools nuevas):
+    * updateTask: Actualiza campos de tarea existente (titulo, descripcion,
+      prioridad, fecha limite). Solo actualiza campos proporcionados.
+    * deleteTask: Elimina tarea existente. Solo ejecuta si usuario lo pide.
+    * queryExpenses: Lista gastos de un proyecto con filtro por categoria,
+      retorna total y desglose por categoria. Limit configurable.
+    * queryBudget: Presupuesto vs gastos con desglose por categoria,
+      porcentaje de ejecucion, indicador de riesgo (emoji color).
+    * Total: 10 herramientas (6 Nivel 1 + 4 Nivel 2)
+    * Archivo: ai-tools.ts
+
+  Tarea 23.4 — Actualizar UI del Agent Panel:
+    * Quick prompts actualizados: queryBudget y queryExpenses
+    * Badge actualizado: "Groq + Mistral — Gratis"
+    * Descripcion actualizada: menciona consultas de presupuesto
+    * Archivo: AIAgentPanel.tsx
+
+  Siguiente (Fase 3): Modo supervisado con action cards de confirmacion,
+    persistencia de chat en Firestore, renderizado markdown.
+
 2026-04-17 21:45 | BUG FIX — 6 bugs de fecha NaN/Invalid Date corregidos
   Estado: RESUELTO
   Tag de respaldo: backup-pre-fix-gettime-bugs-20260417-2146
