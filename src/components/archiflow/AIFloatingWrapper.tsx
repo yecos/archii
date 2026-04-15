@@ -2,18 +2,17 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import AIChatPanel from './AIChatPanel';
 import QuickActions from './QuickActions';
 import { useUIStore } from '@/stores/ui-store';
-import { Plus, HelpCircle } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 
 export default function AIFloatingWrapper() {
-  const [chatOpen, setChatOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isScrollHidden, setIsScrollHidden] = useState(false);
   const [tooltip, setTooltip] = useState(true);
   const currentScreen = useUIStore((s) => s.currentScreen);
+  const setAIAgentOpen = useUIStore((s) => s.setAIAgentOpen);
   const lastScrollY = useRef(0);
 
   // Hide FABs on chat screen to avoid overlapping the chat input bar
@@ -54,8 +53,8 @@ export default function AIFloatingWrapper() {
     return () => mainContent.removeEventListener('scroll', handleScroll);
   }, [hideFABs]);
 
-  const handleChatOpen = () => {
-    setChatOpen(true);
+  const handleAgentOpen = () => {
+    setAIAgentOpen(true);
     setQuickOpen(false);
     setTooltip(false);
   };
@@ -69,17 +68,11 @@ export default function AIFloatingWrapper() {
 
   return (
     <>
-      {/* Chat Panel */}
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-      />
-
       {/* Quick Actions */}
       <QuickActions
         isOpen={quickOpen}
         onClose={() => setQuickOpen(false)}
-        onOpenChat={handleChatOpen}
+        onOpenChat={handleAgentOpen}
       />
 
       {/* Floating Buttons - hidden on chat screen, positioned higher on desktop */}
@@ -91,7 +84,7 @@ export default function AIFloatingWrapper() {
           : 'translate-y-4 opacity-0 pointer-events-none'
       )}>
         {/* Tooltip */}
-        {tooltip && !chatOpen && !quickOpen && (
+        {tooltip && !quickOpen && (
           <div className="animate-slideUp mb-1 px-3 py-2 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] shadow-lg text-xs text-muted-foreground max-w-[200px]">
             Pregúntame sobre tu proyecto
             <div className="absolute -bottom-1 right-6 w-2 h-2 bg-[var(--af-bg3)] border-r border-b border-[var(--af-bg4)] rotate-45" />
@@ -113,19 +106,18 @@ export default function AIFloatingWrapper() {
           <Plus className="w-5 h-5" />
         </button>
 
-        {/* Main AI Chat Button (golden) */}
+        {/* Main AI Agent Button (golden) — now opens the unified Agent panel */}
         <button
-          onClick={handleChatOpen}
+          onClick={handleAgentOpen}
           className={cn(
             'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300',
             'shadow-xl shadow-[var(--af-accent)]/20 hover:shadow-2xl hover:shadow-[var(--af-accent)]/30',
             'bg-[var(--af-accent)] text-black hover:scale-105 active:scale-95',
-            chatOpen && 'scale-90 opacity-0 pointer-events-none'
           )}
-          title="Abrir asistente IA"
-          aria-label="Abrir asistente IA"
+          title="Abrir Agente IA"
+          aria-label="Abrir Agente IA"
         >
-          <HelpCircle className="w-6 h-6" />
+          <Sparkles className="w-6 h-6" />
         </button>
       </div>
       )}

@@ -29,14 +29,14 @@ const ACTION_BUTTONS = [
     id: 'tasks',
     label: 'Sugerir tareas',
     icon: <SquareCheck className="w-4 h-4" />,
-    type: 'task' as const,
+    type: 'tasks' as const,
     description: 'Genera tareas sugeridas para tu proyecto',
   },
   {
     id: 'budget',
     label: 'Optimizar presupuesto',
     icon: <DollarSign className="w-4 h-4" />,
-    type: 'expense' as const,
+    type: 'budget' as const,
     description: 'Analiza y optimiza los gastos del proyecto',
   },
   {
@@ -50,7 +50,7 @@ const ACTION_BUTTONS = [
     id: 'improve',
     label: 'Mejoras del proyecto',
     icon: <BarChart3 className="w-4 h-4" />,
-    type: 'project' as const,
+    type: 'overview' as const,
     description: 'Recomendaciones para mejorar tu proyecto',
   },
 ];
@@ -71,9 +71,17 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
     setError(null);
 
     try {
+      // Get Firebase auth token
+      const fb = (window as any).firebase;
+      const currentUser = fb?.auth?.()?.currentUser;
+      const token = currentUser ? await currentUser.getIdToken() : null;
+
       const response = await fetch('/api/ai-suggestions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           context: projectContext || 'Proyecto de arquitectura general',
           type: action.type,

@@ -191,6 +191,10 @@ export async function routeAIRequest(options: AIRequestOptions): Promise<{
     }
   }
 
+  const hasAnyKey = !!process.env.GROQ_API_KEY || !!process.env.MISTRAL_API_KEY || !!process.env.OPENAI_API_KEY;
+  if (!hasAnyKey) {
+    throw new Error('No hay API keys de IA configuradas. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en las variables de entorno (Vercel → Settings → Environment Variables).');
+  }
   throw new Error('Todos los proveedores de IA están en límite de tasa. Intenta en unos segundos.');
 }
 
