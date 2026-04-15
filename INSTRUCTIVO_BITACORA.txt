@@ -221,6 +221,57 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 23:00 | FIX — Unificación del sistema de colores light/dark mode
+  Estado: COMPLETADO
+  Commit: e759697
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: El usuario reportó que en el sidebar los contadores (Proyectos: 5,
+    Tareas: 6) mostraban dos colores distintos — uno oscuro y otro claro.
+    La auditoría reveló ~30 instancias de colores hardcoded (rgba(200,169,110)
+    y #c8a96e) que NUNCA cambiaban al alternar light/dark mode o al cambiar
+    el tema de color (Pastel, Neon, etc). También faltaban variables CSS
+    --af-bg1 y --af-bg2, causando paneles invisibles en AI.
+
+  Tarea T1 — Variables CSS faltantes:
+    * --af-bg1: #f5f1eb (light) / #181b22 (dark)
+    * --af-bg2: #ebe6dd (light) / #1a1d25 (dark)
+    * --af-accent-h: 38 (HSL hue, para skeleton shimmer)
+    * --af-accent-rgb: 158,124,62 / 200,169,110 (para rgba() dinámico)
+    * Archivo: globals.css
+
+  Tarea T2 — 7 temas de color actualizados (themes.ts):
+    * Cada tema (Dorado, Pastel, Terracota, Eléctrico, Neon, Arena, Menta)
+      ahora define --af-accent-h y --af-accent-rgb en light y dark.
+    * El skeleton shimmer y el focus ring se adaptan al color activo.
+    * Archivo: themes.ts
+
+  Tarea T3 — 17 archivos corregidos (~30 reemplazos):
+    * globals.css: .skeuo-input:focus, skeleton shimmer → vars dinámicos
+    * input.tsx, skeleton.tsx: focus ring, shimmer → rgba(var(--af-accent-rgb),...)
+    * AuthScreen.tsx: input focus → vars
+    * DashboardCharts.tsx: 7 instancias → hook useThemeColors()
+    * ReportsCharts.tsx: 8 instancias → hook useThemeColors()
+    * DashboardScreen.tsx: Sprint progress ring → var(--af-accent)
+    * ProfileScreen.tsx: Completion rate ring → var(--af-accent)
+    * ObraScreen.tsx: Chart cursor/fill → vars
+    * BudgetScreen.tsx: Materiales color → var(--af-accent)
+    * ProjectObra.tsx: Timeline glow → rgba(var(--af-accent-rgb),...)
+    * ResumenTab.tsx: Progress ring → var(--af-accent)
+    * ErrorBoundary.tsx: Retry button → vars
+    * loading.tsx: Badge bg, spinner border → vars
+    * page.tsx: Spinner border → vars
+
+  Tarea T4 — Hook nuevo useThemeColors():
+    * Lee reactivamente --af-accent y --af-accent-rgb del DOM
+    * Se actualiza via MutationObserver al cambiar dark/light o tema de color
+    * Recharts recibe colores dinámicos en vez de hardcoded
+    * Archivo: src/hooks/useThemeColors.ts
+
+  Area: UI Primitives + Lib & Infrastructure
+  Archivos: 17 modificados, 1 creado
+  Total: +134 lineas, -37 eliminadas
+
 2026-04-17 22:45 | REFACTOR — Tipos Firestore sincronizados + Code Splitting verificado
   Estado: COMPLETADO
   Commit: c0931da
