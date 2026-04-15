@@ -221,6 +221,48 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 22:00 | BUG FIX — 4 bugs en Inventario corregidos
+  Estado: RESUELTO
+  Tag de respaldo: backup-pre-bug-inv-delete-stock-20260416-2200
+  Commit: 0c95e56
+  Build: exitoso (13 static + 13 dynamic routes, 0 errores TypeScript)
+
+  BUG-20260416-001 [CRITICO] — deleteInvMovement no revertia stock:
+    * Antes: eliminar un movimiento solo borraba el registro, el stock quedaba inconsistente
+    * Ahora: transaccion atomica que lee el movimiento, invierte el stock (Entrada resta,
+      Salida suma), elimina el registro y actualiza el producto en una sola operacion
+    * Confirmacion actualizada: "El stock se revertira automaticamente"
+    * Toast actualizado: "Movimiento eliminado — stock revertido"
+    * Archivo: InventoryContext.tsx
+
+  BUG-20260416-002 [CRITICO] — deleteInvTransfer no revertia stock:
+    * Antes: eliminar una transferencia solo borraba el registro, stock quedaba inconsistente
+    * Ahora: transaccion atomica que lee la transferencia, revierte stock (origen recupera,
+      destino devuelve), solo para transferencias con status "Completada"
+    * Transferencias Pendiente/En transito/Cancelada se eliminan sin revertir stock
+    * Archivo: InventoryContext.tsx
+
+  BUG-20260416-003 [MEDIA] — saveInvCategory sobrescribia createdAt al editar:
+    * Antes: data = { name, color, description, createdAt: ts } se usaba tanto para
+      crear como actualizar, sobrescribiendo la fecha de creacion original
+    * Ahora: al editar se usa updatedAt: ts, al crear se usa createdAt: ts
+    * Archivo: InventoryContext.tsx
+
+  BUG-20260416-004 [BAJA] — Variable maxVal muerta en InvReportsTab:
+    * Antes: maxVal se calculaba con invProducts[0] (no ordenado) pero nunca se usaba en JSX
+    * Ahora: variable eliminada, dead code limpiado
+    * Archivo: InvReportsTab.tsx
+
+  Archivos modificados (2): InventoryContext.tsx, InvReportsTab.tsx
+  Total: +86 lineas agregadas, -6 eliminadas
+
+  Resumen:
+    - 1 commit: 0c95e56
+    - 2 archivos tocados
+    - 4 bugs corregidos (2 criticos, 1 medio, 1 bajo)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
+
 2026-04-16 15:00 | FEATURE PACK v19 — Responsive Mobile & Desktop
   Estado: COMPLETADO
   Tag de respaldo: backup-pre-v19-responsive-mobile-desktop-20260416
