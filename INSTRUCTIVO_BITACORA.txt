@@ -221,6 +221,29 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 23:30 | CI — Automatizacion de Tests Diagnosticos
+  Estado: PARCIAL (cron OK, GitHub Actions pendiente permisos)
+
+  Tarea CI.1 — Cron del Agente (ACTIVO):
+    * Job ID: 92392
+    * Horario: Todos los dias a la 1:00 PM (America/Bogota)
+    * El agente ejecuta git pull, bun run test:run, envia resumen por chat
+    * Si hay fallos, envia alerta detallada con modulos y tests especificos
+
+  Tarea CI.2 — GitHub Actions Workflow (PENDIENTE):
+    * Archivo: .github/workflows/test-diagnostic.yml (creado localmente)
+    * Triggers: push a main, cron diario (6 AM Colombia), manual dispatch
+    * Sube 3 artefactos: HTML report, JSON data, coverage
+    * Crea Issue automatico si tests fallan en ejecucion programada
+    * BLOQUEADO: PAT token necesita scope 'workflow' para pushear
+      - Solucion: Settings > Developer settings > PAT > Editar > Marcar 'workflow'
+    * Comando para pushear despues de actualizar el token:
+      git push origin main
+
+  Nota: El cron del agente funciona independientemente de GitHub Actions.
+    El agente ejecuta los tests directamente en el servidor y envia el
+    resumen por chat, sin depender de GitHub Actions.
+
 2026-04-16 22:30 | FEATURE PACK v22-bis — Component Tests + Registry Documentation
   Estado: COMPLETADO
   Objetivo: Completar v22 con tests de componentes, ajuste de coverage,
