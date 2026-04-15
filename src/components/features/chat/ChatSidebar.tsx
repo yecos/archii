@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Search } from 'lucide-react';
 import { getAvatarHSL } from './chat-helpers';
 

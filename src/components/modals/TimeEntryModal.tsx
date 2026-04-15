@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useUI, useFirestore, useTimeTracking } from '@/hooks/useDomain';
 import { DEFAULT_PHASES } from '@/lib/types';

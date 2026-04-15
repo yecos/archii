@@ -7,7 +7,7 @@ interface KeyboardShortcutsConfig {
   enabled?: boolean;
 }
 
-export function useKeyboardShortcuts(config: KeyboardShortcutsConfig = {}) {
+export function useKeyboardShortcuts(config: KeyboardShortcutsConfig = {}): void {
   const { enabled = true } = config;
 
   const {

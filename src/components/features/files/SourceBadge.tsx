@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import type { FileSource } from './types';
 
 interface SourceBadgeProps {

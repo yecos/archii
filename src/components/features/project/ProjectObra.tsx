@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Plus, Eye, Pencil, Trash2, ChevronLeft, X } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
 

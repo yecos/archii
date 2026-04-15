@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { useGallery } from '@/hooks/useDomain';
 import { useOneDrive } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';

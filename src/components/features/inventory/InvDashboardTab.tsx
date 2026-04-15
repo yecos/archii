@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { BarChart3, AlertTriangle, Building2, Package, Plus, Tag, ArrowRight } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';

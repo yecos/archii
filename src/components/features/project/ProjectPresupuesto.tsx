@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { fmtCOP } from '@/lib/helpers';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 

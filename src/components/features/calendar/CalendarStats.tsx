@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { toSafeDate } from '@/lib/date-utils';
 
 interface CalendarStatsProps {

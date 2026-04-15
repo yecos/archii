@@ -7,9 +7,9 @@
  * Este módulo inicializa firebase-admin con las credenciales del proyecto.
  */
 
-import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { initializeApp, cert, getApps, getApp, type App } from 'firebase-admin/app';
+import { getFirestore, type Firestore, type FieldValue } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 
 const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026';
 
@@ -34,7 +34,7 @@ function getAdminConfig() {
 let _adminApp: ReturnType<typeof initializeApp> | null = null;
 let _adminDb: ReturnType<typeof getFirestore> | null = null;
 
-export function getAdminApp() {
+export function getAdminApp(): App {
   if (_adminApp) return _adminApp;
   if (getApps().length > 0) {
     _adminApp = getApp();
@@ -47,20 +47,20 @@ export function getAdminApp() {
   return _adminApp;
 }
 
-export function getAdminDb() {
+export function getAdminDb(): Firestore {
   if (_adminDb) return _adminDb;
   _adminDb = getFirestore(getAdminApp());
   return _adminDb;
 }
 
-export function getAdminAuth() {
+export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
 }
 
 /**
  * FieldValue equivalente para server-side
  */
-export function getAdminFieldValue() {
+export function getAdminFieldValue(): typeof FieldValue {
   const { FieldValue } = require('firebase-admin/firestore');
   return FieldValue;
 }

@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { MESES } from '@/lib/types';
 

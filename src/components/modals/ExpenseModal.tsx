@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';

@@ -12,7 +12,12 @@ function readVar(name: string): string {
  * Updates automatically when dark/light mode or color theme changes.
  * Used by Recharts components that need hardcoded color strings.
  */
-export function useThemeColors() {
+export interface ThemeColors {
+  accent: string;
+  accentRGB: string;
+}
+
+export function useThemeColors(): ThemeColors {
   const [accent, setAccent] = useState('');
   const [accentRGB, setAccentRGB] = useState('');
 

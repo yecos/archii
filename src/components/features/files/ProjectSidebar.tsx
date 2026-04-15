@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { FolderOpen, Upload } from 'lucide-react';
 import type { Project } from '@/lib/types';
 

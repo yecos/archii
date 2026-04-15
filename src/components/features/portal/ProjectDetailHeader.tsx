@@ -1,4 +1,3 @@
-import React from 'react';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { fmtCOP } from '@/lib/helpers';
 import { projectStatusColor, progressColor } from './statusHelpers';

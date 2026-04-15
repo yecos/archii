@@ -1,4 +1,3 @@
-// @ts-nocheck - Vercel AI SDK v6 tool() types incompatible with strict TS
 /**
  * ai-tools.ts
  * Herramientas del Agente IA para ArchiFlow — Nivel 1 + Nivel 2 + Nivel 3 (Fase 3).
@@ -26,7 +25,7 @@ export function createAgentTools(userId: string) {
 
     createTask: tool({
       description: 'Crea una nueva tarea en un proyecto existente. Úsala cuando el usuario quiere agregar una tarea, pendiente o actividad.',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
         title: z.string().describe('Título de la tarea'),
         description: z.string().optional().describe('Descripción detallada'),
@@ -59,7 +58,7 @@ export function createAgentTools(userId: string) {
 
     changeTaskStatus: tool({
       description: 'Cambia el estado de una tarea existente. Úsala cuando el usuario quiere avanzar, completar o retroceder una tarea.',
-      parameters: z.object({
+      inputSchema: z.object({
         taskId: z.string().describe('ID de la tarea'),
         newStatus: z.enum(['Pendiente', 'En progreso', 'En revisión', 'Completado']).describe('Nuevo estado'),
       }),
@@ -77,7 +76,7 @@ export function createAgentTools(userId: string) {
 
     createExpense: tool({
       description: 'Registra un nuevo gasto en un proyecto. Úsala cuando el usuario menciona un gasto, compra o pago.',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
         concept: z.string().describe('Concepto del gasto'),
         amount: z.number().describe('Monto en COP'),
@@ -111,7 +110,7 @@ export function createAgentTools(userId: string) {
 
     updateTask: tool({
       description: 'Actualiza campos de una tarea existente (título, descripción, prioridad, fecha límite). Úsala para editar tareas.',
-      parameters: z.object({
+      inputSchema: z.object({
         taskId: z.string().describe('ID de la tarea'),
         title: z.string().optional().describe('Nuevo título'),
         description: z.string().optional().describe('Nueva descripción'),
@@ -138,7 +137,7 @@ export function createAgentTools(userId: string) {
 
     deleteTask: tool({
       description: 'Elimina una tarea existente. Úsala SOLO si el usuario lo pide explícitamente.',
-      parameters: z.object({
+      inputSchema: z.object({
         taskId: z.string().describe('ID de la tarea a eliminar'),
       }),
       execute: async (args) => {
@@ -159,7 +158,7 @@ export function createAgentTools(userId: string) {
 
     queryProject: tool({
       description: 'Consulta el estado actual de un proyecto. Úsala para responder preguntas sobre el estado de un proyecto.',
-      parameters: z.object({ projectId: z.string().describe('ID del proyecto') }),
+      inputSchema: z.object({ projectId: z.string().describe('ID del proyecto') }),
       execute: async (args) => {
         try {
           const { projectId } = args as { projectId: string };
@@ -189,7 +188,7 @@ export function createAgentTools(userId: string) {
 
     queryTasks: tool({
       description: 'Lista las tareas de un proyecto o usuario. Úsala para "¿qué tareas hay?" o "muéstrame las tareas".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().optional().describe('ID del proyecto'),
         userId: z.string().optional().describe('ID del usuario asignado'),
         status: z.string().optional().describe('Filtrar por estado'),
@@ -218,7 +217,7 @@ export function createAgentTools(userId: string) {
 
     queryDeadlines: tool({
       description: 'Muestra tareas con fecha límite próxima. Úsala cuando el usuario pregunta por vencimientos o plazos.',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().optional().describe('Filtrar por proyecto'),
         days: z.number().default(7).describe('Días futuros a considerar'),
       }),
@@ -246,7 +245,7 @@ export function createAgentTools(userId: string) {
 
     queryExpenses: tool({
       description: 'Lista los gastos de un proyecto. Úsala para "¿cuánto se ha gastado?" o "muéstrame los gastos".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
         category: z.string().optional().describe('Filtrar por categoría'),
         limit: z.number().default(10).describe('Máximo de registros a mostrar'),
@@ -273,7 +272,7 @@ export function createAgentTools(userId: string) {
 
     queryBudget: tool({
       description: 'Muestra el presupuesto vs gastos de un proyecto. Úsala para "¿cuánto presupuesto queda?" o "resumen financiero".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
       }),
       execute: async (args) => {
@@ -317,7 +316,7 @@ export function createAgentTools(userId: string) {
 
     queryInventory: tool({
       description: 'Consulta productos del inventario. Úsala para "¿qué hay en inventario?", "stock de cemento", "materiales disponibles", etc.',
-      parameters: z.object({
+      inputSchema: z.object({
         search: z.string().optional().describe('Buscar por nombre o SKU del producto'),
         warehouse: z.string().optional().describe('Filtrar por almacén (Almacén Principal, Obra en Curso, Bodega Reserva)'),
         lowStock: z.boolean().optional().describe('Si es true, solo muestra productos con stock bajo'),
@@ -378,7 +377,7 @@ export function createAgentTools(userId: string) {
 
     suggestReorder: tool({
       description: 'Analiza el inventario y sugiere productos que necesitan reorden. Úsala para "¿qué debo comprar?" o "alertas de inventario".',
-      parameters: z.object({
+      inputSchema: z.object({
         warehouse: z.string().optional().describe('Filtrar por almacén específico'),
       }),
       execute: async (args) => {
@@ -438,7 +437,7 @@ export function createAgentTools(userId: string) {
 
     createInvoice: tool({
       description: 'Crea una nueva factura para un proyecto. Úsala para "genera una factura" o "crear factura para el proyecto X".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
         projectName: z.string().describe('Nombre del proyecto (para el encabezado)'),
         clientName: z.string().describe('Nombre del cliente'),
@@ -493,7 +492,7 @@ export function createAgentTools(userId: string) {
 
     queryInvoices: tool({
       description: 'Lista facturas con filtros. Úsala para "¿qué facturas hay?", "facturas pendientes", "facturas vencidas".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().optional().describe('Filtrar por proyecto'),
         status: z.string().optional().describe('Filtrar por estado (Borrador, Enviada, Pagada, Vencida, Cancelada)'),
       }),
@@ -531,7 +530,7 @@ export function createAgentTools(userId: string) {
 
     estimateCosts: tool({
       description: 'Estima costos de materiales y mano de obra para un alcance de proyecto. Úsala para "¿cuánto costaría...?" o "estima el costo de...".',
-      parameters: z.object({
+      inputSchema: z.object({
         scope: z.string().describe('Descripción del alcance (ej: "remodelación cocina 15m²", "construcción muro de contención 30m")'),
         items: z.array(z.object({
           concept: z.string().describe('Concepto del ítem (ej: "Cemento Portland", "Mano de obra albañil")'),
@@ -574,7 +573,7 @@ export function createAgentTools(userId: string) {
 
     createQuotation: tool({
       description: 'Crea una cotización profesional para un proyecto. Úsala para "genera una cotización" o "crear propuesta para el cliente X".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
         projectName: z.string().describe('Nombre del proyecto'),
         clientName: z.string().describe('Nombre del cliente'),
@@ -667,7 +666,7 @@ export function createAgentTools(userId: string) {
 
     queryQuotations: tool({
       description: 'Lista cotizaciones existentes. Úsala para "¿qué cotizaciones hay?" o "cotizaciones pendientes".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().optional().describe('Filtrar por proyecto'),
         status: z.string().optional().describe('Filtrar por estado (Borrador, Enviada, Aprobada, Rechazada, Convertida, Vencida)'),
       }),
@@ -705,7 +704,7 @@ export function createAgentTools(userId: string) {
 
     createMeeting: tool({
       description: 'Programa una reunión. Úsala para "agenda una reunión", "programar visita de obra", "reunión con el cliente mañana".',
-      parameters: z.object({
+      inputSchema: z.object({
         title: z.string().describe('Título de la reunión'),
         projectId: z.string().optional().describe('ID del proyecto relacionado'),
         date: z.string().describe('Fecha YYYY-MM-DD'),
@@ -745,7 +744,7 @@ export function createAgentTools(userId: string) {
 
     queryMeetings: tool({
       description: 'Lista reuniones próximas o pasadas. Úsala para "¿qué reuniones tengo?" o "reuniones de esta semana".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().optional().describe('Filtrar por proyecto'),
         days: z.number().optional().describe('Mostrar reuniones en los próximos N días (default 7)'),
       }),
@@ -757,7 +756,7 @@ export function createAgentTools(userId: string) {
           const future = new Date(Date.now() + (days || 7) * 86400000).toISOString().split('T')[0];
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let meetings = snap.docs.map(d => ({ id: d.id, ...d.data() as any }))
-            .filter((m: Record<string, unknown>) => m.date >= now && m.date <= future);
+            .filter((m: Record<string, unknown>) => (m.date as string) >= now && (m.date as string) <= future);
           if (projectId) meetings = meetings.filter((m: Record<string, unknown>) => m.projectId === projectId);
 
           if (meetings.length === 0) return { success: true, count: 0, message: `Sin reuniones en los próximos ${days || 7} días` };
@@ -785,7 +784,7 @@ export function createAgentTools(userId: string) {
 
     generateProjectReport: tool({
       description: 'Genera un reporte resumido de un proyecto. Úsala para "dame un resumen del proyecto", "reporte de estado", "¿cómo va el proyecto X?".',
-      parameters: z.object({
+      inputSchema: z.object({
         projectId: z.string().describe('ID del proyecto'),
       }),
       execute: async (args) => {

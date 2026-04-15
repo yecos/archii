@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useInventory } from '@/hooks/useDomain';
 

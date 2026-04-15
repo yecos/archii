@@ -1,4 +1,3 @@
-import React from 'react';
 import { FolderKanban, FileText, CircleDot } from 'lucide-react';
 
 interface KpiCardsProps {

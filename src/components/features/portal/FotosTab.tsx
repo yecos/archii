@@ -1,4 +1,3 @@
-import React from 'react';
 import { useGallery } from '@/hooks/useDomain';
 
 interface FotosTabProps {

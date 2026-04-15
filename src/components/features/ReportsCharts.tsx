@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { useThemeColors } from '@/hooks/useThemeColors';

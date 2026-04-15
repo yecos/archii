@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { Zap } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';

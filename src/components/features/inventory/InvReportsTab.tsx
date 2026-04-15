@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';

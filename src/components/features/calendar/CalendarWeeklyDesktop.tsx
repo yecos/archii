@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Repeat } from 'lucide-react';
 import { DIAS_SEMANA } from '@/lib/types';
 

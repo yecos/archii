@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { useUI } from '@/hooks/useDomain';
 import { Check, Download, Info, RefreshCw, Trash2 } from 'lucide-react';

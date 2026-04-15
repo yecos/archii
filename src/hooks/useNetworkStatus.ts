@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
-export function useNetworkStatus() {
+export function useNetworkStatus(): { isOnline: boolean; showBanner: boolean; dismissBanner: () => void } {
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
 

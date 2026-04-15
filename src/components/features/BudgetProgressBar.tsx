@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { getBudgetColor, getBudgetTextColorClass, BUDGET_THRESHOLDS } from '@/lib/budget-alerts';
 import { fmtCOP } from '@/lib/helpers';
 

@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { fmtCOP, statusColor } from '@/lib/helpers';
 
 interface ProjectPortalProps {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, MapPin, CalendarDays, Clock, ChevronRight } from 'lucide-react';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { fmtCOP, fmtDateTime } from '@/lib/helpers';

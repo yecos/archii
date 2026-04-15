@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { CalendarDays, Repeat, Folder, User, Users, Pencil } from 'lucide-react';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES } from '@/lib/types';

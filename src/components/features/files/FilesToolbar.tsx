@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Search, FolderOpen, ChevronDown, X, ArrowUpDown, LayoutGrid, List, Upload } from 'lucide-react';
 import type { Project } from '@/lib/types';
 import { FILE_CATEGORY_TABS, SORT_OPTIONS } from './types';

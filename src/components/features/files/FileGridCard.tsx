@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { fmtDate, fmtSize } from '@/lib/helpers';
 import { FileIcon } from './FileIcon';

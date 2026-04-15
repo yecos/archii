@@ -1,4 +1,3 @@
-// @ts-nocheck - Vercel AI SDK v6 tool() types incompatible with strict TS
 /**
  * /api/ai-agent — AI Agent endpoint with streaming + function calling.
  * Fase 2: Tools consolidadas desde ai-tools.ts, soporta Mistral + 4 proveedores.

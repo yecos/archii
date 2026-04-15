@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { useUI, useInventory } from '@/hooks/useDomain';

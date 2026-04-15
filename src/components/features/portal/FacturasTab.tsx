@@ -1,4 +1,3 @@
-import React from 'react';
 import { fmtCOP } from '@/lib/helpers';
 import { invoiceStatusColor } from './statusHelpers';
 

@@ -199,7 +199,10 @@ export async function routeAIRequest(options: AIRequestOptions): Promise<{
 }
 
 /* ===== Get Provider Stats (for admin/debug) ===== */
-export function getProviderStats() {
+export function getProviderStats(): Array<{
+    name: string; rpm: number; rpd: number;
+    rpmCount: number; rpdCount: number; available: boolean;
+  }> {
   const stats: Array<{
     name: string; rpm: number; rpd: number;
     rpmCount: number; rpdCount: number; available: boolean;

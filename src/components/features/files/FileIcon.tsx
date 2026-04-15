@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { FileText, Image, FileSpreadsheet, File, Ruler } from 'lucide-react';
 
 interface FileIconProps {
