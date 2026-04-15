@@ -290,10 +290,10 @@ export default function EmptyState({
   const size = compact ? 120 : 160;
 
   return (
-    <div className={`flex flex-col items-center justify-center text-center ${compact ? 'py-10' : 'py-16'} ${className}`}>
+    <div className={`card-elevated flex flex-col items-center justify-center text-center ${compact ? 'py-10' : 'py-16'} ${className}`}>
       {/* SVG illustration */}
       <div
-        className={`empty-float text-[var(--af-accent)] mb-5 ${compact ? 'opacity-70' : ''}`}
+        className={`skeuo-well empty-float text-[var(--af-accent)] mb-5 ${compact ? 'opacity-70' : ''}`}
         style={{ width: size, height: size }}
       >
         <svg {...svgBase(size)}>

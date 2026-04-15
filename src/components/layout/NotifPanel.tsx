@@ -13,13 +13,13 @@ export default React.memo(function NotifPanel() {
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={() => notif.setShowNotifPanel(false)} />
-      <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
+      <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] rounded-xl shadow-[var(--skeuo-shadow-raised-lg)] overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
         {/* Header */}
-        <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
+        <div className="p-4 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="text-[15px] font-semibold">Notificaciones</div>
-              {notif.unreadCount > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full px-1">{notif.unreadCount}</span>}
+              {notif.unreadCount > 0 && <span className="skeuo-badge min-w-[20px] h-[20px] flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full px-1">{notif.unreadCount}</span>}
             </div>
             <div className="flex items-center gap-2">
               {notif.unreadCount > 0 && (
@@ -46,16 +46,17 @@ export default React.memo(function NotifPanel() {
             ].map(f => (
               <button
                 key={f.key}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${notif.notifFilterCat === f.key ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${notif.notifFilterCat === f.key ? 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] text-[var(--af-accent)]' : 'bg-[var(--skeuo-raised)] shadow-[var(--skeuo-shadow-raised-sm)] border border-[var(--skeuo-edge-light)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                 onClick={() => notif.setNotifFilterCat(f.key)}
               ><f.Icon size={12} /> {f.label}</button>
             ))}
           </div>
+          <hr className="skeuo-divider mt-3" />
         </div>
 
         {/* Permission prompt */}
         {notif.notifPermission !== 'granted' && (
-          <div className="p-4 bg-amber-500/5 border-b border-[var(--border)] flex-shrink-0">
+          <div className="skeuo-well shadow-[var(--skeuo-shadow-inset-sm)] p-4 bg-amber-500/5 flex-shrink-0">
             <div className="flex items-center gap-3">
               <Bell size={20} className="stroke-[var(--af-accent)]" />
               <div className="flex-1">
@@ -83,7 +84,7 @@ export default React.memo(function NotifPanel() {
             return filtered.slice(0, 50).map((n) => (
               <div
                 key={n.id}
-                className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-[var(--af-bg3)] border-b border-[var(--border)]/50 ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}
+                className={`flex items-start gap-3 p-3 cursor-pointer transition-all hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)] border-b border-[var(--skeuo-edge-light)]/30 ${!n.read ? 'bg-[var(--skeuo-inset)]/50 shadow-[var(--skeuo-shadow-inset-sm)]' : ''}`}
                 onClick={() => {
                   notif.markNotifRead(n.id);
                   if (n.screen) {
@@ -118,7 +119,7 @@ export default React.memo(function NotifPanel() {
         </div>
 
         {/* Settings footer */}
-        <div className="p-3 border-t border-[var(--border)] bg-[var(--af-bg3)] flex-shrink-0">
+        <div className="skeuo-well p-3 flex-shrink-0">
           <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Configurar alertas</div>
           <div className="grid grid-cols-2 gap-1.5">
             {[
@@ -131,7 +132,7 @@ export default React.memo(function NotifPanel() {
             ].map(p => (
               <button
                 key={p.key}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifPrefs[p.key] ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifPrefs[p.key] ? 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] text-[var(--af-accent)] border border-[var(--skeuo-edge-light)]' : 'bg-[var(--skeuo-raised)] shadow-[var(--skeuo-shadow-raised-sm)] text-[var(--muted-foreground)] border border-[var(--skeuo-edge-light)]'}`}
                 onClick={() => notif.toggleNotifPref(p.key)}
               >
                 <p.Icon size={11} /> {p.label}
@@ -139,10 +140,10 @@ export default React.memo(function NotifPanel() {
               </button>
             ))}
           </div>
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--skeuo-edge-light)]/30">
             <div className="flex items-center gap-2">
               <button
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifSound ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${notif.notifSound ? 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] text-[var(--af-accent)] border border-[var(--skeuo-edge-light)]' : 'bg-[var(--skeuo-raised)] shadow-[var(--skeuo-shadow-raised-sm)] text-[var(--muted-foreground)] border border-[var(--skeuo-edge-light)]'}`}
                 onClick={() => notif.setNotifSound(!notif.notifSound)}
               ><Volume2 size={12} className="inline mr-0.5" /> Sonido</button>
               <span className="text-[10px] text-[var(--af-text3)]">

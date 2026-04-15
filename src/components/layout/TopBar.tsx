@@ -36,12 +36,12 @@ export default React.memo(function TopBar() {
   };
 
   return (
-    <header className="h-[60px] bg-[var(--card)] border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
-      <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex" onClick={() => ui.setSidebarOpen(true)}>
+    <header className="h-[60px] bg-[var(--skeuo-raised)] border-b border-[var(--skeuo-edge-light)] shadow-[0_2px_8px_var(--skeuo-shadow)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
+      <button className="skeuo-btn w-9 h-9 rounded-lg items-center justify-center cursor-pointer md:hidden flex" onClick={() => ui.setSidebarOpen(true)}>
         <Menu size={18} className="stroke-[var(--muted-foreground)]" />
       </button>
       {ui.screen === 'projectDetail' ? (
-        <button className="flex items-center gap-1.5 text-[var(--af-accent)] text-sm font-medium cursor-pointer hover:underline mr-2" onClick={() => ui.navigateTo('projects')}>
+        <button className="skeuo-btn flex items-center gap-1.5 text-[var(--af-accent)] text-sm font-medium cursor-pointer hover:underline mr-2" onClick={() => ui.navigateTo('projects')}>
           <ChevronLeft size={16} className="stroke-current" />
           Proyectos
         </button>
@@ -55,7 +55,7 @@ export default React.memo(function TopBar() {
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Notification bell */}
         <button
-          className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all relative"
+          className="skeuo-btn w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer shadow-[var(--skeuo-shadow-raised-sm)] transition-all relative"
           onClick={() => notif.setShowNotifPanel(!notif.showNotifPanel)}
           title="Notificaciones"
         >
@@ -71,7 +71,7 @@ export default React.memo(function TopBar() {
         </button>
         {/* Theme toggle — 3-state cycle: light / dark / system */}
         <button
-          className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
+          className="skeuo-btn w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer shadow-[var(--skeuo-shadow-raised-sm)] transition-all"
           onClick={cycleTheme}
           title={(() => {
             if (theme === 'system') return 'Seguir sistema (clic: claro)';
@@ -91,24 +91,24 @@ export default React.memo(function TopBar() {
           )}
         </button>
         {ui.screen === 'projects' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); ui.openModal('project'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); ui.openModal('project'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nuevo proyecto
           </button>
         )}
         {ui.screen === 'tasks' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { ui.setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); ui.openModal('task'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); ui.openModal('task'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nueva tarea
           </button>
         )}
         {ui.screen === 'suppliers' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); ui.openModal('supplier'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] active:shadow-[var(--skeuo-shadow-pressed)] transition-all border-none" onClick={() => { ui.setEditingId(null); ui.setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); ui.openModal('supplier'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nuevo proveedor
           </button>
         )}
-        <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${avatarColor(auth.authUser?.uid)}`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{auth.authUser?.photoURL ? '' : auth.initials}</div>
+        <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] flex-shrink-0 ${avatarColor(auth.authUser?.uid)}`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{auth.authUser?.photoURL ? '' : auth.initials}</div>
       </div>
     </header>
   );

@@ -168,12 +168,12 @@ export default function DashboardScreen() {
       {/* ─── v2.0 Badge ─── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20">v2.0</span>
+          <span className="skeuo-badge text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20">v2.0</span>
           <span className="text-[11px] text-[var(--af-text3)]">Dashboard Premium</span>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20 cursor-pointer hover:bg-[var(--af-accent)]/20 transition-colors"
+            className="skeuo-btn flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20 cursor-pointer hover:bg-[var(--af-accent)]/20 transition-all"
             onClick={() => setSuggestionsOpen(true)}
           >
             <Sparkles size={13} />
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
 
       {/* ─── Budget Alert Banner ─── */}
       {budgetAlerts.length > 0 && (
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <AlertCircle size={16} className="text-amber-400" />
@@ -222,7 +222,7 @@ export default function DashboardScreen() {
             {budgetAlerts.map((alert: BudgetAlert) => (
               <div
                 key={`alert-${alert.projectId}-${alert.threshold}`}
-                className={`flex items-center gap-3 p-3 rounded-lg ${getBudgetBgClass(alert.percentage)} border ${getBudgetBorderColorClass(alert.percentage)} cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]`}
+                className={`flex items-center gap-3 p-3 rounded-lg ${getBudgetBgClass(alert.percentage)} border ${getBudgetBorderColorClass(alert.percentage)} cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[var(--skeuo-shadow-raised-sm)] active:scale-[0.99]`}
                 onClick={() => openProject(alert.projectId)}
               >
                 <div className="text-xl flex-shrink-0"><AlertTriangle size={20} className={alert.severity === 'critical' ? 'text-red-400' : alert.severity === 'danger' ? 'text-orange-400' : 'text-amber-400'} /></div>
@@ -267,7 +267,7 @@ export default function DashboardScreen() {
 
       {/* ─── Row 2: Projects + Activity ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Proyectos recientes</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
@@ -277,12 +277,12 @@ export default function DashboardScreen() {
           ) : projects.slice(0, 4).map((p: any) => {
             const prog = p.data.progress || 0;
             return (
-              <div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors duration-150" onClick={() => openProject(p.id)}>
+              <div key={p.id} className="p-3 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--skeuo-pressed)] transition-all duration-150" onClick={() => openProject(p.id)}>
                 <div className="flex justify-between mb-2">
                   <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
                 </div>
-                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
                 </div>
                 <div className="flex justify-between mt-1.5">
@@ -294,7 +294,7 @@ export default function DashboardScreen() {
           })}
         </div>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Actividad reciente</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Ver reportes →</button>
@@ -306,7 +306,7 @@ export default function DashboardScreen() {
       {/* ─── Row 3: Mini widgets ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Sprint Progress Ring */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
           <div className="flex items-center justify-center">
             <div className="relative w-[100px] h-[100px]">
@@ -326,7 +326,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Financial Summary */}
-        <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-gradient-to-br from-[var(--skeuo-raised)] to-[var(--skeuo-base)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -341,7 +341,7 @@ export default function DashboardScreen() {
               <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[13px]">Gastado</span></div>
               <span className="text-[13px] font-semibold text-red-400">{fmtCOP(totalExpenses)}</span>
             </div>
-            <div className="border-t border-[var(--border)] pt-2 flex items-center justify-between">
+            <div className="border-t border-[var(--skeuo-edge-light)]/30 pt-2 flex items-center justify-between">
               <span className="text-[12px] text-[var(--muted-foreground)]">Balance</span>
               <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
             </div>
@@ -350,7 +350,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Notifications */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-semibold">Notificaciones</div>
             {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
