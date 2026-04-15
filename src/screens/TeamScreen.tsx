@@ -20,11 +20,11 @@ export default function TeamScreen() {
     <div className="animate-fadeIn">
       {/* Tab toggle */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
-          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`} onClick={() => setTeamTab('list')}>
+        <div className="flex gap-1 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-xl p-1">
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'list' ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)] hover:bg-[var(--skeuo-raised)]'}`} onClick={() => setTeamTab('list')}>
             <Users size={14} /> Lista
           </button>
-          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'workload' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`} onClick={() => setTeamTab('workload')}>
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'workload' ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)] hover:bg-[var(--skeuo-raised)]'}`} onClick={() => setTeamTab('workload')}>
             <BarChart3 size={14} /> Carga de Trabajo
           </button>
         </div>
@@ -55,7 +55,7 @@ export default function TeamScreen() {
           const filtered = auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter);
           const count = filtered.filter(u => u.data.role === role).length;
           return (
-            <div key={role} className={`border rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
+            <div key={role} className={`card-elevated rounded-xl p-3 text-center ${ROLE_COLORS[role]}`}>
               <div className="text-lg mb-0.5">{ROLE_ICONS[role]}</div>
               <div className="text-lg font-bold">{count}</div>
               <div className="text-[10px] font-medium">{role}s</div>
@@ -83,7 +83,7 @@ export default function TeamScreen() {
           const userPending = userTasks.filter(t => t.data.status !== 'Completado').length;
           const userCompName = fs.companies.find(c => c.id === user.data.companyId)?.data?.name;
           return (
-            <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99] ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
+            <div key={user.id} className={`card-elevated rounded-xl p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99] ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold border-2 ${avatarColor(user.id)} flex-shrink-0`} style={user.data.photoURL ? { backgroundImage: `url(${user.data.photoURL})`, backgroundSize: 'cover' } : {}}>
                   {user.data.photoURL ? '' : getInitials(user.data.name)}
@@ -103,18 +103,18 @@ export default function TeamScreen() {
                 </div>
                 <div className="flex-shrink-0 flex flex-col gap-1.5 items-end">
                   {canChangeCompany && !isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
+                    <select className="skeuo-input rounded-lg px-2 py-1 text-[10px] max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Asignar empresa">
                       <option value="">Sin empresa</option>
                       {fs.companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
                     </select>
                   ) : canChangeCompany && isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Tu empresa">
+                    <select className="skeuo-input rounded-lg px-2 py-1 text-[10px] max-w-[140px]" value={user.data.companyId || ''} onChange={e => auth.updateUserCompany(user.id, e.target.value)} title="Tu empresa">
                       <option value="">Sin empresa</option>
                       {fs.companies.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
                     </select>
                   ) : null}
                   {canChangeRole && !isMe ? (
-                    <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer" value={role} onChange={e => auth.updateUserRole(user.id, e.target.value)}>
+                    <select className="skeuo-input rounded-lg px-2.5 py-1.5 text-[11px]" value={role} onChange={e => auth.updateUserRole(user.id, e.target.value)}>
                       {USER_ROLES.map(r => <option key={r} value={r}>{ROLE_ICONS[r]} {r}</option>)}
                     </select>
                   ) : isMe ? (

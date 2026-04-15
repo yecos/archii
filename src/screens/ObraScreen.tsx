@@ -93,7 +93,7 @@ export default function ObraScreen() {
   function ChartTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+      <div className="card-elevated rounded-lg px-3 py-2 text-[12px]">
         {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
         {payload.map((p: any, i: number) => (
           <div key={i} className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export default function ObraScreen() {
   return (
     <div className="animate-fadeIn space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5 relative overflow-hidden">
+      <div className="card-elevated rounded-xl p-5 relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-44 h-44 border-[40px] border-[var(--af-accent)]/5 rounded-full" />
         <div className="flex items-center justify-between">
           <div>
@@ -117,7 +117,7 @@ export default function ObraScreen() {
             <div className="text-sm text-[var(--muted-foreground)]">Registro diario de actividades, clima, personal y materiales en obra</div>
           </div>
           {displayLogs.length > 0 && (
-            <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => {
+            <button className="skeuo-btn flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none" onClick={() => {
               try {
                 exportDailyLogsPDF({ logs: displayLogs, projectName: selectedProject?.data.name || 'Todos los proyectos' });
                 ui.showToast('Bitácora PDF descargada');
@@ -130,7 +130,7 @@ export default function ObraScreen() {
       </div>
 
       {/* Active projects */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="text-[15px] font-semibold">Proyectos en Ejecución</div>
           {selectedProjectLogs && (
@@ -151,7 +151,7 @@ export default function ObraScreen() {
               const projLogs = comments.dailyLogs.filter(l => l.data.projectId === p.id);
               const isSelected = selectedProjectLogs === p.id;
               return (
-                <div key={p.id} className={`bg-[var(--af-bg3)] border rounded-xl p-4 cursor-pointer transition-all group ${isSelected ? 'border-[var(--af-accent)]/50 ring-1 ring-[var(--af-accent)]/20' : 'border-[var(--border)] hover:border-[var(--af-accent)]/40'}`} onClick={() => {
+                <div key={p.id} className={`skeuo-well rounded-xl p-4 cursor-pointer transition-all group ${isSelected ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`} onClick={() => {
                   if (isSelected) {
                     setSelectedProjectLogs(null);
                   } else {
@@ -163,7 +163,7 @@ export default function ObraScreen() {
                       <div className="text-sm font-semibold truncate group-hover:text-[var(--af-accent)] transition-colors">{p.data.name}</div>
                       <div className="text-xs text-[var(--af-text3)] mt-1">{p.data.location && '📍 ' + p.data.location}</div>
                       <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                           <div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: (p.data.progress || 0) + '%' }} />
                         </div>
                         <span className="text-[10px] text-[var(--muted-foreground)]">{p.data.progress || 0}%</span>
@@ -194,7 +194,7 @@ export default function ObraScreen() {
               { label: 'Prom. Personal', value: summaryStats.avgLabor, icon: '👷', color: 'text-emerald-400' },
               { label: 'Temp. Promedio', value: `${summaryStats.avgTemp}°C`, icon: '🌡️', color: 'text-amber-400' },
             ].map((stat, i) => (
-              <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+              <div key={i} className="card-elevated rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-base">{stat.icon}</span>
                   <span className="text-[11px] text-[var(--muted-foreground)]">{stat.label}</span>
@@ -207,7 +207,7 @@ export default function ObraScreen() {
           {/* Charts Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Weather distribution */}
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+            <div className="card-elevated rounded-xl p-4">
               <div className="text-[13px] font-semibold mb-3">Clima</div>
               {weatherData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={130}>
@@ -230,7 +230,7 @@ export default function ObraScreen() {
             </div>
 
             {/* Labor trend */}
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+            <div className="card-elevated rounded-xl p-4">
               <div className="text-[13px] font-semibold mb-3">Personal por Día</div>
               {laborTrend.length > 0 ? (
                 <ResponsiveContainer width="100%" height={130}>
@@ -246,7 +246,7 @@ export default function ObraScreen() {
             </div>
 
             {/* Materials frequency */}
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+            <div className="card-elevated rounded-xl p-4">
               <div className="text-[13px] font-semibold mb-3">Materiales Más Usados</div>
               {materialsFreq.length > 0 ? (
                 <ResponsiveContainer width="100%" height={130}>
@@ -263,7 +263,7 @@ export default function ObraScreen() {
           </div>
 
           {/* Timeline of logs */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="card-elevated rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="text-[15px] font-semibold">Registro Diario — Timeline</div>
               <span className="text-[11px] text-[var(--af-text3)]">{displayLogs.length} registros</span>
@@ -271,7 +271,7 @@ export default function ObraScreen() {
 
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-[18px] top-0 bottom-0 w-px bg-[var(--border)]" />
+              <div className="skeuo-divider" style={{ position: 'absolute', left: '18px', top: 0, bottom: 0, width: '1px', height: 'auto' }} />
 
               <div className="space-y-1">
                 {displayLogs.map((log, idx) => {
@@ -280,10 +280,10 @@ export default function ObraScreen() {
                   return (
                     <div key={log.id} className="relative pl-10">
                       {/* Timeline dot */}
-                      <div className="absolute left-[13px] top-3 w-[11px] h-[11px] rounded-full border-2 border-[var(--af-accent)] bg-[var(--card)] z-10" />
+                      <div className="absolute left-[13px] top-3 w-[11px] h-[11px] rounded-full border-2 border-[var(--af-accent)] bg-[var(--skeuo-raised)] z-10" />
 
                       {/* Log card */}
-                      <div className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-[var(--af-accent)]/30 transition-all ${isExpanded ? 'border-[var(--af-accent)]/40' : ''}`} onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
+                      <div className={`card-elevated rounded-xl p-4 cursor-pointer transition-all ${isExpanded ? 'ring-1 ring-[var(--af-accent)]/40' : ''}`} onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
                         {/* Header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function ObraScreen() {
                                 <div className="text-[11px] font-semibold text-[var(--af-accent)] uppercase tracking-wide mb-1.5 flex items-center gap-1"><Package size={10} /> Materiales</div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {log.data.materials.map((mat: string, i: number) => (
-                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--foreground)]">{mat}</span>
+                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full skeuo-badge text-[var(--foreground)]">{mat}</span>
                                   ))}
                                 </div>
                               </div>
@@ -347,7 +347,7 @@ export default function ObraScreen() {
                                 <div className="text-[11px] font-semibold text-[var(--af-accent)] uppercase tracking-wide mb-1.5 flex items-center gap-1"><Wrench size={10} /> Equipos</div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {log.data.equipment.map((eq: string, i: number) => (
-                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--foreground)]">{eq}</span>
+                                    <span key={i} className="text-[11px] px-2 py-0.5 rounded-full skeuo-badge text-[var(--foreground)]">{eq}</span>
                                   ))}
                                 </div>
                               </div>
@@ -374,7 +374,7 @@ export default function ObraScreen() {
                                 <div className="text-[11px] font-semibold text-[var(--af-accent)] uppercase tracking-wide mb-1.5">Fotos ({log.data.photos.length})</div>
                                 <div className="grid grid-cols-3 gap-2">
                                   {log.data.photos.slice(0, 6).map((photo: string, i: number) => (
-                                    <div key={i} className="aspect-square rounded-lg overflow-hidden bg-[var(--af-bg4)]">
+                                    <div key={i} className="aspect-square rounded-lg overflow-hidden bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)]">
                                       <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                                     </div>
                                   ))}
@@ -396,7 +396,7 @@ export default function ObraScreen() {
 
       {/* Empty state when no logs */}
       {displayLogs.length === 0 && comments.dailyLogs.length === 0 && (
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-10 text-center">
+        <div className="card-elevated rounded-xl p-10 text-center">
           <div className="text-4xl mb-3">📝</div>
           <div className="text-sm text-[var(--muted-foreground)]">Sin registros de bitácora</div>
           <div className="text-xs text-[var(--af-text3)] mt-1">Selecciona un proyecto en ejecución para registrar actividades</div>

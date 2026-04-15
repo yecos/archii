@@ -16,7 +16,7 @@ export default function SuppliersScreen() {
     <div className="animate-fadeIn">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="text-sm text-[var(--muted-foreground)]">{fs.suppliers.length} proveedores</div>
-        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { ui.setEditingId(null); ui.openModal('supplier'); }}>
+        <button className="flex items-center gap-1.5 skeuo-btn bg-[var(--af-accent)] text-background px-3.5 py-2 text-[13px] font-semibold cursor-pointer" onClick={() => { ui.setEditingId(null); ui.openModal('supplier'); }}>
           <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />Nuevo proveedor
         </button>
       </div>
@@ -30,12 +30,12 @@ export default function SuppliersScreen() {
       ) : (
         <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {fs.suppliers.map(s => (
-            <StaggerItem key={s.id}><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
+            <StaggerItem key={s.id}><div className="card-elevated rounded-xl p-4">
               <div className="flex items-start justify-between mb-2">
-                <div className="w-11 h-11 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg flex items-center justify-center text-lg">🏪</div>
+                <div className="w-11 h-11 skeuo-well rounded-lg flex items-center justify-center text-lg">🏪</div>
                 <div className="flex gap-1.5">
-                  <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { ui.setEditingId(s.id); ui.setForms(p => ({ ...p, supName: s.data.name, supCategory: s.data.category, supPhone: s.data.phone, supEmail: s.data.email, supAddress: s.data.address, supWebsite: s.data.website, supNotes: s.data.notes, supRating: String(s.data.rating) })); ui.openModal('supplier'); }}>✏️</button>
-                  <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fs.deleteSupplier(s.id)}>🗑</button>
+                  <button className="px-1.5 py-0.5 rounded bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] text-xs cursor-pointer hover:bg-[var(--skeuo-pressed)] transition-colors" onClick={() => { ui.setEditingId(s.id); ui.setForms(p => ({ ...p, supName: s.data.name, supCategory: s.data.category, supPhone: s.data.phone, supEmail: s.data.email, supAddress: s.data.address, supWebsite: s.data.website, supNotes: s.data.notes, supRating: String(s.data.rating) })); ui.openModal('supplier'); }}>✏️</button>
+                  <button className="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 shadow-[var(--skeuo-shadow-raised-sm)] text-xs cursor-pointer hover:bg-red-500/20 transition-colors" onClick={() => fs.deleteSupplier(s.id)}>🗑</button>
                 </div>
               </div>
               <div className="text-sm font-semibold mb-0.5">{s.data.name}</div>

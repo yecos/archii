@@ -75,22 +75,25 @@ interface ModalFooterProps {
   submitColor?: string;
 }
 
-export function ModalFooter({ onCancel, onSubmit, submitLabel, cancelLabel = 'Cancelar', submitDisabled, submitColor = 'bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]' }: ModalFooterProps) {
+export function ModalFooter({ onCancel, onSubmit, submitLabel, cancelLabel = 'Cancelar', submitDisabled }: ModalFooterProps) {
   return (
-    <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
-      <button
-        className="px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all"
-        onClick={onCancel}
-      >
-        {cancelLabel}
-      </button>
-      <button
-        className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors ${submitColor}`}
-        onClick={onSubmit}
-        disabled={submitDisabled}
-      >
-        {submitLabel}
-      </button>
+    <div className="mt-5 pt-4">
+      <div className="skeuo-divider mb-4" />
+      <div className="flex gap-2 justify-end">
+        <button
+          className="skeuo-btn px-4 py-2 text-[13px] font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          onClick={onCancel}
+        >
+          {cancelLabel}
+        </button>
+        <button
+          className="skeuo-btn px-4 py-2 text-[13px] font-semibold bg-[var(--af-accent)] text-[var(--primary-foreground)] hover:bg-[var(--af-accent2)]"
+          onClick={onSubmit}
+          disabled={submitDisabled}
+        >
+          {submitLabel}
+        </button>
+      </div>
     </div>
   );
 }

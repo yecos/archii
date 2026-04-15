@@ -42,7 +42,7 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
                 <button
                   key={tpl.id}
                   type="button"
-                  className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-all cursor-pointer ${forms.projTemplate === tpl.id ? 'border-[var(--af-accent)] bg-[var(--af-accent)]/5' : 'border-[var(--border)] bg-[var(--af-bg3)] hover:border-[var(--af-accent)]/30'}`}
+                  className={`card-elevated flex items-start gap-2 p-2.5 text-left cursor-pointer ${forms.projTemplate === tpl.id ? 'ring-2 ring-[var(--af-accent)]/40 bg-[var(--af-accent)]/5' : ''}`}
                   onClick={() => handleTemplateChange(tpl.id)}
                 >
                   <span className="text-lg flex-shrink-0">{tpl.icon}</span>
@@ -140,7 +140,7 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
         </FormField>
 
         {!editingId && forms.projTemplate && (
-          <div className="bg-[var(--af-accent)]/5 border border-[var(--af-accent)]/20 rounded-lg p-3">
+          <div className="skeuo-well p-3">
             <div className="text-[11px] font-semibold text-[var(--af-accent)] mb-1.5">La plantilla creará automáticamente:</div>
             <div className="text-[10px] text-[var(--muted-foreground)] space-y-0.5">
               {(() => {

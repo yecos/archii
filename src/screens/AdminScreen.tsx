@@ -34,7 +34,7 @@ export default function AdminScreen() {
     <>
       {!isAdmin && (
         <div className="animate-fadeIn p-6 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3"><Lock size={28} className="text-[var(--af-text3)]" /></div>
+          <div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3"><Lock size={28} className="text-[var(--af-text3)]" /></div>
           <div className="text-lg font-semibold">Acceso restringido</div>
           <div className="text-sm text-[var(--muted-foreground)] mt-1">Solo administradores y directores pueden acceder a este panel</div>
         </div>
@@ -76,22 +76,22 @@ export default function AdminScreen() {
                   <p className="text-xs text-[var(--muted-foreground)]">Vista de tareas del equipo en el tiempo</p>
                 </div>
                 <div className="flex gap-1.5">
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(p => p - 1)}>◀ Anterior</button>
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(0)}>Hoy</button>
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(p => p + 1)}>Siguiente ▶</button>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p - 1)}>◀ Anterior</button>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(0)}>Hoy</button>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p + 1)}>Siguiente ▶</button>
                 </div>
               </div>
 
               {/* Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Colaboradores</div><div className="text-2xl font-bold mt-1">{teamWithTasks.length}</div></div>
-                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Tareas Activas</div><div className="text-2xl font-bold text-blue-400 mt-1">{totalActive}</div></div>
-                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Con Traslapes</div><div className="text-2xl font-bold text-red-400 mt-1">{membersWithOverlaps.length}</div></div>
-                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Proyectos</div><div className="text-2xl font-bold text-amber-400 mt-1">{uniqueProjs.length}</div></div>
+                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Colaboradores</div><div className="text-2xl font-bold mt-1">{teamWithTasks.length}</div></div>
+                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Tareas Activas</div><div className="text-2xl font-bold text-blue-400 mt-1">{totalActive}</div></div>
+                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Con Traslapes</div><div className="text-2xl font-bold text-red-400 mt-1">{membersWithOverlaps.length}</div></div>
+                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Proyectos</div><div className="text-2xl font-bold text-amber-400 mt-1">{uniqueProjs.length}</div></div>
               </div>
 
               {/* Legend */}
-              <div className="bg-[var(--af-bg3)] rounded-xl p-3 border border-[var(--border)] flex flex-wrap items-center gap-3">
+              <div className="card-elevated rounded-xl p-3 flex flex-wrap items-center gap-3">
                 <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] mr-1">Proyectos:</span>
                 {projects.slice(0, 6).map(p => (<div key={p.id} className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getProjectColor(p.id) }} /><span className="text-[11px] text-[var(--foreground)]">{p.data.name.substring(0, 20)}</span></div>))}
                 <div className="w-px h-4 bg-[var(--border)]" />
@@ -100,7 +100,7 @@ export default function AdminScreen() {
               </div>
 
               {/* Gantt Chart */}
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] overflow-hidden">
+              <div className="card-elevated rounded-xl overflow-hidden">
                 <div className="md:hidden text-center py-8 text-sm text-[var(--muted-foreground)]">El cronograma detallado está disponible en vista de escritorio.</div>
                 <div className="hidden md:block overflow-x-auto">
                   <div className="min-w-[1200px]">
@@ -146,7 +146,7 @@ export default function AdminScreen() {
                             const proj = projects.find(p => p.id === task.data.projectId);
                             const pColor = proj ? getProjectColor(task.data.projectId) : '#6b7280';
                             const top = rIdx * 40 + 4;
-                            return (<div key={task.id} className="absolute h-[28px] rounded-md flex items-center gap-1 px-1.5 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:z-30 z-10 overflow-hidden" style={{ left: `${pos.left}%`, width: `${pos.width}%`, top, backgroundColor: isOvlp ? getProjectColorLight(task.data.projectId) : pColor, border: isOvlp ? `1.5px solid ${pColor}` : 'none', color: isOvlp ? pColor : 'white' }} onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); setAdminTooltipPos({ x: Math.min(r.left, window.innerWidth - 280), y: r.top }); setAdminTooltipTask(task); }} onMouseLeave={() => setAdminTooltipTask(null)}>
+                            return (<div key={task.id} className="absolute h-[28px] rounded-md flex items-center gap-1 px-1.5 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:z-30 z-10 overflow-hidden shadow-[var(--skeuo-shadow-raised-sm)]" style={{ left: `${pos.left}%`, width: `${pos.width}%`, top, backgroundColor: isOvlp ? getProjectColorLight(task.data.projectId) : pColor, border: isOvlp ? `1.5px solid ${pColor}` : 'none', color: isOvlp ? pColor : 'white' }} onMouseEnter={e => { const r = e.currentTarget.getBoundingClientRect(); setAdminTooltipPos({ x: Math.min(r.left, window.innerWidth - 280), y: r.top }); setAdminTooltipTask(task); }} onMouseLeave={() => setAdminTooltipTask(null)}>
                               <div className="w-[3px] h-full flex-shrink-0 rounded-sm" style={{ backgroundColor: isOvlp ? pColor : 'rgba(255,255,255,0.3)' }} />
                               <span className="text-[9px] font-medium truncate flex-1">{task.data.title}</span>
                             </div>);
@@ -185,7 +185,7 @@ export default function AdminScreen() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {membersWithOverlaps.map(m => {
                     const ovlTasks = m.tasks.filter(t => findOverlaps(m.tasks).has(t.id));
-                    return (<div key={m.id} className="bg-[var(--card)] rounded-lg p-3 border border-red-500/20">
+                    return (<div key={m.id} className="card-elevated rounded-lg p-3 border border-red-500/20">
                       <div className="flex items-center gap-2 mb-2">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-semibold ${avatarColor(m.id)}`}>{getInitials(m.data?.name || '?')}</div>
                         <span className="text-xs font-semibold">{m.data?.name}</span>
@@ -206,14 +206,14 @@ export default function AdminScreen() {
           {adminTab === 'dashboard' && (<div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2"><TrendingUp size={18} className="text-[var(--af-accent)]" />Dashboard Admin</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">Total Tareas</div><div className="text-2xl font-bold mt-1">{tasks.length}</div></div>
-              <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">En Progreso</div><div className="text-2xl font-bold text-blue-400 mt-1">{tasks.filter(t => t.data.status === 'En progreso').length}</div></div>
-              <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">Completadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks.length}</div></div>
-              <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-xs text-[var(--muted-foreground)]">Vencidas</div><div className="text-2xl font-bold text-red-400 mt-1">{overdueTasks.length}</div></div>
+              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Total Tareas</div><div className="text-2xl font-bold mt-1">{tasks.length}</div></div>
+              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">En Progreso</div><div className="text-2xl font-bold text-blue-400 mt-1">{tasks.filter(t => t.data.status === 'En progreso').length}</div></div>
+              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Completadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks.length}</div></div>
+              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Vencidas</div><div className="text-2xl font-bold text-red-400 mt-1">{overdueTasks.length}</div></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Upcoming */}
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+              <div className="card-elevated rounded-xl p-4">
                 <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays size={14} className="text-[var(--af-accent)]" />Próximas Entregas</h4>
                 {activeTasks.filter(t => t.data.dueDate).sort((a, b) => Number(new Date(a.data.dueDate)) - Number(new Date(b.data.dueDate))).slice(0, 8).map(t => {
                   const proj = projects.find(p => p.id === t.data.projectId);
@@ -230,7 +230,7 @@ export default function AdminScreen() {
                 })}
               </div>
               {/* Projects overview */}
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+              <div className="card-elevated rounded-xl p-4">
                 <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><HardHat size={14} className="text-[var(--af-accent)]" />Proyectos</h4>
                 {projects.map(p => {
                   const pTasks = tasks.filter(t => t.data.projectId === p.id);
@@ -240,14 +240,14 @@ export default function AdminScreen() {
                       <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getProjectColor(p.id) }} /><span className="text-xs font-medium">{p.data.name}</span></div>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusColor(p.data.status)}`}>{p.data.status}</span>
                     </div>
-                    <div className="flex items-center gap-2"><div className="flex-1 h-1.5 bg-[var(--border)] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${p.data.progress || 0}%`, backgroundColor: getProjectColor(p.id) }} /></div><span className="text-[10px] text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div>
+                    <div className="flex items-center gap-2"><div className="flex-1 h-1.5 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${p.data.progress || 0}%`, backgroundColor: getProjectColor(p.id) }} /></div><span className="text-[10px] text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-1">{done}/{pTasks.length} tareas</div>
                   </div>);
                 })}
               </div>
             </div>
             {/* Team productivity */}
-            <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+            <div className="card-elevated rounded-xl p-4">
               <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users size={14} className="text-[var(--af-accent)]" />Productividad del Equipo</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teamUsers.map(m => {
@@ -255,7 +255,7 @@ export default function AdminScreen() {
                   const mActive = mTasks.filter(t => t.data.status !== 'Completado');
                   const mDone = mTasks.filter(t => t.data.status === 'Completado');
                   const pct = mTasks.length > 0 ? Math.round((mDone.length / mTasks.length) * 100) : 0;
-                  return (<div key={m.id} className="bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+                  return (<div key={m.id} className="card-elevated rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold ${avatarColor(m.id)}`}>{getInitials(m.data?.name || '?')}</div>
                       <div className="min-w-0"><div className="text-xs font-semibold truncate">{m.data?.name}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data?.role || 'Miembro'}</div></div>
@@ -291,16 +291,16 @@ export default function AdminScreen() {
 
               {/* Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Total</div><div className="text-2xl font-bold mt-1">{allApprovals.length}</div></div>
+                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Total</div><div className="text-2xl font-bold mt-1">{allApprovals.length}</div></div>
                 <div className="bg-amber-500/5 rounded-xl p-4 border border-amber-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Pendientes</div><div className="text-2xl font-bold text-amber-400 mt-1">{pending.length}</div></div>
                 <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Aprobadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{approved.length}</div></div>
                 <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Rechazadas</div><div className="text-2xl font-bold text-red-400 mt-1">{rejected.length}</div></div>
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto">
+              <div className="flex gap-1 skeuo-well rounded-xl p-1 w-fit overflow-x-auto">
                 {(['all', 'Pendiente', 'Aprobada', 'Rechazada'] as const).map(status => (
-                  <button key={status} className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${approvalView === status ? 'bg-[var(--card)] text-[var(--foreground)] font-semibold shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setApprovalView(status)}>
+                  <button key={status} className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${approvalView === status ? 'bg-[var(--skeuo-raised)] text-[var(--foreground)] font-semibold shadow-[var(--skeuo-shadow-btn)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setApprovalView(status)}>
                     {status === 'all' ? `Todos (${allApprovals.length})` : status === 'Pendiente' ? `Pendientes (${pending.length})` : status === 'Aprobada' ? `Aprobadas (${approved.length})` : `Rechazadas (${rejected.length})`}
                   </button>
                 ))}
@@ -309,7 +309,7 @@ export default function AdminScreen() {
               {/* Approval List */}
               {filtered.length === 0 ? (
                 <div className="text-center py-16 text-[var(--af-text3)]">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-2"><ClipboardList size={24} className="text-[var(--af-text3)]" /></div>
+                  <div className="w-12 h-12 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-2"><ClipboardList size={24} className="text-[var(--af-text3)]" /></div>
                   <div className="text-sm">Sin aprobaciones{approvalView !== 'all' ? ` con estado "${approvalView}"` : ''}</div>
                 </div>
               ) : (
@@ -318,7 +318,7 @@ export default function AdminScreen() {
                     const isPending = a.data.status === 'Pendiente';
                     const TypeIcon = (a.data as any).type === 'budget_change' ? <DollarSign size={18} className="text-emerald-400" /> : (a.data as any).type === 'phase_completion' ? <HardHat size={18} className="text-blue-400" /> : (a.data as any).type === 'expense_approval' ? <FileText size={18} className="text-amber-400" /> : <ClipboardList size={18} className="text-[var(--af-text3)]" />;
                     return (
-                      <div key={a.id} className={`bg-[var(--card)] border rounded-xl p-4 transition-all ${isPending ? 'border-amber-500/20 hover:border-amber-500/40' : 'border-[var(--border)]'}`}>
+                      <div key={a.id} className={`card-elevated rounded-xl p-4 transition-all ${isPending ? 'border border-amber-500/20 hover:border-amber-500/40' : ''}`}>
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--af-bg4)]">{TypeIcon}</div>
                           <div className="flex-1 min-w-0">
@@ -338,7 +338,7 @@ export default function AdminScreen() {
                               {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
                             </div>
                             {(a.data as any)?.comments && (
-                              <div className="mt-2 text-[11px] text-[var(--muted-foreground)] bg-[var(--af-bg3)] rounded-md px-2.5 py-1.5 border border-[var(--border)]">
+                              <div className="mt-2 text-[11px] text-[var(--muted-foreground)] skeuo-well rounded-md px-2.5 py-1.5">
                                 <span className="font-medium">{(a.data as any)?.reviewedByName || 'Revisor'}:</span> {(a.data as any).comments}
                               </div>
                             )}
@@ -367,18 +367,18 @@ export default function AdminScreen() {
             <h3 className="text-lg font-semibold flex items-center gap-2"><Shield size={18} className="text-[var(--af-accent)]" />Permisos y Roles</h3>
             <div className="flex gap-1 mb-4">
               {[{ id: 'roles', label: 'Roles' }, { id: 'permissions', label: 'Permisos por rol' }].map(tab => (
-                <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all ${adminPermSection === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)]'}`} onClick={() => setAdminPermSection(tab.id)}>{tab.label}</button>
+                <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all ${adminPermSection === tab.id ? 'bg-[var(--af-accent)] text-background shadow-[var(--skeuo-shadow-btn)]' : 'skeuo-btn text-[var(--muted-foreground)]'}`} onClick={() => setAdminPermSection(tab.id)}>{tab.label}</button>
               ))}
             </div>
 
             {adminPermSection === 'roles' && (<div className="space-y-4">
               {/* Role description */}
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+              <div className="card-elevated rounded-xl p-4">
                 <h4 className="text-sm font-semibold mb-3">Roles del Sistema</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {USER_ROLES.map(role => {
                     const count = teamUsers.filter(u => u.data?.role === role).length;
-                    return (<div key={role} className="bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+                    return (<div key={role} className="card-elevated rounded-lg p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-base">{ROLE_ICONS[role]}</span>
@@ -391,12 +391,12 @@ export default function AdminScreen() {
                 </div>
               </div>
               {/* Team members with role management */}
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+              <div className="card-elevated rounded-xl p-4">
                 <h4 className="text-sm font-semibold mb-3">Gestionar Roles</h4>
                 <div className="space-y-2">
                   {teamUsers.map(u => {
                     const canChange = isAdmin && u.id !== authUser?.uid;
-                    return (<div key={u.id} className="flex items-center gap-3 bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+                    return (<div key={u.id} className="flex items-center gap-3 card-elevated rounded-lg p-3">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${avatarColor(u.id)}`}>{getInitials(u.data?.name || '?')}</div>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold truncate">{u.data?.name}{u.id === authUser?.uid && <span className="text-[9px] text-[var(--muted-foreground)] ml-1">(Tú)</span>}</div>
@@ -407,7 +407,7 @@ export default function AdminScreen() {
                           <span>{ROLE_ICONS[u.data?.role || 'Miembro']}</span>
                           {u.data?.role || 'Miembro'}
                         </span>
-                        {canChange && (<select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer" value={u.data?.role || 'Miembro'} onChange={e => updateUserRole(u.id, e.target.value)}>
+                        {canChange && (<select className="skeuo-input rounded-lg px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer" value={u.data?.role || 'Miembro'} onChange={e => updateUserRole(u.id, e.target.value)}>
                           {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>)}
                       </div>
@@ -418,7 +418,7 @@ export default function AdminScreen() {
             </div>)}
 
             {adminPermSection === 'permissions' && (<div className="space-y-4">
-              <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+              <div className="card-elevated rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-semibold">Permisos por Rol</h4>
                   <span className="text-[10px] text-[var(--muted-foreground)]">Los cambios se guardan automáticamente</span>
@@ -461,7 +461,7 @@ export default function AdminScreen() {
                 const mOverdue = mTasks.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
                 const isSelf = m.id === authUser?.uid;
                 const isAdminMember = (m.data?.role === 'Admin') || ADMIN_EMAILS.includes(m.data?.email || '');
-                return (<div key={m.id} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)] relative group">
+                return (<div key={m.id} className="card-elevated rounded-xl p-4 relative group">
                   {/* Delete button */}
                   {isAdminMember && !isSelf && (
                     <button
@@ -490,7 +490,7 @@ export default function AdminScreen() {
                       <div className="text-sm font-semibold truncate">{m.data?.name}</div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">{m.data?.role || 'Miembro'}{m.data?.email ? ` · ${m.data.email}` : ''}</div>
                     </div>
-                    <span className="text-[10px] bg-[var(--card)] px-2 py-0.5 rounded-full border border-[var(--border)]">{mTasks.length} tareas</span>
+                    <span className="text-[10px] skeuo-badge">{mTasks.length} tareas</span>
                   </div>
                   {mOverdue.length > 0 && (<div className="text-[10px] text-red-400 mb-2"><AlertTriangle size={10} className="inline mr-0.5" />{mOverdue.length} vencida{mOverdue.length > 1 ? 's' : ''}</div>)}
                   {mTasks.length > 0 ? (<div className="space-y-1.5">
@@ -499,7 +499,7 @@ export default function AdminScreen() {
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString());
                       const sc = GANTT_STATUS_CFG[t.data.status] || { color: '#6b7280' };
                       const pc = GANTT_PRIO_CFG[t.data.priority] || { bg: '#f1f5f9', color: '#475569', label: '' };
-                      return (<div key={t.id} className="flex items-center gap-2 bg-[var(--card)] rounded-lg px-2.5 py-2">
+                      return (<div key={t.id} className="flex items-center gap-2 card-elevated rounded-lg px-2.5 py-2">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: sc.color }} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[10px] font-medium truncate">{t.data.title}</div>

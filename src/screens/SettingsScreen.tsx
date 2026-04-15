@@ -28,8 +28,8 @@ function ThemeCard({
       className={`
         relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 cursor-pointer
         transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]
-        bg-[var(--card)]
-        ${isActive ? 'border-[var(--af-accent)] shadow-[var(--shadow-glow)]' : 'border-[var(--border)] hover:border-[var(--af-accent)]/30'}
+        card-elevated
+        ${isActive ? 'border-[var(--af-accent)] shadow-[var(--skeuo-shadow-btn)]' : 'border-[var(--border)] hover:border-[var(--af-accent)]/30'}
       `}
       aria-label={`Tema ${theme.name}`}
       aria-pressed={isActive}
@@ -83,8 +83,8 @@ function DisplayModeToggle() {
               transition-all duration-200 cursor-pointer border
               ${
                 isActive
-                  ? 'bg-[var(--af-accent)] text-[var(--primary-foreground)] border-[var(--af-accent)]'
-                  : 'bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'
+                  ? 'bg-[var(--af-accent)] text-[var(--primary-foreground)] border-[var(--af-accent)] shadow-[var(--skeuo-shadow-btn)]'
+                  : 'skeuo-btn text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
               }
             `}
             aria-label={`Modo ${mode.label}`}
@@ -204,7 +204,7 @@ export default function SettingsScreen() {
           <Info size={16} className="stroke-[var(--muted-foreground)]" />
           Información
         </h2>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2">
+        <div className="card-elevated rounded-xl p-4 space-y-2">
           <div className="flex items-center justify-between text-[13px]">
             <span className="text-[var(--muted-foreground)]">Aplicación</span>
             <span className="font-medium text-[var(--foreground)]">ArchiFlow 2.0</span>

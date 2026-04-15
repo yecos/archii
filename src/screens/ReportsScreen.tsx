@@ -9,14 +9,14 @@ import { useComments } from '@/hooks/useDomain';
 import dynamic from 'next/dynamic';
 import { Download, FileSpreadsheet, FileText, Filter, AlertTriangle } from 'lucide-react';
 const _im = () => import('@/components/features/ReportsCharts');
-const TaskStatusPie = dynamic(() => _im().then(m => ({ default: m.TaskStatusPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const TaskPriorityPie = dynamic(() => _im().then(m => ({ default: m.TaskPriorityPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const MonthlyExpenseTrend = dynamic(() => _im().then(m => ({ default: m.MonthlyExpenseTrend })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const RoleDistPie = dynamic(() => _im().then(m => ({ default: m.RoleDistPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const BudgetVsRealBar = dynamic(() => _im().then(m => ({ default: m.BudgetVsRealBar })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const ExpenseCategoryPie = dynamic(() => _im().then(m => ({ default: m.ExpenseCategoryPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const HoursByProjectBar = dynamic(() => _im().then(m => ({ default: m.HoursByProjectBar })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
-const TeamRoleDistPie = dynamic(() => _im().then(m => ({ default: m.TeamRoleDistPie })), { loading: () => <div className="animate-pulse bg-[var(--card)] rounded-xl h-[220px]" />, ssr: false });
+const TaskStatusPie = dynamic(() => _im().then(m => ({ default: m.TaskStatusPie })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const TaskPriorityPie = dynamic(() => _im().then(m => ({ default: m.TaskPriorityPie })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const MonthlyExpenseTrend = dynamic(() => _im().then(m => ({ default: m.MonthlyExpenseTrend })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const RoleDistPie = dynamic(() => _im().then(m => ({ default: m.RoleDistPie })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const BudgetVsRealBar = dynamic(() => _im().then(m => ({ default: m.BudgetVsRealBar })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const ExpenseCategoryPie = dynamic(() => _im().then(m => ({ default: m.ExpenseCategoryPie })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const HoursByProjectBar = dynamic(() => _im().then(m => ({ default: m.HoursByProjectBar })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
+const TeamRoleDistPie = dynamic(() => _im().then(m => ({ default: m.TeamRoleDistPie })), { loading: () => <div className="animate-pulse card-elevated rounded-xl h-[220px]" />, ssr: false });
 import { exportGeneralReportPDF, exportBudgetPDF, exportTimeReportPDF } from '@/lib/export-pdf';
 import { exportExpensesExcel, exportTimeExcel, exportProjectsExcel } from '@/lib/export-excel';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, getWeekStart } from '@/lib/helpers';
@@ -145,20 +145,20 @@ export default function ReportsScreen() {
 <div className="animate-fadeIn space-y-4">
         {/* Export toolbar */}
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
+          <div className="flex gap-1 skeuo-well rounded-xl p-1">
             {['General', 'Financiero', 'Tiempo', 'Equipo'].map(tab => (
-              <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${(!forms.reportTab || forms.reportTab === 'General') === (tab === 'General') ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
+              <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${(!forms.reportTab || forms.reportTab === 'General') === (tab === 'General') ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
             ))}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Date filter */}
-            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-0.5">
+            <div className="flex gap-1 skeuo-well rounded-xl p-0.5">
               {[{ k: 'all', l: 'Todo' }, { k: 'month', l: 'Mes' }, { k: 'quarter', l: 'Trim.' }, { k: 'year', l: 'Año' }].map(f => (
-                <button key={f.k} className={`px-2 py-1 rounded-md text-[11px] cursor-pointer transition-all ${dateFilter === f.k ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`} onClick={() => setDateFilter(f.k as any)}>{f.l}</button>
+                <button key={f.k} className={`px-2 py-1 rounded-md text-[11px] cursor-pointer transition-all ${dateFilter === f.k ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)]'}`} onClick={() => setDateFilter(f.k as any)}>{f.l}</button>
               ))}
             </div>
             {/* PDF */}
-            <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => {
+            <button className="skeuo-btn flex items-center gap-1.5 text-[var(--foreground)] px-3 py-2 text-xs font-medium cursor-pointer hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => {
               try {
                 exportGeneralReportPDF({ projects, tasks, expenses: filteredExpenses, invoices: filteredInvoices, teamUsers, timeEntries: filteredTimeEntries });
                 showToast('Reporte PDF descargado');
@@ -167,7 +167,7 @@ export default function ReportsScreen() {
               <FileText size={13} /> PDF
             </button>
             {/* CSV (legacy) */}
-            <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => {
+            <button className="skeuo-btn flex items-center gap-1.5 text-[var(--foreground)] px-3 py-2 text-xs font-medium cursor-pointer hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => {
               try {
                 let csv = 'Tipo,Dato,Valor\n';
                 csv += `Proyectos,Total,${projects.length}\n`;
@@ -207,39 +207,39 @@ export default function ReportsScreen() {
             tasks.forEach(t => { if (t.data.assigneeId) { tasksPerMember[t.data.assigneeId] = (tasksPerMember[t.data.assigneeId] || 0) + 1; } });
             return <div className="contents">
               {/* Card 1: Estado de Proyectos */}
-              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">Estado de Proyectos</h3>
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado ({dateLabel})</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizacion</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{projects.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Proyectos</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto Total</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado ({dateLabel})</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className={`text-2xl font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizacion</div></div>
                 </div>
                 <TaskStatusPie data={taskStatusData} />
-                {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--af-bg3)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos mas</div>}</div>}
+                {projects.length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Progreso por proyecto</div>{projects.slice(0, 5).map(p => (<div key={p.id}><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)] truncate mr-2">{p.data.name}</span><span className="text-[var(--muted-foreground)]">{p.data.progress || 0}%</span></div><div className="w-full bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full h-2"><div className="bg-[var(--af-accent)] rounded-full h-2 transition-all" style={{ width: `${p.data.progress || 0}%` }} /></div></div>))}{projects.length > 5 && <div className="text-xs text-[var(--muted-foreground)]">+{projects.length - 5} proyectos mas</div>}</div>}
               </div>
               {/* Card 2: Tareas y Productividad */}
-              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">Tareas y Productividad</h3>
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{tasks.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Tareas</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{taskCompleted}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Completadas</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-400">{taskInProgress}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{tasks.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Total Tareas</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{taskCompleted}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Completadas</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-blue-400">{taskInProgress}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">En Progreso</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className={`text-2xl font-bold ${taskOverdue > 0 ? 'text-red-400' : 'text-[var(--foreground)]'}`}>{taskPending}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Pendientes</div></div>
                 </div>
                 {taskOverdue > 0 && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><AlertTriangle size={14} className="text-red-400" /><span className="text-sm text-red-400 font-medium">{taskOverdue} tarea{taskOverdue !== 1 ? 's' : ''} vencida{taskOverdue !== 1 ? 's' : ''}</span></div>}
-                {tasks.length > 0 && <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
+                {tasks.length > 0 && <div className="skeuo-well rounded-xl p-3 mb-3"><div className="text-xs font-medium text-[var(--muted-foreground)] mb-2">Completitud general</div><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Progreso</span><span className="text-[var(--muted-foreground)]">{tasks.length > 0 ? Math.round((taskCompleted / tasks.length) * 100) : 0}%</span></div><div className="w-full bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full h-2.5"><div className="bg-emerald-400 rounded-full h-2.5 transition-all" style={{ width: `${tasks.length > 0 ? (taskCompleted / tasks.length) * 100 : 0}%` }} /></div></div>}
                 <TaskPriorityPie data={taskPriorityData} />
               </div>
               {/* Card 3: Presupuesto */}
-              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">Presupuesto</h3>
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalBudget)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Presupuesto</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-lg font-bold text-[var(--foreground)]">{fmtCOP(totalSpent)}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Gastado</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className={`text-lg font-bold ${budgetPct > 90 ? 'text-red-400' : budgetPct > 70 ? 'text-amber-400' : 'text-emerald-400'}`}>{budgetPct}%</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Utilizado</div></div>
                 </div>
-                <div className="bg-[var(--af-bg3)] rounded-lg p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilizacion del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--af-bg2)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
+                <div className="skeuo-well rounded-xl p-3 mb-4"><div className="flex justify-between text-xs mb-1"><span className="text-[var(--foreground)]">Utilizacion del presupuesto</span><span className="text-[var(--muted-foreground)]">{fmtCOP(totalBudget - totalSpent)} restante</span></div><div className="w-full bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full h-3"><div className={`rounded-full h-3 transition-all ${budgetPct > 90 ? 'bg-red-400' : budgetPct > 70 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} /></div></div>
                 <MonthlyExpenseTrend data={monthlyExpenseTrend} />
                 {/* Export budget button */}
                 <button className="w-full text-xs text-[var(--af-accent)] cursor-pointer hover:underline text-center bg-[var(--af-accent)]/5 rounded-lg py-2 transition-colors hover:bg-[var(--af-accent)]/10" onClick={() => {
@@ -249,11 +249,11 @@ export default function ReportsScreen() {
                 </button>
               </div>
               {/* Card 4: Equipo */}
-              <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">Equipo</h3>
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{teamUsers.length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Miembros</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{Object.keys(membersByRole).length}</div><div className="text-xs text-[var(--muted-foreground)] mt-1">Roles distintos</div></div>
                 </div>
                 <RoleDistPie data={roleDistData} />
                 {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>{Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {const member = teamUsers.find(u => u.id === uid); return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>);})}</div>}
@@ -274,14 +274,14 @@ export default function ReportsScreen() {
             const totalBillable = filteredTimeEntries.filter(e => e.data.billable).reduce((s, e) => s + (e.data.duration || 0) * (e.data.rate || 0) / 60, 0);
             const budgetPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
             return (<>
-              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="lg:col-span-2 card-elevated rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Resumen Financiero</h3>
                   <span className="text-[11px] text-[var(--af-text3)]">{dateLabel}</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[{ lbl: 'Presupuesto', val: fmtCOP(totalBudget), c: 'text-[var(--af-accent)]' }, { lbl: 'Gastado', val: fmtCOP(totalSpent), c: 'text-[var(--foreground)]' }, { lbl: 'Facturado', val: fmtCOP(totalInvoiced), c: 'text-blue-400' }, { lbl: 'Cobrado', val: fmtCOP(totalPaid), c: 'text-emerald-400' }, { lbl: 'Por cobrar', val: fmtCOP(totalPending + totalOverdue), c: totalOverdue > 0 ? 'text-red-400' : 'text-amber-400' }].map((m, i) => (
-                    <div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-xl font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>
+                    <div key={i} className="skeuo-well rounded-xl p-3 text-center"><div className={`text-xl font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>
                   ))}
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function ReportsScreen() {
                 {totalBudget > 0 && totalSpent > totalBudget * 0.9 && <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-center gap-2"><AlertTriangle size={18} className="text-amber-400" /><span className="text-sm text-amber-400 font-medium">Gasto al {Math.round(totalSpent / totalBudget * 100)}% del presupuesto</span></div>}
               </div>}
               {/* Budget vs Real */}
-              <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="lg:col-span-2 card-elevated rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Presupuesto vs Real por Proyecto</h3>
                   <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
@@ -301,7 +301,7 @@ export default function ReportsScreen() {
                 <BudgetVsRealBar data={budgetVsRealData} budgetPct={budgetPct} />
               </div>
               {/* Gastos por categoria */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Gastos por Categoria</h3>
                   <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => {
@@ -311,7 +311,7 @@ export default function ReportsScreen() {
                 <ExpenseCategoryPie data={categoryData} />
               </div>
               {/* Rentabilidad */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Metricas de Rentabilidad</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {(() => {
@@ -324,7 +324,7 @@ export default function ReportsScreen() {
                       { lbl: 'Tasa de cobro', val: `${collectionRate}%`, c: collectionRate > 80 ? 'text-emerald-400' : 'text-amber-400' },
                       { lbl: 'Promedio proyecto', val: fmtCOP(avgProject), c: 'text-[var(--af-accent)]' },
                       { lbl: 'Horas facturables', val: fmtCOP(timeRevenue), c: 'text-blue-400' },
-                    ].map((m, i) => (<div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className={`text-lg font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>));
+                    ].map((m, i) => (<div key={i} className="skeuo-well rounded-xl p-3 text-center"><div className={`text-lg font-bold ${m.c}`}>{m.val}</div><div className="text-[11px] text-[var(--muted-foreground)]">{m.lbl}</div></div>));
                   })()}
                 </div>
               </div>
@@ -343,7 +343,7 @@ export default function ReportsScreen() {
             const byUser: Record<string, number> = {};
             filteredTimeEntries.forEach(e => { byUser[e.data.userId] = (byUser[e.data.userId] || 0) + (e.data.duration || 0); });
             return (<>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[15px] font-semibold">Resumen de Tiempo</h3>
                   <div className="flex items-center gap-2">
@@ -357,17 +357,17 @@ export default function ReportsScreen() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{fmtDuration(totalHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Total registrado</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{fmtDuration(billableHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-400">{fmtCOP(totalBillable)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Valor facturable</div></div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtDuration(weekHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Esta semana</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--af-accent)]">{fmtDuration(totalHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Total registrado</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-emerald-400">{fmtDuration(billableHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Facturable</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-blue-400">{fmtCOP(totalBillable)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Valor facturable</div></div>
+                  <div className="skeuo-well rounded-xl p-3 text-center"><div className="text-2xl font-bold text-[var(--foreground)]">{fmtDuration(weekHrs)}</div><div className="text-[11px] text-[var(--muted-foreground)]">Esta semana</div></div>
                 </div>
               </div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Horas por Proyecto</h3>
                 <HoursByProjectBar data={hoursByProjectData} />
               </div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Horas por Miembro</h3>
                 {Object.keys(byUser).length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div> : (
                   <div className="space-y-2">{Object.entries(byUser).sort((a, b) => b[1] - a[1]).map(([uid, mins]) => {
@@ -391,18 +391,18 @@ export default function ReportsScreen() {
             const hoursPerMember: Record<string, number> = {};
             filteredTimeEntries.forEach(e => { hoursPerMember[e.data.userId] = (hoursPerMember[e.data.userId] || 0) + (e.data.duration || 0); });
             return (<>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Distribucion por Roles</h3>
                 <TeamRoleDistPie data={roleDistData} />
               </div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+              <div className="card-elevated rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold mb-4">Productividad por Miembro</h3>
                 <div className="md:hidden space-y-2">
                   {teamUsers.sort((a, b) => (tasksPerMember[b.id]?.total || 0) - (tasksPerMember[a.id]?.total || 0)).map(u => {
                     const stats = tasksPerMember[u.id] || { total: 0, done: 0, overdue: 0 };
                     const hrs = hoursPerMember[u.id] || 0;
                     return (
-                      <div key={u.id} className="bg-[var(--af-bg3)] rounded-lg p-3 border border-[var(--border)] flex items-center gap-3">
+                      <div key={u.id} className="card-elevated rounded-lg p-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(u.id) }}>{getInitials(u.data.name)}</div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[13px] font-medium truncate">{u.data.name}</div>

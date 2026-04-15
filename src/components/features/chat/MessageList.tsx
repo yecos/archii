@@ -115,7 +115,7 @@ export default function MessageList(props: MessageListProps) {
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
             <input
-              className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-8 py-1.5 text-[12px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] placeholder:text-[var(--af-text3)]"
+              className="w-full skeuo-input rounded-lg pl-8 pr-8 py-1.5 text-[12px] placeholder:text-[var(--af-text3)]"
               placeholder="Buscar en esta conversación..."
               value={chatMsgSearch === ' ' ? '' : chatMsgSearch}
               onChange={e => setChatMsgSearch(e.target.value)}
@@ -270,11 +270,11 @@ export default function MessageList(props: MessageListProps) {
       )}
 
       {/* INPUT AREA */}
-      <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--card)]">
+      <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--skeuo-raised)]">
         {/* Reply indicator */}
         {chatReplyingTo && (
           <div className="px-3 pt-2.5 pb-1 animate-fadeIn" style={{ animationDuration: '0.15s' }}>
-            <div className="flex items-center gap-2 bg-[var(--af-bg3)] rounded-lg px-3 py-2 border-l-2 border-l-[var(--af-accent)]">
+            <div className="flex items-center gap-2 bg-[var(--skeuo-raised)] rounded-lg px-3 py-2 border-l-2 border-l-[var(--af-accent)] shadow-[var(--skeuo-shadow-raised-sm)]">
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] font-semibold text-[var(--af-accent)]">Respondiendo a {chatReplyingTo.userName || 'Usuario'}</div>
                 <div className="text-[11px] text-[var(--af-text3)] truncate">{(chatReplyingTo.text || '').substring(0, 100)}</div>
@@ -291,19 +291,19 @@ export default function MessageList(props: MessageListProps) {
 
         <div className="flex gap-1 items-end px-2.5 py-2.5 safe-bottom">
           <input ref={fileInputRef} type="file" className="hidden" multiple onChange={(e) => { if (e.target.files) handleFileSelect(e.target.files); }} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.dwg,.txt,.csv" />
-          <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors flex-shrink-0" onClick={() => fileInputRef.current?.click()} title="Adjuntar archivo">
+          <button className="skeuo-btn w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors flex-shrink-0" onClick={() => fileInputRef.current?.click()} title="Adjuntar archivo">
             <Paperclip className="w-[18px] h-[18px] text-[var(--muted-foreground)]" strokeWidth={1.75} />
           </button>
           <input
             id="chat-input-field"
-            className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-2xl px-4 py-2.5 text-[15px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] min-w-0 transition-colors placeholder:text-[var(--af-text3)]"
+            className="flex-1 skeuo-input rounded-2xl px-4 py-2.5 text-[15px] min-w-0 placeholder:text-[var(--af-text3)]"
             placeholder="Escribe un mensaje..."
             value={formsChatInput || ''}
             onChange={e => setForms((p: any) => ({ ...p, chatInput: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAll(); } }}
           />
           <button
-            className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors flex-shrink-0"
+            className="skeuo-btn w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent flex-shrink-0"
             onClick={() => setShowEmojiPicker(p => !p)}
             title="Emojis"
           >
@@ -321,7 +321,7 @@ export default function MessageList(props: MessageListProps) {
             )}
           </button>
           <button
-            className="w-10 h-10 rounded-xl bg-[var(--af-accent)] flex items-center justify-center cursor-pointer border-none flex-shrink-0 active:scale-95 transition-transform hover:opacity-90 shadow-md"
+            className="skeuo-btn w-10 h-10 rounded-xl bg-[var(--af-accent)] flex items-center justify-center cursor-pointer border-none flex-shrink-0 active:scale-95 text-background"
             onClick={sendAll}
             title="Enviar"
           >

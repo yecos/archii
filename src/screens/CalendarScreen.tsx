@@ -223,7 +223,7 @@ export default function CalendarScreen() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <button
-            className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+            className="skeuo-btn w-8 h-8 rounded-lg flex items-center justify-center"
             onClick={calView === 'weekly' ? prevWeek : prevMonth}
           >
             <ChevronLeft className="w-4 h-4 text-[var(--muted-foreground)]" />
@@ -232,7 +232,7 @@ export default function CalendarScreen() {
             {calView === 'weekly' ? weekLabel : `${MESES[calMonth]} ${calYear}`}
           </div>
           <button
-            className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+            className="skeuo-btn w-8 h-8 rounded-lg flex items-center justify-center"
             onClick={calView === 'weekly' ? nextWeek : nextMonth}
           >
             <ChevronRight className="w-4 h-4 text-[var(--muted-foreground)]" />
@@ -240,7 +240,7 @@ export default function CalendarScreen() {
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex rounded-lg border border-[var(--border)] overflow-hidden">
+          <div className="skeuo-well flex rounded-xl overflow-hidden">
             <button
               className={`text-[11px] px-3 py-1.5 cursor-pointer transition-colors ${
                 calView === 'monthly'
@@ -263,7 +263,7 @@ export default function CalendarScreen() {
             </button>
           </div>
           <select
-            className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--foreground)] outline-none cursor-pointer"
+            className="skeuo-input rounded-lg px-2.5 py-1.5 text-[11px]"
             value={calFilterProject}
             onChange={e => setCalFilterProject(e.target.value)}
           >
@@ -275,7 +275,7 @@ export default function CalendarScreen() {
             ))}
           </select>
           <button
-            className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+            className="skeuo-btn text-[11px] px-2.5 py-1.5 rounded-lg cursor-pointer"
             onClick={goToday}
           >
             Hoy
@@ -335,7 +335,7 @@ export default function CalendarScreen() {
           /* ----- Mobile: single-day agenda ----- */
           <div className="space-y-3">
             {/* Horizontal scrollable day chips */}
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-2">
+            <div className="card-elevated rounded-xl p-2">
               <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
                 {weekDays.map((day, i) => {
                   const ds = formatDateISO(day);
@@ -366,7 +366,7 @@ export default function CalendarScreen() {
             </div>
 
             {/* Agenda list for the selected day */}
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+            <div className="card-elevated rounded-xl overflow-hidden">
               {(() => {
                 const selDate = calSelectedDate || todayStr;
                 const selDayTasks = calTasks.filter(t => t.data.dueDate === selDate);
@@ -407,7 +407,7 @@ export default function CalendarScreen() {
                       return (
                         <div
                           key={`mob-meet-${m.id}-${e.date}-${i}`}
-                          className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--af-bg3)]/50 transition-colors"
+                          className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--skeuo-raised)] transition-colors"
                           onClick={() => openEditMeeting(m)}
                         >
                           {/* Purple left indicator */}
@@ -511,7 +511,7 @@ export default function CalendarScreen() {
           </div>
         ) : (
         /* ----- Desktop: 7-day grid ----- */
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+        <div className="card-elevated rounded-xl overflow-hidden">
           {/* Day header row */}
           <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-[var(--border)]">
             {/* Corner cell */}
@@ -530,7 +530,7 @@ export default function CalendarScreen() {
                       ? 'bg-[var(--af-accent)]/10'
                       : isSelected
                         ? 'bg-[var(--af-accent)]/7'
-                        : 'hover:bg-[var(--af-bg3)]'
+                        : 'hover:bg-[var(--skeuo-raised)]'
                   }`}
                   onClick={() => setCalSelectedDate(ds)}
                 >
@@ -555,7 +555,7 @@ export default function CalendarScreen() {
           <div className="overflow-y-auto" style={{ maxHeight: '70vh' }}>
             <div className="grid grid-cols-[56px_repeat(7,1fr)]">
               {/* Time labels column */}
-              <div className="border-r border-[var(--border)] bg-[var(--af-bg3)]/30">
+              <div className="border-r border-[var(--border)] bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)]">
                 {TIME_SLOTS.map(time => (
                   <div
                     key={time}
@@ -640,7 +640,7 @@ export default function CalendarScreen() {
                         return (
                           <div
                             key={`${e.meeting.id}-${e.date}-${mi}`}
-                            className="absolute left-0.5 right-0.5 rounded-lg bg-purple-500/20 border border-purple-500/30 px-1 py-0.5 overflow-hidden cursor-pointer hover:bg-purple-500/30 transition-colors z-10"
+                            className="absolute left-0.5 right-0.5 rounded-lg bg-purple-500/20 border border-purple-500/30 px-1 py-0.5 overflow-hidden cursor-pointer hover:bg-purple-500/30 transition-colors z-10 shadow-[var(--skeuo-shadow-raised-sm)]"
                             style={{ top: `${top}px`, height: `${height}px` }}
                             title={`${e.meeting.data.title} (${time} · ${duration} min)`}
                             onClick={ev => {
@@ -689,7 +689,7 @@ export default function CalendarScreen() {
         )
       ) : (
         /* ========== MONTHLY VIEW (unchanged) ========== */
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+        <div className="card-elevated rounded-xl overflow-hidden">
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-[var(--border)]">
             {DIAS_SEMANA.map(d => (
@@ -726,7 +726,7 @@ export default function CalendarScreen() {
                   className={`min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] p-1 sm:p-1.5 cursor-pointer transition-colors ${
                     isSelected
                       ? 'bg-[var(--af-accent)]/10'
-                      : 'hover:bg-[var(--af-bg3)]'
+                      : 'hover:bg-[var(--skeuo-raised)]'
                   } ${isPast && !isToday ? 'opacity-70' : ''}`}
                   onClick={() => setCalSelectedDate(dateStr)}
                 >
@@ -794,7 +794,7 @@ export default function CalendarScreen() {
 
       {/* ===== Selected day detail (shared between views) ===== */}
       {calSelectedDate && (
-        <div className="mt-4 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+        <div className="mt-4 card-elevated rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[14px] font-semibold">
               {(() => {
@@ -836,7 +836,7 @@ export default function CalendarScreen() {
                       className={`border rounded-lg p-3 ${
                         isOverdue
                           ? 'border-red-500/20 bg-red-500/5'
-                          : 'border-[var(--border)] bg-[var(--af-bg3)]'
+                          : 'border-[var(--skeuo-edge-light)] bg-[var(--skeuo-raised)]'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">

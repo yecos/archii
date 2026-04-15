@@ -80,10 +80,10 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <button
             type="button"
             onClick={() => setShowComments(!showComments)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] cursor-pointer transition-all ${
+            className={`skeuo-btn flex items-center gap-1.5 px-2.5 py-1 text-[12px] ${
               showComments
-                ? 'bg-[var(--af-accent)]/15 text-[var(--af-accent)] border border-[var(--af-accent)]/25'
-                : 'bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                ? 'bg-[var(--af-accent)]/15 text-[var(--af-accent)] border-[var(--af-accent)]/25'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             }`}
           >
             <MessageSquare size={13} />
@@ -117,7 +117,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             {/* Progress indicator */}
             {totalCount > 0 && (
               <div className="flex items-center gap-2.5">
-                <div className="flex-1 h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                <div className="skeuo-well flex-1 h-2 rounded-full overflow-hidden p-0">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${completedCount === totalCount ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`}
                     style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
@@ -131,11 +131,11 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
 
             {/* Subtask list */}
             {subtasks.length > 0 && (
-              <div className="border border-[var(--border)] rounded-lg overflow-hidden max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+              <div className="skeuo-well overflow-hidden max-h-[200px] overflow-y-auto">
                 {subtasks.map((s: Subtask) => (
                   <div
                     key={s.id}
-                    className={`flex items-center gap-2.5 px-3 py-2 border-b border-[var(--border)] last:border-0 group/st transition-colors hover:bg-[var(--af-bg3)] ${s.completed ? 'bg-emerald-500/5' : ''}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 border-b border-[var(--skeuo-edge-light)] last:border-0 group/st transition-colors hover:bg-[var(--skeuo-raised)] ${s.completed ? 'bg-emerald-500/5' : ''}`}
                   >
                     <button
                       type="button"
@@ -171,16 +171,16 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
                 onChange={(e) => setNewSubtaskText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(); } }}
                 placeholder="Agregar sub-tarea..."
-                className="flex-1 text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 placeholder:text-[var(--af-text3)]"
+                className="skeuo-input flex-1 text-[12px] px-3 py-2 placeholder:text-[var(--af-text3)]"
               />
               <button
                 type="button"
                 onClick={addSubtask}
                 disabled={!newSubtaskText.trim()}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer border-none transition-colors flex-shrink-0 ${
+                className={`skeuo-btn w-8 h-8 flex items-center justify-center flex-shrink-0 ${
                   newSubtaskText.trim()
-                    ? 'bg-[var(--af-accent)] text-background hover:bg-[var(--af-accent2)]'
-                    : 'bg-[var(--af-bg3)] text-[var(--af-text3)] cursor-not-allowed'
+                    ? 'bg-[var(--af-accent)] text-[var(--primary-foreground)] hover:bg-[var(--af-accent2)]'
+                    : 'text-[var(--af-text3)] cursor-not-allowed'
                 }`}
               >
                 <Plus size={15} />
@@ -206,14 +206,14 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <div className="space-y-2">
             {/* Chips de responsables seleccionados */}
             {assignees.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 p-2 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg min-h-[36px]">
+              <div className="skeuo-well flex flex-wrap gap-1.5 p-2 min-h-[36px]">
                 {assignees.map((uid: string) => {
                   const user = auth.teamUsers.find((u: any) => u.id === uid);
                   const name = user?.data?.name || uid;
                   return (
                     <span
                       key={uid}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--af-accent)]/15 text-[var(--af-accent)] border border-[var(--af-accent)]/20"
+                      className="skeuo-badge inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[var(--af-accent)]/15 text-[var(--af-accent)] border-[var(--af-accent)]/20"
                     >
                       {name}{uid === auth.authUser?.uid ? ' (Tu)' : ''}
                       <button
@@ -230,8 +230,8 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             )}
 
             {/* Lista de checkbox para seleccionar */}
-            <div className="border border-[var(--border)] rounded-lg overflow-hidden max-h-[180px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-              <div className="px-2.5 py-2 bg-[var(--af-bg3)] border-b border-[var(--border)] flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] font-medium">
+            <div className="skeuo-well overflow-hidden max-h-[180px] overflow-y-auto">
+              <div className="px-2.5 py-2 bg-[var(--skeuo-raised)] border-b border-[var(--skeuo-edge-light)] flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] font-medium">
                 <Users size={12} />
                 {assignees.length === 0 ? 'Seleccionar responsables' : `${assignees.length} responsable${assignees.length > 1 ? 's' : ''} seleccionado${assignees.length > 1 ? 's' : ''}`}
               </div>
@@ -247,7 +247,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
                 return (
                   <label
                     key={uid}
-                    className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-[var(--af-bg3)] transition-colors border-b border-[var(--border)] last:border-0 ${isChecked ? 'bg-[var(--af-accent)]/5' : ''}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-[var(--skeuo-raised)] transition-colors border-b border-[var(--skeuo-edge-light)] last:border-0 ${isChecked ? 'bg-[var(--af-accent)]/5' : ''}`}
                   >
                     <input
                       type="checkbox"
@@ -299,7 +299,8 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
 
       {/* Comments section — only when editing an existing task */}
       {ui.editingId && showComments && (
-        <div className="mt-4 pt-4 border-t border-[var(--border)]">
+        <div className="mt-4 pt-4">
+          <div className="skeuo-divider mb-4" />
           <TaskCommentsPanel
             taskId={ui.editingId}
             projectId={ui.forms.taskProject || ''}

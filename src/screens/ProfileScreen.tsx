@@ -206,7 +206,7 @@ export default function ProfileScreen() {
               </div>
 
               {/* Notificaciones */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[13px] sm:text-[15px] font-semibold">Notificaciones Recientes</div>
                   <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">{notifications.length} actividad{notifications.length !== 1 ? 'es' : ''}</span>
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {notifications.slice(0, 15).map((n, i) => (
-                      <div key={i} className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${n.urgent ? 'bg-red-500/5 border border-red-500/20' : 'bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)]'}`}>
+                      <div key={i} className={`flex items-start gap-3 p-2.5 rounded-lg transition-all ${n.urgent ? 'bg-red-500/5 border border-red-500/20' : 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] hover:shadow-[var(--skeuo-shadow-inset-sm)]'}`}>
                             <div className="text-base flex-shrink-0 mt-0.5">{n.icon}</div>
                             <div className="flex-1 min-w-0">
                               <div className="text-[12px] sm:text-[13px] leading-snug">{n.text}</div>
@@ -233,7 +233,7 @@ export default function ProfileScreen() {
               </div>
 
               {/* Configuración de notificaciones por evento */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="text-base">⚙️</div>
@@ -286,7 +286,7 @@ export default function ProfileScreen() {
 
               {/* Charts row - stacked on mobile, 3-col on desktop */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5 flex flex-col items-center justify-center">
+                <div className="card-elevated rounded-xl p-3.5 sm:p-5 flex flex-col items-center justify-center">
                   <div className="text-[11px] sm:text-[13px] font-semibold text-[var(--muted-foreground)] mb-2 sm:mb-3">Cumplimiento</div>
                   <div className="relative w-20 h-20 sm:w-28 sm:h-28">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
@@ -301,13 +301,13 @@ export default function ProfileScreen() {
                 </div>
 
                 {/* Priority */}
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+                <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                   <div className="text-[11px] sm:text-[13px] font-semibold text-[var(--muted-foreground)] mb-3">Prioridad</div>
                   <div className="space-y-2.5">
                     {prioData.map((p, i) => (
                       <div key={i}>
                         <div className="flex justify-between text-[11px] sm:text-[12px] mb-1"><span>{p.label}</span><span className="text-[var(--muted-foreground)]">{p.count}</span></div>
-                        <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                        <div className="h-2 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all" style={{ width: Math.round((p.count / prioMax) * 100) + '%', backgroundColor: p.color }} />
                         </div>
                       </div>
@@ -317,12 +317,12 @@ export default function ProfileScreen() {
                 </div>
 
                 {/* Weekly */}
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+                <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                   <div className="text-[11px] sm:text-[13px] font-semibold text-[var(--muted-foreground)] mb-3">Actividad Semanal</div>
                   <div className="flex items-end gap-1 sm:gap-1.5 h-16 sm:h-24">
                     {weeklyData.map((d, i) => (
                       <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                        <div className="w-full bg-[var(--af-bg4)] rounded-sm overflow-hidden flex flex-col-reverse" style={{ height: '50px' }}>
+                        <div className="w-full bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-sm overflow-hidden flex flex-col-reverse" style={{ height: '50px' }}>
                           <div className="w-full bg-[var(--af-accent)] rounded-sm transition-all" style={{ height: d.count > 0 ? Math.max(Math.round((d.count / weekMax) * 100), 10) + '%' : '0%' }} />
                         </div>
                         <span className="text-[7px] sm:text-[9px] text-[var(--af-text3)]">{d.label}</span>
@@ -333,7 +333,7 @@ export default function ProfileScreen() {
               </div>
 
               {/* Progreso por Proyecto */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[13px] sm:text-[15px] font-semibold">Progreso por Proyecto</div>
                   <span className="text-[10px] sm:text-[11px] text-[var(--muted-foreground)]">{Object.keys(tasksByProject).length} proyectos</span>
@@ -350,7 +350,7 @@ export default function ProfileScreen() {
                             <span className="text-[13px] font-medium">{p.name}</span>
                             <span className={`text-[12px] font-semibold ${rate >= 80 ? 'text-emerald-400' : rate >= 40 ? 'text-[var(--af-accent)]' : 'text-amber-400'}`}>{rate}%</span>
                           </div>
-                          <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                          <div className="h-2 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                             <div className={`h-full rounded-full transition-all duration-700 ${rate >= 80 ? 'bg-emerald-500' : rate >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: rate + '%' }} />
                           </div>
                           <div className="flex justify-between mt-1.5">
@@ -365,7 +365,7 @@ export default function ProfileScreen() {
               </div>
 
               {/* Mis Tareas Pendientes */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-[13px] sm:text-[15px] font-semibold">Tareas Pendientes</div>
                   <div className="flex gap-1.5">
@@ -381,7 +381,7 @@ export default function ProfileScreen() {
                       const proj = fs.projects.find(p => p.id === t.data.projectId);
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date();
                       return (
-                        <div key={t.id} className={`border border-[var(--border)] rounded-xl p-3.5 transition-all hover:border-[var(--input)] ${isOverdue ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--af-bg3)]'}`}>
+                        <div key={t.id} className={`border border-[var(--border)] rounded-xl p-3.5 transition-all hover:border-[var(--input)] ${isOverdue ? 'bg-red-500/5 border-red-500/20' : 'skeuo-well'}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex-1 min-w-0">
                               <div className="text-[13px] font-medium leading-snug">{t.data.title}</div>
@@ -397,7 +397,7 @@ export default function ProfileScreen() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-2 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                          <div className="mt-2 h-1 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${t.data.status === 'En progreso' ? 'bg-blue-500 w-1/2' : (t.data.status as string) === 'Revision' ? 'bg-amber-500 w-3/4' : 'w-0'}`} />
                           </div>
                         </div>
@@ -408,7 +408,7 @@ export default function ProfileScreen() {
               </div>
 
               {/* Microsoft / OneDrive */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <svg viewBox="0 0 21 21" className="w-5 h-5"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
@@ -425,7 +425,7 @@ export default function ProfileScreen() {
                         { icon: '📂', title: 'Carpetas por proyecto', desc: 'Organización automática' },
                         { icon: '🔗', title: 'Compartir archivos', desc: 'Enlaces seguros para el equipo' },
                       ].map((f, i) => (
-                        <div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
+                        <div key={i} className="skeuo-well rounded-lg p-3 text-center">
                           <div className="text-lg mb-1">{f.icon}</div>
                           <div className="text-[11px] font-semibold">{f.title}</div>
                           <div className="text-[10px] text-[var(--af-text3)]">{f.desc}</div>
@@ -445,7 +445,7 @@ export default function ProfileScreen() {
                         <div className="text-[11px] font-semibold text-[var(--muted-foreground)] mb-2">Abrir carpeta de proyecto:</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {fs.projects.slice(0, 6).map(p => (
-                            <button key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef] transition-all" onClick={() => od.openOneDriveForProject(p.data.name)}>
+                            <button key={p.id} className="skeuo-well rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef] transition-all border border-transparent" onClick={() => od.openOneDriveForProject(p.data.name)}>
                               <div className="text-[11px] font-medium truncate">{p.data.name}</div>
                               <div className="text-[9px] text-[var(--af-text3)]">{p.data.status}</div>
                             </button>
@@ -461,14 +461,14 @@ export default function ProfileScreen() {
               </div>
 
               {/* Mi Actividad Financiera */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+              <div className="card-elevated rounded-xl p-3.5 sm:p-5">
                 <div className="text-[13px] sm:text-[15px] font-semibold mb-3">Actividad Financiera</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3.5 text-center">
+                  <div className="skeuo-well rounded-lg p-3.5 text-center">
                     <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalSpent)}</div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-1">Gastos registrados</div>
                   </div>
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3.5 text-center">
+                  <div className="skeuo-well rounded-lg p-3.5 text-center">
                     <div className="text-lg font-bold text-emerald-400">{myExpenses.length}</div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-1">Registros realizados</div>
                   </div>

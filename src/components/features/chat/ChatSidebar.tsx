@@ -31,12 +31,12 @@ export default function ChatSidebar({
   onSelectProject,
 }: ChatSidebarProps) {
   return (
-    <div className={`${chatMobileShow ? 'hidden md:flex' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent`}>
+    <div className={`${chatMobileShow ? 'hidden md:flex' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent md:border-r-0 md:border-l md:border-l-[var(--skeuo-edge-light)]`}>
       {/* Search */}
       <div className="p-3 border-b border-[var(--border)]">
         <div className="relative">
           <Search className="w-4 h-4 flex-shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-          <input className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-[13px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] transition-colors placeholder:text-[var(--af-text3)]" placeholder="Buscar conversaciones..." value={chatSearch || ''} onChange={e => onChatSearchChange(e.target.value)} />
+          <input className="skeuo-input w-full pl-9 pr-3 py-2.5 text-[13px] rounded-xl placeholder:text-[var(--af-text3)]" placeholder="Buscar conversaciones..." value={chatSearch || ''} onChange={e => onChatSearchChange(e.target.value)} />
         </div>
       </div>
 
@@ -44,7 +44,7 @@ export default function ChatSidebar({
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
         {/* Chat General */}
         <div
-          className={`flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-all duration-200 border-l-[3px] ${chatProjectId === '__general__' ? 'bg-[var(--accent)] border-l-[var(--af-accent)]' : 'border-l-transparent hover:bg-[var(--af-bg3)]'}`}
+          className={`flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-all duration-200 border-l-[3px] ${chatProjectId === '__general__' ? 'bg-[var(--skeuo-raised)] border-l-[var(--af-accent)] shadow-[var(--skeuo-shadow-raised-sm)]' : 'border-l-transparent hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)]'}`}
           onClick={onSelectGeneral}
         >
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--af-accent)] to-purple-500 flex items-center justify-center text-lg flex-shrink-0 shadow-md">💬</div>
@@ -63,7 +63,7 @@ export default function ChatSidebar({
               .map(u => (
                 <div
                   key={u.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200 border-l-[3px] ${chatDmUser === u.id && chatProjectId === '__dm__' ? 'bg-[var(--accent)] border-l-[var(--af-accent)]' : 'border-l-transparent hover:bg-[var(--af-bg3)]'}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200 border-l-[3px] ${chatDmUser === u.id && chatProjectId === '__dm__' ? 'bg-[var(--skeuo-raised)] border-l-[var(--af-accent)] shadow-[var(--skeuo-shadow-raised-sm)]' : 'border-l-transparent hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)]'}`}
                   onClick={() => onSelectDm(u.id)}
                 >
                   <div className="relative flex-shrink-0">
@@ -95,7 +95,7 @@ export default function ChatSidebar({
                 return (
                   <div
                     key={p.id}
-                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200 border-l-[3px] ${p.id === chatProjectId && chatProjectId !== '__general__' && chatProjectId !== '__dm__' ? 'bg-[var(--accent)] border-l-[var(--af-accent)]' : 'border-l-transparent hover:bg-[var(--af-bg3)]'}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all duration-200 border-l-[3px] ${p.id === chatProjectId && chatProjectId !== '__general__' && chatProjectId !== '__dm__' ? 'bg-[var(--skeuo-raised)] border-l-[var(--af-accent)] shadow-[var(--skeuo-shadow-raised-sm)]' : 'border-l-transparent hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)]'}`}
                     onClick={() => onSelectProject(p.id)}
                   >
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: projColor }} />

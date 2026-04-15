@@ -91,7 +91,7 @@ export default function MessageBubble({
 
       {/* Reply reference */}
       {m.replyTo && (
-        <div className={`mb-1 ml-1 max-w-[260px] px-2.5 py-1.5 rounded-lg border-l-2 border-l-[var(--af-accent)] bg-[var(--af-bg3)]/60 cursor-pointer transition-colors hover:bg-[var(--af-bg3)] ${isMe ? 'mr-1' : ''}`} onClick={() => {
+        <div className={`mb-1 ml-1 max-w-[260px] px-2.5 py-1.5 rounded-lg border-l-2 border-l-[var(--af-accent)] bg-[var(--skeuo-raised)] shadow-[var(--skeuo-shadow-raised-sm)] cursor-pointer transition-all hover:shadow-[var(--skeuo-shadow-raised)] ${isMe ? 'mr-1' : ''}`} onClick={() => {
           const target = filteredMessages.find(msg => msg.id === m.replyTo?.id);
           if (target) {
             const el = document.getElementById(`msg-${target.id}`);
@@ -106,7 +106,7 @@ export default function MessageBubble({
       {/* Message bubble */}
       <div
         id={`msg-${m.id}`}
-        className={`relative max-w-[80%] rounded-2xl shadow-sm transition-shadow hover:shadow-md ${isMe ? 'rounded-br-md' : 'rounded-bl-md'}`}
+        className={`relative max-w-[80%] rounded-2xl shadow-[var(--skeuo-shadow-raised-sm)] transition-shadow hover:shadow-[var(--skeuo-shadow-raised)] ${isMe ? 'rounded-br-md' : 'rounded-bl-md'}`}
       >
         {/* TEXT */}
         {msgType === 'TEXT' && m.text && (

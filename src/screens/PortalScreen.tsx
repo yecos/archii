@@ -197,7 +197,7 @@ function OverviewView({
         ].map((card, i) => (
           <div
             key={i}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--af-accent)]/30 transition-colors"
+            className="card-elevated rounded-xl p-4 hover:border-[var(--af-accent)]/30 transition-colors border border-transparent"
           >
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center ${card.iconColor}`}>
@@ -236,7 +236,7 @@ function OverviewView({
               return (
                 <div
                   key={project.id}
-                  className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--af-accent)]/30 transition-all cursor-pointer group"
+                  className="card-elevated rounded-xl p-5 hover:border-[var(--af-accent)]/30 transition-all cursor-pointer group border border-transparent"
                   onClick={() => onSelectProject(project.id)}
                 >
                   {/* Card Header */}
@@ -289,7 +289,7 @@ function OverviewView({
                       <span className="text-[11px] text-[var(--muted-foreground)]">Progreso</span>
                       <span className="text-[11px] font-semibold">{prog}%</span>
                     </div>
-                    <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                    <div className="h-1 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${progressColor(prog)}`}
                         style={{ width: prog + '%' }}
@@ -449,7 +449,7 @@ function ProjectDetailView({
 
           {/* Progress */}
           <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-2.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+            <div className="flex-1 h-2.5 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${progressColor(prog)}`}
                 style={{ width: prog + '%' }}
@@ -467,7 +467,7 @@ function ProjectDetailView({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
+      <div className="flex gap-1 skeuo-well rounded-xl p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
         {([
           { key: 'resumen' as const, label: 'Resumen', icon: <Eye size={13} /> },
           { key: 'fotos' as const, label: 'Fotos', icon: <ImageIcon size={13} /> },
@@ -478,7 +478,7 @@ function ProjectDetailView({
             key={t.key}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${
               tab === t.key
-                ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm'
+                ? 'bg-[var(--skeuo-raised)] text-[var(--foreground)] font-medium shadow-[var(--skeuo-shadow-btn)]'
                 : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             }`}
             onClick={() => setTab(t.key)}
@@ -528,7 +528,7 @@ function ResumenTab({ project }: { project: any }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Info Card */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated rounded-xl p-5">
         <div className="text-[15px] font-semibold mb-4">Información del Proyecto</div>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
@@ -561,7 +561,7 @@ function ResumenTab({ project }: { project: any }) {
       </div>
 
       {/* Progress Card */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated rounded-xl p-5">
         <div className="text-[15px] font-semibold mb-4">Progreso</div>
         <div className="flex items-center justify-center mb-4">
           <div className="relative w-[120px] h-[120px]">
@@ -609,19 +609,19 @@ function ResumenTab({ project }: { project: any }) {
 
       {/* Expenses by Category */}
       {expensesByCategory.length > 0 && (
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:col-span-2">
+        <div className="card-elevated rounded-xl p-5 md:col-span-2">
           <div className="text-[15px] font-semibold mb-4">Gastos por Categoría</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {expensesByCategory.map(([cat, amount]) => {
               const totalExp = expensesByCategory.reduce((s, [, v]) => s + v, 0);
               const pct = totalExp > 0 ? Math.round((amount / totalExp) * 100) : 0;
               return (
-                <div key={cat} className="bg-[var(--af-bg3)] rounded-lg p-3">
+                <div key={cat} className="skeuo-well rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[13px] font-medium">{cat}</span>
                     <span className="text-[13px] font-semibold text-[var(--af-accent)]">{fmtCOP(amount)}</span>
                   </div>
-                  <div className="h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                  <div className="h-1 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                     <div className="h-full bg-[var(--af-accent)] rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="text-[10px] text-[var(--af-text3)] mt-1">{pct}% del total</div>
@@ -664,7 +664,7 @@ function FotosTab({ projectId, photos }: { projectId: string; photos: any[] }) {
           {filteredPhotos.map((photo, idx) => (
             <div
               key={photo.id}
-              className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all"
+              className="group relative aspect-square rounded-xl overflow-hidden skeuo-well cursor-pointer hover:border-[var(--af-accent)]/50 transition-all"
               onClick={() => {
                 // Set the gallery filter to this project so lightbox navigation works correctly
                 gal.setGalleryFilterProject(projectId);
@@ -732,7 +732,7 @@ function FacturasTab({ invoices }: { invoices: any[] }) {
           { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-blue-400' },
           { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-red-400' },
         ].map((c, i) => (
-          <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+          <div key={i} className="card-elevated rounded-xl p-3">
             <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
             <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
           </div>
@@ -750,7 +750,7 @@ function FacturasTab({ invoices }: { invoices: any[] }) {
           {invoices.map((inv) => (
             <div
               key={inv.id}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4"
+              className="card-elevated rounded-xl p-4 flex items-center gap-4"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -836,11 +836,11 @@ function ActividadTab({ comments, logs }: { comments: any[]; logs: any[] }) {
     <div>
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated rounded-xl p-3">
           <div className="text-lg font-bold">{comments.length}</div>
           <div className="text-[11px] text-[var(--muted-foreground)]">Comentarios</div>
         </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated rounded-xl p-3">
           <div className="text-lg font-bold">{logs.length}</div>
           <div className="text-[11px] text-[var(--muted-foreground)]">Bitácoras de obra</div>
         </div>
@@ -857,10 +857,10 @@ function ActividadTab({ comments, logs }: { comments: any[]; logs: any[] }) {
           {activity.map((item) => (
             <div
               key={item.id + item.type}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"
+              className="card-elevated rounded-xl p-4"
             >
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-base flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] flex items-center justify-center text-base flex-shrink-0">
                   {item.icon}
                 </div>
                 <div className="flex-1 min-w-0">

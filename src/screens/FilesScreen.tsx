@@ -330,7 +330,7 @@ export default function FilesScreen() {
             ].map(s => (
               <button
                 key={s.label}
-                className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 text-center hover:border-[var(--af-accent)]/30 transition-all cursor-pointer"
+                className="card-elevated rounded-lg p-3 text-center hover:border-[var(--af-accent)]/30 transition-all cursor-pointer"
                 onClick={() => {
                   if (s.label === 'Total') setActiveCategory('todos');
                   else setActiveCategory(s.label.toLowerCase() as FileCategory);
@@ -347,7 +347,7 @@ export default function FilesScreen() {
           <div className="flex gap-4 flex-col lg:flex-row">
             {/* Sidebar — Project Filter (Desktop) */}
             <aside className="hidden lg:block w-56 flex-shrink-0">
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 sticky top-4">
+              <div className="skeuo-panel rounded-xl p-4 sticky top-4">
                 <div className="text-[13px] font-semibold mb-3 flex items-center gap-2">
                   <FolderOpen size={14} /> Proyectos
                 </div>
@@ -397,12 +397,12 @@ export default function FilesScreen() {
             {/* Main Content */}
             <main className="flex-1 min-w-0">
               {/* Toolbar */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 mb-4">
+              <div className="card-elevated rounded-xl p-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Mobile: Project selector dropdown */}
                   <div className="lg:hidden relative">
                     <button
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors text-[var(--foreground)]"
+                      className="skeuo-btn flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] cursor-pointer transition-colors text-[var(--foreground)]"
                       onClick={() => { setShowProjectDrop(!showProjectDrop); setShowSort(false); }}
                     >
                       <FolderOpen size={13} />
@@ -412,7 +412,7 @@ export default function FilesScreen() {
                       <ChevronDown size={12} />
                     </button>
                     {showProjectDrop && (
-                      <div className="absolute top-full left-0 mt-1 w-52 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl z-50 py-1 max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                      <div className="absolute top-full left-0 mt-1 w-52 skeuo-well rounded-xl z-50 py-1 max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                         <button
                           className="w-full text-left px-3 py-2 text-[13px] hover:bg-[var(--af-bg3)] cursor-pointer bg-transparent border-none text-[var(--foreground)]"
                           onClick={() => { setFilterProjectId('all'); setShowProjectDrop(false); }}
@@ -440,7 +440,7 @@ export default function FilesScreen() {
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       placeholder="Buscar archivos..."
-                      className="w-full pl-8 pr-8 py-1.5 text-[13px] rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] outline-none focus:border-[var(--af-accent)]/40 text-[var(--foreground)] placeholder:text-[var(--af-text3)]"
+                      className="w-full pl-8 pr-8 py-1.5 text-[13px] rounded-lg skeuo-input outline-none focus:border-[var(--af-accent)]/40 text-[var(--foreground)] placeholder:text-[var(--af-text3)]"
                     />
                     {searchQuery && (
                       <button
@@ -455,7 +455,7 @@ export default function FilesScreen() {
                   {/* Sort */}
                   <div className="relative">
                     <button
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors text-[var(--foreground)]"
+                      className="skeuo-btn flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] cursor-pointer transition-colors text-[var(--foreground)]"
                       onClick={() => { setShowSort(!showSort); setShowProjectDrop(false); }}
                     >
                       <ArrowUpDown size={13} />
@@ -463,7 +463,7 @@ export default function FilesScreen() {
                       <ChevronDown size={12} />
                     </button>
                     {showSort && (
-                      <div className="absolute top-full right-0 mt-1 w-36 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl z-50 py-1">
+                      <div className="absolute top-full right-0 mt-1 w-36 skeuo-well rounded-xl z-50 py-1">
                         {SORT_OPTIONS.map(opt => (
                           <button
                             key={opt.key}
@@ -479,16 +479,16 @@ export default function FilesScreen() {
                   </div>
 
                   {/* View toggle */}
-                  <div className="flex items-center gap-0.5 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                  <div className="flex items-center gap-0.5 skeuo-well rounded-xl p-0.5">
                     <button
-                      className={`p-1.5 rounded-md cursor-pointer transition-all bg-transparent border-none ${viewMode === 'grid' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+                      className={`p-1.5 rounded-md cursor-pointer transition-all bg-transparent border-none ${viewMode === 'grid' ? 'card-elevated text-[var(--foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                       onClick={() => setViewMode('grid')}
                       title="Vista de cuadrícula"
                     >
                       <LayoutGrid size={15} />
                     </button>
                     <button
-                      className={`p-1.5 rounded-md cursor-pointer transition-all bg-transparent border-none ${viewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+                      className={`p-1.5 rounded-md cursor-pointer transition-all bg-transparent border-none ${viewMode === 'list' ? 'card-elevated text-[var(--foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                       onClick={() => setViewMode('list')}
                       title="Vista de lista"
                     >
@@ -515,7 +515,7 @@ export default function FilesScreen() {
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] whitespace-nowrap cursor-pointer transition-all border-none ${
                         activeCategory === tab.key
                           ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] font-medium'
-                          : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--af-bg4)]'
+                          : 'skeuo-well text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
                       }`}
                       onClick={() => setActiveCategory(tab.key)}
                     >
@@ -555,7 +555,7 @@ export default function FilesScreen() {
                       {projects.slice(0, 5).map(p => (
                         <button
                           key={p.id}
-                          className="text-[11px] px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] hover:border-[var(--input)] transition-all"
+                          className="skeuo-btn text-[11px] px-3 py-1.5 text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] transition-all"
                           onClick={() => handleGoToProjectFiles(p.id)}
                         >
                           {p.data.name}
@@ -570,11 +570,11 @@ export default function FilesScreen() {
                   {filteredFiles.map(file => (
                     <div
                       key={`${file.source}-${file.id}`}
-                      className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--af-accent)]/30 transition-all group cursor-pointer"
+                      className="card-elevated rounded-xl p-4 hover:border-[var(--af-accent)]/30 transition-all group cursor-pointer"
                       onClick={() => handleFileClick(file)}
                     >
                       {/* File preview area */}
-                      <div className="w-full h-24 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+                      <div className="w-full h-24 skeuo-well rounded-xl flex items-center justify-center mb-3 overflow-hidden">
                         {file.category === 'imagenes' && file.url && !file.url.startsWith('data:') ? (
                           <img
                             src={file.thumbnailUrl || file.url}
@@ -625,7 +625,7 @@ export default function FilesScreen() {
                       {/* Badges */}
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         <SourceBadge source={file.source} />
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--af-bg3)] text-[var(--af-text3)] truncate max-w-[140px]">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded skeuo-well text-[var(--af-text3)] truncate max-w-[140px]">
                           {file.projectName}
                         </span>
                       </div>
@@ -634,9 +634,9 @@ export default function FilesScreen() {
                 </div>
               ) : (
                 /* List View */
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                <div className="card-elevated rounded-xl overflow-hidden">
                   {/* Column headers */}
-                  <div className="flex items-center gap-3 px-4 py-2.5 text-[10px] text-[var(--muted-foreground)] font-medium border-b border-[var(--border)] bg-[var(--af-bg3)]">
+                  <div className="flex items-center gap-3 px-4 py-2.5 text-[10px] text-[var(--muted-foreground)] font-medium border-b border-[var(--border)] skeuo-well">
                     <div className="w-7 flex-shrink-0"></div>
                     <div className="flex-1 min-w-0">Nombre</div>
                     <div className="w-[70px] text-right flex-shrink-0 hidden sm:block">Tamaño</div>
@@ -652,7 +652,7 @@ export default function FilesScreen() {
                       onClick={() => handleFileClick(file)}
                     >
                       {/* Icon */}
-                      <div className="w-7 h-7 bg-[var(--af-bg3)] rounded-md flex items-center justify-center flex-shrink-0">
+                      <div className="w-7 h-7 skeuo-well rounded-md flex items-center justify-center flex-shrink-0">
                         <FileIcon fileName={file.name} mimeType={file.mimeType} />
                       </div>
                       {/* Name */}

@@ -23,7 +23,7 @@ const CAT_COLORS: Record<string, string> = {
 function PieTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+    <div className="card-elevated rounded-lg px-3 py-2 text-[12px]">
       <div className="font-semibold">{payload[0].name}</div>
       <div className="text-[var(--af-accent)]">{fmtCOP(payload[0].value)}</div>
     </div>
@@ -96,19 +96,19 @@ export default function BudgetScreen() {
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3.5 py-2 rounded-lg text-[13px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            className="skeuo-btn flex items-center gap-1.5 text-[var(--foreground)] px-3.5 py-2 text-[13px] font-medium cursor-pointer hover:border-[var(--af-accent)]/30 transition-colors"
             onClick={() => ui.openModal('importData')}
           >
             <Upload size={14} /> Importar
           </button>
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            className="skeuo-btn flex items-center gap-1.5 text-[var(--foreground)] px-3.5 py-2 text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
             onClick={exportCSV}
           >
             <Download size={14} /> Exportar CSV
           </button>
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
+            className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer shadow-[var(--skeuo-shadow-btn)] hover:shadow-[var(--skeuo-shadow-btn-active)] hover:bg-[var(--af-accent2)] transition-all"
             onClick={() => { ui.setForms((p: any) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); ui.openModal('expense'); }}
           >
             <Plus size={15} /> Registrar gasto
@@ -132,7 +132,7 @@ export default function BudgetScreen() {
               {recentLargeExpenses.map(e => {
                 const proj = fs.projects.find((p: any) => p.id === e.data.projectId);
                 return (
-                  <div key={e.id} className="flex items-center gap-3 p-2.5 bg-[var(--card)] rounded-lg border border-[var(--border)] transition-colors duration-150 hover:bg-[var(--af-bg3)]">
+                  <div key={e.id} className="flex items-center gap-3 p-2.5 card-elevated rounded-lg transition-colors duration-150 hover:bg-[var(--skeuo-pressed)]">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium truncate">{e.data.concept}</div>
                       <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || '—'} · {e.data.category}</div>
@@ -169,19 +169,19 @@ export default function BudgetScreen() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+        <div className="card-elevated rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Total gastado</div>
           <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(totalExpenses)}</div>
         </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+        <div className="card-elevated rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Promedio por gasto</div>
           <div className="text-lg font-bold">{fmtCOP(avgExpense)}</div>
         </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+        <div className="card-elevated rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Mayor categoría</div>
           <div className="text-lg font-bold">{topCategory ? topCategory.name : '—'}</div>
         </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+        <div className="card-elevated rounded-xl p-4">
           <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Total en {topCategory?.name || '—'}</div>
           <div className="text-lg font-bold">{topCategory ? fmtCOP(topCategory.value) : fmtCOP(0)}</div>
         </div>
@@ -190,7 +190,7 @@ export default function BudgetScreen() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Pie chart */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="card-elevated rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Distribución por Categoría</div>
           {byCategory.length === 0 ? (
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos</div>
@@ -218,7 +218,7 @@ export default function BudgetScreen() {
         </div>
 
         {/* Category breakdown list */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 lg:col-span-2">
+        <div className="card-elevated rounded-xl p-5 lg:col-span-2">
           <div className="text-[15px] font-semibold mb-3">Detalle por Categoría</div>
           {byCategory.length === 0 ? (
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin gastos</div>
@@ -236,7 +236,7 @@ export default function BudgetScreen() {
                       </div>
                       <span className="text-[13px] font-semibold">{fmtCOP(cat.value)}</span>
                     </div>
-                    <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                    <div className="h-2 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: pct + '%', background: cat.color }} />
                     </div>
                   </div>
@@ -256,7 +256,7 @@ export default function BudgetScreen() {
             const budget = Number(proj?.data?.budget) || 0;
             const pct = budget > 0 ? (total / budget) * 100 : -1;
             return (
-              <div key={pid} className={`bg-[var(--card)] border rounded-xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : 'border-[var(--border)]'}`}>
+              <div key={pid} className={`card-elevated rounded-xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${budget > 0 && pct >= 80 ? `${getBudgetBorderColorClass(pct)}` : ''}`}>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Receipt size={16} className="text-[var(--af-accent)]" />
@@ -306,7 +306,7 @@ export default function BudgetScreen() {
       {/* Empty state */}
       {fs.expenses.length === 0 && (
         <div className="text-center py-16 text-[var(--af-text3)]">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
+          <div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3">
             <DollarSign size={24} className="text-[var(--af-text3)]" />
           </div>
           <div className="text-[15px] font-medium text-[var(--muted-foreground)]">Sin gastos</div>
