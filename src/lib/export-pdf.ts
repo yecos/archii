@@ -6,6 +6,11 @@
 
 import type jsPDF from 'jspdf';
 import { fmtCOP, fmtDate, fmtDuration } from './helpers';
+import type {
+  Invoice, InvoiceItem, Project, Task, Expense, TeamUser, TimeEntry,
+  DailyLog, Quotation, QuotationItem, QuotationPayment,
+  InvProduct, InvCategory, InvMovement,
+} from './types';
 
 // Colores de marca ArchiFlow
 const BRAND = {
@@ -89,7 +94,7 @@ function checkAddPage(doc: jsPDF, y: number, needed: number = 40): number {
    EXPORTAR FACTURA A PDF
    ═══════════════════════════════════════════════ */
 
-export async function exportInvoicePDF(invoice: any, project?: any) {
+export async function exportInvoicePDF(invoice: Invoice, project?: Project) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
@@ -169,7 +174,7 @@ export async function exportInvoicePDF(invoice: any, project?: any) {
     autoTable(doc, {
       startY: y,
       head: [['Concepto', 'Fase', 'Horas', 'Tarifa (COP)', 'Total (COP)']],
-      body: invoice.data.items.map((item: any) => [
+      body: invoice.data.items.map((item: InvoiceItem) => [
         item.concept || '-',
         item.phase || '-',
         item.hours || 0,
@@ -200,7 +205,7 @@ export async function exportInvoicePDF(invoice: any, project?: any) {
       margin: { left: 14, right: 14 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = doc.lastAutoTable!.finalY + 8;
   } else {
     doc.setFontSize(10);
     doc.setTextColor(...BRAND.muted);
@@ -271,12 +276,12 @@ export async function exportInvoicePDF(invoice: any, project?: any) {
    ═══════════════════════════════════════════════ */
 
 export async function exportGeneralReportPDF(data: {
-  projects: any[];
-  tasks: any[];
-  expenses: any[];
-  invoices: any[];
-  teamUsers: any[];
-  timeEntries: any[];
+  projects: Project[];
+  tasks: Task[];
+  expenses: Expense[];
+  invoices: Invoice[];
+  teamUsers: TeamUser[];
+  timeEntries: TimeEntry[];
 }) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -356,7 +361,7 @@ export async function exportGeneralReportPDF(data: {
       columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'center' } },
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = doc.lastAutoTable!.finalY + 10;
   }
 
   // Tasks table
@@ -383,7 +388,7 @@ export async function exportGeneralReportPDF(data: {
       columnStyles: { 4: { halign: 'center' } },
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = doc.lastAutoTable!.finalY + 10;
   }
 
   // Expenses table
@@ -419,7 +424,7 @@ export async function exportGeneralReportPDF(data: {
    ═══════════════════════════════════════════════ */
 
 export async function exportDailyLogsPDF(data: {
-  logs: any[];
+  logs: DailyLog[];
   projectName: string;
 }) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
@@ -566,8 +571,8 @@ export async function exportDailyLogsPDF(data: {
    ═══════════════════════════════════════════════ */
 
 export async function exportBudgetPDF(data: {
-  expenses: any[];
-  projects: any[];
+  expenses: Expense[];
+  projects: Project[];
   projectName?: string;
 }) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
@@ -640,7 +645,7 @@ export async function exportBudgetPDF(data: {
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'center' } },
     margin: { left: 14, right: 14 },
   });
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = doc.lastAutoTable!.finalY + 12;
 
   // All expenses detail
   y = checkAddPage(doc, y, 40);
@@ -673,9 +678,9 @@ export async function exportBudgetPDF(data: {
    ═══════════════════════════════════════════════ */
 
 export async function exportTimeReportPDF(data: {
-  timeEntries: any[];
-  teamUsers: any[];
-  projects: any[];
+  timeEntries: TimeEntry[];
+  teamUsers: TeamUser[];
+  projects: Project[];
 }) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -755,11 +760,11 @@ export async function exportTimeReportPDF(data: {
    ═══════════════════════════════════════════════ */
 
 export async function exportInventoryPDF(data: {
-  products: any[];
-  categories: any[];
-  movements: any[];
-  getTotalStock: (product: any) => number;
-  getWarehouseStock: (product: any, warehouse: string) => number;
+  products: InvProduct[];
+  categories: InvCategory[];
+  movements: InvMovement[];
+  getTotalStock: (product: InvProduct) => number;
+  getWarehouseStock: (product: InvProduct, warehouse: string) => number;
   getInvCategoryName: (categoryId: string) => string;
   warehouses: string[];
   totalStock: number;
@@ -853,7 +858,7 @@ export async function exportInventoryPDF(data: {
       columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable!.finalY + 12;
   }
 
   // Stock by Warehouse
@@ -881,7 +886,7 @@ export async function exportInventoryPDF(data: {
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
     margin: { left: 14, right: 14 },
   });
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = doc.lastAutoTable!.finalY + 12;
 
   // Detailed products table
   y = checkAddPage(doc, y, 50);
@@ -921,7 +926,7 @@ export async function exportInventoryPDF(data: {
     margin: { left: 10, right: 10 },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = doc.lastAutoTable!.finalY + 10;
 
   // Low stock alerts
   const lowStockProducts = data.products.filter(p => {
@@ -959,7 +964,7 @@ export async function exportInventoryPDF(data: {
   // Recent movements
   if (data.movements.length > 0) {
     y = checkAddPage(doc, y, 50);
-    const finalY = (doc as any).lastAutoTable?.finalY || y;
+    const finalY = doc.lastAutoTable?.finalY || y;
     y = Math.max(y, finalY) + 8;
 
     doc.setFont('helvetica', 'bold');
@@ -996,7 +1001,7 @@ export async function exportInventoryPDF(data: {
    EXPORTAR COTIZACIÓN A PDF
    ═══════════════════════════════════════════════ */
 
-export async function exportQuotationPDF(quotation: any) {
+export async function exportQuotationPDF(quotation: Quotation) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
@@ -1152,7 +1157,7 @@ export async function exportQuotationPDF(quotation: any) {
       autoTable(doc, {
         startY: sy,
         head: [['#', 'Descripción', 'Und', 'Cant.', 'Valor Unit.', 'IVA%', 'Desc%', 'Total']],
-        body: section.items.map((item: any, idx: number) => [
+        body: section.items.map((item: QuotationItem, idx: number) => [
           String(idx + 1),
           [item.concept || '-', item.description || ''].join('\n'),
           item.unit || 'Und',
@@ -1191,7 +1196,7 @@ export async function exportQuotationPDF(quotation: any) {
         margin: { left: 14, right: 14 },
       });
 
-      sy = (doc as any).lastAutoTable.finalY + 8;
+      sy = doc.lastAutoTable!.finalY + 8;
     } else {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -1283,7 +1288,7 @@ export async function exportQuotationPDF(quotation: any) {
     margin: { left: 14, right: 14 },
   });
 
-  fy = (doc as any).lastAutoTable.finalY + 2;
+  fy = doc.lastAutoTable!.finalY + 2;
 
   // Grand total box
   doc.setFillColor(...BRAND.dark);
@@ -1310,7 +1315,7 @@ export async function exportQuotationPDF(quotation: any) {
     autoTable(doc, {
       startY: fy,
       head: [['Etiqueta', 'Condición', 'Porcentaje', 'Monto']],
-      body: (d.payments || []).map((p: any) => [
+      body: (d.payments || []).map((p: QuotationPayment) => [
         p.label || '-',
         p.condition || '-',
         `${p.percentage || 0}%`,
@@ -1324,7 +1329,7 @@ export async function exportQuotationPDF(quotation: any) {
       margin: { left: 14, right: 14 },
     });
 
-    fy = (doc as any).lastAutoTable.finalY + 10;
+    fy = doc.lastAutoTable!.finalY + 10;
   }
 
   // Payment terms
