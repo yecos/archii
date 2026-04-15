@@ -159,7 +159,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
         throw new Error(helpfulMsg);
       }
 
-      // Read streaming response
+      // Read streaming response (plain text stream from AI SDK v6 toTextStreamResponse)
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No se pudo leer la respuesta del servidor.');
 
@@ -171,34 +171,9 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        // Parse Vercel AI SDK data stream protocol
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('0:')) {
-            try {
-              const text = JSON.parse(line.slice(2));
-              fullContent += text;
-            } catch {
-              // Skip malformed chunks
-            }
-          } else if (line.startsWith('9:')) {
-            // Tool call indicator
-            try {
-              const toolData = JSON.parse(line.slice(2));
-              if (toolData.toolName) {
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, toolCalls: [...(m.toolCalls || []), { name: toolData.toolName, args: toolData.args || {} }] }
-                    : m
-                ));
-              }
-            } catch {
-              // Skip
-            }
-          }
-        }
+        fullContent += chunk;
 
-        // Update streaming content
+        // Update streaming content in real-time
         setMessages(prev => prev.map(m =>
           m.id === assistantId ? { ...m, content: fullContent } : m
         ));

@@ -3,7 +3,7 @@
  * Fase 2: Tools consolidadas desde ai-tools.ts, soporta Mistral + 4 proveedores.
  */
 
-import { streamText } from 'ai';
+import { streamText, stepCountIs } from 'ai';
 import { requireAuth } from '@/lib/api-auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { routeAIRequest } from '@/lib/ai-router';
@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
       system: sysPrompt,
       messages: messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       tools,
+      stopWhen: stepCountIs(5),
+      onStepFinish({ text, toolCalls, toolResults }) {
+        if (toolCalls?.length) {
+          console.log(`[ArchiFlow Agent] Tools: ${toolCalls.map(tc => tc.toolName).join(', ')}`);
+        }
+        if (text) console.log(`[ArchiFlow Agent] Step text: ${text.slice(0, 200)}`);
+      },
     });
 
     return result.toTextStreamResponse();
