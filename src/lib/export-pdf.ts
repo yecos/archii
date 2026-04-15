@@ -749,3 +749,245 @@ export async function exportTimeReportPDF(data: {
   addFooter(doc);
   doc.save(`reporte-tiempo-${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR INVENTARIO A PDF
+   ═══════════════════════════════════════════════ */
+
+export async function exportInventoryPDF(data: {
+  products: any[];
+  categories: any[];
+  movements: any[];
+  getTotalStock: (product: any) => number;
+  getWarehouseStock: (product: any, warehouse: string) => number;
+  getInvCategoryName: (categoryId: string) => string;
+  warehouses: string[];
+  totalStock: number;
+  totalValue: number;
+}) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  addHeader(doc, 'Reporte de Inventario', 'Detalle de productos, stock y valor por almacén');
+
+  let y = 40;
+
+  // KPI Summary
+  const inStock = data.products.filter(p => data.getTotalStock(p) > 0).length;
+  const outOfStock = data.products.filter(p => data.getTotalStock(p) === 0).length;
+  const lowStock = data.products.filter(p => {
+    const ts = data.getTotalStock(p);
+    return ts > 0 && ts <= (Number(p.data.minStock) || 0);
+  }).length;
+
+  const kpis = [
+    { label: 'Productos Totales', value: String(data.products.length), color: BRAND.blue },
+    { label: 'Valor Total', value: fmtCOPFull(data.totalValue), color: BRAND.primary },
+    { label: 'Con Stock', value: String(inStock), color: BRAND.green },
+    { label: 'Agotados', value: String(outOfStock), color: BRAND.red },
+    { label: 'Stock Bajo', value: String(lowStock), color: [245, 158, 11] as [number, number, number] },
+    { label: 'Unidades Totales', value: String(data.totalStock), color: BRAND.blue },
+  ];
+
+  const boxW = (pageW - 28 - 10) / 3;
+  kpis.forEach((kpi, i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const x = 14 + col * (boxW + 5);
+    const yPos = y + row * 18;
+
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(x, yPos, boxW, 15, 1.5, 1.5, 'F');
+
+    doc.setFillColor(...kpi.color);
+    doc.rect(x, yPos, 1.5, 15, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...kpi.color);
+    doc.text(kpi.value, x + 5, yPos + 8);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(kpi.label, x + 5, yPos + 13);
+  });
+
+  y += 44;
+
+  // Stock by Category table
+  y = checkAddPage(doc, y, 50);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Stock por Categoría', 14, y);
+  y += 4;
+
+  const catRows = data.categories.map(c => {
+    const catProducts = data.products.filter(p => p.data.categoryId === c.id);
+    const catStock = catProducts.reduce((s, p) => s + data.getTotalStock(p), 0);
+    const catValue = catProducts.reduce((s, p) => s + (Number(p.data.price) || 0) * data.getTotalStock(p), 0);
+    return [c.data.name, String(catProducts.length), String(catStock), fmtCOPFull(catValue)];
+  });
+
+  // Add uncategorized
+  const uncat = data.products.filter(p => !p.data.categoryId);
+  if (uncat.length > 0) {
+    const stock = uncat.reduce((s, p) => s + data.getTotalStock(p), 0);
+    catRows.push(['Sin categoría', String(uncat.length), String(stock), fmtCOPFull(uncat.reduce((s, p) => s + (Number(p.data.price) || 0) * data.getTotalStock(p), 0))]);
+  }
+
+  if (catRows.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Categoría', 'Productos', 'Stock Total', 'Valor Total (COP)']],
+      body: catRows,
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+  // Stock by Warehouse
+  y = checkAddPage(doc, y, 50);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Stock por Almacén', 14, y);
+  y += 4;
+
+  const whRows = data.warehouses.map(wh => {
+    const whStock = data.products.reduce((s, p) => s + data.getWarehouseStock(p, wh), 0);
+    const whValue = data.products.reduce((s, p) => s + data.getWarehouseStock(p, wh) * (Number(p.data.price) || 0), 0);
+    return [wh, String(whStock), fmtCOPFull(whValue)];
+  });
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Almacén', 'Stock Total', 'Valor (COP)']],
+    body: whRows,
+    theme: 'striped',
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 9, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 9, textColor: BRAND.text },
+    alternateRowStyles: { fillColor: BRAND.bg },
+    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 12;
+
+  // Detailed products table
+  y = checkAddPage(doc, y, 50);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Detalle de Productos', 14, y);
+  y += 4;
+
+  const whHeaders = data.warehouses.map(w => w.split(' ')[0]); // Short names
+  autoTable(doc, {
+    startY: y,
+    head: [['Producto', 'SKU', 'Categoría', 'Precio (COP)', ...whHeaders, 'Total', 'Valor (COP)']],
+    body: data.products.map(p => {
+      const whStocks = data.warehouses.map(w => String(data.getWarehouseStock(p, w)));
+      const total = data.getTotalStock(p);
+      return [
+        p.data.name || '-',
+        p.data.sku || '-',
+        data.getInvCategoryName(p.data.categoryId),
+        fmtCOPFull(Number(p.data.price) || 0),
+        ...whStocks,
+        String(total),
+        fmtCOPFull((Number(p.data.price) || 0) * total),
+      ];
+    }),
+    theme: 'striped',
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 7, fontStyle: 'bold', cellPadding: 2 },
+    bodyStyles: { fontSize: 7, textColor: BRAND.text, cellPadding: 2 },
+    alternateRowStyles: { fillColor: BRAND.bg },
+    columnStyles: {
+      3: { halign: 'right' },
+      ...Object.fromEntries(data.warehouses.map((_, i) => [4 + i, { halign: 'center' }])),
+      [4 + whHeaders.length]: { halign: 'right', fontStyle: 'bold' },
+      [5 + whHeaders.length]: { halign: 'right' },
+    },
+    margin: { left: 10, right: 10 },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 10;
+
+  // Low stock alerts
+  const lowStockProducts = data.products.filter(p => {
+    const ts = data.getTotalStock(p);
+    return ts <= (Number(p.data.minStock) || 0);
+  });
+
+  if (lowStockProducts.length > 0) {
+    y = checkAddPage(doc, y, 40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...BRAND.red);
+    doc.text(`Alertas de Stock Bajo (${lowStockProducts.length} productos)`, 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Producto', 'Categoría', 'Stock Actual', 'Stock Mínimo', 'Faltante']],
+      body: lowStockProducts.map(p => [
+        p.data.name || '-',
+        data.getInvCategoryName(p.data.categoryId),
+        String(data.getTotalStock(p)),
+        String(Number(p.data.minStock) || 0),
+        String(data.getTotalStock(p) - (Number(p.data.minStock) || 0)),
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.red, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: [254, 242, 242] as [number, number, number] },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  // Recent movements
+  if (data.movements.length > 0) {
+    y = checkAddPage(doc, y, 50);
+    const finalY = (doc as any).lastAutoTable?.finalY || y;
+    y = Math.max(y, finalY) + 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...BRAND.dark);
+    doc.text('Últimos Movimientos', 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Fecha', 'Tipo', 'Producto', 'Almacén', 'Cantidad', 'Motivo']],
+      body: data.movements.slice(0, 40).map(m => [
+        m.data.date || '-',
+        m.data.type || '-',
+        m.data.productId || '-',
+        m.data.warehouse || '-',
+        String(m.data.quantity || 0),
+        m.data.reason || '-',
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 4: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  addFooter(doc);
+  doc.save(`inventario-${new Date().toISOString().split('T')[0]}.pdf`);
+}

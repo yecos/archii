@@ -3,6 +3,8 @@ import React from 'react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
+import { exportInventoryPDF } from '@/lib/export-pdf';
+import { exportInventoryExcel } from '@/lib/export-excel';
 
 interface InvReportsTabProps {
   invProducts: InvProduct[];
@@ -28,7 +30,7 @@ export default function InvReportsTab({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">📊 Reportes</h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]" onClick={() => {
             // Export products CSV
             const headers = ['Nombre', 'SKU', 'Categoría', 'Unidad', 'Precio', 'Stock Total', 'Mín Stock', 'Valor Total'];
@@ -38,7 +40,7 @@ export default function InvReportsTab({
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = `inventario_productos_${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
             showToast('CSV de productos exportado');
-          }}>📥 Exportar productos CSV</button>
+          }}>📥 CSV Productos</button>
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-blue-600 text-white border-none hover:bg-blue-700" onClick={() => {
             // Export movements CSV
             const headers = ['Fecha', 'Tipo', 'Producto', 'Almacén', 'Cantidad', 'Motivo', 'Referencia'];
@@ -48,7 +50,35 @@ export default function InvReportsTab({
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = `movimientos_${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
             showToast('CSV de movimientos exportado');
-          }}>📥 Exportar movimientos CSV</button>
+          }}>📥 CSV Movimientos</button>
+          <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-emerald-600 text-white border-none hover:bg-emerald-700" onClick={async () => {
+            try {
+              await exportInventoryExcel(invProducts, invCategories, invMovements);
+              showToast('Excel de inventario exportado');
+            } catch (err) {
+              console.error('[ArchiFlow] Inventory: Excel export failed:', err);
+              showToast('Error al exportar Excel');
+            }
+          }}>📊 Exportar Excel</button>
+          <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-rose-600 text-white border-none hover:bg-rose-700" onClick={async () => {
+            try {
+              await exportInventoryPDF({
+                products: invProducts,
+                categories: invCategories,
+                movements: invMovements,
+                getTotalStock,
+                getWarehouseStock,
+                getInvCategoryName,
+                warehouses: [...INV_WAREHOUSES],
+                totalStock: invTotalStock,
+                totalValue: invTotalValue,
+              });
+              showToast('PDF de inventario exportado');
+            } catch (err) {
+              console.error('[ArchiFlow] Inventory: PDF export failed:', err);
+              showToast('Error al exportar PDF');
+            }
+          }}>📄 Exportar PDF</button>
         </div>
       </div>
 

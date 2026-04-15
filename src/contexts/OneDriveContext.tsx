@@ -190,7 +190,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
         }
       }
     } catch (e) {
-      console.error('Error refreshing MS token:', e);
+      console.error('[ArchiFlow] OneDrive: Error refreshing MS token:', e);
     }
     return null;
   }, [msRefreshToken]);
