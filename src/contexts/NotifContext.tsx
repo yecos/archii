@@ -9,6 +9,7 @@ import { useInventoryContext } from './InventoryContext';
 import { fmtDate } from '@/lib/helpers';
 import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts';
 import { useNotifPreferencesContext } from './NotifPreferencesContext';
+import { useUIStore } from '@/stores/ui-store';
 import type { NotifEventType, NotifEntry } from '@/lib/types';
 
 /* ===== NOTIFICATION CONTEXT ===== */
@@ -171,6 +172,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         const typeLabel = msgType === 'AUDIO' ? '🎤 Nota de voz' : msgType === 'IMAGE' ? '🖼️ Imagen' : msgType === 'FILE' ? '📎 Archivo' : '';
         const bodyText = lastMsg.text?.substring(0, 120) || (msgType === 'AUDIO' ? '🎵 Nota de voz' : msgType === 'IMAGE' ? '📷 Foto' : msgType === 'FILE' ? `📎 ${lastMsg.fileName || 'Archivo'}` : '');
         sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId, eventType: 'chat_message' });
+        useUIStore.getState().incrementChatUnread();
       }
     }
     prevMessagesRef.current = messages;

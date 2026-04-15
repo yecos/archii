@@ -224,6 +224,8 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     setSelectedProjectId(projId ?? selectedProjectId);
     setSidebarOpen(false);
     if (s !== 'chat') { setChatMobileShow(false); }
+    // Clear floating chat bubble unread when entering chat
+    if (s === 'chat') { useUIStore.getState().clearChatUnread(); }
     useUIStore.getState().setCurrentScreen(s);
   }, [selectedProjectId, showToast]);
   navigateToRef.current = navigateTo;

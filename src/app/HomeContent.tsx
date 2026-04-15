@@ -29,6 +29,7 @@ import OfflineBanner from '@/components/common/OfflineBanner';
 const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
 const CommandPalette = dynamic(() => import('@/components/archiflow/CommandPalette'), { ssr: false });
 const AIAgentPanel = dynamic(() => import('@/components/archiflow/AIAgentPanel'), { ssr: false });
+const FloatingChatBubble = dynamic(() => import('@/components/layout/FloatingChatBubble'), { ssr: false });
 
 /* ─── Modals (lazy — solo se cargan cuando se abren) ─── */
 const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), { ssr: false });
@@ -247,6 +248,7 @@ function AppContent() {
       <LightboxViewer />
       <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
       <AIAgentPanel isOpen={aiAgentOpen} onClose={() => setAIAgentOpen(false)} />
+      <FloatingChatBubble />
     </div>
   );
 }
