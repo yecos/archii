@@ -60,9 +60,24 @@ interface AISuggestion {
 type DocData = Record<string, any>;
 
 async function callAI(userPrompt: string): Promise<AISuggestion[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-  const model = process.env.AI_MODEL || "gpt-4o-mini";
+  let apiKey = process.env.OPENAI_API_KEY;
+  let baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+  let model = process.env.AI_MODEL || "gpt-4o-mini";
+
+  // Si no hay API key OpenAI, intentar con ZAI (proveedor interno)
+  if (!apiKey) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const ZAI = require('z-ai-web-dev-sdk').default;
+      const zai = await ZAI.create();
+      apiKey = zai.config.apiKey || 'Z.ai';
+      baseUrl = zai.config.baseUrl;
+      model = 'default';
+      console.log('[AI Suggestions] Usando ZAI como proveedor (baseURL=' + baseUrl + ')');
+    } catch (zaiErr) {
+      console.warn('[AI Suggestions] ZAI no disponible:', zaiErr);
+    }
+  }
 
   if (!apiKey) {
     throw new Error("API_KEY_NOT_CONFIGURED");
