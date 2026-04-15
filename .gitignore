@@ -37,3 +37,6 @@ next-env.d.ts
 
 # prisma
 prisma/*.db
+
+# skills (external toolkit, not part of web app)
+skills/

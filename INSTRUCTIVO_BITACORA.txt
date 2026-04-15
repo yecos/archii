@@ -1664,3 +1664,42 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     - 0 errores TypeScript
     - Build exitoso, Vercel deploy automatico
     - Total funcionalidades/mejoras (v7-v17): 50 items
+
+2026-04-16 10:00 | FEATURE PACK v18 — Zero-Debt Foundation
+  Estado: EN CURSO
+  Tag de respaldo: backup-pre-v18-zero-debt-foundation-20260416
+  Objetivo: Eliminar deuda tecnica oculta (TypeScript, dead dirs, config)
+  Alcance: [GRANDE]
+
+  Tarea 18.0 — Commits faltantes no registrados (pre-sesion):
+    - b89498f: Update layout.tsx (cambio en auth handler)
+    - aeecca3: Update layout.tsx (cambio en auth handler)
+    - 606d419: fix: Add auth handler page and switch Google login to redirect flow
+    - 5062ee3: fix: Use public directory for auth handler (fixes build)
+    - 40ca70b: feat: Inicio rediseño Neo-Skeuomorphic Tactile System
+    - 1fd9e7b: feat: Rediseño Neo-Skeuomorphic Tactile System - Fase 2
+    Nota: Estos commits se realizaron en sesiones anteriores pero no quedaron
+    documentados en la bitacora. Se registran aqui para mantener la trazabilidad.
+
+  Tarea 18.1 — Limpiar directorio skills/ del repo:
+    - Directorio skills/ contiene 90+ subdirectorios que NO son parte
+      de la app web ArchiFlow
+    - Agregado a .gitignore para excluir del repo
+    - Eliminado del tracking con git rm --cached -r skills/
+    - Reduce significativamente el tamano del repositorio
+
+  Tarea 18.2 — Corregir errores TypeScript (ignorar skills/):
+    - ignoreBuildErrors: true enmascara ~1,000 errores reales en src/
+    - Errores JSX (TS7026): causados por tsconfig sin react-jsx referenciado
+      en los types - se corregira con skipLibCheck o tsconfig fix
+    - Errores implicit any (TS7006): ~969 ocurrencias en src/
+    - Errores missing modules (TS2307): ~245 ocurrencias
+    - Objetivo: reducir errores reales en src/ lo maximo posible
+
+  Tarea 18.3 — Limpieza de lock files duales:
+    - bun.lock + package-lock.json = inconsistencia potencial
+    - Seleccionar un solo gestor de paquetes
+
+  Tarea 18.4 — Config cleanup:
+    - Evaluar activar reactStrictMode: true
+    - Verificar tsconfig.json esta completo
