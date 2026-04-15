@@ -108,7 +108,7 @@ export default React.memo(function TopBar() {
             Nuevo proveedor
           </button>
         )}
-        <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] flex-shrink-0 ${avatarColor(auth.authUser?.uid)}`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{auth.authUser?.photoURL ? '' : auth.initials}</div>
+        <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] flex-shrink-0 ${avatarColor(auth.authUser?.uid ?? '')}`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{auth.authUser?.photoURL ? '' : auth.initials}</div>
       </div>
     </header>
   );

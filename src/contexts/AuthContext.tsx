@@ -7,13 +7,22 @@ import type { TeamUser, Project, Task } from '@/lib/types';
 import { getInitials } from '@/lib/helpers';
 import { confirm } from '@/hooks/useConfirmDialog';
 
+interface FirebaseUserInfo {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  providerData: Array<{ providerId: string }>;
+  updateProfile: (profile: { displayName?: string | null; photoURL?: string | null }) => Promise<void>;
+}
+
 /* ===== AUTH CONTEXT ===== */
 interface AuthContextType {
   // State
   ready: boolean;
   setReady: React.Dispatch<React.SetStateAction<boolean>>;
-  authUser: any;
-  setAuthUser: React.Dispatch<React.SetStateAction<any>>;
+  authUser: FirebaseUserInfo | null;
+  setAuthUser: React.Dispatch<React.SetStateAction<FirebaseUserInfo | null>>;
   loading: boolean;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   teamUsers: TeamUser[];
@@ -51,7 +60,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // State
   const [ready, setReady] = useState(false);
-  const [authUser, setAuthUser] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<FirebaseUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
 
@@ -105,16 +114,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
 
     // Handle redirect results (for signInWithRedirect fallback)
-    auth.getRedirectResult().then((result: any) => {
-      if (result?.credential) {
+    auth.getRedirectResult().then((result) => {
+      const cred = (result as any)?.credential as { accessToken?: string; refreshToken?: string } | undefined;
+      if (cred) {
         // Handle Microsoft redirect tokens
-        if (result.credential.accessToken) {
+        if (cred.accessToken) {
           if (msAuthCallbackRef.current) {
-            msAuthCallbackRef.current(result.credential.accessToken, result.credential.refreshToken || null);
+            msAuthCallbackRef.current(cred.accessToken, cred.refreshToken || null);
           }
-          localStorage.setItem('msAccessToken', result.credential.accessToken);
+          localStorage.setItem('msAccessToken', cred.accessToken);
           localStorage.setItem('msConnected', 'true');
-          if (result.credential.refreshToken) localStorage.setItem('msRefreshToken', result.credential.refreshToken);
+          if (cred.refreshToken) localStorage.setItem('msRefreshToken', cred.refreshToken);
         }
       }
     }).catch((err: unknown) => {
@@ -126,16 +136,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
     });
 
-    const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user: FirebaseUserInfo | null) => {
       setAuthUser(user || null);
       if (user) {
         try {
           const db = fb.firestore();
           const ref = db.collection('users').doc(user.uid);
           const snap = await ref.get();
-          const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+          const isAdminEmail = ADMIN_EMAILS.includes(user.email || '');
           if (!snap.exists) {
-            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
+            await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
           } else if (isAdminEmail) {
             const current = snap.data()?.role;
             if (current !== 'Admin') {
@@ -176,8 +186,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
-    } catch (e: any) {
-      console.error('[ArchiFlow Auth] Login error:', e.code, e.message, e);
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      console.error('[ArchiFlow Auth] Login error:', err.code, err.message, e);
       const msgs: Record<string, string> = {
         'auth/invalid-credential': 'Correo o contraseña incorrectos',
         'auth/user-not-found': 'No existe cuenta con ese correo',
@@ -186,7 +197,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/invalid-email': 'El formato del correo no es válido.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
       };
-      showToast(msgs[e.code] || `Error: ${e.code || e.message || 'No se pudo iniciar sesión'}`, 'error');
+      showToast(msgs[err.code || ''] || `Error: ${err.code || err.message || 'No se pudo iniciar sesión'}`, 'error');
     }
   }, [showToast]);
 
@@ -198,8 +209,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
       await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: serverTimestamp() });
-    } catch (e: any) {
-      console.error('[ArchiFlow Auth] Register error:', e.code, e.message, e);
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      console.error('[ArchiFlow Auth] Register error:', err.code, err.message, e);
       const msgs: Record<string, string> = {
         'auth/email-already-in-use': 'Ese correo ya está registrado. Intenta iniciar sesión.',
         'auth/weak-password': 'La contraseña es muy débil. Mínimo 6 caracteres.',
@@ -208,7 +220,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
         'auth/operation-not-allowed': 'Registro con email/contraseña deshabilitado. Verifica Firebase Console.',
       };
-      showToast(msgs[e.code] || `Error al registrar: ${e.code || e.message || ''}`, 'error');
+      showToast(msgs[err.code || ''] || `Error al registrar: ${err.code || err.message || ''}`, 'error');
     }
   }, [showToast]);
 
@@ -220,9 +232,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const provider = new authNS.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await authInstance.signInWithRedirect(provider);
-    } catch (e: any) {
-      console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
-      if (e.code === 'auth/popup-closed-by-user') return;
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      console.error('[ArchiFlow Auth] Google login error:', err.code, err.message, e);
+      if (err.code === 'auth/popup-closed-by-user') return;
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
@@ -232,7 +245,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
         'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
       };
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/unauthorized-domain') {
         try {
           const fb2 = getFirebase();
           const authNS2 = (fb2 as any).auth;
@@ -241,11 +254,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           provider2.setCustomParameters({ prompt: 'select_account' });
           await authInstance2.signInWithRedirect(provider2);
           return;
-        } catch (redirectErr: any) {
-          console.error('[ArchiFlow Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
+        } catch (redirectErr: unknown) {
+          const redErr = redirectErr as { code?: string; message?: string };
+          console.error('[ArchiFlow Auth] Google redirect also failed:', redErr.code, redErr.message);
         }
       }
-      showToast(msgs[e.code] || `Error con Google: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
+      showToast(msgs[err.code || ''] || `Error con Google: ${err.code || err.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
     }
   }, [showToast]);
 
@@ -256,14 +270,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const authInstance = fb.auth();
 
       // First try with minimal scopes (User.Read only) to avoid consent screen issues
-      let result: any;
+      let result: { credential?: { accessToken?: string; refreshToken?: string }; user?: FirebaseUserInfo };
       try {
         const provider = new authNS.OAuthProvider('microsoft.com');
         provider.addScope('User.Read');
         provider.setCustomParameters({ prompt: 'select_account' });
         result = await authInstance.signInWithPopup(provider);
-      } catch (popupErr: any) {
-        if (popupErr.code === 'auth/popup-blocked') {
+      } catch (popupErr: unknown) {
+        const popErr = popupErr as { code?: string; message?: string };
+        if (popErr.code === 'auth/popup-blocked') {
           // Fallback to redirect flow
           const redirectProvider = new authNS.OAuthProvider('microsoft.com');
           redirectProvider.addScope('User.Read');
@@ -274,7 +289,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         throw popupErr;
       }
 
-      const credential = result.credential as any;
+      const credential = result.credential;
       if (credential?.accessToken) {
         // Use callback bridge for OneDriveContext
         if (msAuthCallbackRef.current) {
@@ -287,9 +302,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       } else {
         showToast('Autenticado con Microsoft, pero sin acceso a OneDrive', 'warning');
       }
-    } catch (e: any) {
-      if (e.code === 'auth/popup-closed-by-user') return;
-      console.error('[ArchiFlow Auth] Microsoft login error:', e.code, e.message, e);
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      if (err.code === 'auth/popup-closed-by-user') return;
+      console.error('[ArchiFlow Auth] Microsoft login error:', err.code, err.message, e);
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
@@ -300,7 +316,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Google o Email). Intenta con ese método.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
       };
-      showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
+      showToast(msgs[err.code || ''] || `Microsoft: ${err.code || err.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
     }
   }, [showToast]);
 
@@ -312,15 +328,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     try {
       await getFirebase().auth().sendPasswordResetEmail(email);
       showToast('Se envió un correo para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.');
-    } catch (e: any) {
-      console.error('[ArchiFlow Auth] Password reset error:', e.code, e.message, e);
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      console.error('[ArchiFlow Auth] Password reset error:', err.code, err.message, e);
       const msgs: Record<string, string> = {
         'auth/user-not-found': 'No existe cuenta con ese correo.',
         'auth/invalid-email': 'El formato del correo no es válido.',
         'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
       };
-      showToast(msgs[e.code] || `Error al enviar correo: ${e.code || e.message || ''}`, 'error');
+      showToast(msgs[err.code || ''] || `Error al enviar correo: ${err.code || err.message || ''}`, 'error');
     }
   }, [showToast]);
 

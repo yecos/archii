@@ -178,7 +178,7 @@ export default function ProfileScreen() {
               {/* Profile Header Card */}
               <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 relative overflow-hidden">
                 <div className="flex items-center gap-3 relative">
-                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold border-2 ${avatarColor(auth.authUser?.uid)} flex-shrink-0`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>
+                  <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold border-2 ${avatarColor(auth.authUser?.uid ?? '')} flex-shrink-0`} style={auth.authUser?.photoURL ? { backgroundImage: `url(${auth.authUser.photoURL})`, backgroundSize: 'cover' } : {}}>
                     {auth.authUser?.photoURL ? '' : auth.initials}
                   </div>
                   <div className="flex-1 min-w-0">

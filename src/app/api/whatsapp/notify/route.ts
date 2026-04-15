@@ -22,10 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Mensaje requerido" }, { status: 400 });
     }
 
-    // Broadcast requires authentication; single-user notify is called from client with user context
-    if (broadcast) {
-      await requireAuth(request);
-    }
+    // Authentication required for ALL requests (broadcast AND single-user)
+    // Previously single-user notify skipped auth — security fix: BUG-20260416-001
+    await requireAuth(request);
 
     // Dinámicamente importar firebase-admin (solo server-side)
     const { getAdminDb } = await import("@/lib/firebase-admin");

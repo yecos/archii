@@ -173,7 +173,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     if (!chatProjectId) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: serverTimestamp() };
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || (authUser?.email || '').split('@')[0], createdAt: serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -364,24 +364,45 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   };
 
   const copyMessageText = (text: string) => {
-    navigator.clipboard.writeText(text);
+    try {
+      navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for non-secure contexts (HTTP)
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
     setChatMenuMsg(null);
     showToast('Texto copiado');
   };
+
+  const audioCleanupRef = useRef<(() => void) | null>(null);
 
   const toggleAudioPlay = (msgId: string) => {
     const audioEl = document.getElementById('audio-' + msgId) as HTMLAudioElement;
     if (!audioEl) return;
     if (playingAudio === msgId) {
       audioEl.pause(); setPlayingAudio(null); setAudioProgress(0);
+      if (audioCleanupRef.current) { audioCleanupRef.current(); audioCleanupRef.current = null; }
     } else {
       if (playingAudio) { const prev = document.getElementById('audio-' + playingAudio) as HTMLAudioElement; if (prev) prev.pause(); }
+      if (audioCleanupRef.current) { audioCleanupRef.current(); audioCleanupRef.current = null; }
       audioEl.play(); setPlayingAudio(msgId);
       const onTime = () => { if (audioEl.duration) { setAudioProgress((audioEl.currentTime / audioEl.duration) * 100); setAudioCurrentTime(audioEl.currentTime); } };
       const onEnd = () => { setPlayingAudio(null); setAudioProgress(0); };
       audioEl.addEventListener('timeupdate', onTime);
       audioEl.addEventListener('ended', onEnd);
       audioEl.addEventListener('pause', onEnd);
+      audioCleanupRef.current = () => {
+        audioEl.removeEventListener('timeupdate', onTime);
+        audioEl.removeEventListener('ended', onEnd);
+        audioEl.removeEventListener('pause', onEnd);
+      };
     }
   };
 
