@@ -267,7 +267,7 @@ export default function ProjectsScreen() {
       )}
 
       {!loading && filteredProjects.length > 0 && viewMode === 'grid' && (
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredProjects.map(p => {
             const d = p.data;
             const prog = d.progress || 0;
@@ -424,7 +424,7 @@ export default function ProjectsScreen() {
                     </div>
 
                     {/* Actions */}
-                    <div className="sm:flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                    <div className="sm:flex items-center justify-end gap-1 transition-opacity duration-150">
                       <button
                         className="text-[11px] px-2 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20"
                         onClick={e => { e.stopPropagation(); openEditProject(p); }}

@@ -473,7 +473,7 @@ export default function AdminScreen() {
                           showToast(`${m.data?.name || m.data?.email} eliminado del equipo`);
                         } catch (err) { console.error('[ArchiFlow] Admin: delete user failed:', err); showToast('Error al eliminar usuario', 'error'); }
                       }}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
+                      className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
                       title="Eliminar del equipo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

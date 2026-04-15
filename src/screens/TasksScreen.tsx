@@ -7,7 +7,7 @@ import { useTimeTracking } from '@/hooks/useDomain';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { StaggerContainer, StaggerItem } from '@/components/ui/StaggerContainer';
 import EmptyState from '@/components/ui/EmptyState';
@@ -94,6 +94,7 @@ export default function TasksScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedKanbanColumn, setSelectedKanbanColumn] = useState<string>(KANBAN_COLS[0].status);
   const dragCounterRef = useRef<Record<string, number>>({});
 
   const taskFilterProject = forms.taskFilterProject || '';
@@ -479,7 +480,7 @@ export default function TasksScreen() {
                         ); })()}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                      <div className="flex items-center gap-1 flex-shrink-0 transition-opacity duration-150">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
                         <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
                           <X size={12} />
@@ -503,14 +504,123 @@ export default function TasksScreen() {
             compact
           />
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
+          <>
+          {/* Mobile Kanban: column selector + single column view */}
+          <div className="md:hidden">
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+                onClick={() => {
+                  const idx = KANBAN_COLS.findIndex(c => c.status === selectedKanbanColumn);
+                  const prev = idx > 0 ? KANBAN_COLS[idx - 1].status : KANBAN_COLS[KANBAN_COLS.length - 1].status;
+                  setSelectedKanbanColumn(prev);
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="flex gap-1 flex-1 overflow-x-auto scrollbar-none">
+                {KANBAN_COLS.map(col => {
+                  const count = filteredTasks.filter((t: any) => t.data.status === col.status).length;
+                  return (
+                    <button
+                      key={col.status}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${
+                        selectedKanbanColumn === col.status
+                          ? `${col.bg} ${col.border} border font-medium`
+                          : 'bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)]'
+                      }`}
+                      onClick={() => setSelectedKanbanColumn(col.status)}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                      {col.status}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        selectedKanbanColumn === col.status ? 'bg-[var(--card)]' : 'bg-[var(--af-bg4)]'
+                      }`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+                onClick={() => {
+                  const idx = KANBAN_COLS.findIndex(c => c.status === selectedKanbanColumn);
+                  const next = idx < KANBAN_COLS.length - 1 ? KANBAN_COLS[idx + 1].status : KANBAN_COLS[0].status;
+                  setSelectedKanbanColumn(next);
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            {(() => {
+              const col = KANBAN_COLS.find(c => c.status === selectedKanbanColumn);
+              if (!col) return null;
+              const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
+              return (
+                <div className="min-h-[60vh]">
+                  {colTasks.length > 0 && (
+                    <div className="h-0.5 bg-[var(--af-bg4)] rounded-full mb-3 overflow-hidden">
+                      <div className={`h-full rounded-full ${col.dot}`} style={{ width: '100%' }} />
+                    </div>
+                  )}
+                  {colTasks.length === 0 ? (
+                    <div className="text-center py-12 text-[var(--af-text3)] text-sm">
+                      Sin tareas en &quot;{col.status}&quot;
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {colTasks.map((t: any) => {
+                        const proj = projects.find((p: any) => p.id === t.data.projectId);
+                        const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
+                        return (
+                          <div
+                            key={t.id}
+                            className="card-elevated p-3 cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.99]"
+                            onClick={() => openEditTask(t)}
+                          >
+                            {proj && (
+                              <div className="text-[10px] text-[var(--af-text3)] mb-1 truncate">{proj.data.name}</div>
+                            )}
+                            <div className={`text-[13px] font-medium leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
+                              {t.data.title}
+                            </div>
+                            <div className="flex items-center justify-between mt-2 gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                                {(() => { const si = getSubtaskInfo(t); return si && <SubtaskBadge info={si} />; })()}
+                                {t.data.dueDate && (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                                    {isOverdue && <span className="w-1 h-1 rounded-full bg-red-400" />}
+                                    {fmtDate(t.data.dueDate)}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
+                              <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
+                              <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer transition-colors" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Desktop Kanban: horizontal scroll */}
+          <div className="hidden md:flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
             {KANBAN_COLS.map(col => {
               const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
               const isDragOver = dragOverCol === col.status;
               return (
                 <div
                   key={col.status}
-                  className={`flex-shrink-0 w-[270px] sm:w-[290px] rounded-xl transition-all ${
+                  className={`flex-shrink-0 w-[270px] sm:w-[290px] xl:w-[320px] rounded-xl transition-all ${
                     isDragOver
                       ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20`
                       : 'skeuo-panel'
@@ -576,7 +686,7 @@ export default function TasksScreen() {
 
                           {/* Task title */}
                           <div className="flex items-start gap-2">
-                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 opacity-100 sm:opacity-0 sm:group-hover/card:opacity-100 transition-opacity" />
+                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 transition-opacity" />
                             <div className={`text-[13px] font-medium flex-1 leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
                               {t.data.title}
                             </div>
@@ -613,7 +723,7 @@ export default function TasksScreen() {
                           {/* Footer: assignees */}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
                             <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
-                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer opacity-100 sm:opacity-0 sm:group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
+                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
                               <X size={12} />
                             </button>
                           </div>
@@ -625,6 +735,7 @@ export default function TasksScreen() {
               );
             })}
           </div>
+          </>
         )
       )}
     </div>

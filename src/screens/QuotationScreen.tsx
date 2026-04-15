@@ -93,7 +93,7 @@ export default function QuotationScreen() {
               { lbl: 'Pendientes', val: String(pending), color: 'text-[var(--af-blue)]' },
               { lbl: 'Tasa Conversión', val: `${conversionRate}%`, color: 'text-purple-400' },
             ].map((c, i) => (
-              <div key={i} className="card-elevated rounded-xl p-3">
+              <div key={i} className="card-elevated rounded-xl xl:p-4 p-3">
                 <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
                 <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
               </div>
@@ -112,7 +112,7 @@ export default function QuotationScreen() {
           ) : (
             <div className="space-y-2">
               {filtered.map(q => (
-                <div key={q.id} className="card-elevated rounded-xl p-4 transition-all">
+                <div key={q.id} className="card-elevated rounded-xl xl:p-5 p-4 transition-all">
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

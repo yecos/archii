@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef, useCallback, useState } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import type { TeamUser, Project, Task, GalleryPhoto, InvProduct } from '@/lib/types';
@@ -45,6 +45,72 @@ export default React.memo(function Sidebar({
 }: SidebarProps) {
   const tasksWithDueDate = useMemo(() => tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado'), [tasks]);
 
+  /* ─── Sidebar nav scroll fade indicator ─── */
+  const navRef = useRef<HTMLDivElement>(null);
+  const [canScrollTop, setCanScrollTop] = useState(false);
+  const [canScrollBottom, setCanScrollBottom] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    setCanScrollTop(el.scrollTop > 4);
+    setCanScrollBottom(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll]);
+
+  const scrollMaskStyle = (canScrollTop || canScrollBottom)
+    ? { maskImage: 'linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent)' as const }
+    : {};
+
+  // ─── Swipe gesture for sidebar open/close on mobile ───
+  const touchRef = useRef<{ startX: number; startTime: number } | null>(null);
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    touchRef.current = { startX: e.touches[0].clientX, startTime: Date.now() };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (!touchRef.current) return;
+    const { startX, startTime } = touchRef.current;
+    const endX = e.changedTouches[0].clientX;
+    const elapsed = Date.now() - startTime;
+    const deltaX = endX - startX;
+    touchRef.current = null;
+
+    // Only trigger on fast swipes (< 300ms) with enough distance (> 50px)
+    if (elapsed > 300) return;
+
+    // Swipe RIGHT from left edge (< 30px) → open sidebar
+    if (startX < 30 && deltaX > 50 && !sidebarOpen) {
+      setSidebarOpen(true);
+    }
+    // Swipe LEFT when sidebar is open → close sidebar
+    if (sidebarOpen && startX - endX > 50) {
+      setSidebarOpen(false);
+    }
+  }, [sidebarOpen, setSidebarOpen]);
+
+  useEffect(() => {
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchEnd]);
+
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} className="stroke-current" /> },
     { id: 'profile', label: 'Mi Perfil', icon: <User size={18} className="stroke-current" /> },
@@ -78,7 +144,7 @@ export default React.memo(function Sidebar({
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-[2px] md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`fixed md:static z-50 h-full bg-[var(--skeuo-raised)] border-r border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] flex flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[270px]'} max-md:!w-[270px]`}>
+      <aside className={`fixed md:static z-50 h-full bg-[var(--skeuo-raised)] border-r border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised)] flex flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[270px] xl:w-[280px]'} max-md:!w-[270px]`}>
         <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="skeuo-btn hidden md:flex items-center justify-center h-8 w-8 self-end mr-2 mt-2 rounded-lg text-[var(--muted-foreground)] transition-colors cursor-pointer" title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
           <ChevronLeft size={16} className="transition-transform" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none' }} />
         </button>
@@ -88,7 +154,7 @@ export default React.memo(function Sidebar({
           </div>
           <div className={`transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg flex items-center gap-1.5">ArchiFlow <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/15 text-[var(--af-accent)]" style={{ fontFamily: 'system-ui, sans-serif' }}>2.0</span></div><div className="text-[10px] text-[var(--af-text3)]">Premium</div></div>
         </div>
-        <div className="flex-1 overflow-y-auto py-3 px-3">
+        <div ref={navRef} className="flex-1 overflow-y-auto py-3 px-3" style={scrollMaskStyle}>
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
           {navItems.filter((n): n is Extract<NavItem, { id: string }> => !('divider' in n)).slice(0, 7).map((n) => (
             <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${screen === n.id ? 'bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)] hover:text-[var(--foreground)]'}`} onClick={() => { navigateTo(n.id, null); if (window.innerWidth < 768) setSidebarOpen(false); }}>

@@ -43,7 +43,7 @@ export default function InvoicesScreen() {
                 { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-[var(--af-blue)]' },
                 { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-[var(--af-red)]' },
               ].map((c, i) => (
-                <div key={i} className="card-elevated rounded-xl p-3">
+                <div key={i} className="card-elevated rounded-xl xl:p-4 p-3">
                   <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
                   <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
                 </div>
@@ -58,7 +58,7 @@ export default function InvoicesScreen() {
                 {filtered.map(inv => {
                   const statusColors: Record<string, string> = { Borrador: 'bg-[var(--skeuo-raised)] text-[var(--muted-foreground)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Enviada: 'bg-[var(--skeuo-raised)] text-[var(--af-blue)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Pagada: 'bg-[var(--skeuo-raised)] text-[var(--af-green)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Vencida: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)]', Cancelada: 'bg-[var(--skeuo-raised)] text-[var(--af-red)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-sm)] line-through opacity-60' };
                   const proj = projects.find(p => p.id === inv.data.projectId);
-                  return (<div key={inv.id} className="card-elevated rounded-xl p-4 cursor-pointer transition-all">
+                  return (<div key={inv.id} className="card-elevated rounded-xl xl:p-5 p-4 cursor-pointer transition-all">
                     <div className="flex items-center gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

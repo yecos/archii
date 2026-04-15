@@ -188,7 +188,7 @@ export default function BudgetScreen() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:gap-6 gap-4">
         {/* Pie chart */}
         <div className="card-elevated rounded-xl p-5">
           <div className="text-[15px] font-semibold mb-3">Distribución por Categoría</div>
@@ -196,7 +196,7 @@ export default function BudgetScreen() {
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos</div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={160}>
+              <ResponsiveContainer width="100%" className="xl:h-[200px]" height={160}>
                 <PieChart>
                   <Pie data={byCategory} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
                     {byCategory.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
@@ -284,7 +284,7 @@ export default function BudgetScreen() {
                       <div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div>
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
-                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150" onClick={() => fs.deleteExpense(e.id)}>✕</button>
+                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer transition-opacity duration-150" onClick={() => fs.deleteExpense(e.id)}>✕</button>
                   </div>
                 ))}
                 {exps.length > 5 && !expandedProjects.has(pid) && (

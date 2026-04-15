@@ -514,6 +514,8 @@ export default function CalendarScreen() {
         ) : (
         /* ----- Desktop: 7-day grid ----- */
         <div className="card-elevated rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+          <div className="min-w-[800px]">
           {/* Day header row */}
           <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-[var(--border)]">
             {/* Corner cell */}
@@ -687,7 +689,9 @@ export default function CalendarScreen() {
               })}
             </div>
           </div>
-        </div>
+          </div>
+          </div>
+          </div>
         )
       ) : (
         /* ========== MONTHLY VIEW (unchanged) ========== */

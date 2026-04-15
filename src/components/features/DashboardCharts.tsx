@@ -57,7 +57,7 @@ export default function DashboardCharts({
         {taskStatusData.length === 0 ? (
           <div className="text-center py-6 text-[var(--af-text3)] text-[12px]">Sin datos</div>
         ) : (
-          <ResponsiveContainer width="100%" height={100}>
+          <ResponsiveContainer width="100%" className="xl:h-[120px]" height={100}>
             <PieChart>
               <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={3} dataKey="value" stroke="none">
                 {taskStatusData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
@@ -78,7 +78,7 @@ export default function DashboardCharts({
       </div>
 
       {/* Row 4: Charts v2.0 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:gap-6 gap-4">
         {/* Revenue Trend */}
         <div className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
@@ -86,7 +86,7 @@ export default function DashboardCharts({
             <span className="text-[10px] text-[var(--af-text3)]">Últimos 6 meses</span>
           </div>
           {revenueTrend.some(d => d.facturado > 0 || d.cobrado > 0) ? (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" className="xl:h-[220px]" height={180}>
               <AreaChart data={revenueTrend} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
@@ -104,7 +104,7 @@ export default function DashboardCharts({
         {/* Burndown Chart */}
         <div className="card-elevated p-5">
           <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" className="xl:h-[220px]" height={180}>
             <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
@@ -118,7 +118,7 @@ export default function DashboardCharts({
       </div>
 
       {/* Row 5: Team Workload + Expense Categories */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:gap-6 gap-4">
         {/* Team Workload */}
         <div className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
@@ -128,7 +128,7 @@ export default function DashboardCharts({
           {teamWorkload.length === 0 ? (
             <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin tareas asignadas</div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" className="xl:h-[220px]" height={180}>
               <BarChart data={teamWorkload} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
@@ -151,7 +151,7 @@ export default function DashboardCharts({
           {expenseByCategory.length === 0 ? (
             <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin gastos registrados</div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" className="xl:h-[220px]" height={180}>
               <BarChart data={expenseByCategory} layout="vertical" margin={{ top: 0, right: 20, left: 60, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />

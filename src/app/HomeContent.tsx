@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 /* ─── Context hooks ─── */
@@ -73,6 +73,25 @@ const SettingsScreen = dynamic(() => import('@/screens/SettingsScreen'), { ssr: 
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
+
+  /* ─── Smooth page transition state ─── */
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [displayScreen, setDisplayScreen] = useState(screen);
+
+  const stableNavigateTo = useCallback((s: string, projId?: string | null) => {
+    navigateTo(s, projId);
+  }, [navigateTo]);
+
+  useEffect(() => {
+    if (screen !== displayScreen) {
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setDisplayScreen(screen);
+        setIsTransitioning(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [screen, displayScreen]);
   const { ready, loading, authUser, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset, userName, initials } = useAuthContext();
   const { teamUsers, isAdmin, isEmailAdmin } = useAuthContext();
   const { projects, tasks, currentProject, pendingCount } = useFirestoreContext();
@@ -144,7 +163,7 @@ function AppContent() {
         )}
 
         {/* In-App Notification Toasts */}
-        <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
+        <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto md:max-w-sm z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
           {inAppNotifs.map(n => (
             <div key={n.id} className="pointer-events-auto card-elevated p-3 shadow-2xl flex items-start gap-3 animate-slideUp cursor-pointer hover:border-[var(--af-accent)]/30 transition-all" style={{ width: '340px', maxWidth: 'calc(100vw - 32px)' }} onClick={() => { markNotifRead(n.id); if (n.screen) navigateTo(n.screen, n.itemId); }}>
               <div className="text-lg flex-shrink-0 mt-0.5">{n.icon}</div>
@@ -167,30 +186,30 @@ function AppContent() {
           className={`flex-1 flex flex-col overflow-hidden ${screen === 'chat' ? 'p-0' : 'overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-6'}`}
           style={{ maxHeight: screen === 'chat' ? 'calc(100dvh - 60px)' : undefined }}
         >
-          <div key={screen} className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-            {screen === 'dashboard' && <ErrorBoundary label="Dashboard"><DashboardScreen /></ErrorBoundary>}
-            {screen === 'projects' && <ErrorBoundary label="Proyectos"><ProjectsScreen /></ErrorBoundary>}
-            {screen === 'projectDetail' && <ErrorBoundary label="Detalle de Proyecto"><ProjectDetailScreen /></ErrorBoundary>}
-            {screen === 'tasks' && <ErrorBoundary label="Tareas"><TasksScreen /></ErrorBoundary>}
-            {screen === 'chat' && <ErrorBoundary label="Chat"><ChatScreen /></ErrorBoundary>}
-            {screen === 'budget' && <ErrorBoundary label="Presupuestos"><BudgetScreen /></ErrorBoundary>}
-            {screen === 'files' && <ErrorBoundary label="Archivos"><FilesScreen /></ErrorBoundary>}
-            {screen === 'obra' && <ErrorBoundary label="Seguimiento de Obra"><ObraScreen /></ErrorBoundary>}
-            {screen === 'suppliers' && <ErrorBoundary label="Proveedores"><SuppliersScreen /></ErrorBoundary>}
-            {screen === 'team' && <ErrorBoundary label="Equipo"><TeamScreen /></ErrorBoundary>}
-            {screen === 'companies' && <ErrorBoundary label="Empresas"><CompaniesScreen /></ErrorBoundary>}
-            {screen === 'calendar' && <ErrorBoundary label="Calendario"><CalendarScreen /></ErrorBoundary>}
-            {screen === 'portal' && <ErrorBoundary label="Portal Cliente"><PortalScreen /></ErrorBoundary>}
-            {screen === 'gallery' && <ErrorBoundary label="Galería"><GalleryScreen /></ErrorBoundary>}
-            {screen === 'inventory' && <ErrorBoundary label="Inventario"><InventoryScreen /></ErrorBoundary>}
-            {screen === 'admin' && <ErrorBoundary label="Panel Admin"><AdminScreen /></ErrorBoundary>}
-            {screen === 'profile' && <ErrorBoundary label="Mi Perfil"><ProfileScreen /></ErrorBoundary>}
-            {screen === 'install' && <ErrorBoundary label="Instalar App"><InstallScreen /></ErrorBoundary>}
-            {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
-            {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
-            {screen === 'quotations' && <ErrorBoundary label="Cotizaciones"><QuotationScreen /></ErrorBoundary>}
-            {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
-            {screen === 'settings' && <ErrorBoundary label="Configuración"><SettingsScreen /></ErrorBoundary>}
+          <div key={displayScreen} className={`flex-1 flex flex-col min-h-0 transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}>
+            {displayScreen === 'dashboard' && <ErrorBoundary label="Dashboard"><DashboardScreen /></ErrorBoundary>}
+            {displayScreen === 'projects' && <ErrorBoundary label="Proyectos"><ProjectsScreen /></ErrorBoundary>}
+            {displayScreen === 'projectDetail' && <ErrorBoundary label="Detalle de Proyecto"><ProjectDetailScreen /></ErrorBoundary>}
+            {displayScreen === 'tasks' && <ErrorBoundary label="Tareas"><TasksScreen /></ErrorBoundary>}
+            {displayScreen === 'chat' && <ErrorBoundary label="Chat"><ChatScreen /></ErrorBoundary>}
+            {displayScreen === 'budget' && <ErrorBoundary label="Presupuestos"><BudgetScreen /></ErrorBoundary>}
+            {displayScreen === 'files' && <ErrorBoundary label="Archivos"><FilesScreen /></ErrorBoundary>}
+            {displayScreen === 'obra' && <ErrorBoundary label="Seguimiento de Obra"><ObraScreen /></ErrorBoundary>}
+            {displayScreen === 'suppliers' && <ErrorBoundary label="Proveedores"><SuppliersScreen /></ErrorBoundary>}
+            {displayScreen === 'team' && <ErrorBoundary label="Equipo"><TeamScreen /></ErrorBoundary>}
+            {displayScreen === 'companies' && <ErrorBoundary label="Empresas"><CompaniesScreen /></ErrorBoundary>}
+            {displayScreen === 'calendar' && <ErrorBoundary label="Calendario"><CalendarScreen /></ErrorBoundary>}
+            {displayScreen === 'portal' && <ErrorBoundary label="Portal Cliente"><PortalScreen /></ErrorBoundary>}
+            {displayScreen === 'gallery' && <ErrorBoundary label="Galería"><GalleryScreen /></ErrorBoundary>}
+            {displayScreen === 'inventory' && <ErrorBoundary label="Inventario"><InventoryScreen /></ErrorBoundary>}
+            {displayScreen === 'admin' && <ErrorBoundary label="Panel Admin"><AdminScreen /></ErrorBoundary>}
+            {displayScreen === 'profile' && <ErrorBoundary label="Mi Perfil"><ProfileScreen /></ErrorBoundary>}
+            {displayScreen === 'install' && <ErrorBoundary label="Instalar App"><InstallScreen /></ErrorBoundary>}
+            {displayScreen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
+            {displayScreen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
+            {displayScreen === 'quotations' && <ErrorBoundary label="Cotizaciones"><QuotationScreen /></ErrorBoundary>}
+            {displayScreen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
+            {displayScreen === 'settings' && <ErrorBoundary label="Configuración"><SettingsScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

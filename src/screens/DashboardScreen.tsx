@@ -19,7 +19,7 @@ const DashboardCharts = dynamic(() => import('@/components/features/DashboardCha
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { getActiveAlerts, getBudgetBgClass, getBudgetBorderColorClass, getBudgetTextColorClass, type BudgetAlert } from '@/lib/budget-alerts';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
-import { FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, TrendingUp, AlertCircle, ChevronRight, Sparkles, ShieldCheck, Bell } from 'lucide-react';
+import { FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, TrendingUp, AlertCircle, ChevronRight, Sparkles, ShieldCheck, Bell, MoreHorizontal } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -33,6 +33,24 @@ export default function DashboardScreen() {
   const { unreadCount, notifHistory } = useNotif();
   const { dailyLogs } = useComments();
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const toolbarMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close toolbar menu on outside click
+  React.useEffect(() => {
+    if (!toolbarMenuOpen) return;
+    const handler = (e: Event) => {
+      if (toolbarMenuRef.current && !toolbarMenuRef.current.contains(e.target as Node)) {
+        setToolbarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [toolbarMenuOpen]);
 
   // Computed data
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
@@ -178,18 +196,45 @@ export default function DashboardScreen() {
             onClick={() => setSuggestionsOpen(true)}
           >
             <Sparkles size={13} />
-            <span>Sugerencias IA</span>
+            <span className="sm:inline hidden">Sugerencias IA</span>
           </button>
-          <button className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
+          {/* Desktop: show PDF & Excel directly */}
+          <button className="hidden sm:flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
             try { exportGeneralReportPDF({ projects, tasks, expenses, invoices, teamUsers, timeEntries }); showToast('Reporte PDF descargado'); } catch (err) { console.error('[ArchiFlow] Dashboard: export general report PDF failed:', err); showToast('Error', 'error'); }
           }}>
             <FileText size={12} /> PDF
           </button>
-          <button className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
+          <button className="hidden sm:flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
             try { exportProjectsExcel(projects, tasks, expenses); showToast('Excel descargado'); } catch (err) { console.error('[ArchiFlow] Dashboard: export projects Excel failed:', err); showToast('Error', 'error'); }
           }}>
             <Download size={12} /> Excel
           </button>
+          {/* Mobile: overflow menu */}
+          <div className="relative sm:hidden" ref={toolbarMenuRef}>
+            <button
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors"
+              onClick={() => setToolbarMenuOpen(!toolbarMenuOpen)}
+              aria-label="Más opciones"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+            {toolbarMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 skeuo-panel rounded-lg p-1 min-w-[140px] shadow-lg animate-fadeIn">
+                <button className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg4)] hover:text-[var(--foreground)] rounded-md transition-colors" onClick={() => {
+                  try { exportGeneralReportPDF({ projects, tasks, expenses, invoices, teamUsers, timeEntries }); showToast('Reporte PDF descargado'); } catch (err) { console.error('[ArchiFlow] Dashboard: export general report PDF failed:', err); showToast('Error', 'error'); }
+                  setToolbarMenuOpen(false);
+                }}>
+                  <FileText size={13} /> Reporte PDF
+                </button>
+                <button className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-[var(--muted-foreground)] cursor-pointer hover:bg-[var(--af-bg4)] hover:text-[var(--foreground)] rounded-md transition-colors" onClick={() => {
+                  try { exportProjectsExcel(projects, tasks, expenses); showToast('Excel descargado'); } catch (err) { console.error('[ArchiFlow] Dashboard: export projects Excel failed:', err); showToast('Error', 'error'); }
+                  setToolbarMenuOpen(false);
+                }}>
+                  <Download size={13} /> Exportar Excel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -267,7 +312,7 @@ export default function DashboardScreen() {
       </div>
 
       {/* ─── Row 2: Projects + Activity ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:gap-6 gap-4">
         <div className="skeuo-panel p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Proyectos recientes</div>
@@ -305,7 +350,7 @@ export default function DashboardScreen() {
       </div>
 
       {/* ─── Row 3: Mini widgets ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Sprint Progress Ring */}
         <div className="skeuo-panel p-5">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
