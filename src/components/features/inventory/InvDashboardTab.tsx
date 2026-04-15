@@ -27,9 +27,50 @@ export default function InvDashboardTab({
   invProducts, invCategories, invMovements, invAlerts, invTotalValue, invTotalStock,
   getWarehouseStock, getInvProductName, getTotalStock,
 }: InvDashboardTabProps) {
+  // ─── DIAGNÓSTICO: muestra estado de datos en tiempo real ───
+  const [showDiag, setShowDiag] = React.useState(false);
+  const diag = React.useMemo(() => {
+    if (!showDiag) return null;
+    const samples = invProducts.slice(0, 2).map(p => ({
+      id: p.id.slice(0, 8),
+      name: p.data.name,
+      price: p.data.price,
+      stock: p.data.stock,
+      minStock: p.data.minStock,
+      warehouseStock: p.data.warehouseStock,
+      categoryId: p.data.categoryId,
+      unit: p.data.unit,
+      totalCalc: getTotalStock(p),
+      hasImage: !!p.data.imageData,
+    }));
+    return { prodCount: invProducts.length, catCount: invCategories.length, movCount: invMovements.length, alertCount: invAlerts.length, totalValue: invTotalValue, totalStock: invTotalStock, samples };
+  }, [showDiag, invProducts, invCategories, invMovements, invAlerts, invTotalValue, invTotalStock, getTotalStock]);
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
+        <button onClick={() => setShowDiag(!showDiag)} className="text-[10px] px-2 py-1 rounded bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer border-none">🔍 Diagnóstico</button>
+      </div>
+      {/* DIAGNÓSTICO */}
+      {diag && (
+        <details open className="skeuo-panel rounded-xl p-3 text-xs font-mono">
+          <summary className="cursor-pointer text-[var(--af-accent)] font-semibold mb-2">Estado de datos (Firestore)</summary>
+          <div className="space-y-1 text-[var(--muted-foreground)]">
+            <div>Productos: {diag.prodCount} | Categorías: {diag.catCount} | Movimientos: {diag.movCount} | Alertas: {diag.alertCount}</div>
+            <div>Valor total: {diag.totalValue} | Stock total: {diag.totalStock}</div>
+            {diag.prodCount === 0 && <div className="text-red-400 font-bold">⚠️ No hay productos cargados — Firestore listeners podrían no estar recibiendo datos</div>}
+            {diag.samples.length > 0 && diag.samples.map((s, i) => (
+              <div key={i} className="bg-[var(--af-bg4)] rounded p-2 mt-1">
+                <div className="text-[var(--foreground)]">Producto {i + 1}: {s.name} (ID: {s.id})</div>
+                <div>price={s.price} | stock={s.stock} | minStock={s.minStock} | unit={s.unit}</div>
+                <div>categoryId={s.categoryId} | warehouseStock={JSON.stringify(s.warehouseStock)}</div>
+                <div>getTotalStock()={s.totalCalc} | hasImage={s.hasImage}</div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="skeuo-panel rounded-xl p-4">
