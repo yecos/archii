@@ -716,6 +716,123 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
   }, showToast);
 }
 
+/* ===== QUOTATIONS ===== */
+
+export function saveQuotation(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+  return fbAction('guardar cotización', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
+    const proj = data.projId ? await db.collection('projects').doc(data.projId).get() : null;
+    const projData = proj?.exists ? proj.data() : {};
+
+    // Recalculate all section totals
+    const sections = (data.sections || []).map((sec: any) => {
+      const items = (sec.items || []).map((item: any) => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.unitPrice) || 0;
+        const vat = Number(item.vat) ?? 19;
+        const disc = Number(item.discount) || 0;
+        const sub = qty * price;
+        return {
+          ...item,
+          subtotal: sub,
+          vatAmount: sub * vat / 100,
+          discountAmount: sub * disc / 100,
+          total: sub + (sub * vat / 100) - (sub * disc / 100),
+        };
+      });
+      const secSub = items.reduce((s: number, i: any) => s + (i.subtotal || 0), 0);
+      const secVat = items.reduce((s: number, i: any) => s + (i.vatAmount || 0), 0);
+      const secDisc = items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0);
+      return { ...sec, items, subtotal: secSub, vatTotal: secVat, discountTotal: secDisc, total: secSub + secVat - secDisc };
+    });
+
+    // Recalculate payments
+    const grandTotal = sections.reduce((s: number, sec: any) => s + (sec.total || 0), 0);
+    const payments = (data.payments || []).map((p: any) => ({
+      ...p,
+      amount: grandTotal * (Number(p.percentage) || 0) / 100,
+    }));
+
+    const subtotal = sections.reduce((s: number, sec: any) => s + (sec.subtotal || 0), 0);
+    const vatTotal = sections.reduce((s: number, sec: any) => s + (sec.vatTotal || 0), 0);
+    const discountTotal = sections.reduce((s: number, sec: any) => s + (sec.discountTotal || 0), 0);
+
+    const quoteData: Record<string, any> = {
+      number: data.number || `COT-${Date.now().toString(36).toUpperCase()}`,
+      projectId: data.projId || '',
+      projectName: projData.name || '',
+      clientName: data.clientName || projData.client || '',
+      clientEmail: data.clientEmail || '',
+      clientPhone: data.clientPhone || '',
+      clientAddress: data.clientAddress || '',
+      status: data.status || 'Borrador',
+      sections,
+      payments,
+      subtotal,
+      vatTotal,
+      discountTotal,
+      grandTotal,
+      validUntil: data.validUntil || '',
+      notes: data.notes || '',
+      internalNotes: data.internalNotes || '',
+      terms: data.terms || '',
+      bankName: data.bankName || '',
+      bankAccount: data.bankAccount || '',
+      bankAccountType: data.bankAccountType || '',
+      bankHolder: data.bankHolder || '',
+      updatedAt: ts,
+    };
+
+    if (editingId) {
+      await db.collection('quotations').doc(editingId).update(quoteData);
+      showToast('Cotización actualizada');
+    } else {
+      quoteData.createdAt = ts;
+      quoteData.createdBy = authUser?.uid;
+      await db.collection('quotations').add(quoteData);
+      showToast('✅ Cotización creada');
+    }
+  }, showToast);
+}
+
+export async function updateQuotationStatus(quotationId: string, status: string, showToast: ToastFn) {
+  return fbAction('actualizar cotización', async () => {
+    const fb = getFirebase();
+    await fb.firestore().collection('quotations').doc(quotationId).update({ status, updatedAt: fb.firestore.FieldValue.serverTimestamp() });
+    showToast(`Cotización: ${status}`);
+  }, showToast);
+}
+
+export async function duplicateQuotation(quotationId: string, showToast: ToastFn, authUser: any) {
+  return fbAction('duplicar cotización', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const doc = await db.collection('quotations').doc(quotationId).get();
+    if (!doc.exists) { showToast('Cotización no encontrada', 'error'); return; }
+    const data = doc.data();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
+    await db.collection('quotations').add({
+      ...data,
+      number: `COT-${Date.now().toString(36).toUpperCase()}`,
+      status: 'Borrador',
+      createdAt: ts,
+      createdBy: authUser?.uid,
+      updatedAt: ts,
+    });
+    showToast('✅ Cotización duplicada');
+  }, showToast);
+}
+
+export async function deleteQuotation(quotationId: string, showToast: ToastFn) {
+  if (!(await confirm({ title: 'Eliminar cotización', description: '¿Eliminar esta cotización? Esta acción no se puede deshacer.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
+  return fbAction('eliminar cotización', async () => {
+    await getFirebase().firestore().collection('quotations').doc(quotationId).delete();
+    showToast('Cotización eliminada');
+  }, showToast);
+}
+
 /* ===== COMMENTS ===== */
 
 export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: any) {

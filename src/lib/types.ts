@@ -435,6 +435,74 @@ export interface Invoice {
   };
 }
 
+export type QuotationStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Convertida' | 'Vencida';
+
+export interface QuotationItem {
+  id: string;
+  concept: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  vat: number; // IVA percentage (default 19)
+  discount: number; // discount percentage (default 0)
+  subtotal: number; // quantity * unitPrice
+  vatAmount: number; // subtotal * vat / 100
+  discountAmount: number; // subtotal * discount / 100
+  total: number; // subtotal + vatAmount - discountAmount
+}
+
+export interface QuotationSection {
+  id: string;
+  name: string;
+  items: QuotationItem[];
+  subtotal: number;
+  vatTotal: number;
+  discountTotal: number;
+  total: number;
+}
+
+export interface QuotationPayment {
+  id: string;
+  label: string;
+  condition: string; // e.g. "Al inicio", "Al 80%", "Entrega final"
+  percentage: number;
+  amount: number;
+  paid: boolean;
+  paidDate?: string;
+}
+
+export interface Quotation {
+  id: string;
+  data: {
+    number: string;
+    projectId: string;
+    projectName: string;
+    clientName: string;
+    clientEmail?: string;
+    clientPhone?: string;
+    clientAddress?: string;
+    status: QuotationStatus;
+    sections: QuotationSection[];
+    payments: QuotationPayment[];
+    subtotal: number;
+    vatTotal: number;
+    discountTotal: number;
+    grandTotal: number;
+    validUntil: string; // ISO date
+    notes: string;
+    internalNotes: string; // only visible to team
+    terms: string; // payment terms text
+    bankName: string;
+    bankAccount: string;
+    bankAccountType: string;
+    bankHolder: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
 export interface Comment {
   id: string;
   data: {
@@ -603,6 +671,7 @@ export const NAV_ITEMS = [
   { id: 'team', icon: '👥', label: 'Equipo' },
   { id: 'companies', icon: '🏢', label: 'Empresas' },
   { id: 'invoices', icon: '🧾', label: 'Facturas' },
+  { id: 'quotations', icon: '📋', label: 'Cotizaciones' },
   { id: 'calendar', icon: '📅', label: 'Calendario' },
   { id: 'portal', label: 'Portal Cliente', icon: '🤝' },
   { id: 'gallery', icon: '📸', label: 'Galería' },
@@ -626,6 +695,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   team: 'Equipo',
   companies: 'Empresas',
   invoices: 'Facturación',
+  quotations: 'Cotizaciones',
   calendar: 'Calendario',
   portal: 'Portal Cliente',
   gallery: 'Galería de Fotos',

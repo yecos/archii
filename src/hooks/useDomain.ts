@@ -36,6 +36,9 @@ export { useCalendarContext as useCalendar } from '@/contexts/CalendarContext';
 // Invoice domain
 export { useInvoiceContext as useInvoice } from '@/contexts/InvoiceContext';
 
+// Quotation domain
+export { useQuotationContext as useQuotation } from '@/contexts/QuotationContext';
+
 // Comments domain
 export { useCommentsContext as useComments } from '@/contexts/CommentsContext';
 

@@ -32,6 +32,7 @@ import OneDriveProvider from './OneDriveContext';
 import FirestoreProvider from './FirestoreContext';
 import CommentsProvider from './CommentsContext';
 import InvoiceProvider from './InvoiceContext';
+import QuotationProvider from './QuotationContext';
 import InventoryProvider from './InventoryContext';
 import GalleryProvider from './GalleryContext';
 import TimeTrackingProvider from './TimeTrackingContext';
@@ -49,23 +50,25 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           <FirestoreProvider>
             <CommentsProvider>
               <InvoiceProvider>
-                <InventoryProvider>
-                  <GalleryProvider>
-                    <TimeTrackingProvider>
-                      <CalendarProvider>
-                        <AdminProvider>
-                          <ChatProvider>
-                            <NotifPreferencesProvider>
-                              <NotifProvider>
-                                {children}
-                              </NotifProvider>
-                            </NotifPreferencesProvider>
-                          </ChatProvider>
-                        </AdminProvider>
-                      </CalendarProvider>
-                    </TimeTrackingProvider>
-                  </GalleryProvider>
-                </InventoryProvider>
+                <QuotationProvider>
+                  <InventoryProvider>
+                    <GalleryProvider>
+                      <TimeTrackingProvider>
+                        <CalendarProvider>
+                          <AdminProvider>
+                            <ChatProvider>
+                              <NotifPreferencesProvider>
+                                <NotifProvider>
+                                  {children}
+                                </NotifProvider>
+                              </NotifPreferencesProvider>
+                            </ChatProvider>
+                          </AdminProvider>
+                        </CalendarProvider>
+                      </TimeTrackingProvider>
+                    </GalleryProvider>
+                  </InventoryProvider>
+                </QuotationProvider>
               </InvoiceProvider>
             </CommentsProvider>
           </FirestoreProvider>

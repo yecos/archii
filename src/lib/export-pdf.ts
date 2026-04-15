@@ -991,3 +991,407 @@ export async function exportInventoryPDF(data: {
   addFooter(doc);
   doc.save(`inventario-${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR COTIZACIÓN A PDF
+   ═══════════════════════════════════════════════ */
+
+export async function exportQuotationPDF(quotation: any) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const d = quotation.data;
+
+  // ═══════ PAGE 1: COVER ═══════
+  // Gold top band
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(0, 0, pageW, 10, 'F');
+
+  // Company branding
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(...BRAND.white);
+  doc.text('ArchiFlow', 14, 26);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.muted);
+  doc.text('Plataforma de Gestion de Proyectos', 14, 33);
+
+  // COTIZACIÓN title (right side)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...BRAND.primary);
+  doc.text('COTIZACIÓN', pageW - 14, 24, { align: 'right' });
+
+  // Number
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(14);
+  doc.setTextColor(...BRAND.dark);
+  doc.text(`No. ${d.number || 'S/N'}`, pageW - 14, 32, { align: 'right' });
+
+  // Separator
+  doc.setDrawColor(...BRAND.primary);
+  doc.setLineWidth(0.5);
+  doc.line(14, 40, pageW - 14, 40);
+
+  // Date and city
+  const today = new Date();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`Fecha: ${today.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 50);
+  doc.text('Ciudad: Bogotá, D.C.', 14, 56);
+
+  // Status badge
+  const statusColors: Record<string, [number, number, number]> = {
+    Borrador: BRAND.muted,
+    Enviada: BRAND.blue,
+    Aprobada: BRAND.green,
+    Rechazada: BRAND.red,
+    Convertida: [139, 92, 246] as [number, number, number],
+    Vencida: [245, 158, 11] as [number, number, number],
+  };
+  const stColor = statusColors[d.status] || BRAND.muted;
+  doc.setFillColor(...stColor);
+  const stW = doc.getTextWidth((d.status || 'Borrador').toUpperCase()) + 12;
+  doc.roundedRect(pageW - 14 - stW, 44, stW, 7, 1, 1, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.white);
+  doc.text((d.status || 'Borrador').toUpperCase(), pageW - 14 - stW / 2, 49, { align: 'center' });
+
+  // Client info box
+  let y = 70;
+  doc.setFillColor(...BRAND.bg);
+  doc.roundedRect(14, y, pageW - 28, 35, 2, 2, 'F');
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(14, y, 2, 35, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.muted);
+  doc.text('SEÑOR(ES)', 22, y + 7);
+  doc.text('PROYECTO', 22, y + 15);
+  doc.text('DIRECCIÓN', 22, y + 23);
+  if (d.validUntil) doc.text('VÁLIDA HASTA', 22, y + 31);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...BRAND.dark);
+  doc.text(d.clientName || 'N/A', 55, y + 7);
+  doc.text(d.projectName || 'N/A', 55, y + 15);
+  doc.text(d.clientAddress || 'N/A', 55, y + 23);
+  if (d.validUntil) doc.text(d.validUntil, 55, y + 31);
+
+  y = 112;
+
+  // Grand total preview on cover
+  doc.setFillColor(...BRAND.dark);
+  doc.roundedRect(14, y, pageW - 28, 18, 2, 2, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.white);
+  doc.text('VALOR TOTAL DE LA COTIZACIÓN', pageW / 2, y + 7, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...BRAND.primary);
+  doc.text(fmtCOPFull(d.grandTotal || 0), pageW / 2, y + 14, { align: 'center' });
+
+  // Notes on cover
+  if (d.notes) {
+    y += 26;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text('OBSERVACIONES', 14, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.text);
+    doc.text(d.notes, 14, y + 6, { maxWidth: pageW - 28 });
+  }
+
+  addFooter(doc);
+
+  // ═══════ SECTION PAGES ═══════
+  const sections = d.sections || [];
+
+  for (const section of sections) {
+    doc.addPage();
+    addFooter(doc);
+
+    // Gold bar at top
+    doc.setFillColor(...BRAND.primary);
+    doc.rect(0, 0, pageW, 4, 'F');
+
+    // Section header
+    let sy = 14;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...BRAND.dark);
+    doc.text(section.name || 'Sección', 14, sy);
+    sy += 4;
+
+    // Section number (right)
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(`Cotización: ${d.number || 'S/N'}`, pageW - 14, 14, { align: 'right' });
+
+    // Separator
+    doc.setDrawColor(...BRAND.primary);
+    doc.setLineWidth(0.3);
+    doc.line(14, sy + 2, pageW - 14, sy + 2);
+    sy += 8;
+
+    // Items table
+    if (section.items && section.items.length > 0) {
+      autoTable(doc, {
+        startY: sy,
+        head: [['#', 'Descripción', 'Und', 'Cant.', 'Valor Unit.', 'IVA%', 'Desc%', 'Total']],
+        body: section.items.map((item: any, idx: number) => [
+          String(idx + 1),
+          [item.concept || '-', item.description || ''].join('\n'),
+          item.unit || 'Und',
+          String(item.quantity || 0),
+          fmtCOPFull(item.unitPrice || 0),
+          `${item.vat ?? 19}%`,
+          `${item.discount || 0}%`,
+          fmtCOPFull(item.total || 0),
+        ]),
+        theme: 'striped',
+        headStyles: {
+          fillColor: BRAND.dark,
+          textColor: BRAND.white,
+          fontSize: 8,
+          fontStyle: 'bold',
+          cellPadding: 3,
+        },
+        bodyStyles: {
+          fontSize: 8,
+          cellPadding: 3,
+          textColor: BRAND.text,
+        },
+        alternateRowStyles: {
+          fillColor: BRAND.bg,
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 8 },
+          1: { cellWidth: 55 },
+          2: { halign: 'center', cellWidth: 12 },
+          3: { halign: 'center', cellWidth: 12 },
+          4: { halign: 'right', cellWidth: 25 },
+          5: { halign: 'center', cellWidth: 12 },
+          6: { halign: 'center', cellWidth: 12 },
+          7: { halign: 'right', cellWidth: 25 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      sy = (doc as any).lastAutoTable.finalY + 8;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...BRAND.muted);
+      doc.text('Sin items en esta sección', 14, sy + 4);
+      sy += 12;
+    }
+
+    // Section subtotal
+    sy = checkAddPage(doc, sy, 25);
+    const stX = pageW - 14;
+    doc.setDrawColor(...BRAND.bg);
+    doc.setLineWidth(0.2);
+    doc.line(stX - 70, sy, stX, sy);
+
+    sy += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text('Subtotal sección:', stX - 2, sy, { align: 'right' });
+    doc.setTextColor(...BRAND.dark);
+    doc.text(fmtCOPFull(section.subtotal || 0), stX, sy, { align: 'right' });
+
+    sy += 5;
+    doc.setTextColor(...BRAND.muted);
+    doc.text('IVA sección:', stX - 2, sy, { align: 'right' });
+    doc.setTextColor(...BRAND.dark);
+    doc.text(fmtCOPFull(section.vatTotal || 0), stX, sy, { align: 'right' });
+
+    if ((section.discountTotal || 0) > 0) {
+      sy += 5;
+      doc.setTextColor(...BRAND.muted);
+      doc.text('Descuentos:', stX - 2, sy, { align: 'right' });
+      doc.setTextColor(...BRAND.red);
+      doc.text('- ' + fmtCOPFull(section.discountTotal || 0), stX, sy, { align: 'right' });
+    }
+
+    sy += 3;
+    doc.setDrawColor(...BRAND.primary);
+    doc.setLineWidth(0.5);
+    doc.line(stX - 70, sy + 2, stX, sy + 2);
+
+    sy += 9;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...BRAND.primary);
+    doc.text('TOTAL SECCIÓN:', stX - 2, sy, { align: 'right' });
+    doc.text(fmtCOPFull(section.total || 0), stX, sy, { align: 'right' });
+  }
+
+  // ═══════ FINAL PAGE: SUMMARY + PAYMENTS + BANK ═══════
+  doc.addPage();
+  addFooter(doc);
+
+  // Gold bar
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(0, 0, pageW, 4, 'F');
+
+  let fy = 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Resumen de Cotización', 14, fy);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`${d.number || 'S/N'} — ${d.clientName || 'N/A'}`, pageW - 14, 14, { align: 'right' });
+
+  fy += 6;
+  doc.setDrawColor(...BRAND.primary);
+  doc.setLineWidth(0.3);
+  doc.line(14, fy, pageW - 14, fy);
+  fy += 8;
+
+  // Summary table
+  autoTable(doc, {
+    startY: fy,
+    head: [['Concepto', 'Valor (COP)']],
+    body: [
+      ['Subtotal', fmtCOPFull(d.subtotal || 0)],
+      ['IVA Total', fmtCOPFull(d.vatTotal || 0)],
+      ['Descuentos', '- ' + fmtCOPFull(d.discountTotal || 0)],
+    ],
+    theme: 'plain',
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 9, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 9, textColor: BRAND.text },
+    columnStyles: { 1: { halign: 'right' } },
+    margin: { left: 14, right: 14 },
+  });
+
+  fy = (doc as any).lastAutoTable.finalY + 2;
+
+  // Grand total box
+  doc.setFillColor(...BRAND.dark);
+  doc.roundedRect(14, fy, pageW - 28, 12, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.white);
+  doc.text('GRAN TOTAL', 22, fy + 8);
+  doc.setTextColor(...BRAND.primary);
+  doc.setFontSize(14);
+  doc.text(fmtCOPFull(d.grandTotal || 0), pageW - 22, fy + 8, { align: 'right' });
+
+  fy += 20;
+
+  // Payment plan
+  if (d.payments && d.payments.length > 0) {
+    fy = checkAddPage(doc, fy, 40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...BRAND.dark);
+    doc.text('Plan de Pagos', 14, fy);
+    fy += 4;
+
+    autoTable(doc, {
+      startY: fy,
+      head: [['Etiqueta', 'Condición', 'Porcentaje', 'Monto']],
+      body: (d.payments || []).map((p: any) => [
+        p.label || '-',
+        p.condition || '-',
+        `${p.percentage || 0}%`,
+        fmtCOPFull(p.amount || 0),
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+
+    fy = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // Payment terms
+  if (d.terms) {
+    fy = checkAddPage(doc, fy, 30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text('CONDICIONES DE PAGO', 14, fy);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...BRAND.text);
+    doc.text(d.terms, 14, fy + 5, { maxWidth: pageW - 28 });
+    fy += 15;
+  }
+
+  // Bank information
+  if (d.bankName || d.bankAccount) {
+    fy = checkAddPage(doc, fy, 35);
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(14, fy, pageW - 28, 28, 2, 2, 'F');
+    doc.setFillColor(...BRAND.primary);
+    doc.rect(14, fy, 2, 28, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text('INFORMACIÓN BANCARIA', 22, fy + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...BRAND.text);
+    doc.text(`Banco: ${d.bankName || 'N/A'}`, 22, fy + 14);
+    doc.text(`Tipo: ${d.bankAccountType || 'N/A'}`, 22, fy + 19);
+    doc.text(`Cuenta: ${d.bankAccount || 'N/A'}`, 22, fy + 24);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Titular: ${d.bankHolder || 'N/A'}`, 110, fy + 14);
+
+    fy += 34;
+  }
+
+  // Valid until
+  if (d.validUntil) {
+    fy = checkAddPage(doc, fy, 15);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(`Esta cotización es válida hasta: ${d.validUntil}`, 14, fy);
+  }
+
+  // Notes (if any)
+  if (d.notes) {
+    fy += 5;
+    fy = checkAddPage(doc, fy, 15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    doc.text('NOTAS', 14, fy);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...BRAND.text);
+    doc.text(d.notes, 14, fy + 5, { maxWidth: pageW - 28 });
+  }
+
+  // Footer
+  addFooter(doc);
+
+  doc.save(`cotizacion-${(d.number || 'borrador').replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+}

@@ -67,6 +67,7 @@ const AdminScreen = dynamic(() => import('@/screens/AdminScreen'), { ssr: false 
 const InstallScreen = dynamic(() => import('@/screens/InstallScreen'), { ssr: false });
 const TimeTrackingScreen = dynamic(() => import('@/screens/TimeTrackingScreen'), { ssr: false });
 const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: false });
+const QuotationScreen = dynamic(() => import('@/screens/QuotationScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 const SettingsScreen = dynamic(() => import('@/screens/SettingsScreen'), { ssr: false });
 
@@ -187,6 +188,7 @@ function AppContent() {
             {screen === 'install' && <ErrorBoundary label="Instalar App"><InstallScreen /></ErrorBoundary>}
             {screen === 'timeTracking' && <ErrorBoundary label="Time Tracking"><TimeTrackingScreen /></ErrorBoundary>}
             {screen === 'invoices' && <ErrorBoundary label="Facturas"><InvoicesScreen /></ErrorBoundary>}
+            {screen === 'quotations' && <ErrorBoundary label="Cotizaciones"><QuotationScreen /></ErrorBoundary>}
             {screen === 'reports' && <ErrorBoundary label="Reportes"><ReportsScreen /></ErrorBoundary>}
             {screen === 'settings' && <ErrorBoundary label="Configuración"><SettingsScreen /></ErrorBoundary>}
           </div>
