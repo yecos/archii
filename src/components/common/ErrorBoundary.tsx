@@ -65,9 +65,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             onClick={this.handleRetry}
             style={{
               padding: '8px 20px', borderRadius: '10px',
-              border: '1px solid rgba(200,169,110,0.3)',
-              background: 'rgba(200,169,110,0.1)',
-              color: '#c8a96e', fontSize: '13px', fontWeight: 500,
+              border: '1px solid rgba(var(--af-accent-rgb),0.3)',
+              background: 'rgba(var(--af-accent-rgb),0.1)',
+              color: 'var(--af-accent)', fontSize: '13px', fontWeight: 500,
               cursor: 'pointer',
             }}
           >

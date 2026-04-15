@@ -137,7 +137,7 @@ const inputBase =
 function inputClasses(hasError: boolean) {
   return hasError
     ? `${inputBase} border-[var(--destructive)] focus:border-[var(--destructive)] focus:shadow-[var(--skeuo-shadow-inset)]`
-    : `${inputBase} focus:border-[rgba(200,169,110,0.4)] focus:shadow-[var(--skeuo-shadow-inset),0_0_0_2px_rgba(200,169,110,0.2)]`;
+    : `${inputBase} focus:border-[rgba(var(--af-accent-rgb),0.4)] focus:shadow-[var(--skeuo-shadow-inset),0_0_0_2px_rgba(var(--af-accent-rgb),0.2)]`;
 }
 
 export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doPasswordReset }: AuthScreenProps) {

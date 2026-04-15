@@ -54,7 +54,7 @@ export default function ProjectObra({ workView, workPhases, cmt, initDefaultPhas
         {workPhases.map(phase => {
           const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completada';
           return (<div key={phase.id} className="relative mb-5">
-            <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
+            <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(var(--af-accent-rgb),0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
             <div className="card-elevated p-4 hover:border-[var(--input)] transition-all">
               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <div className="text-sm font-semibold">{phase.data.name}</div>

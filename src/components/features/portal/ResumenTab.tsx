@@ -90,7 +90,7 @@ export default function ResumenTab({ project }: ResumenTabProps) {
                   proj.data.progress >= 80
                     ? '#10b981'
                     : proj.data.progress >= 40
-                      ? '#c8a96e'
+                      ? 'var(--af-accent)'
                       : '#f59e0b'
                 }
                 strokeWidth="2.5"

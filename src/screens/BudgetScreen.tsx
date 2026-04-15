@@ -10,7 +10,7 @@ import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { getBudgetTextColorClass, getBudgetBgClass, getBudgetBorderColorClass } from '@/lib/budget-alerts';
 
 const CAT_COLORS: Record<string, string> = {
-  'Materiales': '#c8a96e',
+  'Materiales': 'var(--af-accent)',
   'Mano de obra': '#3a7cc4',
   'Mobiliario': '#7b5bbf',
   'Acabados': '#10b981',

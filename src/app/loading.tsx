@@ -17,7 +17,7 @@ export default function Loading() {
       >
         ArchiFlow
       </h1>
-      <span className="text-xs font-bold tracking-wider uppercase mb-10 px-3 py-1 rounded-full" style={{ backgroundColor: 'rgba(200,169,110,0.12)', color: 'var(--af-accent, #c8a96e)' }}>
+      <span className="text-xs font-bold tracking-wider uppercase mb-10 px-3 py-1 rounded-full" style={{ backgroundColor: 'rgba(var(--af-accent-rgb),0.12)', color: 'var(--af-accent)' }}>
         v2.0 Premium
       </span>
 

@@ -3,8 +3,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { Zap } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
-
-const CHART_COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899'];
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -39,6 +38,17 @@ export default function DashboardCharts({
   expenseByCategory,
   navigateTo,
 }: DashboardChartsProps) {
+  const { accent, accentRGB } = useThemeColors();
+
+  // Theme-aware chart colors: accent + semantic palette
+  const CHART_COLORS = accent
+    ? [accent, '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899']
+    : ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899'];
+
+  const accentFill = accentRGB ? `rgba(${accentRGB},0.1)` : 'rgba(200,169,110,0.1)';
+  const accentFill4 = accentRGB ? `rgba(${accentRGB},0.4)` : 'rgba(200,169,110,0.4)';
+  const accentFill06 = accentRGB ? `rgba(${accentRGB},0.06)` : 'rgba(200,169,110,0.06)';
+
   return (
     <>
       {/* Task Distribution Pie */}
@@ -82,7 +92,7 @@ export default function DashboardCharts({
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="facturado" name="Facturado" stroke="#c8a96e" fill="rgba(200,169,110,0.1)" strokeWidth={2} />
+                <Area type="monotone" dataKey="facturado" name="Facturado" stroke={accent} fill={accentFill} strokeWidth={2} />
                 <Area type="monotone" dataKey="cobrado" name="Cobrado" stroke="#10b981" fill="rgba(16,185,129,0.08)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -99,8 +109,8 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
-              <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[4, 4, 0, 0]} barSize={20} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: accentFill06 }} />
+              <Bar dataKey="pendientes" name="Pendientes" fill={accentFill4} radius={[4, 4, 0, 0]} barSize={20} />
               <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
             </BarChart>
           </ResponsiveContainer>
@@ -126,7 +136,7 @@ export default function DashboardCharts({
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="activas" name="Activas" fill="#3b82f6" radius={[2, 2, 0, 0]} stackId="a" barSize={16} />
                 <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" barSize={16} />
-                <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[2, 2, 0, 0]} stackId="a" barSize={16} />
+                <Bar dataKey="pendientes" name="Pendientes" fill={accentFill4} radius={[2, 2, 0, 0]} stackId="a" barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -147,7 +157,7 @@ export default function DashboardCharts({
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={55} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="value" name="Gasto" fill="#c8a96e" radius={[0, 4, 4, 0]} barSize={18} />
+                <Bar dataKey="value" name="Gasto" fill={accent} radius={[0, 4, 4, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
           )}

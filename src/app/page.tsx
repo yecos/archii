@@ -17,8 +17,8 @@ const HomeContent = dynamic(() => import('./HomeContent'), {
       color: '#f0f0ee', fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{
-        width: '48px', height: '48px', border: '3px solid rgba(200,169,110,0.2)',
-        borderTopColor: '#c8a96e', borderRadius: '50%',
+        width: '48px', height: '48px', border: '3px solid rgba(var(--af-accent-rgb),0.2)',
+        borderTopColor: 'var(--af-accent)', borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

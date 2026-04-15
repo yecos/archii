@@ -2,8 +2,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
-
-const COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'];
+import { useThemeColors } from '@/hooks/useThemeColors';
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -34,10 +33,21 @@ function ChartLegend({ payload }: any) {
   );
 }
 
+/* Theme-aware chart colors hook wrapper */
+function useChartColors() {
+  const { accent, accentRGB } = useThemeColors();
+  const COLORS = accent
+    ? [accent, '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4']
+    : ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4'];
+  const accentFill06 = accentRGB ? `rgba(${accentRGB},0.06)` : 'rgba(200,169,110,0.06)';
+  return { COLORS, accent, accentRGB, accentFill06 };
+}
+
 /* ─────────────────────────────────────────────
    1. Task Status Pie (General tab – Estado de Proyectos)
    ───────────────────────────────────────────── */
 export function TaskStatusPie({ data }: { data: { name: string; value: number }[] }) {
+  const { COLORS } = useChartColors();
   if (!data.length) return null;
   return (
     <div className="mb-4">
@@ -82,6 +92,7 @@ export function TaskPriorityPie({ data }: { data: { name: string; value: number 
    3. Monthly Expense Trend Line (General tab – Presupuesto)
    ───────────────────────────────────────────── */
 export function MonthlyExpenseTrend({ data }: { data: { name: string; gastos: number }[] }) {
+  const { accent } = useChartColors();
   return (
     <div className="mb-4">
       <div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Tendencia de Gastos</div>
@@ -92,7 +103,7 @@ export function MonthlyExpenseTrend({ data }: { data: { name: string; gastos: nu
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
             <Tooltip content={<ChartTooltip />} />
-            <Line type="monotone" dataKey="gastos" name="Gastos" stroke="#c8a96e" strokeWidth={2} dot={{ r: 3, fill: '#c8a96e' }} />
+            <Line type="monotone" dataKey="gastos" name="Gastos" stroke={accent} strokeWidth={2} dot={{ r: 3, fill: accent }} />
           </LineChart>
         </ResponsiveContainer>
       ) : (
@@ -111,6 +122,7 @@ export function RoleDistPie({ data, height = 120, innerRadius = 25, outerRadius 
   innerRadius?: number;
   outerRadius?: number;
 }) {
+  const { COLORS } = useChartColors();
   if (!data.length) return null;
   return (
     <div className="mb-4">
@@ -135,6 +147,7 @@ export function BudgetVsRealBar({ data, budgetPct }: {
   data: { name: string; presupuesto: number; gastado: number }[];
   budgetPct: number;
 }) {
+  const { accent, accentFill06 } = useChartColors();
   if (!data.length) return <div className="text-sm text-[var(--muted-foreground)]">Sin proyectos con presupuesto</div>;
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -142,9 +155,9 @@ export function BudgetVsRealBar({ data, budgetPct }: {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
         <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: accentFill06 }} />
         <Legend content={<ChartLegend />} />
-        <Bar dataKey="presupuesto" name="Presupuesto" fill="#c8a96e" radius={[4, 4, 0, 0]} barSize={18} />
+        <Bar dataKey="presupuesto" name="Presupuesto" fill={accent} radius={[4, 4, 0, 0]} barSize={18} />
         <Bar dataKey="gastado" name="Gastado" fill={budgetPct > 90 ? '#ef4444' : '#10b981'} radius={[4, 4, 0, 0]} barSize={18} />
       </BarChart>
     </ResponsiveContainer>
@@ -155,6 +168,7 @@ export function BudgetVsRealBar({ data, budgetPct }: {
    6. Expense Category Pie Chart (Financial tab)
    ───────────────────────────────────────────── */
 export function ExpenseCategoryPie({ data }: { data: { name: string; value: number }[] }) {
+  const { COLORS } = useChartColors();
   if (!data.length) return <div className="text-sm text-[var(--muted-foreground)]">Sin gastos</div>;
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -173,6 +187,7 @@ export function ExpenseCategoryPie({ data }: { data: { name: string; value: numb
    7. Hours by Project Bar Chart (Time tab)
    ───────────────────────────────────────────── */
 export function HoursByProjectBar({ data }: { data: { name: string; horas: number }[] }) {
+  const { accentFill06 } = useChartColors();
   if (!data.length) return <div className="text-sm text-[var(--muted-foreground)]">Sin datos</div>;
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -180,7 +195,7 @@ export function HoursByProjectBar({ data }: { data: { name: string; horas: numbe
         <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
         <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} unit="h" />
         <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={90} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: accentFill06 }} />
         <Bar dataKey="horas" name="Horas" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={14} />
       </BarChart>
     </ResponsiveContainer>
@@ -191,6 +206,7 @@ export function HoursByProjectBar({ data }: { data: { name: string; horas: numbe
    8. Team Role Distribution Pie (Team tab – larger variant)
    ───────────────────────────────────────────── */
 export function TeamRoleDistPie({ data }: { data: { name: string; value: number }[] }) {
+  const { COLORS } = useChartColors();
   if (!data.length) return <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div>;
   return (
     <ResponsiveContainer width="100%" height={200}>

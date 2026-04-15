@@ -295,7 +295,7 @@ export default function ProfileScreen() {
                   <div className="relative w-20 h-20 sm:w-28 sm:h-28">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="3" />
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={totalRate >= 80 ? '#4caf7d' : totalRate >= 50 ? '#c8a96e' : '#e05555'} strokeWidth="3" strokeDasharray={`${totalRate}, 100`} strokeLinecap="round" className="transition-all duration-700" />
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={totalRate >= 80 ? '#4caf7d' : totalRate >= 50 ? 'var(--af-accent)' : '#e05555'} strokeWidth="3" strokeDasharray={`${totalRate}, 100`} strokeLinecap="round" className="transition-all duration-700" />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-lg sm:text-2xl font-bold">{totalRate}%</span>
