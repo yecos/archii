@@ -46,3 +46,23 @@ Stage Summary:
 - 2 @ts-nocheck directives removed
 - 8 return types added to exported functions
 - Remaining ~420 any documented for future P6 task
+
+---
+Task ID: P6
+Agent: main
+Task: Type Safety — eliminate critical any casts, type authUser
+
+Work Log:
+- git pull --rebase (integrated concurrent commits: ai-test endpoint, diagnostic panel)
+- Created backup tag backup/pre-p6-type-safety
+- Analyzed types.ts (32 interfaces), FirestoreContext (30 as any), ApprovalModal (14 as any), AdminScreen (10 as any)
+- Added startDate?: string to Task.data
+- Exported FirebaseUserInfo from AuthContext.tsx
+- Typed authUser: FirebaseUserInfo | null in 18 firestore-actions.ts save functions
+- Removed ~54 unnecessary as any casts (30 FirestoreContext + 14 ApprovalModal + 10 AdminScreen)
+- Build passed (0 TS errors), committed as 77a4d9d, pushed
+- Updated bitacora, committed as 04800d7, pushed
+
+Stage Summary:
+- P6 COMPLETE: 6 files modified, ~54 as any eliminated, 18 functions typed
+- Remaining ~366 any documented for future P7 (FormData interfaces, whatsapp-commands.ts refactor)
