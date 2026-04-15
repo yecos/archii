@@ -2167,3 +2167,28 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Nota: La otra sesion hizo 4 commits durante esta sesion (bug fixes de inventario,
   TimeProgressBar, TasksScreen) que fueron mergeados via fast-forward sin conflictos.
+
+2026-04-17 01:21 | BUG FIX — AIChatPanel no enviaba token de autenticacion
+  Estado: RESUELTO
+  Tag de respaldo: backup-pre-fix-ai-chat-auth-20260415
+  Commit: 16f48a2
+  Build: exitoso (14 static + 15 dynamic routes, 0 errores TypeScript)
+
+  BUG-20260417-001 [ALTO] — AIChatPanel no enviaba Authorization header:
+    * Antes: fetch('/api/ai-assistant') solo enviaba Content-Type, sin token.
+      El servidor respondia con 401 "No autenticado. Se requiere un token valido."
+    * Ahora: antes del fetch se obtiene el Firebase ID token via
+      window.firebase.auth().currentUser.getIdToken() y se agrega
+      header Authorization: Bearer <token>.
+    * Patron: mismo que usa AISuggestionsPanel (acceso directo a window.firebase
+      en vez de useAuthContext, porque AIFloatingWrapper esta fuera de AuthProvider
+      en layout.tsx).
+    * Archivo: src/components/archiflow/AIChatPanel.tsx
+    * Cambios: +11 lineas, -1 linea (1 archivo modificado)
+
+  Resumen:
+    - 1 commit: 16f48a2
+    - 1 archivo tocado
+    - 1 bug corregido (alto)
+    - 0 errores TypeScript
+    - Build exitoso, Vercel deploy automatico
