@@ -2685,3 +2685,35 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Archivos: 3 modificados (types.ts, whatsapp-commands.ts, webhook/route.ts)
   Total: +193 lineas, -133 eliminadas, 110 any eliminados
+
+2026-04-17 03:15 | REFACTOR — P9 export-pdf.ts fully typed: 31 any → 0
+  Estado: COMPLETADO
+  Commit: 92e6b13
+  Build: exitoso (0 errores TypeScript)
+  Tag de respaldo: backup/pre-p9-pdf-types
+
+  Contexto: export-pdf.ts tenia 31 instancias de any — 11 casts para acceder
+    a propiedades del plugin jspdf-autotable (lastAutoTable.finalY) y 20
+    parametros de funcion sin tipar.
+
+  Tarea P9.1 — Type declaration para jspdf-autotable:
+    * Nuevo archivo: src/types/jspdf-autotable.d.ts
+    * Module augmentation: extends jsPDF interface con lastAutoTable y
+      previousAutoTable (propiedades agregadas en runtime por el plugin)
+    * TypeScript las reconoce automaticamente via tsconfig include
+
+  Tarea P9.2 — Eliminar 11 as any de jsPDF internals:
+    * (doc as any).lastAutoTable.finalY → doc.lastAutoTable.finalY
+    * 11 instancias en 6 funciones: exportInvoicePDF, exportGeneralReportPDF,
+      exportBudgetPDF, exportInventoryPDF, exportQuotationPDF
+    * 1 instancia con optional chaining: doc.lastAutoTable?.finalY
+
+  Tarea P9.3 — Tipar 22 parametros de funcion:
+    * Invoice, Project, Task, Expense, TeamUser, TimeEntry, DailyLog,
+      Quotation, QuotationItem, QuotationPayment, InvProduct, InvCategory,
+      InvMovement — 13 tipos importados desde types.ts
+    * Todas las funciones de exportacion ahora tienen parametros tipados
+    * 0 any restantes en el archivo
+
+  Archivos: 1 nuevo (jspdf-autotable.d.ts), 1 modificado (export-pdf.ts)
+  Total: +50 lineas, -31 any eliminados
