@@ -442,6 +442,10 @@
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -459,6 +463,7 @@
 }
 .animate-fadeIn { animation: fadeIn 0.2s ease; }
 .animate-slideIn { animation: slideIn 0.2s ease; }
+.animate-slideInRight { animation: slideInRight 0.25s ease-out; }
 .animate-slideUp { animation: slideUp 0.3s ease; }
 .animate-slideDown { animation: slideDown 0.3s ease-out; }
 .animate-spin { animation: spin 0.7s linear infinite; }

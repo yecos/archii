@@ -28,6 +28,7 @@ import OfflineBanner from '@/components/common/OfflineBanner';
 /* ─── Features (lazy) ─── */
 const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
 const CommandPalette = dynamic(() => import('@/components/archiflow/CommandPalette'), { ssr: false });
+const AIAgentPanel = dynamic(() => import('@/components/archiflow/AIAgentPanel'), { ssr: false });
 
 /* ─── Modals (lazy — solo se cargan cuando se abren) ─── */
 const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), { ssr: false });
@@ -78,6 +79,8 @@ function AppContent() {
   const { invLowStock } = useInventoryContext();
   const { showNotifBanner, requestNotifPermission, dismissNotifBanner, inAppNotifs, setInAppNotifs, markNotifRead } = useNotifContext();
   const commandOpen = useUIStore((s) => s.commandOpen);
+  const aiAgentOpen = useUIStore((s) => s.aiAgentOpen);
+  const setAIAgentOpen = useUIStore((s) => s.setAIAgentOpen);
   const setCommandOpen = useUIStore((s) => s.setCommandOpen);
 
   if (!ready || loading) return <LoadingScreen />;
@@ -210,6 +213,7 @@ function AppContent() {
 
       <LightboxViewer />
       <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
+      <AIAgentPanel isOpen={aiAgentOpen} onClose={() => setAIAgentOpen(false)} />
     </div>
   );
 }

@@ -23,6 +23,11 @@ interface UIState {
   setCommandOpen: (open: boolean) => void;
   toggleCommand: () => void;
 
+  // AI Agent Panel
+  aiAgentOpen: boolean;
+  setAIAgentOpen: (open: boolean) => void;
+  toggleAIAgent: () => void;
+
   // Notifications
   unreadCount: number;
   setUnreadCount: (count: number) => void;
@@ -66,6 +71,11 @@ export const useUIStore = create<UIState>((set) => ({
   commandOpen: false,
   setCommandOpen: (open) => set({ commandOpen: open }),
   toggleCommand: () => set((state) => ({ commandOpen: !state.commandOpen })),
+
+  // AI Agent Panel
+  aiAgentOpen: false,
+  setAIAgentOpen: (open) => set({ aiAgentOpen: open }),
+  toggleAIAgent: () => set((state) => ({ aiAgentOpen: !state.aiAgentOpen })),
 
   // Notifications
   unreadCount: 0,

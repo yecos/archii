@@ -3,7 +3,7 @@ import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import type { TeamUser, Project, Task, GalleryPhoto, InvProduct } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Palette } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Palette, Sparkles } from 'lucide-react';
 
 /** Firebase auth user — loaded via CDN, so no npm type available. */
 interface FirebaseUser {
@@ -99,6 +99,22 @@ export default React.memo(function Sidebar({
               <span className={`transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
             </div>
           ))}
+        </div>
+        {/* AI Agent Button */}
+        <div className="px-3 pb-2">
+          <button
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13px] bg-[var(--af-accent)]/10 text-[var(--af-accent)] hover:bg-[var(--af-accent)]/20 transition-all font-medium"
+            onClick={() => {
+              const { useUIStore } = require('@/stores/ui-store');
+              const store = useUIStore.getState();
+              store.setAIAgentOpen(true);
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+          >
+            <Sparkles size={16} className="stroke-current" />
+            <span>Agente IA</span>
+            <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/20">FREE</span>
+          </button>
         </div>
         <div className="skeuo-divider border-t border-[var(--skeuo-edge-light)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--skeuo-raised)] hover:shadow-[var(--skeuo-shadow-raised-sm)] transition-all" onClick={() => navigateTo('profile')}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid ?? '')} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
