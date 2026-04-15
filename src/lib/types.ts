@@ -90,6 +90,7 @@ export interface Task {
     priority: TaskPriority;
     status: TaskStatus;
     dueDate: string;
+    startDate?: string;
     description?: string;
     subtasks?: Subtask[];
     progress?: number;

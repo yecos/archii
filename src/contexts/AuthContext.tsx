@@ -7,7 +7,7 @@ import type { TeamUser, Project, Task } from '@/lib/types';
 import { getInitials } from '@/lib/helpers';
 import { confirm } from '@/hooks/useConfirmDialog';
 
-interface FirebaseUserInfo {
+export interface FirebaseUserInfo {
   uid: string;
   email: string | null;
   displayName: string | null;

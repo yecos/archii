@@ -7,6 +7,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAdmin } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor, fmtCOP } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
+import type { Approval } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
 import { Trash2, Shield, CheckCircle, XCircle, Clock, Lock, BarChart3, TrendingUp, ClipboardList, Users, AlertTriangle, HardHat, Folder, DollarSign, CalendarDays, User, Key, Check, X, Hourglass, FileText } from 'lucide-react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
@@ -172,7 +173,7 @@ export default function AdminScreen() {
                     <div className="text-[12px] font-semibold mt-1">{t.data.title}</div>
                     {proj && <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{proj.data.name}</div>}
                     <div className="flex gap-3 mt-1 text-[10px] text-[var(--muted-foreground)]">
-                      {(t.data as any).startDate && <span>{fmtDate((t.data as any).startDate)}</span>}
+                      {(t.data.startDate) && <span>{fmtDate(t.data.startDate)}</span>}
                       {t.data.dueDate && <span>→ {fmtDate(t.data.dueDate)}</span>}
                     </div>
                     <div className="text-[10px] text-[var(--muted-foreground)] mt-0.5"><User size={10} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}</div>
@@ -316,7 +317,7 @@ export default function AdminScreen() {
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
                   {filtered.map(a => {
                     const isPending = a.data.status === 'Pendiente';
-                    const TypeIcon = (a.data as any).type === 'budget_change' ? <DollarSign size={18} className="text-emerald-400" /> : (a.data as any).type === 'phase_completion' ? <HardHat size={18} className="text-blue-400" /> : (a.data as any).type === 'expense_approval' ? <FileText size={18} className="text-amber-400" /> : <ClipboardList size={18} className="text-[var(--af-text3)]" />;
+                    const TypeIcon = (a.data.type) === 'budget_change' ? <DollarSign size={18} className="text-emerald-400" /> : (a.data.type) === 'phase_completion' ? <HardHat size={18} className="text-blue-400" /> : (a.data.type) === 'expense_approval' ? <FileText size={18} className="text-amber-400" /> : <ClipboardList size={18} className="text-[var(--af-text3)]" />;
                     return (
                       <div key={a.id} className={`card-elevated rounded-xl p-4 transition-all ${isPending ? 'border border-amber-500/20 hover:border-amber-500/40' : ''}`}>
                         <div className="flex items-start gap-3">
@@ -332,14 +333,14 @@ export default function AdminScreen() {
                             </div>
                             {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mt-1">{a.data.description}</div>}
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-[var(--af-text3)]">
-                              {(a.data as any).projectName && <span><Folder size={11} className="inline mr-0.5" />{(a.data as any).projectName}</span>}
-                              {(a.data as any).amount > 0 && <span className="text-[var(--af-accent)] font-medium"><DollarSign size={11} className="inline mr-0.5" />{fmtCOP((a.data as any).amount)}</span>}
-                              {(a.data as any).requestedByName && <span><User size={11} className="inline mr-0.5" />{(a.data as any).requestedByName}</span>}
+                              {(a.data.projectName) && <span><Folder size={11} className="inline mr-0.5" />{(a.data.projectName)}</span>}
+                              {(a.data.amount ?? 0) > 0 && <span className="text-[var(--af-accent)] font-medium"><DollarSign size={11} className="inline mr-0.5" />{fmtCOP(a.data.amount ?? 0)}</span>}
+                              {(a.data.requestedByName) && <span><User size={11} className="inline mr-0.5" />{(a.data.requestedByName)}</span>}
                               {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
                             </div>
-                            {(a.data as any)?.comments && (
+                            {(a.data.comments) && (
                               <div className="mt-2 text-[11px] text-[var(--muted-foreground)] skeuo-well rounded-md px-2.5 py-1.5">
-                                <span className="font-medium">{(a.data as any)?.reviewedByName || 'Revisor'}:</span> {(a.data as any).comments}
+                                <span className="font-medium">{(a.data.reviewedByName) || 'Revisor'}:</span> {(a.data.comments)}
                               </div>
                             )}
                           </div>

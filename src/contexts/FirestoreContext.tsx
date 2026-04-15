@@ -209,11 +209,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, [ready, authUser]);
 
   // AI project context
-  const currentProject = useMemo(() => projects.find((p: any) => p.id === selectedProjectId), [projects, selectedProjectId]);
-  const projectTasks = useMemo(() => tasks.filter((t: any) => t.data.projectId === selectedProjectId), [tasks, selectedProjectId]);
-  const projectExpenses = useMemo(() => expenses.filter((e: any) => e.data.projectId === selectedProjectId), [expenses, selectedProjectId]);
+  const currentProject = useMemo(() => projects.find((p: Project) => p.id === selectedProjectId), [projects, selectedProjectId]);
+  const projectTasks = useMemo(() => tasks.filter((t: Task) => t.data.projectId === selectedProjectId), [tasks, selectedProjectId]);
+  const projectExpenses = useMemo(() => expenses.filter((e: Expense) => e.data.projectId === selectedProjectId), [expenses, selectedProjectId]);
   const projectBudget = useMemo(() => currentProject?.data.budget || 0, [currentProject]);
-  const projectSpent = useMemo(() => projectExpenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [projectExpenses]);
+  const projectSpent = useMemo(() => projectExpenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [projectExpenses]);
 
   useEffect(() => {
     if (currentProject) {
@@ -225,7 +225,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         currentProject.data.status ? `Estado: ${currentProject.data.status}` : '',
         currentProject.data.budget ? `Presupuesto: ${fmtCOP(currentProject.data.budget)}` : '',
         currentProject.data.progress !== undefined ? `Progreso: ${currentProject.data.progress}%` : '',
-        projectTasks.length > 0 ? `Tareas: ${projectTasks.length} (${projectTasks.filter((t: any) => t.data.status === 'Completado').length} completadas)` : '',
+        projectTasks.length > 0 ? `Tareas: ${projectTasks.length} (${projectTasks.filter((t: Task) => t.data.status === 'Completado').length} completadas)` : '',
         projectExpenses.length > 0 ? `Gastos registrados: ${fmtCOP(projectSpent)} de ${fmtCOP(projectBudget)}` : '',
       ].filter(Boolean).join('\n');
       useUIStore.getState().setAIProjectContext(ctx);
@@ -254,7 +254,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) {
-        const existing = projects.find((p: any) => p.id === editingId);
+        const existing = projects.find((p: Project) => p.id === editingId);
         await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado');
         // Audit: update
         if (existing) {
@@ -301,7 +301,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, [editingId, forms, authUser, projects, msConnected, msAccessToken, showToast, closeModal, setForms]);
 
   const deleteProject = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
-    const existing = projects.find((p: any) => p.id === id);
+    const existing = projects.find((p: Project) => p.id === id);
     const projName = existing?.data?.name || 'Proyecto';
     await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado');
     // Audit: delete
@@ -309,7 +309,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }, [confirm, showToast, projects, authUser]);
 
   const duplicateProject = useCallback(async (id: string) => {
-    const source = projects.find((p: any) => p.id === id);
+    const source = projects.find((p: Project) => p.id === id);
     if (!source) return;
     const src = source.data;
     try {
@@ -323,11 +323,11 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         createdAt: ts, createdBy: authUser?.uid, updatedAt: ts, updatedBy: authUser?.uid,
       });
       // Copy tasks (without completion data)
-      const srcTasks = tasks.filter((t: any) => t.data.projectId === id);
+      const srcTasks = tasks.filter((t: Task) => t.data.projectId === id);
       if (srcTasks.length > 0) {
         const batch = db.batch();
-        srcTasks.forEach((t: any) => {
-          const { id: _tid, createdAt: _ca, updatedAt: _ua, ...taskData } = t.data;
+        srcTasks.forEach((t: Task) => {
+          const { createdAt: _ca, updatedAt: _ua, ...taskData } = t.data;
           batch.set(db.collection('tasks').doc(), { ...taskData, projectId: ref.id, status: 'Pendiente', progress: 0, completedAt: null, createdAt: ts, updatedAt: ts });
         });
         await batch.commit();
@@ -361,7 +361,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const data: any = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) {
-        const existing = tasks.find((t: any) => t.id === editingId);
+        const existing = tasks.find((t: Task) => t.id === editingId);
         await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada');
         // Audit: update
         if (existing) {
@@ -375,7 +375,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         // Audit: create
         logAudit('create', 'task' as AuditEntityType, ref.id, title, undefined, data.projectId || undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
         if (assignees.length > 0 && forms.taskProject) {
-          const proj = projects.find((p: any) => p.id === forms.taskProject);
+          const proj = projects.find((p: Project) => p.id === forms.taskProject);
           const projName = proj?.data?.name || 'Proyecto';
           assignees.forEach((uid: string) => { notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp taskAssigned notification failed:', err)); });
         }
@@ -386,9 +386,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const openEditTask = useCallback((t: Task) => {
     setEditingId(t.id);
-    const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
-    const subtasks: Subtask[] = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [];
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: (t.data as any).projectId || '', taskAssignees: assignees, taskAssignee: (t.data as any).assigneeId || '', taskPriority: (t.data as any).priority || 'Media', taskStatus: (t.data as any).status || 'Por hacer', taskDue: (t.data as any).dueDate || '', taskSubtasks: subtasks }));
+    const assignees: string[] = Array.isArray(t.data.assigneeIds) ? t.data.assigneeIds : (t.data.assigneeId ? [t.data.assigneeId] : []);
+    const subtasks: Subtask[] = Array.isArray(t.data.subtasks) ? t.data.subtasks : [];
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: subtasks }));
     openModal('task');
   }, [setEditingId, setForms, openModal]);
 
@@ -407,7 +407,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, []);
 
   const deleteTask = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar tarea', description: '¿Eliminar tarea?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
-    const existing = tasks.find((t: any) => t.id === id);
+    const existing = tasks.find((t: Task) => t.id === id);
     const taskName = existing?.data?.title || 'Tarea';
     await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada');
     // Audit: delete
@@ -416,9 +416,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
     try {
-      const task = tasks.find((t: any) => t.id === taskId);
+      const task = tasks.find((t: Task) => t.id === taskId);
       if (!task) return;
-      const subtasks: Subtask[] = Array.isArray((task.data as any).subtasks) ? (task.data as any).subtasks : [];
+      const subtasks: Subtask[] = Array.isArray(task.data.subtasks) ? task.data.subtasks : [];
       const updated = subtasks.map((s: Subtask) => s.id === subtaskId ? { ...s, completed: !s.completed } : s);
       await getFirebase().firestore().collection('tasks').doc(taskId).update({ subtasks: updated, updatedAt: serverTimestamp() });
     } catch (err) { console.error('[ArchiFlow]', err); }
@@ -426,9 +426,9 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   const deleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
     try {
-      const task = tasks.find((t: any) => t.id === taskId);
+      const task = tasks.find((t: Task) => t.id === taskId);
       if (!task) return;
-      const subtasks: Subtask[] = Array.isArray((task.data as any).subtasks) ? (task.data as any).subtasks : [];
+      const subtasks: Subtask[] = Array.isArray(task.data.subtasks) ? task.data.subtasks : [];
       const updated = subtasks.filter((s: Subtask) => s.id !== subtaskId);
       await getFirebase().firestore().collection('tasks').doc(taskId).update({ subtasks: updated, updatedAt: serverTimestamp() });
     } catch (err) { console.error('[ArchiFlow]', err); }
@@ -595,16 +595,16 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const approveApproval = useCallback(async (id: string, comments?: string) => {
     try {
       const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
-      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      const projectId = approval?.data?.projectId || selectedProjectId;
       if (!projectId) return;
       const ts = serverTimestamp();
       const updateData: Record<string, any> = { status: 'Aprobada', reviewedBy: authUser?.uid || '', reviewedByName: authUser?.displayName || authUser?.email || 'Admin', reviewedAt: ts, updatedAt: ts };
       if (comments) updateData.comments = comments;
       await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update(updateData);
       showToast('✅ Aprobación aceptada');
-      const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
-      if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Aprobada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Aprobada) notification failed:', err));
+      const projName = approval?.data?.projectName || currentProject?.data?.name || 'Proyecto';
+      if (approval?.data?.requestedBy) {
+        notifyWhatsApp.approvalResolved(approval?.data?.requestedBy, approval?.data?.title, 'Aprobada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Aprobada) notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);
@@ -612,15 +612,15 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const rejectApproval = useCallback(async (id: string, comments?: string) => {
     try {
       const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
-      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      const projectId = approval?.data?.projectId || selectedProjectId;
       if (!projectId) return;
       const ts = serverTimestamp();
       const updateData: Record<string, any> = { status: 'Rechazada', reviewedBy: authUser?.uid || '', reviewedByName: authUser?.displayName || authUser?.email || 'Admin', reviewedAt: ts, updatedAt: ts };
       if (comments) updateData.comments = comments;
       await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update(updateData);
       showToast('❌ Aprobación rechazada');
-      if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, 'Rechazada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Rechazada) notification failed:', err));
+      if (approval?.data?.requestedBy) {
+        notifyWhatsApp.approvalResolved(approval?.data?.requestedBy, approval?.data?.title, 'Rechazada', authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved (Rechazada) notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [allApprovals, approvals, selectedProjectId, authUser, showToast]);
@@ -628,20 +628,20 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const updateApproval = useCallback(async (id: string, status: string) => {
     try {
       const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
-      const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+      const projectId = approval?.data?.projectId || selectedProjectId;
       if (!projectId) return;
       await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).update({ status, updatedAt: serverTimestamp() });
       showToast('Estado actualizado');
-      const projName = (approval?.data as any)?.projectName || currentProject?.data?.name || 'Proyecto';
-      if ((approval?.data as any)?.requestedBy) {
-        notifyWhatsApp.approvalResolved((approval?.data as any).requestedBy, (approval?.data as any).title, status, authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved notification failed:', err));
+      const projName = approval?.data?.projectName || currentProject?.data?.name || 'Proyecto';
+      if (approval?.data?.requestedBy) {
+        notifyWhatsApp.approvalResolved(approval?.data?.requestedBy, approval?.data?.title, status, authUser?.displayName || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp approvalResolved notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); }
   }, [allApprovals, approvals, selectedProjectId, currentProject, authUser, showToast]);
 
   const deleteApproval = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar aprobación', description: '¿Eliminar aprobación?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
     const approval = allApprovals.find(a => a.id === id) || approvals.find(a => a.id === id);
-    const projectId = (approval?.data as any)?.projectId || selectedProjectId;
+    const projectId = approval?.data?.projectId || selectedProjectId;
     if (!projectId) return;
     await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(id).delete(); showToast('Eliminada');
   } catch (err) { console.error('[ArchiFlow]', err); } }, [confirm, allApprovals, approvals, selectedProjectId]);

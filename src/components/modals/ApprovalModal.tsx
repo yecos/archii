@@ -4,7 +4,7 @@ import CenterModal from '@/components/common/CenterModal';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { useUI, useFirestore, useAuth } from '@/hooks/useDomain';
 import { APPROVAL_TYPE_LABELS, APPROVAL_TYPE_ICONS } from '@/lib/types';
-import type { ApprovalType } from '@/lib/types';
+import type { ApprovalType, Approval, Project } from '@/lib/types';
 import { fmtCOP } from '@/lib/helpers';
 
 const APPROVAL_TYPES: { value: ApprovalType; label: string; icon: string }[] = [
@@ -25,7 +25,7 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
   const showAmount = appType === 'budget_change' || appType === 'expense_approval';
 
   // If there's a reviewing approval (from admin or detail), show review section
-  const reviewApproval = forms.reviewingApproval as any | null;
+  const reviewApproval = (forms.reviewingApproval ?? null) as Approval | null;
 
   const handleSubmit = async () => {
     await createApproval({
@@ -55,43 +55,43 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
       {reviewApproval ? (
         <>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">{APPROVAL_TYPE_ICONS[(reviewApproval.data as any)?.type as ApprovalType] || '📋'}</span>
+            <span className="text-xl">{APPROVAL_TYPE_ICONS[reviewApproval.data?.type as ApprovalType] || '📋'}</span>
             <h2 className="text-lg font-semibold flex-1">Revisar Aprobación</h2>
           </div>
 
           <div className="skeuo-panel p-4 mb-4">
             <div className="flex items-start justify-between mb-2">
-              <div className="text-sm font-semibold">{(reviewApproval.data as any)?.title}</div>
+              <div className="text-sm font-semibold">{reviewApproval.data?.title}</div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                (reviewApproval.data as any)?.status === 'Pendiente' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : ''
+                reviewApproval.data?.status === 'Pendiente' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : ''
               }`}>
-                {(reviewApproval.data as any)?.status}
+                {reviewApproval.data?.status}
               </span>
             </div>
-            {(reviewApproval.data as any)?.description && (
-              <p className="text-xs text-[var(--muted-foreground)] mb-2">{(reviewApproval.data as any)?.description}</p>
+            {reviewApproval.data?.description && (
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">{reviewApproval.data?.description}</p>
             )}
             <div className="space-y-1 text-[11px] text-[var(--muted-foreground)]">
               <div className="flex items-center gap-2">
                 <span>Tipo:</span>
-                <span className="font-medium text-[var(--foreground)]">{APPROVAL_TYPE_LABELS[(reviewApproval.data as any)?.type as ApprovalType] || (reviewApproval.data as any)?.type}</span>
+                <span className="font-medium text-[var(--foreground)]">{APPROVAL_TYPE_LABELS[reviewApproval.data?.type as ApprovalType] || reviewApproval.data?.type}</span>
               </div>
-              {(reviewApproval.data as any)?.projectName && (
+              {reviewApproval.data?.projectName && (
                 <div className="flex items-center gap-2">
                   <span>Proyecto:</span>
-                  <span className="font-medium text-[var(--foreground)]">{(reviewApproval.data as any)?.projectName}</span>
+                  <span className="font-medium text-[var(--foreground)]">{reviewApproval.data?.projectName}</span>
                 </div>
               )}
-              {(reviewApproval.data as any)?.amount > 0 && (
+              {(reviewApproval.data?.amount ?? 0) > 0 && (
                 <div className="flex items-center gap-2">
                   <span>Monto:</span>
-                  <span className="font-semibold text-[var(--af-accent)]">{fmtCOP((reviewApproval.data as any)?.amount)}</span>
+                  <span className="font-semibold text-[var(--af-accent)]">{fmtCOP(reviewApproval.data?.amount ?? 0)}</span>
                 </div>
               )}
-              {(reviewApproval.data as any)?.requestedByName && (
+              {reviewApproval.data?.requestedByName && (
                 <div className="flex items-center gap-2">
                   <span>Solicitado por:</span>
-                  <span className="font-medium text-[var(--foreground)]">{(reviewApproval.data as any)?.requestedByName}</span>
+                  <span className="font-medium text-[var(--foreground)]">{reviewApproval.data?.requestedByName}</span>
                 </div>
               )}
             </div>
@@ -164,7 +164,7 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
                 onChange={(e) => setForms(p => ({ ...p, appProject: e.target.value }))}
               >
                 <option value="">Seleccionar proyecto</option>
-                {fs.projects.map((p: any) => (
+                {fs.projects.map((p: Project) => (
                   <option key={p.id} value={p.id}>{p.data.name}</option>
                 ))}
               </FormSelect>
