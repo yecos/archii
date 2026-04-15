@@ -2601,3 +2601,56 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
   Archivos: 6 modificados
   Total: ~54 as any eliminados, 18 funciones tipadas, 1 campo agregado
+
+2026-04-17 02:15 | REFACTOR — P7 FormData Interfaces: tipar 16 save functions + reducir 20 any
+  Estado: COMPLETADO
+  Commit: 57ab516
+  Build: exitoso (Turbopack, 0 errores TypeScript)
+  Tag de respaldo: backup/pre-p7-formdata-types
+
+  Contexto: Continuacion de P5/P6 type safety. El objetivo era eliminar
+    Record<string, any> en los parametros de las funciones save de
+    firestore-actions.ts, creando interfaces FormData especificas por entidad.
+
+  Tarea P7.1 — 16 FormData interfaces creadas en types.ts:
+    * ProjectFormData (9 campos: projName, projStatus, projClient, etc.)
+    * TaskFormData (6 campos: taskTitle, taskProject, taskAssignee, etc.)
+    * ExpenseFormData (5 campos: expConcept, expProject, expCategory, etc.)
+    * SupplierFormData (9 campos: supName, supCategory, supPhone, etc.)
+    * CompanyFormData (6 campos: compName, compNit, compAddress, etc.)
+    * ApprovalFormData (2 campos: appTitle, appDesc)
+    * MeetingFormData (8 campos: meetTitle, meetProject, meetAttendees[], etc.)
+    * GalleryPhotoFormData (4 campos: photoProject, photoCategory, etc.)
+    * InvProductFormData (10 campos: prodName, prodSku, prodCategory, etc.)
+    * InvMovementFormData (7 campos: movProduct, movType, movQuantity, etc.)
+    * InvTransferFormData (7 campos: transProduct, transProductName, etc.)
+    * TimeEntryFormData (9 campos: teDuration/teRate como string|number)
+    * InvoiceFormData (10 campos: invItems como any[], totales string|number)
+    * QuotationFormData (17 campos: sections/payments como any[])
+    * CommentFormData (5 campos: parentId como string|null)
+    * ChatMessageFormData (11 campos opcionales: text, fileData, audio, etc.)
+
+  Tarea P7.2 — 16 save functions tipadas en firestore-actions.ts:
+    * Reemplazado data: Record<string, any> con tipo FormData especifico
+    * sendMessage usa ChatMessageFormData (msgData parameter)
+    * Nota: InvoiceFormData.invItems, QuotationFormData.sections/payments
+      quedan como any[] por estructuras anidadas complejas
+
+  Tarea P7.3 — 20 any adicionales reducidos:
+    * CommentsContext.tsx: log: any → log: DailyLog
+    * ProjectObra.tsx: dailyLogs: DailyLog[], openEditLog: (log: DailyLog)
+    * TaskModal.tsx: 11 setForms callbacks (p: any) → (p: Record<string,any>)
+    * FirestoreContext.tsx: data: any → Record<string,any>, 2 setForms callbacks
+
+  Nota sobre any restante (~346):
+    * UIContext forms: Record<string, any> — raiz del problema, requiere
+      migracion de 100+ consumidores (no tocar sin plan completo)
+    * AuthScreen: usa forms para login/register (no mapea a FormData)
+    * CommentsContext logForm: campos string vs DailyLog.data (numeros)
+    * export-pdf.ts: jsPDF internals
+    * whatsapp-commands.ts: 107 any (refactor completo pendiente)
+    * Recomendacion: DailyLogFormData + AuthFormData como tareas futuras
+
+  Archivos: 6 modificados (types.ts, firestore-actions.ts, CommentsContext,
+    ProjectObra, TaskModal, FirestoreContext)
+  Total: +211 lineas, -35 eliminadas
