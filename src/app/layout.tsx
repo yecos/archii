@@ -94,7 +94,7 @@ export default function RootLayout({
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               var cfg = {
-                  apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
+                    apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
   authDomain: "archiflow-prod-2026.firebaseapp.com",
   projectId: "archiflow-prod-2026",
   storageBucket: "archiflow-prod-2026.firebasestorage.app",
