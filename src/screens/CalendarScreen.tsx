@@ -5,14 +5,10 @@ import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useCalendar } from '@/hooks/useDomain';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MESES } from '@/lib/types';
+import { prioColor, taskStColor } from '@/lib/helpers';
+import { MESES, DIAS_SEMANA } from '@/lib/types';
 import { expandMeetingForMonth } from '@/lib/recurrence';
-import CalendarHeader from '@/components/features/calendar/CalendarHeader';
-import CalendarStats from '@/components/features/calendar/CalendarStats';
-import CalendarWeeklyMobile from '@/components/features/calendar/CalendarWeeklyMobile';
-import CalendarWeeklyDesktop from '@/components/features/calendar/CalendarWeeklyDesktop';
-import CalendarMonthlyView from '@/components/features/calendar/CalendarMonthlyView';
-import SelectedDayDetail from '@/components/features/calendar/SelectedDayDetail';
+import { Repeat, ChevronLeft, ChevronRight, Clock, FolderOpen, CalendarDays, Users, Zap, User, Folder, Pencil, X } from 'lucide-react';
 
 /* ===== Helpers ===== */
 
@@ -223,89 +219,728 @@ export default function CalendarScreen() {
 
   return (
     <div className="animate-fadeIn">
-      <CalendarHeader
-        calView={calView}
-        weekLabel={weekLabel}
-        calMonth={calMonth}
-        calYear={calYear}
-        calFilterProject={calFilterProject}
-        projects={projects}
-        onPrev={calView === 'weekly' ? prevWeek : prevMonth}
-        onNext={calView === 'weekly' ? nextWeek : nextMonth}
-        onViewChange={setCalView}
-        onFilterProjectChange={setCalFilterProject}
-        onGoToday={goToday}
-      />
+      {/* ===== Calendar Header ===== */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            className="skeuo-btn w-8 h-8 rounded-lg flex items-center justify-center"
+            onClick={calView === 'weekly' ? prevWeek : prevMonth}
+          >
+            <ChevronLeft className="w-4 h-4 text-[var(--muted-foreground)]" />
+          </button>
+          <div className="text-[15px] font-semibold min-w-[120px] sm:min-w-[160px] text-center">
+            {calView === 'weekly' ? weekLabel : `${MESES[calMonth]} ${calYear}`}
+          </div>
+          <button
+            className="skeuo-btn w-8 h-8 rounded-lg flex items-center justify-center"
+            onClick={calView === 'weekly' ? nextWeek : nextMonth}
+          >
+            <ChevronRight className="w-4 h-4 text-[var(--muted-foreground)]" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="skeuo-well flex rounded-xl overflow-hidden">
+            <button
+              className={`text-[11px] px-3 py-1.5 cursor-pointer transition-colors ${
+                calView === 'monthly'
+                  ? 'bg-[var(--af-accent)] text-background font-semibold'
+                  : 'bg-[var(--af-bg3)] text-[var(--foreground)] hover:bg-[var(--af-bg4)]'
+              }`}
+              onClick={() => setCalView('monthly')}
+            >
+              Mensual
+            </button>
+            <button
+              className={`text-[11px] px-3 py-1.5 cursor-pointer transition-colors border-l border-[var(--border)] ${
+                calView === 'weekly'
+                  ? 'bg-[var(--af-accent)] text-background font-semibold'
+                  : 'bg-[var(--af-bg3)] text-[var(--foreground)] hover:bg-[var(--af-bg4)]'
+              }`}
+              onClick={() => setCalView('weekly')}
+            >
+              Semanal
+            </button>
+          </div>
+          <select
+            className="skeuo-input rounded-lg px-2.5 py-1.5 text-[11px]"
+            value={calFilterProject}
+            onChange={e => setCalFilterProject(e.target.value)}
+          >
+            <option value="all">Todos los proyectos</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.data.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="skeuo-btn text-[11px] px-2.5 py-1.5 rounded-lg cursor-pointer"
+            onClick={goToday}
+          >
+            Hoy
+          </button>
+        </div>
+      </div>
 
-      <CalendarStats
-        calTasks={calTasks}
-        today={today}
-        todayOnly={todayOnly}
-        expandedMeetingsCount={expandedMeetings.length}
-        openNewMeeting={openNewMeeting}
-      />
+      {/* ===== Stats row ===== */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20"
+            onClick={openNewMeeting}
+          >
+            + Reunión
+          </button>
+          <span className="text-[11px] text-purple-400/70">
+            {expandedMeetings.length} este mes
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-red-500/10 rounded-lg p-2.5 text-center">
+          <div className="text-base font-bold text-red-400">
+            {calTasks.filter(t => t.data.priority === 'Alta').length}
+          </div>
+          <div className="text-[9px] text-red-400/70">Urgentes</div>
+        </div>
+        <div className="bg-amber-500/10 rounded-lg p-2.5 text-center">
+          <div className="text-base font-bold text-amber-400">
+            {calTasks.filter(t => {
+              const d = t.data.dueDate;
+              return d && new Date(d) < todayOnly;
+            }).length}
+          </div>
+          <div className="text-[9px] text-amber-400/70">Vencidas</div>
+        </div>
+        <div className="bg-blue-500/10 rounded-lg p-2.5 text-center">
+          <div className="text-base font-bold text-blue-400">
+            {calTasks.filter(t => {
+              const d = t.data.dueDate;
+              if (!d) return false;
+              const diff = Math.ceil(
+                (new Date(d).getTime() - today.getTime()) / 86400000,
+              );
+              return diff >= 0 && diff <= 7;
+            }).length}
+          </div>
+          <div className="text-[9px] text-blue-400/70">Esta semana</div>
+        </div>
+      </div>
 
       {/* ===== Calendar Grid ===== */}
       {calView === 'weekly' ? (
+        /* ========== WEEKLY VIEW ========== */
         isMobile ? (
-          <CalendarWeeklyMobile
-            weekDays={weekDays}
-            todayStr={todayStr}
-            todayOnly={todayOnly}
-            calSelectedDate={calSelectedDate}
-            calTasks={calTasks}
-            weeklyExpandedMeetings={weeklyExpandedMeetings}
-            projects={projects}
-            getUserName={getUserName}
-            formatTime12={formatTime12}
-            formatDateISO={formatDateISO}
-            onSelectDate={setCalSelectedDate}
-            openEditMeeting={openEditMeeting}
-          />
+          /* ----- Mobile: single-day agenda ----- */
+          <div className="space-y-3">
+            {/* Horizontal scrollable day chips */}
+            <div className="card-elevated rounded-xl p-2">
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+                {weekDays.map((day, i) => {
+                  const ds = formatDateISO(day);
+                  const isToday = ds === todayStr;
+                  const isSelected = calSelectedDate === ds;
+                  return (
+                    <button
+                      key={i}
+                      className={`flex flex-col items-center min-w-[48px] px-2 py-2 rounded-lg transition-colors flex-shrink-0 cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--af-accent)] text-background'
+                          : isToday
+                            ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30'
+                            : 'bg-[var(--af-bg3)] text-[var(--foreground)] hover:bg-[var(--af-bg4)]'
+                      }`}
+                      onClick={() => setCalSelectedDate(ds)}
+                    >
+                      <span className="text-[9px] font-semibold uppercase leading-none">
+                        {DIAS_SEMANA[i]}
+                      </span>
+                      <span className="text-base font-bold mt-1 leading-none">
+                        {day.getDate()}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Agenda list for the selected day */}
+            <div className="card-elevated rounded-xl overflow-hidden">
+              {(() => {
+                const selDate = calSelectedDate || todayStr;
+                const selDayTasks = calTasks.filter(t => t.data.dueDate === selDate);
+                const selDayMeetings = weeklyExpandedMeetings
+                  .filter(e => e.date === selDate)
+                  .sort((a, b) => (a.meeting.data.time || '').localeCompare(b.meeting.data.time || ''));
+                const hasEvents = selDayTasks.length > 0 || selDayMeetings.length > 0;
+
+                if (!hasEvents) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 text-[var(--muted-foreground)]">
+                      <CalendarDays size={30} className="text-[var(--muted-foreground)]" />
+                      <div className="text-[13px] font-medium">Sin eventos</div>
+                      <div className="text-[11px] mt-0.5 opacity-70">
+                        {(() => {
+                          const parts = selDate.split('-');
+                          return `${parseInt(parts[2])} de ${MESES[parseInt(parts[1]) - 1]}`;
+                        })()}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="divide-y divide-[var(--border)]">
+                    {/* Meetings first, then tasks */}
+                    {selDayMeetings.map((e, i) => {
+                      const m = e.meeting;
+                      const meetProj = projects.find(p => p.id === m.data.projectId);
+                      const time = m.data.time || '09:00';
+                      const duration = parseInt(String(m.data.duration || 60)) || 60;
+                      const [h, startMin] = time.split(':').map(Number);
+                      const totalEndMin = h * 60 + startMin + duration;
+                      const endH = Math.floor(totalEndMin / 60);
+                      const endM = totalEndMin % 60;
+                      const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+                      return (
+                        <div
+                          key={`mob-meet-${m.id}-${e.date}-${i}`}
+                          className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--skeuo-raised)] transition-colors"
+                          onClick={() => openEditMeeting(m)}
+                        >
+                          {/* Purple left indicator */}
+                          <div className="w-1 rounded-full bg-purple-500 flex-shrink-0" />
+                          {/* Time column */}
+                          <div className="flex flex-col items-center w-12 flex-shrink-0">
+                            <Clock size={12} className="text-purple-400/60 mb-0.5" />
+                            <span className="text-[10px] font-semibold text-[var(--foreground)] leading-tight">
+                              {formatTime12(time)}
+                            </span>
+                            <span className="text-[9px] text-[var(--muted-foreground)] leading-tight">
+                              {formatTime12(endTime)}
+                            </span>
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {e.isRecurring && <Repeat size={11} className="text-purple-400/70 flex-shrink-0" />}
+                              <span className="text-[13px] font-medium truncate">{m.data.title}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {meetProj && (
+                                <span className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)]">
+                                  <FolderOpen size={10} />{meetProj.data.name}
+                                </span>
+                              )}
+                              <span className="text-[9px] text-purple-400/70">{duration} min</span>
+                            </div>
+                            {m.data.attendees && m.data.attendees.length > 0 && (
+                              <div className="text-[9px] text-[var(--muted-foreground)] mt-0.5">
+                                <Users size={10} className="inline mr-0.5" />{Array.isArray(m.data.attendees) ? m.data.attendees.length : String(m.data.attendees).split(',').length} asistentes
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {selDayTasks.length > 0 && selDayMeetings.length > 0 && (
+                      <div className="px-4 py-2 bg-[var(--af-bg3)]/20">
+                        <span className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+                          Tareas ({selDayTasks.length})
+                        </span>
+                      </div>
+                    )}
+
+                    {selDayTasks
+                      .sort((a, b) => {
+                        const pOrder = { Alta: 0, Media: 1, Baja: 2 };
+                        return (pOrder[a.data.priority as keyof typeof pOrder] || 1) - (pOrder[b.data.priority as keyof typeof pOrder] || 1);
+                      })
+                      .map(t => {
+                        const proj = projects.find(p => p.id === t.data.projectId);
+                        const isOverdue = new Date(t.data.dueDate) < todayOnly;
+                        const borderColor =
+                          t.data.priority === 'Alta'
+                            ? 'bg-red-500'
+                            : t.data.priority === 'Media'
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500';
+
+                        return (
+                          <div
+                            key={`mob-task-${t.id}`}
+                            className="flex gap-3 px-4 py-3"
+                          >
+                            {/* Priority-colored left indicator */}
+                            <div className={`w-1 rounded-full ${borderColor} flex-shrink-0`} />
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                {isOverdue && <Zap size={11} className="text-red-400" />}
+                                <span className="text-[13px] font-medium truncate">{t.data.title}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {proj && (
+                                  <span className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)]">
+                                    <FolderOpen size={10} />{proj.data.name}
+                                  </span>
+                                )}
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>
+                                  {t.data.priority}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>
+                                  {t.data.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] text-[var(--muted-foreground)]">
+                                  <User size={9} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         ) : (
-          <CalendarWeeklyDesktop
-            weekDays={weekDays}
-            todayStr={todayStr}
-            todayOnly={todayOnly}
-            calSelectedDate={calSelectedDate}
-            calTasks={calTasks}
-            weeklyExpandedMeetings={weeklyExpandedMeetings}
-            TIME_SLOTS={TIME_SLOTS}
-            SLOT_H={SLOT_H}
-            START_HOUR={START_HOUR}
-            formatTime12={formatTime12}
-            formatDateISO={formatDateISO}
-            onSelectDate={setCalSelectedDate}
-            openEditMeeting={openEditMeeting}
-          />
+        /* ----- Desktop: 7-day grid ----- */
+        <div className="card-elevated rounded-xl overflow-hidden">
+          {/* Day header row */}
+          <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-[var(--border)]">
+            {/* Corner cell */}
+            <div className="p-1.5 flex items-center justify-center">
+              <span className="text-[9px] text-[var(--muted-foreground)] font-semibold uppercase">Hora</span>
+            </div>
+            {weekDays.map((day, i) => {
+              const ds = formatDateISO(day);
+              const isToday = ds === todayStr;
+              const isSelected = calSelectedDate === ds;
+              return (
+                <div
+                  key={i}
+                  className={`py-2 text-center cursor-pointer transition-colors ${
+                    isToday
+                      ? 'bg-[var(--af-accent)]/10'
+                      : isSelected
+                        ? 'bg-[var(--af-accent)]/7'
+                        : 'hover:bg-[var(--skeuo-raised)]'
+                  }`}
+                  onClick={() => setCalSelectedDate(ds)}
+                >
+                  <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+                    {DIAS_SEMANA[i]}
+                  </div>
+                  <div
+                    className={`text-lg font-bold mt-0.5 ${
+                      isToday
+                        ? 'w-8 h-8 rounded-full bg-[var(--af-accent)] text-background flex items-center justify-center mx-auto'
+                        : 'text-[var(--foreground)]'
+                    }`}
+                  >
+                    {day.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Scrollable time grid */}
+          <div className="overflow-y-auto" style={{ maxHeight: '70vh' }}>
+            <div className="grid grid-cols-[56px_repeat(7,1fr)]">
+              {/* Time labels column */}
+              <div className="card-sunken border-r border-[var(--border)]">
+                {TIME_SLOTS.map(time => (
+                  <div
+                    key={time}
+                    className="flex items-start justify-end pr-2 border-b border-[var(--border)]/40"
+                    style={{ height: `${SLOT_H}px` }}
+                  >
+                    <span className="text-[9px] text-[var(--muted-foreground)] leading-none mt-1">
+                      {formatTime12(time)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Day columns */}
+              {weekDays.map((day, i) => {
+                const ds = formatDateISO(day);
+                const isToday = ds === todayStr;
+                const isSelected = calSelectedDate === ds;
+                const dayTasks = calTasks.filter(t => t.data.dueDate === ds);
+                const dayMeetings = weeklyExpandedMeetings.filter(e => e.date === ds);
+
+                return (
+                  <div
+                    key={i}
+                    className={`border-r border-[var(--border)] relative ${
+                      isToday ? 'bg-[var(--af-accent)]/5' : ''
+                    } ${isSelected && !isToday ? 'bg-[var(--af-bg3)]/30' : ''}`}
+                  >
+                    {/* All-day tasks section */}
+                    <div className="border-b border-[var(--border)] px-0.5 py-0.5 bg-[var(--af-bg3)]/20" style={{ minHeight: '28px' }}>
+                      {dayTasks.length > 0 && (
+                        <div className="space-y-px">
+                          {dayTasks.slice(0, 2).map(t => {
+                            const isOverdue = new Date(t.data.dueDate) < todayOnly;
+                            return (
+                              <div
+                                key={t.id}
+                                className={`text-[8px] leading-tight px-1 py-0.5 rounded truncate ${
+                                  t.data.priority === 'Alta'
+                                    ? 'bg-red-500/15 text-red-400'
+                                    : t.data.priority === 'Media'
+                                      ? 'bg-amber-500/15 text-amber-400'
+                                      : 'bg-emerald-500/15 text-emerald-400'
+                                }`}
+                                title={t.data.title}
+                              >
+                                {isOverdue ? '' : ''}
+                                {t.data.title}
+                              </div>
+                            );
+                          })}
+                          {dayTasks.length > 2 && (
+                            <div className="text-[7px] text-[var(--muted-foreground)] pl-1">
+                              +{dayTasks.length - 2} más
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Time grid with meeting blocks */}
+                    <div className="relative">
+                      {/* Horizontal grid lines */}
+                      {TIME_SLOTS.map(time => (
+                        <div
+                          key={time}
+                          className="border-b border-[var(--border)]/30"
+                          style={{ height: `${SLOT_H}px` }}
+                        />
+                      ))}
+
+                      {/* Meeting blocks */}
+                      {dayMeetings.map((e, mi) => {
+                        const time = e.meeting.data.time || '09:00';
+                        const duration = e.meeting.data.duration || 60;
+                        const [h, m] = time.split(':').map(Number);
+                        const startMin = (h - START_HOUR) * 60 + m;
+                        const top = Math.max(0, (startMin / 30) * SLOT_H);
+                        const height = Math.max(20, (duration / 30) * SLOT_H);
+                        const showTime = height >= 36;
+
+                        return (
+                          <div
+                            key={`${e.meeting.id}-${e.date}-${mi}`}
+                            className="absolute left-0.5 right-0.5 rounded-lg bg-purple-500/20 border border-purple-500/30 px-1 py-0.5 overflow-hidden cursor-pointer hover:bg-purple-500/30 transition-colors z-10 shadow-[var(--skeuo-shadow-raised-sm)]"
+                            style={{ top: `${top}px`, height: `${height}px` }}
+                            title={`${e.meeting.data.title} (${time} · ${duration} min)`}
+                            onClick={ev => {
+                              ev.stopPropagation();
+                              openEditMeeting(e.meeting);
+                            }}
+                          >
+                            <div className="text-[9px] font-semibold text-purple-300 truncate leading-tight">
+                              {e.isRecurring && <Repeat size={8} className="inline mr-0.5 -mt-px" />}
+                              {e.meeting.data.title}
+                            </div>
+                            {showTime && (
+                              <div className="text-[8px] text-purple-400/80 leading-tight">
+                                {formatTime12(time)} · {duration}m
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Now indicator line */}
+                      {isToday && (() => {
+                        const now = new Date();
+                        const nowMin = (now.getHours() - START_HOUR) * 60 + now.getMinutes();
+                        const nowTop = (nowMin / 30) * SLOT_H;
+                        if (nowTop < 0 || nowTop > TIME_SLOTS.length * SLOT_H) return null;
+                        return (
+                          <div
+                            className="absolute left-0 right-0 z-20 pointer-events-none"
+                            style={{ top: `${nowTop}px` }}
+                          >
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                              <div className="flex-1 h-px bg-red-500" />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
         )
       ) : (
-        <CalendarMonthlyView
-          cells={cells}
-          calYear={calYear}
-          calMonth={calMonth}
-          calSelectedDate={calSelectedDate}
-          today={today}
-          todayOnly={todayOnly}
-          getTasksForDay={getTasksForDay}
-          getExpandedMeetingsForDay={getExpandedMeetingsForDay}
-          onSelectDate={setCalSelectedDate}
-        />
+        /* ========== MONTHLY VIEW (unchanged) ========== */
+        <div className="card-elevated rounded-xl overflow-hidden">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 border-b border-[var(--border)]">
+            {DIAS_SEMANA.map(d => (
+              <div
+                key={d}
+                className="py-2.5 text-center text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+          {/* Days grid */}
+          <div className="grid grid-cols-7">
+            {cells.map((day, idx) => {
+              if (day === null)
+                return (
+                  <div
+                    key={`e-${idx}`}
+                    className="min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] bg-[var(--af-bg3)]/30"
+                  />
+                );
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isToday =
+                day === today.getDate() &&
+                calMonth === today.getMonth() &&
+                calYear === today.getFullYear();
+              const isSelected = calSelectedDate === dateStr;
+              const dayTasks = getTasksForDay(day);
+              const dayMeetings = getExpandedMeetingsForDay(day);
+              const isPast = new Date(dateStr) < new Date(today.toISOString().split('T')[0]);
+              return (
+                <div
+                  key={day}
+                  className={`min-h-[70px] sm:min-h-[90px] border-b border-r border-[var(--border)] p-1 sm:p-1.5 cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-[var(--af-accent)]/10'
+                      : 'hover:bg-[var(--skeuo-raised)]'
+                  } ${isPast && !isToday ? 'opacity-70' : ''}`}
+                  onClick={() => setCalSelectedDate(dateStr)}
+                >
+                  <div
+                    className={`text-[11px] sm:text-[13px] font-medium mb-0.5 ${
+                      isToday
+                        ? 'w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--af-accent)] text-background flex items-center justify-center'
+                        : 'text-[var(--foreground)]'
+                    }`}
+                  >
+                    {day}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayTasks.slice(0, 3).map(t => {
+                      const proj = projects.find(p => p.id === t.data.projectId);
+                      const isOverdue = new Date(t.data.dueDate) < todayOnly;
+                      return (
+                        <div
+                          key={t.id}
+                          className={`text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate ${
+                            t.data.priority === 'Alta'
+                              ? 'bg-red-500/15 text-red-400'
+                              : t.data.priority === 'Media'
+                                ? 'bg-amber-500/15 text-amber-400'
+                                : 'bg-emerald-500/15 text-emerald-400'
+                          }`}
+                          title={t.data.title}
+                        >
+                          {isOverdue ? '' : ''}
+                          {t.data.title}
+                        </div>
+                      );
+                    })}
+                    {dayTasks.length > 3 && (
+                      <div className="text-[8px] text-[var(--muted-foreground)] pl-1">
+                        +{dayTasks.length - 3} más
+                      </div>
+                    )}
+                    {dayMeetings.slice(0, 2).map((e, i) => (
+                      <div
+                        key={`${e.meeting.id}-${e.date}-${i}`}
+                        className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400 flex items-center gap-0.5"
+                        title={`${e.meeting.data.title} (${e.meeting.data.time})`}
+                      >
+                        {e.isRecurring ? (
+                          <Repeat size={8} className="flex-shrink-0" />
+                        ) : (
+                          <CalendarDays size={8} className="flex-shrink-0" />
+                        )}{' '}
+                        {e.meeting.data.time}
+                      </div>
+                    ))}
+                    {dayMeetings.length > 2 && (
+                      <div className="text-[8px] text-[var(--muted-foreground)] pl-1">
+                        +{dayMeetings.length - 2} más
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* ===== Selected day detail (shared between views) ===== */}
       {calSelectedDate && (
-        <SelectedDayDetail
-          calSelectedDate={calSelectedDate}
-          selectedDayTasks={selectedDayTasks}
-          selectedDayMeetings={selectedDayMeetings}
-          todayOnly={todayOnly}
-          projects={projects}
-          getUserName={getUserName}
-          openNewMeeting={openNewMeeting}
-          openEditMeeting={openEditMeeting}
-          deleteMeeting={deleteMeeting}
-        />
+        <div className="mt-4 card-elevated rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-semibold">
+              {(() => {
+                const parts = calSelectedDate.split('-');
+                return `${parseInt(parts[2])} de ${MESES[parseInt(parts[1]) - 1]} ${parts[0]}`;
+              })()}
+            </div>
+            <span
+              className={`text-[11px] px-2 py-0.5 rounded-full ${
+                selectedDayTasks.length === 0
+                  ? 'skeuo-badge text-[var(--muted-foreground)]'
+                  : 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]'
+              }`}
+            >
+              {selectedDayTasks.length} tarea{selectedDayTasks.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {selectedDayTasks.length === 0 ? (
+            <div className="text-center py-6 text-[var(--af-text3)]">
+              <CalendarDays size={20} className="text-[var(--muted-foreground)]" />
+              <div className="text-sm">Sin tareas pendientes para este día</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {selectedDayTasks
+                .sort((a, b) => {
+                  const pOrder = { Alta: 0, Media: 1, Baja: 2 };
+                  return (
+                    (pOrder[a.data.priority as keyof typeof pOrder] || 1) -
+                    (pOrder[b.data.priority as keyof typeof pOrder] || 1)
+                  );
+                })
+                .map(t => {
+                  const proj = projects.find(p => p.id === t.data.projectId);
+                  const isOverdue = new Date(t.data.dueDate) < todayOnly;
+                  return (
+                    <div
+                      key={t.id}
+                      className={`border rounded-lg p-3 ${
+                        isOverdue
+                          ? 'border-red-500/20 bg-red-500/5'
+                          : 'border-[var(--skeuo-edge-light)] bg-[var(--skeuo-raised)]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="text-[13px] font-medium">{t.data.title}</div>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(t.data.priority)}`}
+                        >
+                          {t.data.priority}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
+                        {proj && <span><Folder size={10} className="inline mr-0.5" />{proj.data.name}</span>}
+                        <span><User size={9} className="inline mr-0.5" />{getUserName(t.data.assigneeId)}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>
+                          {t.data.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {/* Meetings for selected day */}
+          {(() => {
+            if (selectedDayMeetings.length === 0) return null;
+            return (
+              <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[12px] font-semibold text-purple-400">
+                    <CalendarDays size={12} className="inline mr-1" /> Reuniones ({selectedDayMeetings.length})
+                  </div>
+                  <button
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+                    onClick={openNewMeeting}
+                  >
+                    + Nueva
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {selectedDayMeetings
+                    .sort((a, b) =>
+                      (a.meeting.data.time || '').localeCompare(b.meeting.data.time || ''),
+                    )
+                    .map((e, i) => {
+                      const m = e.meeting;
+                      const meetProj = projects.find(p => p.id === m.data.projectId);
+                      return (
+                        <div
+                          key={`${m.id}-${e.date}-${i}`}
+                          className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="text-[13px] font-medium flex items-center gap-1.5">
+                              {e.isRecurring && (
+                                <Repeat
+                                  size={13}
+                                  className="text-purple-400/70 flex-shrink-0"
+                                />
+                              )}
+                              {m.data.title}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <button
+                                className="skeuo-btn text-[10px] px-1.5 py-0.5 rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                                onClick={() => openEditMeeting(m)}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer"
+                                onClick={() => deleteMeeting(m.id)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
+                            <span>
+                              🕐 {m.data.time || '09:00'} · {m.data.duration || 60} min
+                            </span>
+                            {meetProj && <span><Folder size={10} className="inline mr-0.5" />{meetProj.data.name}</span>}
+                          </div>
+                          {m.data.attendees && m.data.attendees.length > 0 && (
+                            <div className="text-[10px] text-[var(--af-text3)] mt-1">
+                              <Users size={10} className="inline" />
+                              {Array.isArray(m.data.attendees)
+                                ? m.data.attendees.join(', ')
+                                : m.data.attendees}
+                            </div>
+                          )}
+                          {m.data.description && (
+                            <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
+                              {m.data.description}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       )}
     </div>
   );

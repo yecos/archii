@@ -63,7 +63,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
         const toStock = getWarehouseStock(prod, forms.invTrTo);
         const qty = Number(forms.invTrQty || 0);
         return (
-          <div className={`rounded-lg p-3 mt-3 text-sm border space-y-1 ${qty > fromStock ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}>
+          <div className={`rounded-lg p-3 mt-3 text-sm border space-y-1 ${qty > fromStock ? 'bg-red-500/10 border-red-500/30' : 'skeuo-panel'}`}>
             <div className="flex justify-between">
               <span className="text-[var(--muted-foreground)]">Stock en {forms.invTrFrom}:</span>
               <span className="font-medium">{fromStock} → {qty > fromStock ? '❌' : fromStock - qty} {prod.data.unit}</span>

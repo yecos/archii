@@ -14,7 +14,7 @@ export default function CenterModal({ open, onClose, children, maxWidth = 480, t
         <DialogOverlay className="z-[100] bg-black/60 backdrop-blur-sm" />
         <DialogContent
           showCloseButton={false}
-          className="z-[101] bg-[var(--card)] border border-[var(--border)] rounded-2xl p-0 shadow-2xl max-h-[85dvh] sm:max-h-[85vh] flex flex-col overflow-hidden"
+          className="z-[101] card-elevated p-0 shadow-2xl max-h-[85dvh] sm:max-h-[85vh] flex flex-col overflow-hidden"
           style={{ maxWidth: maxWidth ? `${maxWidth}px` : undefined, width: '95vw' }}
         >
           {title ? (

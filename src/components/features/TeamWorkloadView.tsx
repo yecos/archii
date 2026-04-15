@@ -158,7 +158,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
     <div className="animate-fadeIn space-y-5">
       {/* ===== SUMMARY STATS BAR ===== */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
               <Users size={14} className="text-blue-400" />
@@ -169,7 +169,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
           <div className="text-[10px] text-[var(--af-text3)]">miembros</div>
         </div>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
               <TrendingUp size={14} className="text-purple-400" />
@@ -180,7 +180,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
           <div className="text-[10px] text-[var(--af-text3)]">tareas/miembro</div>
         </div>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <AlertTriangle size={14} className="text-amber-400" />
@@ -193,7 +193,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
           <div className="text-[10px] text-[var(--af-text3)]">mayor carga activa</div>
         </div>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+        <div className="card-elevated p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
               <Users size={14} className="text-emerald-400" />
@@ -210,7 +210,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
         <Filter size={14} className="text-[var(--muted-foreground)]" />
         <span className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Ordenar</span>
         <select
-          className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer ml-1"
+          className="skeuo-input rounded-lg px-2.5 py-1.5 text-xs cursor-pointer ml-1"
           value={sortBy}
           onChange={e => setSortBy(e.target.value as SortOption)}
         >
@@ -235,7 +235,7 @@ export default function TeamWorkloadView({ navigateTo }: { navigateTo: (screen: 
           return (
             <div
               key={member.uid}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 transition-all hover:border-[var(--input)]"
+              className="card-elevated p-4 transition-all hover:border-[var(--input)]"
             >
               {/* Header: Avatar + Name + Role */}
               <div className="flex items-center gap-3 mb-3">

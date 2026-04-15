@@ -59,7 +59,7 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
             <h2 className="text-lg font-semibold flex-1">Revisar Aprobación</h2>
           </div>
 
-          <div className="bg-[var(--af-bg3)] rounded-lg p-4 mb-4 border border-[var(--border)]">
+          <div className="skeuo-panel p-4 mb-4">
             <div className="flex items-start justify-between mb-2">
               <div className="text-sm font-semibold">{(reviewApproval.data as any)?.title}</div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
@@ -106,25 +106,28 @@ export default function ApprovalModal({ open, onClose }: { open: boolean; onClos
             />
           </FormField>
 
-          <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
-            <button
-              className="px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all"
-              onClick={() => { closeModal('approval'); setForms(p => ({ ...p, reviewingApproval: null, reviewComment: '' })); }}
-            >
-              Cancelar
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
-              onClick={handleReject}
-            >
-              ✕ Rechazar
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all"
-              onClick={handleApprove}
-            >
-              ✓ Aprobar
-            </button>
+          <div className="mt-5 pt-4">
+            <div className="skeuo-divider -mx-5 sm:-mx-6 mb-4" />
+            <div className="flex gap-2 justify-end">
+              <button
+                className="skeuo-btn px-4 py-2 text-[13px] font-medium"
+                onClick={() => { closeModal('approval'); setForms(p => ({ ...p, reviewingApproval: null, reviewComment: '' })); }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
+                onClick={handleReject}
+              >
+                ✕ Rechazar
+              </button>
+              <button
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all"
+                onClick={handleApprove}
+              >
+                ✓ Aprobar
+              </button>
+            </div>
           </div>
         </>
       ) : (

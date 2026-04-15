@@ -79,7 +79,7 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
         const curStock = getWarehouseStock(prod, wh);
         const qty = Number(forms.invMovQty || 0);
         return (
-          <div className={`rounded-lg p-3 mt-3 text-sm border ${forms.invMovType === 'Salida' && qty > curStock ? 'bg-red-500/10 border-red-500/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}>
+          <div className={`rounded-lg p-3 mt-3 text-sm border ${forms.invMovType === 'Salida' && qty > curStock ? 'bg-red-500/10 border-red-500/30' : 'skeuo-panel'}`}>
             <div className="flex justify-between">
               <span className="text-[var(--muted-foreground)]">Stock en {wh}:</span>
               <span className="font-medium">{curStock} {prod.data.unit}</span>

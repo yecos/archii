@@ -19,7 +19,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
         <div>
           <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Proyecto</label>
           <select
-            className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none"
+            className="w-full skeuo-input px-3 py-2 text-sm"
             value={forms.teProject || ''}
             onChange={(e) => setForms(p => ({ ...p, teProject: e.target.value }))}
           >
@@ -33,7 +33,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
         <div>
           <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Fase</label>
           <select
-            className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none"
+            className="w-full skeuo-input px-3 py-2 text-sm"
             value={forms.tePhase || ''}
             onChange={(e) => setForms(p => ({ ...p, tePhase: e.target.value }))}
           >
@@ -47,7 +47,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
         <div>
           <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Descripción</label>
           <textarea
-            className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none"
+            className="w-full skeuo-input px-3 py-2 text-sm resize-none"
             value={forms.teDescription || ''}
             onChange={(e) => setForms(p => ({ ...p, teDescription: e.target.value }))}
             placeholder="¿Qué hiciste?"
@@ -59,7 +59,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
           <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Fecha</label>
           <input
             type="date"
-            className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]"
+            className="w-full skeuo-input px-3 py-2 text-sm"
             value={forms.teDate || ''}
             onChange={(e) => setForms(p => ({ ...p, teDate: e.target.value }))}
           />
@@ -69,7 +69,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
           <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Duración (min)</label>
           <input
             type="number"
-            className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]"
+            className="w-full skeuo-input px-3 py-2 text-sm"
             value={forms.teManualDuration || ''}
             onChange={(e) => setForms(p => ({ ...p, teManualDuration: e.target.value }))}
             placeholder="60"
@@ -81,7 +81,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Hora inicio</label>
             <input
               type="time"
-              className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]"
+              className="w-full skeuo-input px-3 py-2 text-sm"
               value={forms.teStartTime || ''}
               onChange={(e) => setForms(p => ({ ...p, teStartTime: e.target.value }))}
             />
@@ -90,7 +90,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Hora fin</label>
             <input
               type="time"
-              className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]"
+              className="w-full skeuo-input px-3 py-2 text-sm"
               value={forms.teEndTime || ''}
               onChange={(e) => setForms(p => ({ ...p, teEndTime: e.target.value }))}
             />
@@ -102,7 +102,7 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Tarifa/h (COP)</label>
             <input
               type="number"
-              className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]"
+              className="w-full skeuo-input px-3 py-2 text-sm"
               value={forms.teRate || 50000}
               onChange={(e) => setForms(p => ({ ...p, teRate: e.target.value }))}
               placeholder="50000"
@@ -122,19 +122,22 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
         </div>
       </div>
 
-      <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[var(--border)]">
-        <button
-          className="px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all"
-          onClick={() => closeModal('timeEntry')}
-        >
-          Cancelar
-        </button>
-        <button
-          className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]"
-          onClick={saveManualTimeEntry}
-        >
-          Guardar
-        </button>
+      <div className="mt-5 pt-4">
+        <div className="skeuo-divider -mx-5 sm:-mx-6 mb-4" />
+        <div className="flex gap-2 justify-end">
+          <button
+            className="skeuo-btn px-4 py-2 text-[13px] font-medium"
+            onClick={() => closeModal('timeEntry')}
+          >
+            Cancelar
+          </button>
+          <button
+            className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]"
+            onClick={saveManualTimeEntry}
+          >
+            Guardar
+          </button>
+        </div>
       </div>
     </CenterModal>
   );

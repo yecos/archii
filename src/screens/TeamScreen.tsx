@@ -20,7 +20,7 @@ export default function TeamScreen() {
     <div className="animate-fadeIn">
       {/* Tab toggle */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="flex gap-1 bg-[var(--skeuo-inset)] shadow-[var(--skeuo-shadow-inset-sm)] rounded-xl p-1">
+        <div className="flex gap-1 skeuo-well rounded-xl p-1">
           <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${teamTab === 'list' ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)] hover:bg-[var(--skeuo-raised)]'}`} onClick={() => setTeamTab('list')}>
             <Users size={14} /> Lista
           </button>
@@ -67,7 +67,7 @@ export default function TeamScreen() {
       <div className="space-y-2">
         {auth.teamUsers.filter(u => !ui.forms.teamCompanyFilter || u.data.companyId === ui.forms.teamCompanyFilter).length === 0 ? (
           <div className="text-center py-16 text-[var(--af-text3)]">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
+            <div className="w-14 h-14 rounded-2xl skeuo-panel flex items-center justify-center mx-auto mb-3">
               <Users size={24} className="text-[var(--af-text3)]" />
             </div>
             <div className="text-[15px] font-medium text-[var(--muted-foreground)]">Sin miembros en el equipo</div>
@@ -93,7 +93,7 @@ export default function TeamScreen() {
                     <span className="text-[14px] font-semibold">{user.data.name}</span>
                     {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)]">Tú</span>}
                     <span className={`text-[9px] px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}>{ROLE_ICONS[role]} {role}</span>
-                    {userCompName && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]"><Building2 size={10} className="inline mr-0.5" />{userCompName}</span>}
+                    {userCompName && <span className="skeuo-badge text-[9px] px-2 py-0.5 text-[var(--af-text3)]"><Building2 size={10} className="inline mr-0.5" />{userCompName}</span>}
                   </div>
                   <div className="text-[11px] text-[var(--muted-foreground)] truncate">{user.data.email}</div>
                   <div className="flex items-center gap-3 mt-1.5">

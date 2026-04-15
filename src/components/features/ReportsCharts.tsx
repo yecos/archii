@@ -8,7 +8,7 @@ const COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6'
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+    <div className="card-elevated px-3 py-2 shadow-lg text-[12px]">
       {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">

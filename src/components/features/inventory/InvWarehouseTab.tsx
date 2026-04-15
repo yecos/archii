@@ -42,7 +42,7 @@ export default function InvWarehouseTab({
           const wv = invProducts.reduce((s, p) => s + getWarehouseStock(p, wh) * (Number(p.data.price) || 0), 0);
           const wp = invProducts.filter(p => getWarehouseStock(p, wh) > 0).length;
           return (
-            <div key={wh} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+            <div key={wh} className="skeuo-panel rounded-xl p-4">
               <div className="text-sm font-semibold">{wh}</div>
               <div className="text-2xl font-bold text-[var(--af-accent)] mt-1">{ws.toLocaleString('es-CO')}</div>
               <div className="text-xs text-[var(--muted-foreground)]">{wp} productos · {fmtCOP(wv)}</div>
@@ -59,7 +59,7 @@ export default function InvWarehouseTab({
               const maxS = Math.max(...invProducts.map(x => getWarehouseStock(x, wh)), 1);
               const pct = (getWarehouseStock(p, wh) / maxS) * 100;
               return (
-                <div key={p.id} className="bg-[var(--af-bg3)] rounded-lg px-3 py-2.5 border border-[var(--border)]">
+                <div key={p.id} className="skeuo-panel rounded-lg px-3 py-2.5">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getInvCategoryColor(p.data.categoryId) }} />

@@ -48,10 +48,10 @@ export default function ProjectDetailScreen() {
           </div>
           {/* Action buttons */}
           <div className="flex gap-1.5 flex-shrink-0">
-            <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" title="Duplicar proyecto" onClick={() => fs.duplicateProject(project.id)}>
+            <button className="w-8 h-8 skeuo-btn flex items-center justify-center" title="Duplicar proyecto" onClick={() => fs.duplicateProject(project.id)}>
               <Copy className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
             </button>
-            <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" title="Editar proyecto" onClick={() => fs.openEditProject(project)}>
+            <button className="w-8 h-8 skeuo-btn flex items-center justify-center" title="Editar proyecto" onClick={() => fs.openEditProject(project)}>
               <Edit3 className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
             </button>
             <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center cursor-pointer hover:bg-red-500/20 transition-colors" title="Eliminar proyecto" onClick={() => { fs.deleteProject(project.id); ui.setForms(p => ({ ...p, selectedProjectId: null })); }}>
@@ -86,7 +86,7 @@ export default function ProjectDetailScreen() {
               style={{ left: `calc(${(fs.currentProject.data.progress || 0)}% - 8px)`, background: (fs.currentProject.data.progress || 0) >= 80 ? '#10b981' : (fs.currentProject.data.progress || 0) >= 40 ? 'var(--af-accent)' : '#f59e0b' }}
             />
           </div>
-          <div className="flex items-center gap-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-1 py-0.5">
+          <div className="flex items-center gap-1 skeuo-panel px-1 py-0.5">
             <input type="number" min="0" max="100" className="w-10 bg-transparent text-sm text-[var(--foreground)] outline-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={fs.currentProject.data.progress || 0} onChange={e => { const v = Math.min(100, Math.max(0, Number(e.target.value) || 0)); fs.updateProjectProgress(v); }} />
             <span className="text-[11px] text-[var(--muted-foreground)]">%</span>
           </div>

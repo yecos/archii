@@ -54,26 +54,26 @@ export default function InvReportsTab({
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-xs text-[var(--muted-foreground)]">Valor total inventario</div>
           <div className="text-xl font-bold text-[var(--af-accent)] mt-1">{fmtCOP(invTotalValue)}</div>
         </div>
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-xs text-[var(--muted-foreground)]">Productos con stock</div>
           <div className="text-xl font-bold text-emerald-400 mt-1">{invProducts.filter(p => getTotalStock(p) > 0).length}</div>
         </div>
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-xs text-[var(--muted-foreground)]">Agotados</div>
           <div className="text-xl font-bold text-red-400 mt-1">{invProducts.filter(p => getTotalStock(p) === 0).length}</div>
         </div>
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-xs text-[var(--muted-foreground)]">Total movimientos</div>
           <div className="text-xl font-bold text-blue-400 mt-1">{invMovements.length}</div>
         </div>
       </div>
 
       {/* Stock by Category - horizontal bar chart */}
-      <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+      <div className="skeuo-panel rounded-xl p-4">
         <h4 className="text-sm font-semibold mb-3">📦 Stock por categoría</h4>
         {invCategories.length === 0 ? (<div className="text-center py-6 text-sm text-[var(--muted-foreground)]">Sin categorías</div>) : (
           <div className="space-y-2.5">
@@ -123,7 +123,7 @@ export default function InvReportsTab({
       </div>
 
       {/* Stock by Warehouse */}
-      <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+      <div className="skeuo-panel rounded-xl p-4">
         <h4 className="text-sm font-semibold mb-3">🏢 Stock por almacén</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {INV_WAREHOUSES.map(wh => {
@@ -131,7 +131,7 @@ export default function InvReportsTab({
             const whValue = invProducts.reduce((s, p) => s + getWarehouseStock(p, wh) * (Number(p.data.price) || 0), 0);
             const maxWh = Math.max(...INV_WAREHOUSES.map(w => invProducts.reduce((s, p) => s + getWarehouseStock(p, w), 0)), 1);
             return (
-              <div key={wh} className="bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+              <div key={wh} className="card-elevated rounded-lg p-3">
                 <div className="text-xs font-medium mb-1">{wh}</div>
                 <div className="text-lg font-bold text-[var(--af-accent)]">{whStock.toLocaleString('es-CO')}</div>
                 <div className="text-[10px] text-[var(--muted-foreground)] mb-2">{fmtCOP(whValue)}</div>
@@ -145,7 +145,7 @@ export default function InvReportsTab({
       </div>
 
       {/* Top products by value */}
-      <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+      <div className="skeuo-panel rounded-xl p-4">
         <h4 className="text-sm font-semibold mb-3">💎 Top 10 productos por valor</h4>
         {invProducts.length === 0 ? (<div className="text-center py-6 text-sm text-[var(--muted-foreground)]">Sin productos</div>) : (
           <div className="space-y-2">
@@ -168,7 +168,7 @@ export default function InvReportsTab({
       </div>
 
       {/* Movements summary */}
-      <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+      <div className="skeuo-panel rounded-xl p-4">
         <h4 className="text-sm font-semibold mb-3">📈 Resumen de movimientos</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <div className="text-center">
@@ -213,7 +213,7 @@ export default function InvReportsTab({
       </div>
 
       {/* Products table (detailed) */}
-      <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+      <div className="skeuo-panel rounded-xl p-4">
         <h4 className="text-sm font-semibold mb-3">📋 Tabla detallada de productos</h4>
         {/* Mobile card view */}
         <div className="md:hidden space-y-3">
@@ -222,7 +222,7 @@ export default function InvReportsTab({
             const isOut = ts === 0;
             const isLow = ts > 0 && ts <= (Number(p.data.minStock) || 0);
             return (
-              <div key={p.id} className="bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
+              <div key={p.id} className="card-elevated rounded-lg p-3">
                 <div className="flex items-start gap-3">
                   {p.data.imageData ? <img src={p.data.imageData} alt={p.data.name || "Producto"} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" loading="lazy" /> : <div className="w-10 h-10 rounded-lg bg-[var(--af-bg4)] flex items-center justify-center flex-shrink-0">📦</div>}
                   <div className="flex-1 min-w-0">

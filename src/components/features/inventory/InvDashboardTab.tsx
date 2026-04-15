@@ -32,15 +32,15 @@ export default function InvDashboardTab({
       <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Panel de Inventario</h3>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-2xl font-bold text-[var(--af-accent)]">{invProducts.length}</div>
           <div className="text-xs text-[var(--muted-foreground)] mt-1">Productos totales</div>
         </div>
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-2xl font-bold text-blue-400">{fmtCOP(invTotalValue)}</div>
           <div className="text-xs text-[var(--muted-foreground)] mt-1">Valor total</div>
         </div>
-        <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+        <div className="skeuo-panel rounded-xl p-4">
           <div className="text-2xl font-bold text-emerald-400">{invTotalStock.toLocaleString('es-CO')}</div>
           <div className="text-xs text-[var(--muted-foreground)] mt-1">Unidades en stock</div>
         </div>
@@ -70,7 +70,7 @@ export default function InvDashboardTab({
             const whValue = invProducts.reduce((s, p) => s + getWarehouseStock(p, wh) * (Number(p.data.price) || 0), 0);
             const whProducts = invProducts.filter(p => getWarehouseStock(p, wh) > 0).length;
             return (
-              <div key={wh} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
+              <div key={wh} className="skeuo-panel rounded-xl p-4">
                 <div className="text-sm font-semibold">{wh}</div>
                 <div className="text-xl font-bold text-[var(--af-accent)] mt-1">{whStock.toLocaleString('es-CO')}</div>
                 <div className="text-[10px] text-[var(--muted-foreground)]">{whProducts} productos · {fmtCOP(whValue)}</div>
@@ -87,7 +87,7 @@ export default function InvDashboardTab({
         ) : (
           <div className="space-y-1.5">
             {invMovements.slice(0, 6).map(m => (
-              <div key={m.id} className="flex items-center justify-between bg-[var(--af-bg3)] rounded-lg px-3 py-2">
+              <div key={m.id} className="flex items-center justify-between skeuo-panel rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-lg ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '↓' : '↑'}</span>
                   <div>
@@ -112,7 +112,7 @@ export default function InvDashboardTab({
               const cp = invProducts.filter(p => p.data.categoryId === c.id);
               const cv = cp.reduce((s, p) => s + (Number(p.data.price) || 0) * getTotalStock(p), 0);
               return (
-                <div key={c.id} className="bg-[var(--af-bg3)] rounded-lg p-3 border border-[var(--border)]">
+                <div key={c.id} className="skeuo-panel rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.data.color }} />
                     <span className="text-xs font-medium truncate">{c.data.name}</span>

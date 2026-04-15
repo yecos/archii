@@ -147,12 +147,12 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
   return (
     <div className="space-y-4">
       {/* ===== FILTER BAR ===== */}
-      <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
+      <div className="skeuo-panel rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter size={14} className="text-[var(--muted-foreground)]" />
           <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Filtros</span>
           <button
-            className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer bg-[var(--af-bg4)] border border-[var(--border)] hover:bg-[var(--card)] transition-all"
+            className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer skeuo-btn hover:bg-[var(--card)] transition-all"
             onClick={fetchLogs}
             disabled={loading}
           >
@@ -165,7 +165,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
           <div>
             <label className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-medium mb-1 block">Tipo de Entidad</label>
             <select
-              className="w-full bg-[var(--card)] border border-[var(--input)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer"
+              className="w-full skeuo-input rounded-lg px-2.5 py-1.5 text-xs cursor-pointer"
               value={filterEntityType}
               onChange={e => setFilterEntityType(e.target.value as AuditEntityType | 'all')}
             >
@@ -180,7 +180,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
           <div>
             <label className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-medium mb-1 block">Acción</label>
             <select
-              className="w-full bg-[var(--card)] border border-[var(--input)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer"
+              className="w-full skeuo-input rounded-lg px-2.5 py-1.5 text-xs cursor-pointer"
               value={filterAction}
               onChange={e => setFilterAction(e.target.value as AuditAction | 'all')}
             >
@@ -195,7 +195,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
           <div>
             <label className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-medium mb-1 block">Usuario</label>
             <select
-              className="w-full bg-[var(--card)] border border-[var(--input)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer"
+              className="w-full skeuo-input rounded-lg px-2.5 py-1.5 text-xs cursor-pointer"
               value={filterUser}
               onChange={e => setFilterUser(e.target.value)}
             >
@@ -266,7 +266,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
       {!loading && filteredLogs.length > 0 && (
         <>
           {/* Desktop view */}
-          <div className="hidden md:block bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] overflow-hidden">
+          <div className="hidden md:block skeuo-panel rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>

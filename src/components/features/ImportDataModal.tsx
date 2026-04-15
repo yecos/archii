@@ -251,7 +251,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
           {(['projects', 'tasks', 'expenses'] as ImportType[]).map(type => (
             <button
               key={type}
-              className="w-full flex items-center gap-3 p-4 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--af-accent)]/30 hover:bg-[var(--af-bg4)] transition-all text-left"
+              className="w-full flex items-center gap-3 p-4 skeuo-panel rounded-xl cursor-pointer hover:border-[var(--af-accent)]/30 hover:bg-[var(--af-bg4)] transition-all text-left"
               onClick={() => handleSelectType(type)}
             >
               <span className="text-2xl">{TYPE_ICONS[type]}</span>
@@ -303,7 +303,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
           </div>
 
           {/* Template download */}
-          <div className="flex items-center gap-2 p-3 bg-[var(--af-bg3)] rounded-lg border border-[var(--border)]">
+          <div className="flex items-center gap-2 p-3 skeuo-panel rounded-lg">
             <Download size={16} className="text-[var(--af-accent)] flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium">¿No tienes un archivo?</div>
@@ -343,7 +343,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
               </p>
             </div>
             <button
-              className="text-xs px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors border border-[var(--border)] font-medium"
+              className="text-xs px-3 py-1.5 rounded-lg skeuo-btn hover:bg-[var(--af-bg4)] transition-colors border border-[var(--border)] font-medium"
               onClick={() => { setFile(null); setPreviewData([]); setStep('upload'); }}
             >
               Cambiar archivo
@@ -407,7 +407,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
       {step === 'result' && result && (
         <div className="space-y-4">
           {/* Summary */}
-          <div className="flex items-center gap-4 p-4 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl">
+          <div className="flex items-center gap-4 p-4 skeuo-panel rounded-xl">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10">
               <CheckCircle2 size={24} className="text-emerald-500" />
             </div>
@@ -442,7 +442,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-2">
             <button
-              className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--af-bg4)] transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer skeuo-btn hover:bg-[var(--af-bg4)] transition-colors"
               onClick={resetState}
             >
               Importar más
@@ -460,7 +460,7 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
       {/* Global loading overlay */}
       {importing && step === 'preview' && (
         <div className="absolute inset-0 bg-black/20 rounded-2xl flex items-center justify-center z-50">
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl px-5 py-3 shadow-xl flex items-center gap-2">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl px-5 py-3 shadow-xl flex items-center gap-2 card-elevated">
             <Loader2 size={18} className="animate-spin text-[var(--af-accent)]" />
             <span className="text-sm font-medium">Procesando...</span>
           </div>

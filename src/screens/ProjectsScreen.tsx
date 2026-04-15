@@ -140,7 +140,7 @@ export default function ProjectsScreen() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            className="flex items-center gap-1.5 skeuo-btn text-[var(--foreground)] px-3 py-2 text-xs font-medium"
             onClick={() => openModal('importData')}
           >
             <Upload size={13} /> Importar
@@ -196,7 +196,7 @@ export default function ProjectsScreen() {
             placeholder="Buscar proyecto, cliente..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 w-[200px] sm:w-[240px] transition-all"
+            className="text-[13px] skeuo-input pl-8 pr-3 py-1.5 w-[200px] sm:w-[240px]"
           />
           {searchQuery && (
             <button
@@ -214,7 +214,7 @@ export default function ProjectsScreen() {
           <select
             value={sortOption}
             onChange={e => setSortOption(e.target.value as SortOption)}
-            className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-7 py-1.5 text-[var(--foreground)] outline-none cursor-pointer appearance-none focus:border-[var(--af-accent)]/50 transition-all"
+            className="text-[13px] skeuo-input pl-8 pr-7 py-1.5 cursor-pointer appearance-none"
           >
             {SORT_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -335,7 +335,7 @@ export default function ProjectsScreen() {
 
       {!loading && filteredProjects.length > 0 && viewMode === 'list' && (
         <StaggerContainer>
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+          <div className="card-elevated overflow-hidden">
             {/* Table header */}
             <div className="hidden sm:grid sm:grid-cols-[1fr_120px_90px_110px_100px_100px_80px] gap-3 px-4 py-2.5 text-[11px] text-[var(--af-text3)] font-medium uppercase tracking-wider border-b border-[var(--border)] bg-[var(--af-bg3)]">
               <span>Proyecto</span>

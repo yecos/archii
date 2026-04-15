@@ -9,7 +9,7 @@ const CHART_COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+    <div className="card-elevated px-3 py-2 shadow-lg text-[12px]">
       {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">
@@ -42,7 +42,7 @@ export default function DashboardCharts({
   return (
     <>
       {/* Task Distribution Pie */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated p-5">
         <div className="text-[15px] font-semibold mb-3">Distribución Tareas</div>
         {taskStatusData.length === 0 ? (
           <div className="text-center py-6 text-[var(--af-text3)] text-[12px]">Sin datos</div>
@@ -70,7 +70,7 @@ export default function DashboardCharts({
       {/* Row 4: Charts v2.0 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Revenue Trend */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold flex items-center gap-2"><Zap size={16} className="text-[var(--af-accent)]" /> Tendencia de Ingresos</div>
             <span className="text-[10px] text-[var(--af-text3)]">Últimos 6 meses</span>
@@ -92,7 +92,7 @@ export default function DashboardCharts({
         </div>
 
         {/* Burndown Chart */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="card-elevated p-5">
           <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
@@ -110,7 +110,7 @@ export default function DashboardCharts({
       {/* Row 5: Team Workload + Expense Categories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Team Workload */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Carga de Trabajo</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Reporte completo →</button>
@@ -133,7 +133,7 @@ export default function DashboardCharts({
         </div>
 
         {/* Expense by Category */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="card-elevated p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Gastos por Categoría</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('budget')}>Ver presupuesto →</button>

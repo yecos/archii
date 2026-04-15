@@ -263,7 +263,7 @@ export default function TasksScreen() {
               placeholder="Buscar tarea..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 w-[120px] sm:w-[160px] transition-all"
+              className="text-[13px] skeuo-input pl-8 pr-3 py-1.5 w-[120px] sm:w-[160px]"
             />
             {searchQuery && (
               <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--af-text3)] cursor-pointer" onClick={() => setSearchQuery('')}>
@@ -295,7 +295,7 @@ export default function TasksScreen() {
           )}
           {/* Import */}
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            className="flex items-center gap-1.5 skeuo-btn text-[var(--foreground)] px-3 py-2 text-xs font-medium"
             onClick={() => openModal('importData')}
           >
             <Upload size={13} /> Importar
@@ -303,7 +303,7 @@ export default function TasksScreen() {
 
           {/* Export Excel */}
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            className="flex items-center gap-1.5 skeuo-btn text-[var(--foreground)] px-3 py-2 text-xs font-medium"
             onClick={() => {
               try {
                 exportTasksExcel(tasks, projects, teamUsers);
@@ -326,7 +326,7 @@ export default function TasksScreen() {
 
       {/* Filter bar (expandable) */}
       {showFilters && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl animate-fadeIn">
+        <div className="flex items-center gap-3 mb-4 p-3 skeuo-panel animate-fadeIn">
           <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)]">
             <Filter size={13} /> Filtrar:
           </div>
@@ -396,7 +396,7 @@ export default function TasksScreen() {
         </div>
       )}
       {batchMode && selectedIds.size === 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl animate-fadeIn">
+        <div className="flex items-center gap-3 mb-4 p-3 skeuo-panel animate-fadeIn">
           <span className="text-[12px] text-[var(--muted-foreground)]">Selecciona tareas para acciones en lote</span>
           <button className="text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={selectAll}>Seleccionar todas</button>
           <div className="flex-1" />
@@ -422,7 +422,7 @@ export default function TasksScreen() {
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
             return (
-              <StaggerItem key={prio}><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
+              <StaggerItem key={prio}><div className="card-elevated p-4 mb-4">
                 <div className={`inline-flex items-center gap-1.5 text-xs font-semibold mb-3 px-2.5 py-1 rounded-lg ${prioColorBg}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${prioDot}`} />
                   Prioridad {prio}
@@ -513,7 +513,7 @@ export default function TasksScreen() {
                   className={`flex-shrink-0 w-[270px] sm:w-[290px] rounded-xl transition-all ${
                     isDragOver
                       ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20`
-                      : 'bg-[var(--af-bg3)] border border-[var(--border)]'
+                      : 'skeuo-panel'
                   } p-3 flex flex-col`}
                   onDragEnter={e => handleDragEnter(e, col.status)}
                   onDragLeave={e => handleDragLeave(e, col.status)}
@@ -562,8 +562,8 @@ export default function TasksScreen() {
                           draggable
                           onDragStart={e => handleDragStart(e, t.id)}
                           onDragEnd={handleDragEnd}
-                          className={`bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all duration-200 ease-out hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 active:scale-[0.99] group/card ${
-                            isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'border-[var(--border)] hover:border-[var(--input)]'
+                          className={`card-elevated p-3 cursor-grab active:cursor-grabbing transition-all duration-200 ease-out hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 active:scale-[0.99] group/card ${
+                            isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'hover:border-[var(--input)]'
                           }`}
                           onClick={() => openEditTask(t)}
                         >

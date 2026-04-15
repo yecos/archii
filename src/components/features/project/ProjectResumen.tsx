@@ -16,7 +16,7 @@ export default function ProjectResumen({ project, projectTasks, approvals, selec
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated p-5">
         <div className="text-[15px] font-semibold mb-4">Información</div>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Cliente</span><span>{project.data.client || '—'}</span></div>
@@ -26,7 +26,7 @@ export default function ProjectResumen({ project, projectTasks, approvals, selec
           <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Presupuesto</span><span className="text-[var(--af-accent)] font-semibold">{fmtCOP(project.data.budget)}</span></div>
         </div>
       </div>
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated p-5">
         <div className="text-[15px] font-semibold mb-4">Actividad reciente</div>
         {pendingTasks.slice(0, 5).map(t => (
           <div key={t.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
@@ -38,7 +38,7 @@ export default function ProjectResumen({ project, projectTasks, approvals, selec
         {pendingTasks.length === 0 && <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>}
       </div>
       {/* Quick Actions: Request Approval */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 md:col-span-2">
+      <div className="card-elevated p-5 md:col-span-2">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[15px] font-semibold flex items-center gap-2">📋 Aprobaciones</div>
           <button
@@ -53,8 +53,8 @@ export default function ProjectResumen({ project, projectTasks, approvals, selec
             {approvals.slice(0, 10).map(a => {
               const isPending = a.data.status === 'Pendiente';
               return (
-                <div key={a.id} className="flex items-start gap-3 p-3 bg-[var(--af-bg3)] rounded-lg border border-[var(--border)]">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 bg-[var(--af-bg4)]">
+                <div key={a.id} className="flex items-start gap-3 p-3 skeuo-panel rounded-lg">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 skeuo-well">
                     {a.data.type === 'budget_change' ? '💰' : a.data.type === 'phase_completion' ? '🏗️' : a.data.type === 'expense_approval' ? '🧾' : '📋'}
                   </div>
                   <div className="flex-1 min-w-0">

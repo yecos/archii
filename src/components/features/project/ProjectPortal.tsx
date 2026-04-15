@@ -23,14 +23,14 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, appTitle: '', appDesc: '' })); openModal('approval'); }}>+ Nueva aprobación</button>
       </div>
       {/* Client summary */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
+      <div className="card-elevated p-5 mb-4">
         <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-xl mb-2">{project.data.name}</div>
         <div className="text-sm text-[var(--muted-foreground)] mb-3">{project.data.description || 'Sin descripción'}</div>
         <div className="flex items-center gap-3 mb-2"><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(project.data.status)}`}>{project.data.status}</span><span className="text-sm font-medium">{project.data.progress || 0}% completado</span></div>
         <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: (project.data.progress || 0) + '%' }} /></div>
       </div>
       {/* Work phases for client */}
-      {workPhases.length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
+      {workPhases.length > 0 && (<div className="card-elevated p-5 mb-4">
         <div className="text-[15px] font-semibold mb-3">Fases del proyecto</div>
         <div className="space-y-2">
           {workPhases.map(ph => (
@@ -43,7 +43,7 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
         </div>
       </div>)}
       {/* Files gallery */}
-      {imageFiles.length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
+      {imageFiles.length > 0 && (<div className="card-elevated p-5 mb-4">
         <div className="text-[15px] font-semibold mb-3">Galería</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {imageFiles.map(f => (
@@ -52,7 +52,7 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
         </div>
       </div>)}
       {/* Approvals */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+      <div className="card-elevated p-5">
         <div className="text-[15px] font-semibold mb-3">Aprobaciones</div>
         {approvals.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin solicitudes de aprobación</div> :
         approvals.map(a => (

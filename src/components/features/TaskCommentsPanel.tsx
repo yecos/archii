@@ -128,7 +128,7 @@ export default function TaskCommentsPanel({ taskId, projectId }: TaskCommentsPan
           onChange={(e) => setCommentText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={replyingTo ? `Responder a ${replyingToComment?.data.userName || '...'}` : 'Escribe un comentario...'}
-          className="flex-1 text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 placeholder:text-[var(--af-text3)]"
+          className="flex-1 text-[12px] skeuo-input rounded-lg px-3 py-2 outline-none focus:border-[var(--af-accent)]/50 placeholder:text-[var(--af-text3)]"
         />
         <button
           type="button"

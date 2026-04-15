@@ -118,7 +118,7 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
         </FormField>
 
         {/* Recurrence Section */}
-        <div className="border border-[var(--border)] rounded-lg p-3 space-y-3">
+        <div className="skeuo-panel p-3 space-y-3">
           <FormField label="Recurrencia">
             <div className="flex items-center gap-2">
               <Repeat size={14} className="text-[var(--muted-foreground)] flex-shrink-0" />

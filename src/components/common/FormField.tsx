@@ -29,7 +29,7 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function FormInput({ className = '', ...props }: FormInputProps) {
   return (
     <input
-      className={`w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] ${className}`}
+      className={`w-full skeuo-input px-3 py-2 text-sm ${className}`}
       {...props}
     />
   );
@@ -43,7 +43,7 @@ interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> 
 export function FormSelect({ className = '', children, ...props }: FormSelectProps) {
   return (
     <select
-      className={`w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none ${className}`}
+      className={`w-full skeuo-input px-3 py-2 text-sm ${className}`}
       {...props}
     >
       {children}
@@ -59,7 +59,7 @@ interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaEle
 export function FormTextarea({ className = '', ...props }: FormTextareaProps) {
   return (
     <textarea
-      className={`w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none ${className}`}
+      className={`w-full skeuo-input px-3 py-2 text-sm resize-none ${className}`}
       {...props}
     />
   );

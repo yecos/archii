@@ -254,7 +254,7 @@ export default function ActivityTimeline() {
       </div>
 
       {/* ===== FILTER TABS ===== */}
-      <div className="flex items-center gap-1 p-1 bg-[var(--af-bg4)] rounded-lg">
+      <div className="flex items-center gap-1 p-1 skeuo-well rounded-lg">
         {FILTER_TABS.map(tab => (
           <button
             key={tab.key}
@@ -308,7 +308,7 @@ export default function ActivityTimeline() {
 
                 {/* ===== RIGHT: Content Card ===== */}
                 <div className="flex-1 pb-4 min-w-0">
-                  <div className="bg-[var(--af-bg3)] rounded-lg p-3 hover:bg-[var(--af-bg4)] transition-colors">
+                  <div className="skeuo-panel rounded-lg p-3 hover:bg-[var(--af-bg4)] transition-colors">
                     {/* Header row */}
                     <div className="flex items-start gap-2 mb-1">
                       <span className="text-sm shrink-0 mt-px">{config.icon}</span>

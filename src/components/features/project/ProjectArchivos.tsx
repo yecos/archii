@@ -92,19 +92,18 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
               Abrir en OneDrive — {projectName}
             </button>
           ) : (
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-              {/* Header with tabs */}
+            <div className="card-elevated p-4">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <svg viewBox="0 0 21 21" className="w-4 h-4"><rect x="1" y="1" width="9" height="9" fill="#00a4ef"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#00a4ef"/></svg>
                   <span className="text-sm font-semibold text-[#00a4ef]">OneDrive — {projectName}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-0.5 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                  <div className="flex items-center gap-0.5 skeuo-panel rounded-lg p-0.5">
                     <button onClick={() => od.setOdTab('files')} className={`px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${od.odTab === 'files' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}>📋 Archivos</button>
                     <button onClick={() => { od.setOdTab('gallery'); if (selectedProjectId) od.loadGalleryPhotos(selectedProjectId); }} className={`px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${od.odTab === 'gallery' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}>🖼️ Galería</button>
                   </div>
-                  <button className="text-xs px-2 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { od.setShowOneDrive(false); od.setOneDriveFiles([]); od.setOdBreadcrumbs([]); od.setOdSearchQuery(''); od.setOdSearchResults([]); }}>✕</button>
+                  <button className="text-xs px-2 py-1.5 rounded-lg skeuo-btn cursor-pointer" onClick={() => { od.setShowOneDrive(false); od.setOneDriveFiles([]); od.setOdBreadcrumbs([]); od.setOdSearchQuery(''); od.setOdSearchResults([]); }}>✕</button>
                 </div>
               </div>
 
@@ -114,7 +113,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                   {od.galleryLoading ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                       {Array.from({length: 8}).map((_, i) => (
-                        <div key={i} className="bg-[var(--af-bg3)] rounded-lg animate-pulse aspect-square" />
+                        <div key={i} className="skeuo-panel rounded-lg animate-pulse aspect-square" />
                       ))}
                     </div>
                   ) : od.odGalleryPhotos.length === 0 ? (
@@ -166,14 +165,14 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                         value={od.odSearchQuery}
                         onChange={(e) => { od.setOdSearchQuery(e.target.value); if (e.target.value.length > 2) od.searchOneDriveFiles(e.target.value); else if (!e.target.value) od.setOdSearchResults([]); }}
                         placeholder="Buscar archivos..."
-                        className="w-[150px] sm:w-[180px] pl-7 pr-2.5 py-1.5 text-[11px] rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] outline-none focus:border-[#00a4ef]/40"
+                        className="w-[150px] sm:w-[180px] pl-7 pr-2.5 py-1.5 text-[11px] rounded-lg skeuo-input outline-none focus:border-[#00a4ef]/40"
                       />
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px]">🔍</span>
                       {od.odSearching && <div className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 border border-[#00a4ef]/30 border-t-[#00a4ef] rounded-full animate-spin" />}
                     </div>
 
                     {/* View toggle */}
-                    <div className="flex items-center gap-0.5 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                    <div className="flex items-center gap-0.5 skeuo-panel rounded-lg p-0.5">
                       <button onClick={() => od.setOdViewMode('list')} className={`px-1.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${od.odViewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)]'}`}>📋</button>
                       <button onClick={() => od.setOdViewMode('grid')} className={`px-1.5 py-1 rounded-md text-[11px] cursor-pointer transition-all ${od.odViewMode === 'grid' ? 'bg-[var(--card)] text-[var(--foreground)] shadow-sm' : 'text-[var(--muted-foreground)]'}`}>⊞</button>
                     </div>
@@ -187,7 +186,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
 
                   {/* Upload progress */}
                   {od.odUploading && (
-                    <div className="mb-3 bg-[var(--af-bg3)] rounded-lg p-3">
+                    <div className="mb-3 skeuo-panel rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[11px] font-medium truncate max-w-[200px]">{od.odUploadFile}</span>
                         <span className="text-[10px] text-[var(--muted-foreground)]">{od.odUploadProgress}%</span>
@@ -215,7 +214,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                       <div className="space-y-1">
                         <div className="text-[10px] text-[var(--muted-foreground)] mb-2">{od.odSearchResults.length} resultado(s) para &quot;{od.odSearchQuery}&quot;</div>
                         {od.odSearchResults.map((f: any) => (
-                          <div key={f.id} className="flex items-center gap-2 py-2 px-2 bg-[var(--af-bg3)] rounded-lg hover:bg-[var(--af-bg4)] transition-colors">
+                          <div key={f.id} className="flex items-center gap-2 py-2 px-2 skeuo-panel rounded-lg hover:bg-[var(--af-bg4)] transition-colors">
                             <span className="text-sm">{od.getFileIcon(f.mimeType || '', f.name)}</span>
                             <div className="flex-1 min-w-0">
                               <div className="text-[11px] font-medium truncate">{f.name}</div>
@@ -239,7 +238,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                       /* Grid view */
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {od.oneDriveFiles.map((f: any) => (
-                          <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { od.navigateToFolder(f.id); od.setOdBreadcrumbs((prev: OdBreadcrumb[]) => [...prev, { id: f.id, name: f.name }]); } }}>
+                          <div key={f.id} className={`skeuo-panel rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { od.navigateToFolder(f.id); od.setOdBreadcrumbs((prev: OdBreadcrumb[]) => [...prev, { id: f.id, name: f.name }]); } }}>
                             <div className="w-9 h-9 bg-[var(--af-bg4)] rounded-lg flex items-center justify-center text-base mb-2">{od.getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                             <div className="text-[11px] font-medium truncate mb-0.5">
                               {od.odRenaming === f.id ? (
@@ -331,7 +330,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
       {projectFiles.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">📂</div><div className="text-sm">Sin archivos subidos</div></div> :
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {projectFiles.map(f => (
-          <div key={f.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all group">
+          <div key={f.id} className="card-elevated p-4 hover:border-[var(--input)] transition-all group">
             <div className="flex items-start justify-between mb-2">
               <div className="w-10 h-10 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center text-lg">
                 {f.data.type?.startsWith('image/') ? '🖼️' : f.data.type === 'application/pdf' ? '📄' : f.data.type?.includes('video') ? '🎬' : '📎'}

@@ -40,19 +40,22 @@ export default function CompanyModal({ open, onClose }: { open: boolean; onClose
         </FormField>
       </div>
 
-      <div className="flex gap-3 mt-5 pt-4 border-t border-[var(--border)]">
-        <button
-          className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-transparent text-[var(--muted-foreground)] border border-[var(--input)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)] transition-all"
-          onClick={() => closeModal('company')}
-        >
-          Cancelar
-        </button>
-        <button
-          className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors"
-          onClick={saveCompany}
-        >
-          {editingId ? 'Guardar cambios' : 'Crear empresa'}
-        </button>
+      <div className="mt-5 pt-4">
+        <div className="skeuo-divider -mx-5 sm:-mx-6 mb-4" />
+        <div className="flex gap-3 justify-end">
+          <button
+            className="skeuo-btn px-4 py-2.5 text-[13px] font-medium"
+            onClick={() => closeModal('company')}
+          >
+            Cancelar
+          </button>
+          <button
+            className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors"
+            onClick={saveCompany}
+          >
+            {editingId ? 'Guardar cambios' : 'Crear empresa'}
+          </button>
+        </div>
       </div>
     </CenterModal>
   );

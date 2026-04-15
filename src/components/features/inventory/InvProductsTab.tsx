@@ -42,9 +42,9 @@ export default function InvProductsTab({
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-          <input className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg pl-9 pr-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder="Buscar producto..." value={invSearch} onChange={e => setInvSearch(e.target.value)} />
+          <input className="w-full skeuo-input rounded-lg pl-9 pr-3 py-2 text-sm" placeholder="Buscar producto..." value={invSearch} onChange={e => setInvSearch(e.target.value)} />
         </div>
-        <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invFilterCat} onChange={e => setInvFilterCat(e.target.value)}>
+        <select className="skeuo-input rounded-lg px-3 py-2 text-sm outline-none" value={invFilterCat} onChange={e => setInvFilterCat(e.target.value)}>
           <option value="all">Todas las categorías</option>
           {invCategories.map(c => <option key={c.id} value={c.id}>{c.data.name}</option>)}
         </select>
@@ -56,7 +56,7 @@ export default function InvProductsTab({
           return ms && mc;
         });
         return filtered.length === 0 ? (
-          <div className="text-center py-12"><div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3"><Package size={28} className="text-[var(--af-text3)]" /></div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
+          <div className="text-center py-12"><div className="w-14 h-14 rounded-2xl skeuo-well flex items-center justify-center mx-auto mb-3"><Package size={28} className="text-[var(--af-text3)]" /></div><div className="text-[var(--muted-foreground)]">No hay productos</div></div>
         ) : (
           <div className="space-y-2">
             {filtered.slice(0, productLimit).map(p => {
@@ -64,7 +64,7 @@ export default function InvProductsTab({
             const isLow = totalSt <= (Number(p.data.minStock) || 0);
             const isOut = totalSt === 0;
             return (
-              <div key={p.id} className={`bg-[var(--af-bg3)] rounded-xl p-3 sm:p-4 border ${isOut ? 'border-red-500/40' : isLow ? 'border-amber-500/30' : 'border-[var(--border)]'}`}>
+              <div key={p.id} className={`skeuo-panel rounded-xl p-3 sm:p-4 border ${isOut ? 'border-red-500/40' : isLow ? 'border-amber-500/30' : 'border-[var(--border)]'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3 min-w-0">
                     {p.data.imageData ? <img src={p.data.imageData} alt={p.data.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 mt-0.5" loading="lazy" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: (getInvCategoryColor(p.data.categoryId) || '#6b7280') + '20' }}><div className="w-4 h-4 rounded-sm" style={{ backgroundColor: getInvCategoryColor(p.data.categoryId) }} /></div>}
@@ -79,7 +79,7 @@ export default function InvProductsTab({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><Pencil className="w-3.5 h-3.5" /></button>
+                    <button className="w-8 h-8 rounded-lg card-elevated flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><Pencil className="w-3.5 h-3.5" /></button>
                     <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvProduct(p.id)}><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
@@ -110,7 +110,7 @@ export default function InvProductsTab({
           })}
           {filtered.length > productLimit && (
             <div className="text-center py-4">
-              <button className="px-5 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => setProductLimit(prev => prev + 20)}>
+              <button className="px-5 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer skeuo-btn hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => setProductLimit(prev => prev + 20)}>
                 Cargar más productos
               </button>
             </div>
