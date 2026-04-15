@@ -106,7 +106,7 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
     catch (err) { console.error('[ArchiFlow] Comments: delete daily log failed:', err); showToast('Error al eliminar', 'error'); }
   };
 
-  const openEditLog = (log: any) => {
+  const openEditLog = (log: DailyLog) => {
     setSelectedLogId(log.id);
     setLogForm({ date: log.data.date || '', weather: log.data.weather || '', temperature: log.data.temperature || '', activities: log.data.activities?.length > 0 ? log.data.activities : [''], laborCount: log.data.laborCount || '', equipment: log.data.equipment?.length > 0 ? log.data.equipment : [''], materials: log.data.materials?.length > 0 ? log.data.materials : [''], observations: log.data.observations || '', photos: log.data.photos || [], supervisor: log.data.supervisor || '' });
     setDailyLogTab('create');

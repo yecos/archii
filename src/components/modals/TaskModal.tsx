@@ -27,7 +27,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   const totalCount = subtasks.length;
 
   const toggleAssignee = (uid: string) => {
-    ui.setForms((p: any) => {
+    ui.setForms((p: Record<string, any>) => {
       const current = Array.isArray(p.taskAssignees) ? p.taskAssignees : [];
       const updated = current.includes(uid) ? current.filter((id: string) => id !== uid) : [...current, uid];
       return { ...p, taskAssignees: updated, taskAssignee: updated[0] || '' };
@@ -35,7 +35,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const removeAssignee = (uid: string) => {
-    ui.setForms((p: any) => {
+    ui.setForms((p: Record<string, any>) => {
       const current = Array.isArray(p.taskAssignees) ? p.taskAssignees : [];
       const updated = current.filter((id: string) => id !== uid);
       return { ...p, taskAssignees: updated, taskAssignee: updated[0] || '' };
@@ -50,7 +50,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
       text,
       completed: false,
     };
-    ui.setForms((p: any) => ({
+    ui.setForms((p: Record<string, any>) => ({
       ...p,
       taskSubtasks: [...(Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []), newSubtask],
     }));
@@ -58,14 +58,14 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const removeSubtask = (subtaskId: string) => {
-    ui.setForms((p: any) => ({
+    ui.setForms((p: Record<string, any>) => ({
       ...p,
       taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).filter((s: Subtask) => s.id !== subtaskId),
     }));
   };
 
   const toggleSubtaskCheckbox = (subtaskId: string) => {
-    ui.setForms((p: any) => ({
+    ui.setForms((p: Record<string, any>) => ({
       ...p,
       taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).map((s: Subtask) =>
         s.id === subtaskId ? { ...s, completed: !s.completed } : s
@@ -97,7 +97,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Titulo" required>
           <FormInput
             value={ui.forms.taskTitle || ''}
-            onChange={(e) => ui.setForms((p: any) => ({ ...p, taskTitle: e.target.value }))}
+            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskTitle: e.target.value }))}
             placeholder="Titulo de la tarea"
           />
         </FormField>
@@ -105,7 +105,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Descripcion">
           <FormTextarea
             value={ui.forms.taskDescription || ''}
-            onChange={(e) => ui.setForms((p: any) => ({ ...p, taskDescription: e.target.value }))}
+            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskDescription: e.target.value }))}
             placeholder="Descripcion de la tarea"
             rows={3}
           />
@@ -192,7 +192,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Proyecto">
           <FormSelect
             value={ui.forms.taskProject || ''}
-            onChange={(e) => ui.setForms((p: any) => ({ ...p, taskProject: e.target.value }))}
+            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskProject: e.target.value }))}
           >
             <option value="">— Sin proyecto —</option>
             {fs.projects.map((p: any) => (
@@ -267,7 +267,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormField label="Prioridad">
             <FormSelect
               value={ui.forms.taskPriority || 'Media'}
-              onChange={(e) => ui.setForms((p: any) => ({ ...p, taskPriority: e.target.value }))}
+              onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskPriority: e.target.value }))}
             >
               <option value="Alta">Alta</option>
               <option value="Media">Media</option>
@@ -278,7 +278,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormField label="Estado">
             <FormSelect
               value={ui.forms.taskStatus || 'Por hacer'}
-              onChange={(e) => ui.setForms((p: any) => ({ ...p, taskStatus: e.target.value }))}
+              onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskStatus: e.target.value }))}
             >
               <option value="Por hacer">Por hacer</option>
               <option value="En progreso">En progreso</option>
@@ -292,7 +292,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormInput
             type="date"
             value={ui.forms.taskDue || ''}
-            onChange={(e) => ui.setForms((p: any) => ({ ...p, taskDue: e.target.value }))}
+            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskDue: e.target.value }))}
           />
         </FormField>
       </div>

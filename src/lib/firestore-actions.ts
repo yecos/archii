@@ -8,7 +8,7 @@
 import { getFirebase } from '@/lib/firebase-service';
 import type { FirebaseUserInfo } from '@/contexts/AuthContext';
 import { fileToBase64 } from '@/lib/helpers';
-import { DEFAULT_PHASES } from '@/lib/types';
+import { DEFAULT_PHASES, ProjectFormData, TaskFormData, ExpenseFormData, SupplierFormData, CompanyFormData, ApprovalFormData, MeetingFormData, GalleryPhotoFormData, InvProductFormData, InvMovementFormData, InvTransferFormData, TimeEntryFormData, InvoiceFormData, QuotationFormData, CommentFormData, ChatMessageFormData } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 type ToastFn = (msg: string, type?: string) => void;
@@ -26,7 +26,7 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
 
 /* ===== PROJECTS ===== */
 
-export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveProject(data: ProjectFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar proyecto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -83,7 +83,7 @@ export async function deleteProject(projectId: string, showToast: ToastFn) {
 
 /* ===== TASKS ===== */
 
-export function saveTask(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveTask(data: TaskFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar tarea', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -131,7 +131,7 @@ export async function deleteTask(taskId: string, showToast: ToastFn) {
 
 /* ===== CHAT MESSAGES ===== */
 
-export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: FirebaseUserInfo | null, showToast: ToastFn) {
+export async function sendMessage(chatProjectId: string, msgData: ChatMessageFormData, authUser: FirebaseUserInfo | null, showToast: ToastFn) {
   return fbAction('enviar mensaje', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -153,7 +153,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
 
 /* ===== EXPENSES ===== */
 
-export function saveExpense(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveExpense(data: ExpenseFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar gasto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -192,7 +192,7 @@ export async function deleteExpense(expenseId: string, showToast: ToastFn) {
 
 /* ===== SUPPLIERS ===== */
 
-export function saveSupplier(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveSupplier(data: SupplierFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar proveedor', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -237,7 +237,7 @@ export async function deleteSupplier(supplierId: string, showToast: ToastFn) {
 
 /* ===== COMPANIES ===== */
 
-export function saveCompany(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveCompany(data: CompanyFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar empresa', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -345,7 +345,7 @@ export async function updatePhaseStatus(projectId: string, phaseId: string, stat
 
 /* ===== APPROVALS ===== */
 
-export function saveApproval(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveApproval(projectId: string, data: ApprovalFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar aprobación', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -388,7 +388,7 @@ export async function deleteApproval(projectId: string, approvalId: string, show
 
 /* ===== MEETINGS ===== */
 
-export function saveMeeting(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveMeeting(data: MeetingFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar reunión', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -434,7 +434,7 @@ export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
 
 /* ===== GALLERY ===== */
 
-export async function saveGalleryPhoto(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export async function saveGalleryPhoto(data: GalleryPhotoFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar foto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -460,7 +460,7 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
 
 /* ===== INVENTORY ===== */
 
-export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvProduct(data: InvProductFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar producto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -538,7 +538,7 @@ export async function deleteInvCategory(catId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvMovement(data: InvMovementFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('registrar movimiento', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -565,7 +565,7 @@ export async function deleteInvMovement(movId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvTransfer(data: InvTransferFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('registrar transferencia', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -625,7 +625,7 @@ export async function updateUserCompany(userId: string, companyId: string, showT
 
 /* ===== TIME ENTRIES ===== */
 
-export function saveTimeEntry(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveTimeEntry(data: TimeEntryFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar registro de tiempo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -665,7 +665,7 @@ export async function deleteTimeEntry(entryId: string, showToast: ToastFn) {
 
 /* ===== INVOICES ===== */
 
-export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvoice(data: InvoiceFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar factura', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -719,7 +719,7 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
 
 /* ===== QUOTATIONS ===== */
 
-export function saveQuotation(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveQuotation(data: QuotationFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar cotización', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -836,7 +836,7 @@ export async function deleteQuotation(quotationId: string, showToast: ToastFn) {
 
 /* ===== COMMENTS ===== */
 
-export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveComment(data: CommentFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
   return fbAction('guardar comentario', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();

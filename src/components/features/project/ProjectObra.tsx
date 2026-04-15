@@ -1,6 +1,7 @@
 'use client';
 import { Plus, Eye, Pencil, Trash2, ChevronLeft, X } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
+import type { DailyLog } from '@/lib/types';
 
 interface WorkPhase {
   id: string;
@@ -8,7 +9,7 @@ interface WorkPhase {
 }
 
 interface CommentsState {
-  dailyLogs: Array<{ id: string; data: Record<string, any> }>;
+  dailyLogs: DailyLog[];
   dailyLogTab: string;
   selectedLogId: string | null;
   logForm: Record<string, any>;
@@ -16,7 +17,7 @@ interface CommentsState {
   setSelectedLogId: (id: string | null) => void;
   resetLogForm: () => void;
   setLogForm: (updater: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => void;
-  openEditLog: (log: any) => void;
+  openEditLog: (log: DailyLog) => void;
   deleteDailyLog: (logId: string) => void;
   saveDailyLog: () => void;
 }
@@ -221,7 +222,7 @@ export default function ProjectObra({ workView, workPhases, cmt, initDefaultPhas
 
         {/* Bitácora: Detail view */}
         {cmt.dailyLogTab === 'detail' && cmt.selectedLogId && (() => {
-          const log = cmt.dailyLogs.find((l: any) => l.id === cmt.selectedLogId);
+          const log = cmt.dailyLogs.find((l: DailyLog) => l.id === cmt.selectedLogId);
           if (!log) return <div className="text-center py-8 text-[var(--af-text3)]">Registro no encontrado</div>;
           const d = log.data;
           return (

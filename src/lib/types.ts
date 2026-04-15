@@ -593,6 +593,181 @@ export const NOTIF_EVENT_TYPES: readonly NotifEventType[] = [
   'approval_action',
 ];
 
+/* ===== FORM DATA INTERFACES ===== */
+/** Typed form data for each save function (replaces Record<string, any>). */
+
+export interface ProjectFormData {
+  projName: string;
+  projStatus: string;
+  projClient: string;
+  projLocation: string;
+  projBudget: string; // Number() applied
+  projDesc: string;
+  projStart: string;
+  projEnd: string;
+  projCompany: string;
+}
+
+export interface TaskFormData {
+  taskTitle: string;
+  taskProject: string;
+  taskAssignee: string;
+  taskPriority: string;
+  taskStatus: string;
+  taskDue: string;
+}
+
+export interface ExpenseFormData {
+  expConcept: string;
+  expProject: string;
+  expCategory: string;
+  expAmount: string; // Number() applied
+  expDate: string;
+}
+
+export interface SupplierFormData {
+  supName: string;
+  supCategory: string;
+  supPhone: string;
+  supEmail: string;
+  supAddress: string;
+  supWebsite: string;
+  supNotes: string;
+  supRating: string; // Number() applied
+}
+
+export interface CompanyFormData {
+  compName: string;
+  compNit: string;
+  compAddress: string;
+  compPhone: string;
+  compEmail: string;
+  compLegal: string;
+}
+
+export interface ApprovalFormData {
+  apprTitle: string;
+  apprDesc: string;
+}
+
+export interface MeetingFormData {
+  meetTitle: string;
+  meetProject: string;
+  meetDate: string;
+  meetTime: string;
+  meetDuration: string;
+  meetLocation: string;
+  meetDesc: string;
+  meetAttendees: string[];
+}
+
+export interface GalleryPhotoFormData {
+  photoProject: string;
+  photoCategory: string;
+  photoCaption: string;
+  photoImage: string;
+}
+
+export interface InvProductFormData {
+  prodName: string;
+  prodSku: string;
+  prodCategory: string;
+  prodUnit: string;
+  prodPrice: string; // Number() applied
+  prodStock: string; // Number() applied
+  prodMinStock: string; // Number() applied
+  prodDesc: string;
+  prodImage: string;
+  prodWarehouse: string;
+}
+
+export interface InvMovementFormData {
+  movProduct: string;
+  movType: string;
+  movQuantity: string; // Number() applied
+  movReason: string;
+  movReference: string;
+  movDate: string;
+  movWarehouse: string;
+}
+
+export interface InvTransferFormData {
+  transProduct: string;
+  transProductName: string;
+  transFrom: string;
+  transTo: string;
+  transQuantity: string; // Number() applied
+  transDate: string;
+  transNotes: string;
+}
+
+export interface TimeEntryFormData {
+  teProject: string;
+  tePhase: string;
+  teDescription: string;
+  teStartTime: string;
+  teEndTime: string;
+  teDuration: string | number; // Number() applied
+  teBillable: boolean;
+  teRate: string | number; // Number() applied
+  teDate: string;
+}
+
+export interface InvoiceFormData {
+  invProject: string;
+  invNumber: string;
+  invStatus: string;
+  invItems: any[];
+  invSubtotal: string | number; // Number() applied
+  invTax: string | number; // Number() applied
+  invTotal: string | number; // Number() applied
+  invNotes: string;
+  invIssueDate: string;
+  invDueDate: string;
+}
+
+export interface QuotationFormData {
+  projId: string;
+  number: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  clientAddress: string;
+  status: string;
+  sections: any[];
+  payments: any[];
+  validUntil: string;
+  notes: string;
+  internalNotes: string;
+  terms: string;
+  bankName: string;
+  bankAccount: string;
+  bankAccountType: string;
+  bankHolder: string;
+}
+
+export interface CommentFormData {
+  taskId: string;
+  projectId: string;
+  text: string;
+  mentions: string[];
+  parentId: string | null;
+}
+
+export interface ChatMessageFormData {
+  text?: string;
+  type?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  fileData?: string;
+  fileType?: string;
+  audioData?: string;
+  audioDuration?: number;
+  replyTo?: any;
+  reactions?: Record<string, string[]>;
+}
+
 /* ===== CONSTANTES ===== */
 
 export const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];

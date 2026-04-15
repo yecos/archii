@@ -358,7 +358,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const ts = serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const subtasks: Subtask[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
-    const data: any = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, updatedAt: ts, updatedBy: authUser?.uid };
+    const data: Record<string, any> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) {
         const existing = tasks.find((t: Task) => t.id === editingId);
@@ -380,7 +380,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
           assignees.forEach((uid: string) => { notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp taskAssigned notification failed:', err)); });
         }
       }
-      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
+      closeModal('task'); setEditingId(null); setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   }, [editingId, forms, authUser, projects, tasks, showToast, closeModal, setEditingId, setForms]);
 
@@ -388,7 +388,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     setEditingId(t.id);
     const assignees: string[] = Array.isArray(t.data.assigneeIds) ? t.data.assigneeIds : (t.data.assigneeId ? [t.data.assigneeId] : []);
     const subtasks: Subtask[] = Array.isArray(t.data.subtasks) ? t.data.subtasks : [];
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: subtasks }));
+    setForms((f: Record<string, any>) => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: subtasks }));
     openModal('task');
   }, [setEditingId, setForms, openModal]);
 
