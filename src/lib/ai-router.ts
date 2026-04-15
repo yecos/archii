@@ -1,13 +1,14 @@
 /**
  * ai-router.ts
- * Router de IA multi-proveedor para ArchiFlow.
+ * Router de IA multi-proveedor para ArchiFlow — Fase 2.
  * Enruta solicitudes al proveedor óptimo según tipo de tarea,
  * límites de tasa y disponibilidad.
  *
- * Proveedores:
- *   - Groq (Llama 3.1 8B) — Alto volumen, 14,400 req/día
- *   - Groq (Llama 3.1 70B) — Mejor razonamiento, 30 RPM
- *   - OpenAI-compatible (fallback) — Configurable via env
+ * Proveedores (en orden de prioridad):
+ *   1. Groq (Llama 3.1 8B) — Alto volumen, 14,400 req/día (gratuito)
+ *   2. Mistral (Mistral Small) — Calidad crítica, 50 RPM
+ *   3. Groq (Llama 3.1 70B) — Mejor razonamiento, 30 RPM
+ *   4. OpenAI-compatible (fallback) — Configurable via env
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
@@ -59,6 +60,7 @@ function markUsed(p: ProviderStatus) {
 
 /* ===== Provider Client Instances ===== */
 let groqClient: ReturnType<typeof createOpenAICompatible> | null = null;
+let mistralClient: ReturnType<typeof createOpenAICompatible> | null = null;
 let openaiClient: ReturnType<typeof createOpenAICompatible> | null = null;
 
 function getGroqClientInstance() {
@@ -72,6 +74,19 @@ function getGroqClientInstance() {
     });
   }
   return groqClient;
+}
+
+function getMistralClientInstance() {
+  if (!mistralClient) {
+    const apiKey = process.env.MISTRAL_API_KEY;
+    if (!apiKey) return null;
+    mistralClient = createOpenAICompatible({
+      name: 'mistral',
+      apiKey,
+      baseURL: 'https://api.mistral.ai/v1',
+    });
+  }
+  return mistralClient;
 }
 
 function getOpenAIClientInstance() {
@@ -122,38 +137,49 @@ export async function routeAIRequest(options: AIRequestOptions): Promise<{
   const needsReasoning = ['analysis', 'task_update', 'expense_create'].includes(taskType);
   const needsTools = !!tools && tools.length > 0;
 
-  // Attempt 1: Groq (primary)
+  // Attempt 1: Groq (primary — free, high volume)
   const groq = getGroqClientInstance();
-  if (groq) {
-    const modelName = needsReasoning ? 'llama-3.1-70b-versatile' : 'llama-3.1-8b-instant';
-    const rpd = needsReasoning ? 1440 : 14400;
-    const stat = initProvider(modelName, 30, rpd);
+  if (groq && !needsReasoning) {
+    const modelName = 'llama-3.1-8b-instant';
+    const stat = initProvider(modelName, 30, 14400);
 
     if (canUseProvider(stat)) {
       markUsed(stat);
-      return {
-        model: groq(modelName),
-        provider: 'Groq',
-        modelName,
-      };
-    }
-
-    // Fallback to other Groq model
-    const fallbackModel = needsReasoning ? 'llama-3.1-8b-instant' : 'llama-3.1-70b-versatile';
-    const fallbackRpd = needsReasoning ? 14400 : 1440;
-    const fallbackStat = initProvider(fallbackModel, 30, fallbackRpd);
-
-    if (canUseProvider(fallbackStat)) {
-      markUsed(fallbackStat);
-      return {
-        model: groq(fallbackModel),
-        provider: 'Groq (fallback)',
-        modelName: fallbackModel,
-      };
+      return { model: groq(modelName), provider: 'Groq', modelName };
     }
   }
 
-  // Attempt 2: OpenAI-compatible fallback
+  // Attempt 2: Mistral (quality critical)
+  const mistral = getMistralClientInstance();
+  if (mistral) {
+    const modelName = 'mistral-small-latest';
+    const stat = initProvider(modelName, 50, 5000);
+
+    if (canUseProvider(stat)) {
+      markUsed(stat);
+      return { model: mistral(modelName), provider: 'Mistral', modelName };
+    }
+  }
+
+  // Attempt 3: Groq 70B (reasoning fallback)
+  if (groq) {
+    const modelName = needsReasoning ? 'llama-3.1-70b-versatile' : 'llama-3.1-70b-versatile';
+    const stat = initProvider(modelName, 30, 1440);
+
+    if (canUseProvider(stat)) {
+      markUsed(stat);
+      return { model: groq(modelName), provider: 'Groq 70B', modelName };
+    }
+
+    // Try 8B as last Groq attempt
+    const stat8b = initProvider('llama-3.1-8b-instant', 30, 14400);
+    if (canUseProvider(stat8b)) {
+      markUsed(stat8b);
+      return { model: groq('llama-3.1-8b-instant'), provider: 'Groq (fallback)', modelName: 'llama-3.1-8b-instant' };
+    }
+  }
+
+  // Attempt 4: OpenAI-compatible fallback
   const openai = getOpenAIClientInstance();
   if (openai) {
     const modelName = process.env.AI_MODEL || 'gpt-4o-mini';
@@ -161,11 +187,7 @@ export async function routeAIRequest(options: AIRequestOptions): Promise<{
 
     if (canUseProvider(stat)) {
       markUsed(stat);
-      return {
-        model: openai(modelName),
-        provider: 'OpenAI-compatible',
-        modelName,
-      };
+      return { model: openai(modelName), provider: 'OpenAI-compatible', modelName };
     }
   }
 

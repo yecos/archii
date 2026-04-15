@@ -26,8 +26,8 @@ const QUICK_PROMPTS = [
   '¿Qué tareas vencen esta semana?',
   'Registrar gasto de materiales',
   '¿Cuál es el estado del proyecto?',
-  'Listar tareas pendientes',
-  '¿Qué presupuestos están en riesgo?',
+  '¿Cuánto presupuesto queda?',
+  'Listar gastos del proyecto',
 ];
 
 export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
@@ -207,7 +207,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold">Agente IA</h3>
-              <p className="text-[11px] text-[var(--muted-foreground)]">Groq — Gratis</p>
+              <p className="text-[11px] text-[var(--muted-foreground)]">Groq + Mistral — Gratis</p>
             </div>
           </div>
           <button
@@ -243,7 +243,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
               </div>
               <h3 className="text-sm font-semibold mb-1">Agente IA de ArchiFlow</h3>
               <p className="text-xs text-[var(--muted-foreground)] mb-4">
-                Puedo crear tareas, registrar gastos, consultar proyectos y más. Todo gratis con IA.
+                Creo tareas, registro gastos, consulto presupuestos y más. IA gratuita + Mistral.
               </p>
               {/* Quick prompts */}
               <div className="flex flex-wrap gap-1.5 justify-center">
