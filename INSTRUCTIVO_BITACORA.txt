@@ -221,6 +221,124 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 10:00 | FEATURES v34-v51 — Plan Premium: 18 Features Completadas
+  Estado: COMPLETADO
+  Build: exitoso (0 errores TypeScript, 18 static + 26 dynamic routes)
+  
+  Contexto: El usuario solicitó hacer la aplicación premium. Se propusieron 18
+    features en 3 tiers de impacto. Las features v34-v43 fueron construidas por una
+    sesión paralela. Esta sesión completó las 8 features restantes (v44-v51).
+
+  Features construidas en esta sesión:
+  
+  v44 — Multi-idioma i18n (ES, EN, PT):
+    * src/lib/i18n.ts (700+ lineas): 3 diccionarios completos (es, en, pt)
+    * ~180 claves de traducción organizadas por módulo (nav, common, tasks, settings, etc.)
+    * Helpers: translate(), getTranslatedArray(), detectBrowserLocale()
+    * src/contexts/I18nContext.tsx (100 lineas): Provider con localStorage persistence
+    * useI18n() hook: { locale, setLocale, t, tArray, ready, locales, dir }
+    * Selector de idioma en SettingsScreen con 3 botones (🇨🇴🇧🇺🇺🇸) + checkmark
+    * Integrado en AppContext como último provider
+  
+  v45 — Lector QR/Código de Barras:
+    * Dependencia: html5-qrcode (instalada via bun)
+    * src/components/ui/QRScanner.tsx (300+ lineas): Componente reutilizable
+      - Cámara con overlay de esquinas animadas + línea de escaneo
+      - Cambio de cámara (frontal/trasera) + linterna
+      - Escaneo desde archivo de imagen
+      - Vibración al escanear + detección de URLs
+    * src/screens/QRScannerScreen.tsx (290 lineas):
+      - Lookup automático en proyectos, tareas, inventario al escanear
+      - Historial de escaneos (máx 50) con copiar/ver
+      - Cards informativas: qué se puede escanear
+    * Navegación: nav group "Herramientas"
+  
+  v46 — Generador de Formularios (Inspecciones personalizadas):
+    * src/screens/FormBuilderScreen.tsx (400+ lineas)
+    * CRUD de plantillas (formTemplates) en Firestore
+    * 8 tipos de campo: text, textarea, number, select, checkbox, photo, date, rating
+    * Editor visual con FieldEditor component
+    * Form filling con validación de campos requeridos
+    * Historial de formularios completados con vista detallada
+    * Navegación: nav group "Herramientas"
+  
+  v47 — Time-lapse Automático:
+    * src/screens/TimeLapseScreen.tsx (420+ lineas)
+    * Genera videos WebM desde fotos de Galería y Bitácora Fotográfica
+    - Canvas API + MediaRecorder para renderizado secuencial
+    - Configuración: FPS (1-5), resolución (480p/720p/1080p), overlays
+    - Barra de progreso en tiempo real durante generación
+    - Reproductor de video + descarga del archivo generado
+    - Estimación de duración basada en fotos y FPS
+    * Navegación: nav group "Herramientas"
+  
+  v48 — API Pública + Webhooks:
+    * src/screens/ApiWebhooksScreen.tsx (410+ lineas):
+      - 3 tabs: API Keys, Webhooks, Documentación
+      - Generación de API keys con prefijo afk_xxxx
+      - CRUD de webhooks con selector de eventos (8 eventos)
+      - Documentación inline con ejemplos de uso
+    * src/app/api/external/[collection]/route.ts (75 lineas):
+      - Endpoint GET público con autenticación Bearer token
+      - Rate limiting: 100 req/min por API key
+      - Soporta colecciones: projects, tasks, expenses
+    * Navegación: nav group "Herramientas"
+  
+  v49 — Geolocalización GPS (construido por subagente):
+    * src/lib/geolocation-service.ts (285 lineas)
+    * src/contexts/GeolocationContext.tsx (455 lineas)
+    * src/screens/GeolocationScreen.tsx (891 lineas)
+    * Tracking GPS, geofencing, reverse geocoding, historial
+    * Navegación: nav group "Operaciones"
+  
+  v50 — Copia de Seguridad y Restore (construido por subagente):
+    * src/lib/backup-service.ts (343 lineas)
+    * src/app/api/backup/restore/route.ts (247 lineas)
+    * src/screens/BackupScreen.tsx (729 lineas)
+    - Exportar: 20 colecciones a JSON
+    - Restore: subida vía API con batch writes
+    - Drag & drop, preview, estrategias de conflicto
+    * Navegación: nav group "Sistema"
+  
+  v51 — Modo Multitenant Real (construido por subagente):
+    * src/lib/tenant-service.ts (253 lineas)
+    * src/contexts/TenantContext.tsx (220 lineas)
+    * src/screens/MultiTenantScreen.tsx (573 lineas)
+    - Data isolation con tenantQuery()
+    - Planes: Free, Pro, Enterprise con límites
+    - Tenant switching para super-admins
+    - Branding por tenant (colores, logo)
+    * Navegación: nav group "Sistema"
+
+  Archivos creados (18):
+    src/lib/i18n.ts (700+)
+    src/contexts/I18nContext.tsx (100)
+    src/components/ui/QRScanner.tsx (300+)
+    src/screens/QRScannerScreen.tsx (290)
+    src/screens/FormBuilderScreen.tsx (400+)
+    src/screens/TimeLapseScreen.tsx (420+)
+    src/screens/ApiWebhooksScreen.tsx (410+)
+    src/screens/GeolocationScreen.tsx (891)
+    src/lib/geolocation-service.ts (285)
+    src/contexts/GeolocationContext.tsx (455)
+    src/lib/backup-service.ts (343)
+    src/app/api/backup/restore/route.ts (247)
+    src/screens/BackupScreen.tsx (729)
+    src/lib/tenant-service.ts (253)
+    src/contexts/TenantContext.tsx (220)
+    src/screens/MultiTenantScreen.tsx (573)
+    src/app/api/external/[collection]/route.ts (75)
+
+  Archivos modificados (5):
+    src/lib/types.ts (NAV_ITEMS, SCREEN_TITLES, NAV_GROUPS)
+    src/app/HomeContent.tsx (dynamic imports + routes)
+    src/contexts/AppContext.tsx (provider chain)
+    src/hooks/useDomain.ts (exports)
+    src/screens/SettingsScreen.tsx (language selector)
+    package.json (html5-qrcode dependency)
+
+  Total: ~6,600+ nuevas lineas (33 archivos) en esta sesión
+
 2026-04-16 01:30 | FEATURE v33 — Unificar Sistema de Templates
   Estado: COMPLETADO
   Commit: 9630ee4
