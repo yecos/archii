@@ -221,6 +221,80 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 18:00 | FEATURE v30 — IA Predictiva (predicciones de presupuesto, cronograma y riesgos)
+  Estado: COMPLETADO
+  Commit: 4418e3b
+  Build: exitoso (17 static + 15 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-v30-ia-predictiva-20260416
+
+  Contexto: Tercera feature del plan de mejoras. Se crea un motor de análisis
+    predictivo con IA que genera predicciones accionables sobre presupuesto,
+    cronograma y riesgos para cada proyecto.
+
+  Tarea 30.1 — API Route /api/ai-predictions/route.ts (340 lineas):
+    * Endpoint POST con auth Firebase + rate limit 5 req/min
+    * 4 tipos de predicción: budget, timeline, risks, full
+    * Fetch datos reales de Firestore (proyectos, tareas, gastos, change orders)
+    * Prompts especializados por tipo con métricas calculadas:
+      - Burn rate mensual, % ejecutado, forecast 3-4 meses
+      - Velocidad tareas/semana, tareas vencidas, milestones
+      - Factores multi-factoriales de riesgo, impactos acumulados
+    * Temperatura 0.4 para output analítico determinista
+    * Respuesta JSON estructurada con confidence 30-95%
+
+  Tarea 30.2 — Pantalla PredictiveAIScreen.tsx (470+ lineas):
+    * 4 modos de análisis: Completa, Presupuesto, Cronograma, Riesgos
+    * Selector de proyecto activo con info bar (estado, presupuesto, avance)
+    * Botón principal con gradiente purple-blue + animación loading
+    * Estado idle con descripción de los 3 módulos predictivos
+
+  Tarea 30.3 — Vista Resultados:
+    * Header con resumen ejecutivo + nivel riesgo (bajo/medio/alto/critico)
+    * Confidence meter visual (barra + % con color semáforo)
+    * Key Insights grid (2 columnas) con datos concretos
+    * Botón "Regenerar predicción" para re-ejecutar
+
+  Tarea 30.4 — Módulo Presupuesto:
+    * 4 KPIs: Burn Rate, Proyección Total, Variación (COP), Var. %
+    * Indicadores visuales: verde=ahorro, rojo=sobrecosto
+    * Chart de proyección mensual (barras gradient acumulativas)
+    * Recomendación específica de presupuesto por la IA
+
+  Tarea 30.5 — Módulo Cronograma:
+    * KPIs: Velocidad actual (tareas/sem), Varianza (días)
+    * Comparación visual: Fecha Planificada vs Proyectada
+    * Predicción por milestones con status (adelantado/a tiempo/atrasado/en riesgo)
+    * Recomendación específica de cronograma
+
+  Tarea 30.6 — Módulo Riesgos:
+    * Lista de riesgos ordenados por prioridad (probabilidad × impacto)
+    * Cards expandibles con: descripción, probabilidad, impacto, categoría
+    * Barras de probabilidad visuales
+    * Estrategia de mitigación sugerida por IA (verde)
+    * Categorías: presupuesto, cronograma, recursos, calidad, legal
+    * Iconos por categoría (emoji) y por impacto (lucide-react)
+
+  Tarea 30.7 — UX Premium:
+    * Loading state con animación bouncing dots + brain icon
+    * Aurora background en header de resultados
+    * Card-glass + card-glass-subtle design tokens
+    * Disclaimer sobre naturaleza predictiva (no reemplaza juicio profesional)
+    * Toast de error para sesión inactiva y fallos de conexión
+
+  Tarea 30.8 — Navegación:
+    * NAV_ITEMS: { id: 'predictiveAI', icon: '🧠', label: 'IA Predictiva' }
+    * SCREEN_TITLES: predictiveAI: 'IA Predictiva'
+    * NAV_GROUPS: grupo "Herramientas" (entre Rentabilidad y Templates)
+    * HomeContent.tsx: dynamic import + route registration
+
+  Archivos creados (2):
+    src/app/api/ai-predictions/route.ts (340 lineas)
+    src/screens/PredictiveAIScreen.tsx (470+ lineas)
+  Archivos modificados (2):
+    src/lib/types.ts (+4 lineas)
+    src/app/HomeContent.tsx (+2 lineas)
+  Total: +1153 lineas (4 archivos)
+
 2026-04-16 13:15 | FEATURE v29 — Fotos en Firebase Storage (migración base64)
   Estado: COMPLETADO
   Commit: 44aa89b
