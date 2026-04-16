@@ -221,6 +221,62 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 02:30 | FEATURE v26 — Control de Cambios (Change Orders)
+  Estado: COMPLETADO
+  Commit: fbe929e
+  Build: exitoso (15 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: Feature solicitada desde el analisis de mejoras. No existia
+    en el proyecto — se creo desde cero: tipos, pantalla, navegacion.
+
+  Tarea 26.1 — Tipos en types.ts:
+    * ChangeOrderStatus: 6 estados (Borrador, Solicitada, En Revision,
+      Aprobada, Rechazada, Implementada)
+    * ChangeOrderCategory: 7 categorias (Cambio de Alcance, Diseno,
+      Condicion de Sitio, Solicitud del Cliente, Normativa,
+      Error de Construccion, Otro)
+    * ChangeOrder interface con 18 campos incluyendo impactBudget,
+      impactDays, requestedBy, approvedBy, approvedAt, implementedAt
+
+  Tarea 26.2 — Pantalla ChangeOrdersScreen.tsx (310 lineas):
+    * Vista lista con filtro por 6 estados + "Todas"
+    * 5 tarjetas KPI: Total, Pendientes, Aprobadas, Impacto Presupuesto,
+      Dias Adicionales (con colores rojo/verde segun signo)
+    * Cards expandibles con: titulo, numero, estado, categoria, proyecto,
+      indicadores de impacto, descripcion, justificacion, metadatos
+    * Workflow de estados con botones contextuales:
+      Borrador → Solicitar → Revisar → Aprobar/Rechazar → Implementar
+    * Indicadores visuales: TrendingUp (rojo) para costos, Clock (amber)
+      para retrasos, TrendingDown (verde) para ahorros
+    * Icons por categoria y estado
+
+  Tarea 26.3 — Editor / Formulario:
+    * Selector de proyecto + categoria + fecha limite
+    * Titulo del cambio
+    * Textarea descripcion + justificacion
+    * Seccion de impacto con preview en tiempo real:
+      - Impacto en presupuesto (COP) con signo +/- 
+      - Impacto en cronograma (dias) con signo +/-
+    * Notas adicionales
+    * Validacion: titulo y proyecto requeridos
+
+  Tarea 26.4 — Firestore:
+    * Coleccion 'changeOrders' con listener en tiempo real
+    * CRUD completo: crear, editar, eliminar, cambiar estado
+    * Numero auto-generado: CC-[timestamp base36]
+    * Campos de auditoria: createdBy, requestedBy, approvedBy
+    * Timestamps: createdAt, updatedAt, approvedAt, implementedAt
+
+  Tarea 26.5 — Navegacion:
+    * NAV_ITEMS: { id: 'changeOrders', icon: '🔄', label: 'Control de Cambios' }
+    * SCREEN_TITLES: changeOrders: 'Control de Cambios'
+    * NAV_GROUPS: grupo "Obra / Campo" (despues de Inspecciones)
+    * HomeContent.tsx: dynamic import + route registration
+
+  Archivos creados (1): src/screens/ChangeOrdersScreen.tsx
+  Archivos modificados (2): src/lib/types.ts, src/app/HomeContent.tsx
+  Total: +566 lineas (3 archivos)
+
 2026-04-17 01:00 | REFACTOR — P8 Type Safety: 88 any eliminados en 4 archivos
   Estado: COMPLETADO
   Commit: 89ad84c
