@@ -173,8 +173,8 @@ async function callAI(userPrompt: string, userId: string): Promise<AIPrediction>
 
 /** Helper: map Firestore snapshot docs to typed array */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function snapDocs(snap: any): DocData[] {
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+function snapDocs(snap: { docs: Array<{ id: string; data: () => Record<string, any> }> }): DocData[] {
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 function buildBudgetPrompt(project: DocData, expenses: DocData[], tasks: DocData[]): string {

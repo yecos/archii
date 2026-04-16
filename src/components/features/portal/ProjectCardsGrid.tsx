@@ -1,7 +1,8 @@
 import ProjectCard, { ActivityItem } from './ProjectCard';
+import type { Project } from '@/lib/types';
 
 interface ProjectCardsGridProps {
-  projects: any[];
+  projects: Project[];
   onSelectProject: (id: string) => void;
   getProjectBudget: (projectId: string) => { spent: number; budget: number };
   getProjectActivity: Record<string, ActivityItem[]>;

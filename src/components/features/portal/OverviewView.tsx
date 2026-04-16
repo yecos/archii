@@ -76,10 +76,14 @@ export default function OverviewView({ onSelectProject }: OverviewViewProps) {
             icon: '📝',
           });
         });
-      items.sort((a, b) => {
-        const ta = a.time?.toDate?.() || new Date(0);
-        const tb = b.time?.toDate?.() || new Date(0);
-        return tb.getTime() - ta.getTime();
+          items.sort((a, b) => {
+        const toSortDate = (t: typeof a.time): Date => {
+          if (!t) return new Date(0);
+          if (typeof t === 'string' || t instanceof Date) return new Date(t);
+          if ('toDate' in t && typeof t.toDate === 'function') return t.toDate();
+          return new Date(0);
+        };
+        return toSortDate(b.time).getTime() - toSortDate(a.time).getTime();
       });
       map[p.id] = items.slice(0, 3);
     });

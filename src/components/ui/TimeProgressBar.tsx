@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
+import type { FirestoreTimestamp } from '@/lib/types';
 import { Clock, AlertTriangle, CheckCircle2, Flame } from 'lucide-react';
 
 interface TimeProgressBarProps {
   /** Fecha límite de la tarea (string, Date, o Firestore Timestamp) */
-  dueDate: any;
+  dueDate: string | Date | FirestoreTimestamp | null;
   /** Fecha de creación de la tarea (string, Date, o Firestore Timestamp) — si no se pasa, se asume 7 días antes */
-  createdAt?: any;
+  createdAt?: string | Date | FirestoreTimestamp | null;
   /** Si la tarea ya está completada */
   isCompleted?: boolean;
   /** Clase CSS adicional para el contenedor */
@@ -19,7 +20,7 @@ interface TimeProgressBarProps {
  * Convierte cualquier tipo de fecha a milisegundos (number).
  * Soporta: string ISO, Date nativo, Firestore Timestamp ({toDate, seconds, nanoseconds}), number.
  */
-function toMs(value: any): number | null {
+function toMs(value: string | Date | FirestoreTimestamp | number | null | undefined): number | null {
   if (value == null) return null;
   // Ya es un number
   if (typeof value === 'number') return value;
@@ -28,18 +29,18 @@ function toMs(value: any): number | null {
     const n = new Date(value).getTime();
     return isNaN(n) ? null : n;
   }
+  // Date nativo
+  if (value instanceof Date) return value.getTime();
   // Firestore Timestamp — tiene .toDate()
-  if (typeof value?.toDate === 'function') {
+  if (value && 'toDate' in value && typeof value.toDate === 'function') {
     try { return value.toDate().getTime(); } catch (_) { /* fall through */ }
   }
   // Tiene .seconds (Firestore Timestamp parcial / serializado)
-  if (typeof value?.seconds === 'number') {
+  if (value && 'seconds' in value && typeof value.seconds === 'number') {
     return (value.seconds * 1000) + (value.nanoseconds || 0) / 1e6;
   }
-  // Date nativo
-  if (value instanceof Date) return value.getTime();
   // Último intento
-  try { const n = new Date(value).getTime(); return isNaN(n) ? null : n; } catch (_) { return null; }
+  try { const n = new Date(value as unknown as string).getTime(); return isNaN(n) ? null : n; } catch (_) { return null; }
 }
 
 /**

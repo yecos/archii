@@ -54,9 +54,9 @@ export default function PhotoLogScreen() {
   // Load entries
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('photoLog').orderBy('date', 'desc').onSnapshot((snap: any) => {
+    const unsub = db.collection('photoLog').orderBy('date', 'desc').onSnapshot((snap) => {
       setEntries(snapToDocs(snap) as PhotoLogEntry[]);
-    }, (err: any) => console.error('[ArchiFlow] PhotoLog: listen error:', err));
+    }, (err: unknown) => console.error('[ArchiFlow] PhotoLog: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
   }, []);
 

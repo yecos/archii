@@ -3,6 +3,7 @@ import CenterModal from '@/components/common/CenterModal';
 import { useUI, useFirestore } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { EXPENSE_CATS } from '@/lib/types';
+import type { Project } from '@/lib/types';
 
 export default function ExpenseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
@@ -28,8 +29,8 @@ export default function ExpenseModal({ open, onClose }: { open: boolean; onClose
             onChange={(e) => setForms(p => ({ ...p, expProject: e.target.value }))}
           >
             <option value="">— Sin proyecto —</option>
-            {projects.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.data?.name || p.name}</option>
+            {projects.map((p: Project) => (
+              <option key={p.id} value={p.id}>{p.data.name}</option>
             ))}
           </FormSelect>
         </FormField>

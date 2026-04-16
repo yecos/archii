@@ -1,6 +1,7 @@
 'use client';
 import { Repeat } from 'lucide-react';
 import { DIAS_SEMANA } from '@/lib/types';
+import type { Meeting } from '@/lib/types';
 
 interface CalendarWeeklyDesktopProps {
   weekDays: Date[];
@@ -8,14 +9,14 @@ interface CalendarWeeklyDesktopProps {
   todayOnly: Date;
   calSelectedDate: string | null;
   calTasks: Array<{ id: string; data: Record<string, any> }>;
-  weeklyExpandedMeetings: Array<{ date: string; meeting: any; isRecurring: boolean }>;
+  weeklyExpandedMeetings: Array<{ date: string; meeting: Meeting; isRecurring: boolean }>;
   TIME_SLOTS: string[];
   SLOT_H: number;
   START_HOUR: number;
   formatTime12: (time24: string) => string;
   formatDateISO: (d: Date) => string;
   onSelectDate: (date: string) => void;
-  openEditMeeting: (meeting: any) => void;
+  openEditMeeting: (meeting: Meeting) => void;
 }
 
 export default function CalendarWeeklyDesktop({

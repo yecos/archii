@@ -1,13 +1,14 @@
 'use client';
 import { Pencil, Trash2, CheckSquare } from 'lucide-react';
 import { fmtDate, prioColor, taskStColor } from '@/lib/helpers';
+import type { Task, Subtask } from '@/lib/types';
 
 interface ProjectTareasProps {
   projectTasks: Array<{ id: string; data: Record<string, any> }>;
   selectedProjectId: string | null;
   getUserName: (userId: string) => string;
   toggleTask: (taskId: string, status: string) => void;
-  openEditTask: (task: any) => void;
+  openEditTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
   setForms: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
   openModal: (modal: string) => void;
@@ -23,7 +24,7 @@ export default function ProjectTareas({ projectTasks, selectedProjectId, getUser
       {projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
       projectTasks.map(t => {
         const subs = t.data?.subtasks;
-        const subtaskInfo = Array.isArray(subs) && subs.length > 0 ? { total: subs.length, completed: subs.filter((s: any) => s.completed).length } : null;
+        const subtaskInfo = Array.isArray(subs) && subs.length > 0 ? { total: subs.length, completed: subs.filter((s: Subtask) => s.completed).length } : null;
         return (
         <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
           <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
@@ -48,7 +49,7 @@ export default function ProjectTareas({ projectTasks, selectedProjectId, getUser
             )}
           </div>
           <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-          <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}><Pencil className="w-3 h-3" /></button>
+          <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t as unknown as Task)}><Pencil className="w-3 h-3" /></button>
           <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}><Trash2 className="w-3 h-3" /></button>
         </div>
         );

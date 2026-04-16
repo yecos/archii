@@ -117,8 +117,8 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
       setPreviewHeaders(headers);
       setPreviewData(data.slice(0, 5));
       setStep('preview');
-    } catch (err: any) {
-      showToast('Error al leer el archivo: ' + (err?.message || 'Error desconocido'), 'error');
+    } catch (err: unknown) {
+      showToast('Error al leer el archivo: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
     } finally {
       setImporting(false);
     }
@@ -172,8 +172,8 @@ export default function ImportDataModal({ open, onClose, defaultType }: ImportDa
       if (res.errors.length > 0) {
         showToast(`⚠️ ${res.errors.length} errores encontrados`, 'warning');
       }
-    } catch (err: any) {
-      showToast('Error al importar: ' + (err?.message || 'Error desconocido'), 'error');
+    } catch (err: unknown) {
+      showToast('Error al importar: ' + (err instanceof Error ? err.message : 'Error desconocido'), 'error');
     } finally {
       setImporting(false);
     }

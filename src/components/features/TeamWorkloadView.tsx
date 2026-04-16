@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
+import type { Task } from '@/lib/types';
 import { Users, AlertTriangle, TrendingUp, Filter } from 'lucide-react';
 
 /* ===== HELPERS ===== */
@@ -17,7 +18,7 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function getAssigneeIds(t: any): string[] {
+function getAssigneeIds(t: Task): string[] {
   if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
   if (t.data.assigneeId) return [t.data.assigneeId];
   return [];

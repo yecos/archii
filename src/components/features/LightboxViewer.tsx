@@ -2,14 +2,18 @@
 import { useGallery } from '@/hooks/useDomain';
 import { useOneDrive } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
+import type { OneDriveFile } from '@/lib/types';
 import { X, Download, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 export default function LightboxViewer() {
   const gallery = useGallery();
-  const od = useOneDrive();
+  const oneDrive = useOneDrive();
   const fs = useFirestore();
 
   if (!gallery.lightboxPhoto) return null;
+
+  const isOneDrivePhoto = gallery.lightboxPhoto && ('thumbnailLarge' in gallery.lightboxPhoto || 'thumbnailUrl' in gallery.lightboxPhoto);
+  const odPhoto = isOneDrivePhoto ? gallery.lightboxPhoto as OneDriveFile : null;
 
   return (
     <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center animate-fadeIn" onClick={gallery.closeLightbox}>
@@ -17,29 +21,29 @@ export default function LightboxViewer() {
         {/* Close button */}
         <button className="absolute top-3 right-3 pt-[env(safe-area-inset-top,0px)] z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20 transition-colors" onClick={gallery.closeLightbox}><X size={20} /></button>
         {/* OneDrive photo lightbox */}
-        {gallery.lightboxPhoto && 'thumbnailLarge' in gallery.lightboxPhoto && (gallery.lightboxPhoto as any).thumbnailLarge || gallery.lightboxPhoto && 'thumbnailUrl' in gallery.lightboxPhoto && (gallery.lightboxPhoto as any).thumbnailUrl ? (
+        {odPhoto ? (
           <>
             {/* Download button */}
-            <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => od.downloadOneDriveFile(gallery.lightboxPhoto!.id, 'name' in gallery.lightboxPhoto! ? gallery.lightboxPhoto.name : '')} title="Descargar"><Download size={18} /></button>
+            <button className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => oneDrive.downloadOneDriveFile(odPhoto.id, odPhoto.name)} title="Descargar"><Download size={18} /></button>
             {/* Image */}
-            <img src={'thumbnailLarge' in gallery.lightboxPhoto! ? (gallery.lightboxPhoto as any).thumbnailLarge : (gallery.lightboxPhoto as any).webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={'name' in gallery.lightboxPhoto! ? gallery.lightboxPhoto.name : ''} loading="lazy" />
+            <img src={odPhoto.thumbnailLarge || odPhoto.thumbnailUrl || odPhoto.webUrl} className="max-w-full max-h-[80dvh] object-contain rounded-lg" alt={odPhoto.name} loading="lazy" />
             {/* Navigation */}
             <div className="flex items-center gap-4 mt-4 pb-[env(safe-area-inset-bottom,0px)]">
               <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
-                const prev = (gallery.lightboxIndex - 1 + od.odGalleryPhotos.length) % od.odGalleryPhotos.length;
-                gallery.setLightboxIndex(prev); gallery.setLightboxPhoto(od.odGalleryPhotos[prev]);
+                const prev = (gallery.lightboxIndex - 1 + oneDrive.odGalleryPhotos.length) % oneDrive.odGalleryPhotos.length;
+                gallery.setLightboxIndex(prev); gallery.setLightboxPhoto(oneDrive.odGalleryPhotos[prev]);
               }}>
                 <ChevronLeft size={20} className="stroke-current" />
               </button>
-              <span className="text-white/60 text-sm">{gallery.lightboxIndex + 1} / {od.odGalleryPhotos.length}</span>
+              <span className="text-white/60 text-sm">{gallery.lightboxIndex + 1} / {oneDrive.odGalleryPhotos.length}</span>
               <button className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => {
-                const next = (gallery.lightboxIndex + 1) % od.odGalleryPhotos.length;
-                gallery.setLightboxIndex(next); gallery.setLightboxPhoto(od.odGalleryPhotos[next]);
+                const next = (gallery.lightboxIndex + 1) % oneDrive.odGalleryPhotos.length;
+                gallery.setLightboxIndex(next); gallery.setLightboxPhoto(oneDrive.odGalleryPhotos[next]);
               }}>
                 <ChevronRight size={20} className="stroke-current" />
               </button>
             </div>
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50 text-[11px] mt-2">{'name' in gallery.lightboxPhoto! ? gallery.lightboxPhoto.name : ''}</div>
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/50 text-[11px] mt-2">{odPhoto.name}</div>
           </>
         ) : (
           <>

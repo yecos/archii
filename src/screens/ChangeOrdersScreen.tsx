@@ -112,9 +112,9 @@ export default function ChangeOrdersScreen() {
   // Load Change Orders
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
+    const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').onSnapshot((snap) => {
       setCos(snapToDocs(snap) as ChangeOrderEntry[]);
-    }, (err: any) => console.error('[ArchiFlow] CO: listen error:', err));
+    }, (err: unknown) => console.error('[ArchiFlow] CO: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
   }, []);
 

@@ -2,16 +2,17 @@
 import { CalendarDays, Repeat, Folder, User, Users, Pencil } from 'lucide-react';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES } from '@/lib/types';
+import type { Meeting } from '@/lib/types';
 
 interface SelectedDayDetailProps {
   calSelectedDate: string;
   selectedDayTasks: Array<{ id: string; data: Record<string, any> }>;
-  selectedDayMeetings: Array<{ date: string; meeting: any; isRecurring: boolean }>;
+  selectedDayMeetings: Array<{ date: string; meeting: Meeting; isRecurring: boolean }>;
   todayOnly: Date;
   projects: Array<{ id: string; data: { name: string } }>;
   getUserName: (id: string) => string;
   openNewMeeting: () => void;
-  openEditMeeting: (meeting: any) => void;
+  openEditMeeting: (meeting: Meeting) => void;
   deleteMeeting: (id: string) => void;
 }
 

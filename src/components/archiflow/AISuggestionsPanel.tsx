@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useDomain';
+import { getFirebase } from '@/lib/firebase-service';
 import {
   Sparkles,
   X,
@@ -82,7 +83,7 @@ function getAuthToken(): Promise<string> {
       reject(new Error('Not in browser'));
       return;
     }
-    const fb = (window as any).firebase;
+    const fb = getFirebase();
     if (!fb?.auth?.()) {
       reject(new Error('Firebase not ready'));
       return;

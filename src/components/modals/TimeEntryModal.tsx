@@ -2,6 +2,7 @@
 import CenterModal from '@/components/common/CenterModal';
 import { useUI, useFirestore, useTimeTracking } from '@/hooks/useDomain';
 import { DEFAULT_PHASES } from '@/lib/types';
+import type { Project } from '@/lib/types';
 
 export default function TimeEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
@@ -23,8 +24,8 @@ export default function TimeEntryModal({ open, onClose }: { open: boolean; onClo
             onChange={(e) => setForms(p => ({ ...p, teProject: e.target.value }))}
           >
             <option value="">— Seleccionar —</option>
-            {projects.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.data?.name || p.name}</option>
+            {projects.map((p: Project) => (
+              <option key={p.id} value={p.id}>{p.data.name}</option>
             ))}
           </select>
         </div>

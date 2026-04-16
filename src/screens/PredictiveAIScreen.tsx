@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
+import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP } from '@/lib/helpers';
 import EmptyState from '@/components/ui/EmptyState';
 import {
@@ -152,9 +153,8 @@ export default function PredictiveAIScreen() {
   const runPrediction = useCallback(async () => {
     if (!selectedProject) return;
 
-    // Get auth token via CDN firebase
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fb = (window as any).firebase;
+    // Get auth token via firebase-service
+    const fb = getFirebase();
     if (!fb?.auth?.().currentUser) {
       showToast('No hay sesión activa', 'error');
       return;
@@ -165,7 +165,7 @@ export default function PredictiveAIScreen() {
     setExpandedRisk(null);
 
     try {
-      const token = await fb.auth().currentUser.getIdToken();
+      const token = await fb.auth().currentUser!.getIdToken();
       const res = await fetch('/api/ai-predictions', {
         method: 'POST',
         headers: {

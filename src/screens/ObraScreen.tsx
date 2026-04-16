@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { FileText, ChevronDown, ChevronUp, Thermometer, Users, Wrench, Package } from 'lucide-react';
 import { exportDailyLogsPDF } from '@/lib/export-pdf';
 
@@ -90,12 +91,12 @@ export default function ObraScreen() {
     }
   };
 
-  function ChartTooltip({ active, payload, label }: any) {
+  function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
     if (!active || !payload?.length) return null;
     return (
       <div className="card-elevated rounded-lg px-3 py-2 text-[12px]">
         {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
-        {payload.map((p: any, i: number) => (
+        {payload.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
             <span className="text-[var(--muted-foreground)]">{p.name}:</span>

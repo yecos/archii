@@ -2,6 +2,7 @@
 import { CalendarDays, Repeat, Clock, FolderOpen, Users, Zap, User } from 'lucide-react';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
+import type { Meeting } from '@/lib/types';
 
 interface CalendarWeeklyMobileProps {
   weekDays: Date[];
@@ -9,13 +10,13 @@ interface CalendarWeeklyMobileProps {
   todayOnly: Date;
   calSelectedDate: string | null;
   calTasks: Array<{ id: string; data: Record<string, any> }>;
-  weeklyExpandedMeetings: Array<{ date: string; meeting: any; isRecurring: boolean }>;
+  weeklyExpandedMeetings: Array<{ date: string; meeting: Meeting; isRecurring: boolean }>;
   projects: Array<{ id: string; data: { name: string } }>;
   getUserName: (id: string) => string;
   formatTime12: (time24: string) => string;
   formatDateISO: (d: Date) => string;
   onSelectDate: (date: string) => void;
-  openEditMeeting: (meeting: any) => void;
+  openEditMeeting: (meeting: Meeting) => void;
 }
 
 export default function CalendarWeeklyMobile({

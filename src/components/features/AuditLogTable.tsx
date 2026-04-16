@@ -16,6 +16,7 @@ import {
   formatValue,
 } from '@/lib/audit-trail';
 import { fmtDateTime } from '@/lib/helpers';
+import type { FirestoreTimestamp } from '@/lib/types';
 import { ChevronDown, ChevronRight, Filter, RefreshCw, Loader2 } from 'lucide-react';
 
 /* ===== TYPES ===== */
@@ -301,7 +302,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
                           {/* Date */}
                           <td className="py-2.5 px-3 text-[var(--muted-foreground)] whitespace-nowrap">
                             {entry.data.timestamp
-                              ? fmtDateTime(entry.data.timestamp as any)
+                              ? fmtDateTime(entry.data.timestamp as FirestoreTimestamp)
                               : '—'}
                           </td>
                           {/* User */}
@@ -388,7 +389,7 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
                       {AUDIT_ACTION_LABELS[entry.data.action]}
                     </span>
                     <span className="ml-auto text-[10px] text-[var(--muted-foreground)]">
-                      {entry.data.timestamp ? fmtDateTime(entry.data.timestamp as any) : '—'}
+                      {entry.data.timestamp ? fmtDateTime(entry.data.timestamp as FirestoreTimestamp) : '—'}
                     </span>
                   </div>
 

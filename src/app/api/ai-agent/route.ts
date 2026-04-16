@@ -168,8 +168,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          for await (const part of result.fullStream as any) {
+          for await (const part of result.fullStream as AsyncIterable<{ type: string; text?: string; toolCallId?: string; toolName?: string; input?: Record<string, unknown>; args?: Record<string, unknown>; output?: unknown; result?: unknown; error?: unknown; isError?: boolean }>) {
             const partType = part.type;
 
             if (partType === 'text-delta') {

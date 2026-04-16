@@ -48,9 +48,9 @@ interface UseNotificationsReturn {
   /** Show permission banner? */
   showNotifBanner: boolean;
   /** In-app notification banners (auto-dismiss) */
-  inAppNotifs: any[];
+  inAppNotifs: NotifEntry[];
   /** Notification history */
-  notifHistory: any[];
+  notifHistory: NotifEntry[];
   /** Unread count */
   unreadCount: number;
   /** Mark single notification as read */
@@ -82,7 +82,7 @@ export function useNotifications(showToastFn: (msg: string, type?: string) => vo
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifSound, setNotifSound] = useState(true);
-  const [inAppNotifs, setInAppNotifs] = useState<any[]>([]);
+  const [inAppNotifs, setInAppNotifs] = useState<NotifEntry[]>([]);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
 
@@ -210,7 +210,7 @@ export function useNotifications(showToastFn: (msg: string, type?: string) => vo
 
     // Always show in-app toast
     setInAppNotifs(prev => [...prev, { ...notifEntry, ts: Date.now() }]);
-    setTimeout(() => setInAppNotifs(prev => prev.filter(n => Date.now() - n.ts < 5000)), 5500);
+    setTimeout(() => setInAppNotifs(prev => prev.filter(n => n.ts != null && Date.now() - n.ts < 5000)), 5500);
 
     // Sound + vibrate
     playNotifSound(type);

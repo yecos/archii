@@ -1,8 +1,9 @@
 import { useGallery } from '@/hooks/useDomain';
+import type { GalleryPhoto } from '@/lib/types';
 
 interface FotosTabProps {
   projectId: string;
-  photos: any[];
+  photos: GalleryPhoto[];
 }
 
 export default function FotosTab({ projectId, photos }: FotosTabProps) {

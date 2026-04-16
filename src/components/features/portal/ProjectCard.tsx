@@ -1,17 +1,18 @@
 import { User, MapPin, CalendarDays, Clock, ChevronRight } from 'lucide-react';
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { fmtCOP, fmtDateTime } from '@/lib/helpers';
+import type { Project, FirestoreTimestamp } from '@/lib/types';
 import { projectStatusColor, progressColor } from './statusHelpers';
 
 export interface ActivityItem {
   id: string;
   text: string;
-  time: any;
+  time: FirestoreTimestamp | string | Date | null;
   icon: string;
 }
 
 interface ProjectCardProps {
-  project: any;
+  project: Project;
   progress: number;
   spent: number;
   budget: number;

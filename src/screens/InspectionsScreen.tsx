@@ -143,9 +143,9 @@ export default function InspectionsScreen() {
   // Load
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('inspections').orderBy('date', 'desc').onSnapshot((snap: any) => {
+    const unsub = db.collection('inspections').orderBy('date', 'desc').onSnapshot((snap) => {
       setInspections(snapToDocs(snap) as Inspection[]);
-    }, (err: any) => console.error('[ArchiFlow] Inspections: listen error:', err));
+    }, (err: unknown) => console.error('[ArchiFlow] Inspections: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
   }, []);
 
@@ -204,7 +204,7 @@ export default function InspectionsScreen() {
     setExpandedId(null);
   };
 
-  const updateItem = (idx: number, field: keyof InspectionItem, value: any) => {
+  const updateItem = (idx: number, field: keyof InspectionItem, value: string | number) => {
     setFormItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 

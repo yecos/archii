@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { toSafeDate } from '@/lib/date-utils';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
+import type { Meeting } from '@/lib/types';
 import { expandMeetingForMonth } from '@/lib/recurrence';
 import { Repeat, ChevronLeft, ChevronRight, Clock, FolderOpen, CalendarDays, Users, Zap, User, Folder, Pencil, X } from 'lucide-react';
 
@@ -93,18 +94,18 @@ export default function CalendarScreen() {
     for (const d of weekDays) {
       monthYearSet.add(`${d.getFullYear()}-${d.getMonth()}`);
     }
-    const results: Array<{ date: string; meeting: any; isRecurring: boolean }> = [];
+    const results: Array<{ date: string; meeting: Meeting; isRecurring: boolean }> = [];
     for (const key of monthYearSet) {
       const [yStr, mStr] = key.split('-');
       const y = parseInt(yStr);
       const m = parseInt(mStr);
       for (const mt of meetings) {
         const expanded = expandMeetingForMonth(
-          mt as { id: string; data: Record<string, any> },
+          mt as unknown as { id: string; data: Record<string, any> },
           y,
           m,
         );
-        results.push(...expanded);
+        results.push(...expanded.map(e => ({ date: e.date, meeting: e.meeting as unknown as Meeting, isRecurring: e.isRecurring })));
       }
     }
     return results.filter(e => weekDateStrs.includes(e.date));

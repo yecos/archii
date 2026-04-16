@@ -27,10 +27,11 @@ function useFirebaseStatus(triggerKey: number) {
     const check = () => {
       attempts++;
       try {
-        const w = window as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const w = window as Window & { firebase?: Record<string, any> };
         // Check raw script tags loaded
         const scripts = document.querySelectorAll('script[src*="firebase"]');
-        const loadedScripts = Array.from(scripts).filter((s: any) => s.src);
+        const loadedScripts = Array.from(scripts).filter((s): s is HTMLScriptElement => s instanceof HTMLScriptElement && !!s.src);
         
         if (!w.firebase) {
           if (attempts < maxAttempts) { scheduleCheck(500); return; }
@@ -70,10 +71,10 @@ function useFirebaseStatus(triggerKey: number) {
         }
         setStatus('ok');
         setDetail(`Firebase OK — ${appOptions.projectId}`);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (attempts < maxAttempts) { scheduleCheck(500); return; }
         setStatus('error');
-        setDetail(e.message || 'Error desconocido al verificar Firebase');
+        setDetail(e instanceof Error ? e.message : 'Error desconocido al verificar Firebase');
       }
     };
     // Reset and start checking

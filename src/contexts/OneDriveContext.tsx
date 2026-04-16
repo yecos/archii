@@ -3,6 +3,14 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import type { OneDriveFile } from '@/lib/types';
+
+/* ===== MS Graph API Drive item (minimal) ===== */
+interface MsGraphDriveItem {
+  id: string;
+  name: string;
+  folder?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 import { toSafeDate } from '@/lib/date-utils';
 import { confirm } from '@/hooks/useConfirmDialog';
 
@@ -231,7 +239,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     try {
       const root = await graphApiGetRef.current('/me/drive/root/children');
       if (!root) { setMsLoading(false); return null; }
-      const archiFolder = root.value?.find((f: any) => f.name === 'ArchiFlow' && f.folder);
+      const archiFolder = root.value?.find((f: MsGraphDriveItem) => f.name === 'ArchiFlow' && f.folder);
       let archiFolderId: string;
       if (archiFolder) {
         archiFolderId = archiFolder.id;
@@ -247,7 +255,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       }
       const projChildren = await graphApiGetRef.current(`/me/drive/items/${archiFolderId}/children`);
       if (!projChildren) { setMsLoading(false); return null; }
-      const projFolder = projChildren.value?.find((f: any) => f.name === projectName && f.folder);
+      const projFolder = projChildren.value?.find((f: MsGraphDriveItem) => f.name === projectName && f.folder);
       let projFolderId: string;
       if (projFolder) {
         projFolderId = projFolder.id;

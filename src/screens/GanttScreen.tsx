@@ -80,10 +80,9 @@ export default function GanttScreen() {
   useEffect(() => {
     const fb = getFirebase();
     const db = fb.firestore();
-    const unsub = db.collection('tasks').orderBy('dueDate', 'asc').onSnapshot(
-      (snap: any) => setTasks(snapToDocs(snap) as Task[]),
-      (err: any) => console.error('[ArchiFlow] Gantt: task listen error:', err),
-    );
+    const unsub = db.collection('tasks').orderBy('dueDate', 'asc').onSnapshot((snap) => {
+      setTasks(snapToDocs(snap) as Task[]);
+    }, (err: unknown) => console.error('[ArchiFlow] Gantt: task listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
   }, []);
 

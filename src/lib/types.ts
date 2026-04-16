@@ -909,7 +909,7 @@ export interface InvoiceFormData {
   invProject: string;
   invNumber: string;
   invStatus: string;
-  invItems: any[];
+  invItems: InvoiceItem[];
   invSubtotal: string | number; // Number() applied
   invTax: string | number; // Number() applied
   invTotal: string | number; // Number() applied
@@ -926,8 +926,8 @@ export interface QuotationFormData {
   clientPhone: string;
   clientAddress: string;
   status: string;
-  sections: any[];
-  payments: any[];
+  sections: QuotationSection[];
+  payments: QuotationPayment[];
   validUntil: string;
   notes: string;
   internalNotes: string;
@@ -956,7 +956,7 @@ export interface ChatMessageFormData {
   fileType?: string;
   audioData?: string;
   audioDuration?: number;
-  replyTo?: any;
+  replyTo?: { id: string; text: string; userName: string; uid: string } | string;
   reactions?: Record<string, string[]>;
 }
 

@@ -54,10 +54,10 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
 
   // ===== COMPUTED: Expanded meetings for current month =====
   const expandedMeetings = useMemo(() => {
-    const results: Array<{ date: string; meeting: any; isRecurring: boolean }> = [];
+    const results: Array<{ date: string; meeting: Meeting; isRecurring: boolean }> = [];
     for (const m of meetings) {
-      const expanded = expandMeetingForMonth(m as { id: string; data: Record<string, any> }, calYear, calMonth);
-      results.push(...expanded.map(e => ({ date: e.date, meeting: e.meeting, isRecurring: e.isRecurring })));
+      const expanded = expandMeetingForMonth(m as unknown as { id: string; data: Record<string, any> }, calYear, calMonth);
+      results.push(...expanded.map(e => ({ date: e.date, meeting: e.meeting as unknown as Meeting, isRecurring: e.isRecurring })));
     }
     return results;
   }, [meetings, calYear, calMonth]);
@@ -100,7 +100,7 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const openEditMeeting = (m: any) => {
+  const openEditMeeting = (m: Meeting) => {
     setEditingId(m.id);
     setForms(f => ({
       ...f,

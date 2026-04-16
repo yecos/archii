@@ -9,6 +9,7 @@ import {
   type UnifiedTemplate,
 } from '@/lib/templates';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import type { Company } from '@/lib/types';
 
 export default function ProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();

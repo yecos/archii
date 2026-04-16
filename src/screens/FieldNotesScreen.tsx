@@ -77,9 +77,9 @@ export default function FieldNotesScreen() {
   // Load notes
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('fieldNotes').orderBy('date', 'desc').onSnapshot((snap: any) => {
+    const unsub = db.collection('fieldNotes').orderBy('date', 'desc').onSnapshot((snap) => {
       setNotes(snapToDocs(snap) as FieldNote[]);
-    }, (err: any) => console.error('[ArchiFlow] FieldNotes: listen error:', err));
+    }, (err: unknown) => console.error('[ArchiFlow] FieldNotes: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
   }, []);
 

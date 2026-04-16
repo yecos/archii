@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { HelpCircle, X, Loader2, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
+import { getFirebase } from '@/lib/firebase-service';
 
 interface Message {
   id: string;
@@ -186,7 +187,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
 
     try {
       // Obtener token de autenticación Firebase directamente
-      const fb = (window as any).firebase;
+      const fb = getFirebase();
       if (!fb?.auth?.()) throw new Error('Firebase no disponible');
       const currentUser = fb.auth().currentUser;
       if (!currentUser) throw new Error('No autenticado. Inicia sesión para usar el asistente.');

@@ -1,6 +1,7 @@
 'use client';
 import { Search } from 'lucide-react';
 import { getAvatarHSL } from './chat-helpers';
+import type { TeamUser, Project } from '@/lib/types';
 
 interface ChatSidebarProps {
   chatMobileShow: boolean;
@@ -9,8 +10,8 @@ interface ChatSidebarProps {
   chatProjectId: string | null;
   chatDmUser: string | null;
   authUserUid: string | undefined;
-  teamUsers: any[];
-  projects: any[];
+  teamUsers: TeamUser[];
+  projects: Project[];
   onSelectGeneral: () => void;
   onSelectDm: (userId: string) => void;
   onSelectProject: (projectId: string) => void;

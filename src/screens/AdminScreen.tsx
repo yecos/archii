@@ -7,7 +7,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAdmin } from '@/hooks/useDomain';
 import { fmtDate, getInitials, statusColor, avatarColor, fmtCOP } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
-import type { Approval } from '@/lib/types';
+import type { Approval, FirestoreTimestamp } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
 import { Trash2, Shield, CheckCircle, XCircle, Clock, Lock, BarChart3, TrendingUp, ClipboardList, Users, AlertTriangle, HardHat, Folder, DollarSign, CalendarDays, User, Key, Check, X, Hourglass, FileText } from 'lucide-react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
@@ -53,7 +53,7 @@ export default function AdminScreen() {
               { id: 'audit', label: 'Registro de Cambios' },
             ]}
             activeTab={adminTab}
-            onTabChange={(id) => setAdminTab(id as any)}
+            onTabChange={(id) => setAdminTab(id)}
             className="mb-5 overflow-x-auto"
           />
 
@@ -336,7 +336,7 @@ export default function AdminScreen() {
                               {(a.data.projectName) && <span><Folder size={11} className="inline mr-0.5" />{(a.data.projectName)}</span>}
                               {(a.data.amount ?? 0) > 0 && <span className="text-[var(--af-accent)] font-medium"><DollarSign size={11} className="inline mr-0.5" />{fmtCOP(a.data.amount ?? 0)}</span>}
                               {(a.data.requestedByName) && <span><User size={11} className="inline mr-0.5" />{(a.data.requestedByName)}</span>}
-                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as any; return d?.toDate ? `${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
+                              {a.data.createdAt && (() => { try { const d = a.data.createdAt as FirestoreTimestamp; return d?.toDate ? `${fmtDate(d.toDate())}` : ''; } catch (err) { console.error('[ArchiFlow] Admin: format approval date failed:', err); return ''; } })()}
                             </div>
                             {(a.data.comments) && (
                               <div className="mt-2 text-[11px] text-[var(--muted-foreground)] skeuo-well rounded-md px-2.5 py-1.5">

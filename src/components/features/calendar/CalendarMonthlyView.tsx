@@ -1,6 +1,7 @@
 'use client';
 import { Repeat, CalendarDays } from 'lucide-react';
 import { DIAS_SEMANA } from '@/lib/types';
+import type { Meeting } from '@/lib/types';
 
 interface CalendarMonthlyViewProps {
   cells: (number | null)[];
@@ -10,7 +11,7 @@ interface CalendarMonthlyViewProps {
   today: Date;
   todayOnly: Date;
   getTasksForDay: (day: number) => Array<{ id: string; data: Record<string, any> }>;
-  getExpandedMeetingsForDay: (day: number) => Array<{ date: string; meeting: any; isRecurring: boolean }>;
+  getExpandedMeetingsForDay: (day: number) => Array<{ date: string; meeting: Meeting; isRecurring: boolean }>;
   onSelectDate: (date: string) => void;
 }
 

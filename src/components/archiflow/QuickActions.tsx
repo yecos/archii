@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SquareCheck, DollarSign, Calendar, BarChart3, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
+import { getFirebase } from '@/lib/firebase-service';
 
 interface QuickActionsProps {
   isOpen: boolean;
@@ -72,7 +73,7 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
 
     try {
       // Get Firebase auth token
-      const fb = (window as any).firebase;
+      const fb = getFirebase();
       const currentUser = fb?.auth?.()?.currentUser;
       const token = currentUser ? await currentUser.getIdToken() : null;
 

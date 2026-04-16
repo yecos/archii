@@ -154,7 +154,7 @@ export default function ReportsScreen() {
             {/* Date filter */}
             <div className="flex gap-1 skeuo-well rounded-xl p-0.5">
               {[{ k: 'all', l: 'Todo' }, { k: 'month', l: 'Mes' }, { k: 'quarter', l: 'Trim.' }, { k: 'year', l: 'Año' }].map(f => (
-                <button key={f.k} className={`px-2 py-1 rounded-md text-[11px] cursor-pointer transition-all ${dateFilter === f.k ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)]'}`} onClick={() => setDateFilter(f.k as any)}>{f.l}</button>
+                <button key={f.k} className={`px-2 py-1 rounded-md text-[11px] cursor-pointer transition-all ${dateFilter === f.k ? 'card-elevated text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)]'}`} onClick={() => setDateFilter(f.k as 'all' | 'month' | 'quarter' | 'year')}>{f.l}</button>
               ))}
             </div>
             {/* PDF */}

@@ -9,7 +9,7 @@ import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/c
 import CenterModal from '@/components/common/CenterModal';
 import TaskCommentsPanel from '@/components/features/TaskCommentsPanel';
 import { X, Users, Plus, Check, Square, Trash2, MessageSquare, ChevronDown } from 'lucide-react';
-import type { Subtask } from '@/lib/types';
+import type { Subtask, Project, TeamUser } from '@/lib/types';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
@@ -195,8 +195,8 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskProject: e.target.value }))}
           >
             <option value="">— Sin proyecto —</option>
-            {fs.projects.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.data?.name || p.name}</option>
+            {fs.projects.map((p: Project) => (
+              <option key={p.id} value={p.id}>{p.data.name}</option>
             ))}
           </FormSelect>
         </FormField>
@@ -208,8 +208,8 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             {assignees.length > 0 && (
               <div className="skeuo-well flex flex-wrap gap-1.5 p-2 min-h-[36px]">
                 {assignees.map((uid: string) => {
-                  const user = auth.teamUsers.find((u: any) => u.id === uid);
-                  const name = user?.data?.name || uid;
+                  const user = auth.teamUsers.find((u: TeamUser) => u.id === uid);
+                  const name = user?.data.name || uid;
                   return (
                     <span
                       key={uid}
@@ -240,9 +240,9 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
                   No hay miembros en el equipo
                 </div>
               )}
-              {auth.teamUsers.map((u: any) => {
+              {auth.teamUsers.map((u: TeamUser) => {
                 const uid = u.id;
-                const name = u.data?.name || u.name || 'Sin nombre';
+                const name = u.data.name;
                 const isChecked = assignees.includes(uid);
                 return (
                   <label

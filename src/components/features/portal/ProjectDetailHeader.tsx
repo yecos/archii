@@ -1,9 +1,10 @@
 import BudgetProgressBar from '@/components/features/BudgetProgressBar';
 import { fmtCOP } from '@/lib/helpers';
+import type { Project } from '@/lib/types';
 import { projectStatusColor, progressColor } from './statusHelpers';
 
 interface ProjectDetailHeaderProps {
-  project: any;
+  project: Project;
   budget: number;
   spent: number;
 }

@@ -24,8 +24,8 @@ async function sendToUser(userId: string, message: string): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, message }),
     });
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp Notify] Error:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp Notify] Error:', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -37,8 +37,8 @@ async function sendBroadcast(message: string): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ broadcast: true, message }),
     });
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp Notify] Error broadcast:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp Notify] Error broadcast:', err instanceof Error ? err.message : String(err));
   }
 }
 

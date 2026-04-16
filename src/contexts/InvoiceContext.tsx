@@ -58,7 +58,7 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
     setInvoiceTab('create');
   };
 
-  const updateInvoiceItem = (idx: number, field: string, value: any) => {
+  const updateInvoiceItem = (idx: number, field: string, value: string | number) => {
     setInvoiceItems(prev => { const items = [...prev]; items[idx] = { ...items[idx], [field]: value }; if (field === 'hours' || field === 'rate') items[idx].amount = (Number(items[idx].hours) || 0) * (Number(items[idx].rate) || 0); return items; });
   };
 

@@ -3,12 +3,12 @@ import React, { RefObject } from 'react';
 import { Pause, Play, Download, MoreVertical } from 'lucide-react';
 import { getAvatarHSL, QUICK_REACTIONS } from './chat-helpers';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 
 interface MessageBubbleProps {
-  m: any;
+  m: ChatMessage;
   mi: number;
-  groupMessages: any[];
+  groupMessages: ChatMessage[];
   authUserUid: string | undefined;
   playingAudio: string | null;
   audioProgress: number;
@@ -16,7 +16,7 @@ interface MessageBubbleProps {
   messageReactions: Record<string, Record<string, string[]>>;
   chatMenuMsg: string | null;
   showReactionPicker: string | null;
-  filteredMessages: any[];
+  filteredMessages: ChatMessage[];
   menuRef: RefObject<HTMLDivElement | null>;
   onToggleAudioPlay: (msgId: string) => void;
   onSetChatMenuMsg: (msgId: string | null) => void;
@@ -51,7 +51,11 @@ export default function MessageBubble({
   onSetLightboxImg,
 }: MessageBubbleProps) {
   const isMe = m.uid === authUserUid;
-  const ts = (m.createdAt as any)?.toDate ? (m.createdAt as any).toDate() : new Date();
+  const ts = m.createdAt
+    ? typeof m.createdAt === 'string' || m.createdAt instanceof Date
+      ? new Date(m.createdAt)
+      : m.createdAt.toDate()
+    : new Date();
   const msgType = m.type || 'TEXT';
   const prevMsg = mi > 0 ? groupMessages[mi - 1] : null;
   const isSameSender = prevMsg && prevMsg.uid === m.uid;
@@ -92,14 +96,15 @@ export default function MessageBubble({
       {/* Reply reference */}
       {m.replyTo && (
         <div className={`mb-1 ml-1 max-w-[260px] px-2.5 py-1.5 rounded-lg border-l-2 border-l-[var(--af-accent)] bg-[var(--skeuo-raised)] shadow-[var(--skeuo-shadow-raised-sm)] cursor-pointer transition-all hover:shadow-[var(--skeuo-shadow-raised)] ${isMe ? 'mr-1' : ''}`} onClick={() => {
-          const target = filteredMessages.find(msg => msg.id === m.replyTo?.id);
+          const replyObj = typeof m.replyTo === 'object' && m.replyTo !== null ? m.replyTo : null;
+          const target = replyObj ? filteredMessages.find(msg => msg.id === replyObj.id) : undefined;
           if (target) {
             const el = document.getElementById(`msg-${target.id}`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }}>
-          <div className="text-[10px] font-semibold text-[var(--af-accent)]">{m.replyTo.userName || 'Usuario'}</div>
-          <div className="text-[11px] text-[var(--af-text3)] truncate">{(m.replyTo.text || '').substring(0, 80)}</div>
+          <div className="text-[10px] font-semibold text-[var(--af-accent)]">{typeof m.replyTo === 'object' && m.replyTo !== null ? (m.replyTo.userName || 'Usuario') : 'Usuario'}</div>
+          <div className="text-[11px] text-[var(--af-text3)] truncate">{(typeof m.replyTo === 'object' && m.replyTo !== null ? (m.replyTo.text || '') : '').substring(0, 80)}</div>
         </div>
       )}
 
@@ -145,7 +150,7 @@ export default function MessageBubble({
         {/* IMAGE */}
         {msgType === 'IMAGE' && m.fileData && (
           <div className={`rounded-2xl overflow-hidden ${isMe ? 'border border-[var(--af-accent)]/20' : 'border border-[var(--border)]'}`}>
-            <img src={m.fileData} alt={m.fileName || 'Imagen'} className="max-w-full max-h-[300px] object-cover cursor-pointer rounded-2xl" loading="lazy" onClick={() => onSetLightboxImg({ src: m.fileData, name: m.fileName, size: m.fileSize })} />
+            <img src={m.fileData!} alt={m.fileName || 'Imagen'} className="max-w-full max-h-[300px] object-cover cursor-pointer rounded-2xl" loading="lazy" onClick={() => onSetLightboxImg({ src: m.fileData!, name: m.fileName, size: m.fileSize })} />
             {m.fileName && <div className="text-[10px] text-[var(--muted-foreground)] px-2.5 py-1 bg-[var(--af-bg3)]">{m.fileName}{m.fileSize ? ` · ${fmtFileSize(m.fileSize)}` : ''}</div>}
           </div>
         )}

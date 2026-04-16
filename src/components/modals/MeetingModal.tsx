@@ -8,6 +8,7 @@ import { useCalendar } from '@/hooks/useDomain';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { UserPlus, Repeat } from 'lucide-react';
 import { generateRecurringDates } from '@/lib/recurrence';
+import type { Project, TeamUser, RecurrencePattern } from '@/lib/types';
 
 const RECURRENCE_OPTIONS = [
   { value: 'none', label: 'Ninguna' },
@@ -40,7 +41,7 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
   // Generate preview of next 5 dates
   const previewDates = useMemo(() => {
     if (recurrence === 'none' || !meetDate) return [];
-    return generateRecurringDates(meetDate, recurrence as any, recurrenceEnd || undefined, 5);
+    return generateRecurringDates(meetDate, recurrence as RecurrencePattern, recurrenceEnd || undefined, 5);
   }, [recurrence, meetDate, recurrenceEnd]);
 
   const toggleAttendee = (name: string) => {
@@ -79,8 +80,8 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
             onChange={(e) => ui.setForms(p => ({ ...p, meetProject: e.target.value }))}
           >
             <option value="">— Sin proyecto —</option>
-            {fs.projects.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.data?.name || p.name}</option>
+            {fs.projects.map((p: Project) => (
+              <option key={p.id} value={p.id}>{p.data.name}</option>
             ))}
           </FormSelect>
         </FormField>
@@ -172,8 +173,8 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
           {quickAddUsers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               <UserPlus size={12} className="text-[var(--muted-foreground)] mt-0.5 mr-0.5" />
-              {quickAddUsers.map((u: any) => {
-                const name = u.data?.name || u.name || '';
+              {quickAddUsers.map((u: TeamUser) => {
+                const name = u.data.name;
                 const inList = isAttendeeInList(name);
                 return (
                   <button

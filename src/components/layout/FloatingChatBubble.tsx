@@ -5,7 +5,7 @@ import { useUIContext } from '@/contexts/UIContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useUIStore } from '@/stores/ui-store';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 
 /* ===== Constants ===== */
 const BTN_SIZE = 48;
@@ -20,10 +20,12 @@ const STORAGE_POS_KEY = 'archiflow-fab-pos-v3';
 const MAX_PREVIEW_MSGS = 8;
 
 /* ===== Helpers ===== */
-function fmtTime(ts: any): string {
+function fmtTime(ts: FirestoreTimestamp | string | Date): string {
   if (!ts) return '';
   try {
-    const d = ts?.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    const d = typeof ts === 'string' || ts instanceof Date
+      ? new Date(ts)
+      : 'seconds' in ts ? new Date(ts.seconds * 1000) : new Date(ts);
     if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();

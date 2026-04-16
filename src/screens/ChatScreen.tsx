@@ -4,7 +4,7 @@ import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useChat } from '@/hooks/useDomain';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 import { formatDateLabel, EMOJI_CATEGORIES, QUICK_REACTIONS, searchEmojis } from '@/components/features/chat/chat-helpers';
 import ChatSidebar from '@/components/features/chat/ChatSidebar';
 import MessageList from '@/components/features/chat/MessageList';
@@ -86,11 +86,11 @@ export default function ChatScreen() {
 
   // Group messages by date
   const messagesByDate = useMemo(() => {
-    const groups: { date: Date; dateLabel: string; messages: any[] }[] = [];
-    let currentGroup: { date: Date; dateLabel: string; messages: any[] } | null = null;
+    const groups: { date: Date; dateLabel: string; messages: ChatMessage[] }[] = [];
+    let currentGroup: { date: Date; dateLabel: string; messages: ChatMessage[] } | null = null;
 
     for (const m of filteredMessages) {
-      const ts = (m.createdAt as any)?.toDate ? (m.createdAt as any).toDate() : new Date();
+      const ts = (m.createdAt as FirestoreTimestamp)?.toDate?.() || new Date();
       const label = formatDateLabel(ts);
       if (!currentGroup || currentGroup.dateLabel !== label) {
         currentGroup = { date: ts, dateLabel: label, messages: [m] };

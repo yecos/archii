@@ -1,9 +1,21 @@
 import React, { useMemo } from 'react';
 import { fmtDateTime } from '@/lib/helpers';
+import type { Comment, FirestoreTimestamp } from '@/lib/types';
+
+interface ActivityLog {
+  id: string;
+  data: {
+    date: string;
+    activities?: string[];
+    observations?: string;
+    supervisor?: string;
+    createdAt: FirestoreTimestamp | null;
+  };
+}
 
 interface ActividadTabProps {
-  comments: any[];
-  logs: any[];
+  comments: Comment[];
+  logs: ActivityLog[];
 }
 
 export default function ActividadTab({ comments, logs }: ActividadTabProps) {
@@ -14,7 +26,7 @@ export default function ActividadTab({ comments, logs }: ActividadTabProps) {
       type: 'comment' | 'log';
       title: string;
       subtitle: string;
-      time: any;
+      time: FirestoreTimestamp | null;
       icon: string;
       userName: string;
     }[] = [];

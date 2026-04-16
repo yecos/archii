@@ -1,4 +1,4 @@
-import type { Project } from '@/lib/types';
+import type { Project, FirestoreTimestamp } from '@/lib/types';
 
 /* ===== TYPES ===== */
 
@@ -13,7 +13,7 @@ export interface UnifiedFile {
   source: FileSource;
   category: FileCategory;
   size: number;
-  date: any;
+  date: FirestoreTimestamp | string | Date;
   projectName: string;
   projectId: string;
   url: string;
@@ -54,9 +54,10 @@ export function getFileCategory(fileName: string, mimeType?: string): FileCatego
   return 'otros';
 }
 
-export function toDate(ts: any): Date {
+export function toDate(ts: FirestoreTimestamp | string | Date | { seconds: number; nanoseconds?: number }): Date {
   if (!ts) return new Date(0);
-  if (ts.toDate) return ts.toDate();
-  if (ts.seconds) return new Date(ts.seconds * 1000);
+  if (typeof ts === 'string' || ts instanceof Date) return new Date(ts);
+  if ('toDate' in ts && typeof ts.toDate === 'function') return ts.toDate();
+  if ('seconds' in ts) return new Date(ts.seconds * 1000);
   return new Date(ts);
 }

@@ -15,6 +15,8 @@ import { aiReply } from "@/lib/whatsapp-ai";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { WhatsAppLinkedUser } from "@/lib/types";
+import type { WhatsAppMessage } from "@/lib/whatsapp-service";
+import type { Firestore } from "firebase-admin/firestore";
 
 // Bot mention keywords (triggers bot response in groups)
 const BOT_MENTIONS = ['archiflow', 'archi', 'bot', 'ayuda', '@archiflow'];
@@ -173,7 +175,7 @@ async function handleGroupMessage(message: any) {
 }
 
 // ─── Safe reply con fallback a texto plano ───
-async function safeReply(message: any) {
+async function safeReply(message: WhatsAppMessage) {
   try {
     const db = getAdminDb();
 
@@ -224,7 +226,7 @@ async function safeReply(message: any) {
 }
 
 // ─── Manejo del flujo de vinculacion ───
-async function handleLinkingFlow(message: any, db: any): Promise<{ text: string; buttons?: { id: string; title: string }[] }> {
+async function handleLinkingFlow(message: WhatsAppMessage, db: Firestore): Promise<{ text: string; buttons?: { id: string; title: string }[] }> {
   const msg = message.body.toLowerCase().trim();
 
   // Primer contacto o boton de vincular

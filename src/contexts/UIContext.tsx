@@ -5,6 +5,14 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 import { SCREEN_TITLES } from '@/lib/types';
 
+/* ===== PWA Install Prompt type ===== */
+declare global {
+  interface BeforeInstallPromptEvent extends Event {
+    prompt(): Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  }
+}
+
 /* ===== DOM Toast Fallback (inline — funciona siempre, sin depender de imports) ===== */
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 function showToastDOM(message: string, type: ToastType = 'info', duration = 4500) {
@@ -77,8 +85,8 @@ interface UIContextType {
   toggleTheme: () => void;
 
   // PWA Install
-  installPrompt: any;
-  setInstallPrompt: React.Dispatch<React.SetStateAction<any>>;
+  installPrompt: BeforeInstallPromptEvent | null;
+  setInstallPrompt: React.Dispatch<React.SetStateAction<BeforeInstallPromptEvent | null>>;
   showInstallBanner: boolean;
   setShowInstallBanner: React.Dispatch<React.SetStateAction<boolean>>;
   isInstalled: boolean;
@@ -130,7 +138,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const toggleTheme = useCallback(() => setNextTheme(darkMode ? 'light' : 'dark'), [darkMode, setNextTheme]);
 
   // PWA Install
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -147,7 +155,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
 
   // Check if running as standalone app
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     setIsStandalone(standalone);
   }, []);
 
@@ -165,7 +173,7 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     }
     const handler = (e: Event) => {
       e.preventDefault();
-      setInstallPrompt(e);
+      setInstallPrompt(e as BeforeInstallPromptEvent);
       setTimeout(() => setShowInstallBanner(true), 2000);
     };
     const appInstalledHandler = () => {
