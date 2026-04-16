@@ -44,6 +44,7 @@ import NotifPreferencesProvider from './NotifPreferencesContext';
 import NotifProvider from './NotifContext';
 import { OfflineQueueProvider } from './OfflineQueueContext';
 import PresenceProvider from './PresenceContext';
+import AutomationProvider from './AutomationContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -64,7 +65,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                                 <NotifProvider>
                                   <OfflineQueueProvider>
                                     <PresenceProvider>
-                                      {children}
+                                      <AutomationProvider>
+                                        {children}
+                                      </AutomationProvider>
                                     </PresenceProvider>
                                   </OfflineQueueProvider>
                                 </NotifProvider>

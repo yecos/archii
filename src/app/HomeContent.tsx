@@ -83,6 +83,7 @@ const ProfitabilityScreen = dynamic(() => import('@/screens/ProfitabilityScreen'
 const PredictiveAIScreen = dynamic(() => import('@/screens/PredictiveAIScreen'), { ssr: false });
 const OfflineStatusScreen = dynamic(() => import('@/screens/OfflineStatusScreen'), { ssr: false });
 const ReportGeneratorScreen = dynamic(() => import('@/screens/ReportGeneratorScreen'), { ssr: false });
+const AutomationScreen = dynamic(() => import('@/screens/AutomationScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -234,6 +235,7 @@ function AppContent() {
             {displayScreen === 'predictiveAI' && <ErrorBoundary label="IA Predictiva"><PredictiveAIScreen /></ErrorBoundary>}
             {displayScreen === 'offlineStatus' && <ErrorBoundary label="Estado Offline"><OfflineStatusScreen /></ErrorBoundary>}
             {displayScreen === 'reportGenerator' && <ErrorBoundary label="Generador de Reportes"><ReportGeneratorScreen /></ErrorBoundary>}
+            {displayScreen === 'automations' && <ErrorBoundary label="Flujos Automatizados"><AutomationScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

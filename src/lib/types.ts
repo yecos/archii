@@ -1052,6 +1052,7 @@ export const NAV_ITEMS = [
   { id: 'profitability', icon: '💎', label: 'Rentabilidad' },
   { id: 'predictiveAI', icon: '🧠', label: 'IA Predictiva' },
   { id: 'offlineStatus', icon: '📡', label: 'Estado Offline' },
+  { id: 'automations', icon: '⚡', label: 'Automatizaciones' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1087,6 +1088,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   profitability: 'Dashboard de Rentabilidad',
   predictiveAI: 'IA Predictiva',
   offlineStatus: 'Estado Offline',
+  automations: 'Flujos Automatizados',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1185,6 +1187,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'profitability', label: 'Rentabilidad', icon: '💎' },
       { id: 'predictiveAI', label: 'IA Predictiva', icon: '🧠' },
       { id: 'templates', label: 'Templates', icon: '📐' },
+      { id: 'automations', label: 'Automatizaciones', icon: '⚡' },
     ],
   },
   {

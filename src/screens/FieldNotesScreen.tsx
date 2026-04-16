@@ -5,10 +5,11 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
+import WeatherAutoFill from '@/components/ui/WeatherAutoFill';
 import SignatureModal from '@/components/modals/SignatureModal';
 import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
 import AnnotatePhotoModal from '@/components/modals/AnnotatePhotoModal';
-import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool, Edit3 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool, Edit3, CloudSun } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -453,7 +454,26 @@ export default function FieldNotesScreen() {
       </div>
 
       <div className="card-elevated rounded-xl p-4 space-y-4">
+        {/* Auto Weather Fill */}
+        {(() => {
+          const selectedProj = projects.find(p => p.id === formProject);
+          const projectLocation = selectedProj?.data?.location || '';
+          return (
+            <WeatherAutoFill
+              location={projectLocation}
+              onWeatherFilled={(weather, temperature) => {
+                setFormWeather(weather);
+                setFormTemperature(temperature);
+              }}
+              autoFetch={tab === 'create'}
+            />
+          );
+        })()}
+
         {/* Project, Date, Weather */}
+        <div className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1.5">
+          <CloudSun size={11} /> Clima (puedes sobreescribir el automático)
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <select className="skeuo-input px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={formProject} onChange={e => setFormProject(e.target.value)}>
             <option value="">Seleccionar proyecto *</option>
