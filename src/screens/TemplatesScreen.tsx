@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
-import { getFirebase, snapToDocs } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3, Layout, ArrowRight } from 'lucide-react';
 import type { ProjectTemplate } from '@/lib/types';
@@ -122,16 +122,16 @@ export default function TemplatesScreen() {
   // Load custom templates from Firestore
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('projectTemplates').onSnapshot((snap: any) => {
+    const unsub = db.collection('projectTemplates').onSnapshot((snap: QuerySnapshot) => {
       const docs = snapToDocs(snap);
-      const parsed = docs.map((d: any) => ({
+      const parsed = docs.map((d) => ({
         ...d.data,
         id: d.id,
         isBuiltIn: false,
         phasesData: d.data.phasesData || [],
       })) as CustomTemplate[];
       setCustomTemplates(parsed);
-    }, (err: any) => console.error('[ArchiFlow] Templates: listen error:', err));
+    }, (err: Error) => console.error('[ArchiFlow] Templates: listen error:', err));
     return () => unsub();
   }, []);
 
@@ -158,7 +158,7 @@ export default function TemplatesScreen() {
   const createProjectFromTemplate = (template: CustomTemplate) => {
     showToast('Navegando a crear proyecto con plantilla...', 'info');
     // Use UI context to navigate to projects with template data
-    ui.setForms((prev: any) => ({
+    ui.setForms((prev: Record<string, any>) => ({
       ...prev,
       projTemplate: template.id,
       projTemplateName: template.name,

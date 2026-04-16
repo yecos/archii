@@ -11,6 +11,17 @@
  *
  * Si el valor no es parseable, retorna Date(0) (epoch) en vez de Invalid Date.
  */
+/** Shape of a Firestore Timestamp with a toDate() method. */
+interface FirestoreTimestampWithToDate {
+  toDate(): Date;
+}
+
+/** Shape of a serialized Firestore Timestamp (e.g. from JSON). */
+interface FirestoreTimestampSerialized {
+  seconds: number;
+  nanoseconds?: number;
+}
+
 export function toSafeDate(value: unknown): Date {
   if (value instanceof Date) return value;
   if (!value) return new Date(0);
@@ -20,12 +31,12 @@ export function toSafeDate(value: unknown): Date {
   }
   if (typeof value === 'object' && value !== null) {
     // Firestore Timestamp — tiene .toDate()
-    if ('toDate' in value && typeof (value as any).toDate === 'function') {
-      try { return (value as any).toDate(); } catch (_) { /* fall through */ }
+    if ('toDate' in value && typeof (value as FirestoreTimestampWithToDate).toDate === 'function') {
+      try { return (value as FirestoreTimestampWithToDate).toDate(); } catch (_) { /* fall through */ }
     }
     // Firestore Timestamp parcial/serializado — tiene .seconds
-    if ('seconds' in value && typeof (value as any).seconds === 'number') {
-      return new Date((value as any).seconds * 1000 + ((value as any).nanoseconds || 0) / 1e6);
+    if ('seconds' in value && typeof (value as FirestoreTimestampSerialized).seconds === 'number') {
+      return new Date((value as FirestoreTimestampSerialized).seconds * 1000 + ((value as FirestoreTimestampSerialized).nanoseconds || 0) / 1e6);
     }
   }
   const d = new Date(value as string | number);

@@ -104,9 +104,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // Set auth persistence to LOCAL (survives browser restart)
     try {
-      const w = window as any;
-      if (w.firebase?.auth?.Auth?.Persistence?.LOCAL) {
-        auth.setPersistence(w.firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('[ArchiFlow] Auth: set persistence failed:', err));
+      if (fb.auth.Auth?.Persistence?.LOCAL) {
+        auth.setPersistence(fb.auth.Auth.Persistence.LOCAL).catch(err => console.warn('[ArchiFlow] Auth: set persistence failed:', err));
       }
     } catch (err) {
       // Ignore persistence errors — default behavior is fine
@@ -115,7 +114,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // Handle redirect results (for signInWithRedirect fallback)
     auth.getRedirectResult().then((result) => {
-      const cred = (result as any)?.credential as { accessToken?: string; refreshToken?: string } | undefined;
+      const cred = result?.credential;
       if (cred) {
         // Handle Microsoft redirect tokens
         if (cred.accessToken) {
@@ -227,11 +226,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const doGoogleLogin = useCallback(async () => {
     try {
       const fb = getFirebase();
-      const authNS = (fb as any).auth;
-      const authInstance = fb.auth();
-      const provider = new authNS.GoogleAuthProvider();
+      const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await authInstance.signInWithRedirect(provider);
+      const result = await fb.auth().signInWithRedirect(provider);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       console.error('[ArchiFlow Auth] Google login error:', err.code, err.message, e);
@@ -248,11 +245,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/unauthorized-domain') {
         try {
           const fb2 = getFirebase();
-          const authNS2 = (fb2 as any).auth;
-          const authInstance2 = fb2.auth();
-          const provider2 = new authNS2.GoogleAuthProvider();
+          const provider2 = new fb2.auth.GoogleAuthProvider();
           provider2.setCustomParameters({ prompt: 'select_account' });
-          await authInstance2.signInWithRedirect(provider2);
+          await fb2.auth().signInWithRedirect(provider2);
           return;
         } catch (redirectErr: unknown) {
           const redErr = redirectErr as { code?: string; message?: string };
@@ -266,13 +261,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const doMicrosoftLogin = useCallback(async () => {
     try {
       const fb = getFirebase();
-      const authNS = (fb as any).auth;
       const authInstance = fb.auth();
 
       // First try with minimal scopes (User.Read only) to avoid consent screen issues
-      let result: { credential?: { accessToken?: string; refreshToken?: string }; user?: FirebaseUserInfo };
+      let result: { credential?: { accessToken?: string; refreshToken?: string } | null; user?: FirebaseUserInfo };
       try {
-        const provider = new authNS.OAuthProvider('microsoft.com');
+        const provider = new fb.auth.OAuthProvider('microsoft.com');
         provider.addScope('User.Read');
         provider.setCustomParameters({ prompt: 'select_account' });
         result = await authInstance.signInWithPopup(provider);
@@ -280,7 +274,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         const popErr = popupErr as { code?: string; message?: string };
         if (popErr.code === 'auth/popup-blocked') {
           // Fallback to redirect flow
-          const redirectProvider = new authNS.OAuthProvider('microsoft.com');
+          const redirectProvider = new fb.auth.OAuthProvider('microsoft.com');
           redirectProvider.addScope('User.Read');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);

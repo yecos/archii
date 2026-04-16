@@ -3,13 +3,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { Zap } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import type { TooltipProps } from 'recharts';
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
     <div className="card-elevated px-3 py-2 shadow-lg text-[12px]">
       {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i: number) => (
         <div key={i} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
           <span className="text-[var(--muted-foreground)]">{p.name}:</span>
@@ -59,14 +60,14 @@ export default function DashboardCharts({
           <ResponsiveContainer width="100%" className="xl:h-[120px]" height={100}>
             <PieChart>
               <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={3} dataKey="value" stroke="none">
-                {taskStatusData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                {taskStatusData.map((_, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip content={<ChartTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         )}
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-          {taskStatusData.map((d: any, i: number) => (
+          {taskStatusData.map((d, i: number) => (
             <div key={i} className="flex items-center gap-1 text-[10px]">
               <div className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
               <span className="text-[var(--muted-foreground)]">{d.name}</span>

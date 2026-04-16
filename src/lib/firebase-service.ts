@@ -89,6 +89,7 @@ export interface FirebaseUser {
 /** Result of signIn / createUserWithEmailAndPassword. */
 export interface UserCredential {
   user: FirebaseUser;
+  credential?: OAuthCredential | null;
 }
 
 /** Firebase Auth instance (compat) returned by `firebase.auth()`. */
@@ -169,6 +170,7 @@ export interface CollectionRef<T extends DocumentData = DocumentData> {
 /** A Firestore document reference. */
 export interface DocRef<T extends DocumentData = DocumentData> {
   readonly id: string;
+  readonly parent?: DocRef<T>;
   collection<U extends DocumentData = DocumentData>(name: string): CollectionRef<U>;
   get(): Promise<DocumentSnapshot<T>>;
   set(data: T, opts?: SetOptions): Promise<void>;
@@ -239,11 +241,44 @@ export interface FirestoreNamespace {
   FieldValue: FieldValues;
 }
 
+/** Minimal shape of an OAuth credential returned by popup/redirect sign-in. */
+export interface OAuthCredential {
+  accessToken?: string;
+  refreshToken?: string;
+  providerId?: string;
+}
+
+/** Minimal auth provider constructor interface (setCustomParameters is common). */
+export interface AuthProviderConstructor {
+  setCustomParameters(params: Record<string, string>): AuthProviderConstructor;
+}
+
+/** Minimal GoogleAuthProvider constructor interface. */
+export interface GoogleAuthProviderConstructor extends AuthProviderConstructor {
+  new (): GoogleAuthProviderConstructor;
+}
+
+/** Minimal OAuthProvider constructor interface. */
+export interface OAuthProviderConstructor extends AuthProviderConstructor {
+  new (providerId: string): OAuthProviderConstructor;
+  addScope(scope: string): OAuthProviderConstructor;
+}
+
 /**
  * The Auth static namespace – callable (`firebase.auth()`).
+ * Also holds static members like Auth.Persistence and provider constructors.
  */
 export interface AuthNamespace {
   (): FirebaseAuth;
+  Auth: {
+    Persistence: {
+      LOCAL: unknown;
+      SESSION: unknown;
+      NONE: unknown;
+    };
+  };
+  GoogleAuthProvider: GoogleAuthProviderConstructor;
+  OAuthProvider: OAuthProviderConstructor;
 }
 
 /**
@@ -279,8 +314,7 @@ export function getFirebase(): FirebaseApp {
   if (!w) {
     throw new Error('[ArchiFlow] No estamos en el navegador.');
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fb = (w as any).firebase as FirebaseApp | undefined;
+  const fb = (w as unknown as { firebase?: FirebaseApp }).firebase;
   if (!fb || !fb.apps || fb.apps.length === 0) {
     throw new Error('[ArchiFlow] Firebase no está inicializado. Verifica que los scripts en layout.tsx cargaron correctamente.');
   }

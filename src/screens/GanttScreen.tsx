@@ -37,7 +37,7 @@ export default function GanttScreen() {
     return withDates;
   }, [tasks, selectedProjectId]);
 
-  const ganttRows = useMemo(() => buildGanttRows(filteredTasks as any[]), [filteredTasks]);
+  const ganttRows = useMemo(() => buildGanttRows(filteredTasks), [filteredTasks]);
 
   const uniqueProjectIds = useMemo(() => {
     const ids = new Set(filteredTasks.map(t => t.data.projectId));
@@ -165,7 +165,7 @@ export default function GanttScreen() {
           <span className="text-[11px] text-[var(--muted-foreground)] font-medium">Proyectos:</span>
           {uniqueProjectIds.map(pid => {
             const proj = projects.find(p => p.id === pid);
-            const color = getProjectColor(pid, projects as any[]);
+            const color = getProjectColor(pid, projects);
             return (
               <div key={pid} className="flex items-center gap-1.5 cursor-pointer" onClick={() => setSelectedProjectId(pid)}>
                 <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
@@ -219,7 +219,7 @@ export default function GanttScreen() {
                 <div className="w-[180px] lg:w-[220px] shrink-0 px-3 py-2.5 border-r border-[var(--border)]">
                   {row.map(task => {
                     const proj = projects.find(p => p.id === task.data.projectId);
-                    const color = getProjectColor(task.data.projectId, projects as any[]);
+                    const color = getProjectColor(task.data.projectId, projects);
                     return (
                       <div key={task.id} className="flex items-center gap-2 mb-1 last:mb-0">
                         <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
@@ -246,10 +246,10 @@ export default function GanttScreen() {
                   )}
 
                   {row.map(task => {
-                    const bar = getTaskBar(task as any, days);
+                    const bar = getTaskBar(task, days);
                     if (!bar) return null;
-                    const color = getProjectColor(task.data.projectId, projects as any[]);
-                    const lightColor = getProjectColorLight(task.data.projectId, projects as any[]);
+                    const color = getProjectColor(task.data.projectId, projects);
+                    const lightColor = getProjectColorLight(task.data.projectId, projects);
                     return (
                       <div key={task.id} className="relative py-1.5 mb-1 last:mb-0">
                         {/* Task bar */}

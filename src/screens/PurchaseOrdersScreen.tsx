@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
-import { getFirebase, snapToDocs } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { fmtCOP } from '@/lib/helpers';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3 } from 'lucide-react';
@@ -85,9 +85,9 @@ export default function PurchaseOrdersScreen() {
   // Load POs
   useEffect(() => {
     const db = getFirebase().firestore();
-    const unsub = db.collection('purchaseOrders').orderBy('createdAt', 'desc').onSnapshot((snap: any) => {
+    const unsub = db.collection('purchaseOrders').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setPos(snapToDocs(snap) as PurchaseOrder[]);
-    }, (err: any) => console.error('[ArchiFlow] PO: listen error:', err));
+    }, (err: Error) => console.error('[ArchiFlow] PO: listen error:', err));
     return () => unsub();
   }, []);
 
@@ -202,7 +202,7 @@ export default function PurchaseOrdersScreen() {
     }
   };
 
-  const updateItem = (idx: number, field: keyof POItem, value: any) => {
+  const updateItem = (idx: number, field: keyof POItem, value: string | number) => {
     setFormItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 

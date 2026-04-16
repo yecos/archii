@@ -2,13 +2,21 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import type { TooltipProps } from 'recharts';
 
-function ChartTooltip({ active, payload, label }: any) {
+interface ChartPayloadEntry {
+  name?: string;
+  value?: number;
+  color?: string;
+  fill?: string;
+}
+
+function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
     <div className="card-elevated px-3 py-2 shadow-lg text-[12px]">
       {label && <div className="font-semibold text-[var(--foreground)] mb-1">{label}</div>}
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i: number) => (
         <div key={i} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
           <span className="text-[var(--muted-foreground)]">{p.name}:</span>
@@ -19,10 +27,10 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
-function ChartLegend({ payload }: any) {
+function ChartLegend({ payload }: { payload?: Array<{ value?: string; color?: string }> }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-2">
-      {payload?.map((entry: any, i: number) => (
+      {payload?.map((entry, i: number) => (
         <div key={i} className="flex items-center gap-1.5 text-[10px]">
           <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
           <span className="text-[var(--muted-foreground)]">{entry.value}</span>

@@ -12,6 +12,13 @@ import { useNotifPreferencesContext } from './NotifPreferencesContext';
 import { useUIStore } from '@/stores/ui-store';
 import type { NotifEventType, NotifEntry } from '@/lib/types';
 
+interface NotifData {
+  type?: string;
+  screen?: string | null;
+  itemId?: string | null;
+  eventType?: NotifEventType;
+}
+
 /* ===== NOTIFICATION CONTEXT ===== */
 interface NotifContextType {
   // State
@@ -34,8 +41,8 @@ interface NotifContextType {
   setShowNotifBanner: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Functions
-  sendNotif: (title: string, body: string, icon?: string, tag?: string, data?: any) => void;
-  sendBrowserNotif: (title: string, body: string, icon?: string, tag?: string, data?: any) => void;
+  sendNotif: (title: string, body: string, icon?: string, tag?: string, data?: NotifData) => void;
+  sendBrowserNotif: (title: string, body: string, icon?: string, tag?: string, data?: NotifData) => void;
   playNotifSound: (type?: string) => void;
   vibrateNotif: () => void;
   requestNotifPermission: () => Promise<void>;
@@ -339,11 +346,11 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     let lastLowStockCount = -1;
     const check = () => {
       const lowStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as any[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
+        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
         return stock > 0 && stock <= (p.data.minStock || 5);
       });
       const outOfStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as any[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
+        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
         return stock <= 0;
       });
       const total = lowStock.length + outOfStock.length;
@@ -388,7 +395,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     } catch (err) { console.error("[ArchiFlow]", err); }
   }, [notifSound]);
 
-  const sendNotif = useCallback((title: string, body: string, icon?: string, tag?: string, data?: any) => {
+  const sendNotif = useCallback((title: string, body: string, icon?: string, tag?: string, data?: NotifData) => {
     // Check granular event preference — if eventType is specified and disabled, skip
     const eventType = data?.eventType as NotifEventType | undefined;
     if (eventType && !isEventEnabled(eventType)) return;
@@ -408,7 +415,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         const n = new Notification(title, { body, icon: icon || '/icon-192.png', badge: '/icon-192.png', tag: tag || `archiflow-${Date.now()}`, requireInteraction: false, silent: true, data });
         n.onclick = () => { window.focus(); n.close(); if (data?.screen) navigateToRef.current(data.screen, data.itemId); };
         setTimeout(() => n.close(), 8000);
-      } catch (e: any) { console.warn('OS Notification error:', e); }
+      } catch (e: unknown) { console.warn('OS Notification error:', e); }
     }
   }, [playNotifSound, vibrateNotif, navigateToRef, isEventEnabled]);
 
@@ -423,7 +430,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (expenses.length === prev.length && expenses.every((e, i) => e.id === prev[i]?.id && e.data.amount === prev[i]?.data.amount)) {
       return;
     }
-    const { newAlerts } = checkBudgetAlerts(projects as any, expenses as any);
+    const { newAlerts } = checkBudgetAlerts(projects, expenses);
     newAlerts.forEach((alert) => {
       const { title, body } = formatBudgetAlertMessage(alert);
       sendNotif(

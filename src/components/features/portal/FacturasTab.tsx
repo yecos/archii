@@ -1,23 +1,24 @@
 import { fmtCOP } from '@/lib/helpers';
 import { invoiceStatusColor } from './statusHelpers';
+import type { Invoice } from '@/lib/types';
 
 interface FacturasTabProps {
-  invoices: any[];
+  invoices: Invoice[];
 }
 
 export default function FacturasTab({ invoices }: FacturasTabProps) {
   const totalInvoiced = invoices
     .filter((i) => i.data.status !== 'Cancelada')
-    .reduce((s: number, i: any) => s + (i.data.total || 0), 0);
+    .reduce((s: number, i: Invoice) => s + (i.data.total || 0), 0);
   const totalPaid = invoices
     .filter((i) => i.data.status === 'Pagada')
-    .reduce((s: number, i: any) => s + (i.data.total || 0), 0);
+    .reduce((s: number, i: Invoice) => s + (i.data.total || 0), 0);
   const totalPending = invoices
     .filter((i) => i.data.status === 'Enviada' || i.data.status === 'Borrador')
-    .reduce((s: number, i: any) => s + (i.data.total || 0), 0);
+    .reduce((s: number, i: Invoice) => s + (i.data.total || 0), 0);
   const totalOverdue = invoices
     .filter((i) => i.data.status === 'Vencida')
-    .reduce((s: number, i: any) => s + (i.data.total || 0), 0);
+    .reduce((s: number, i: Invoice) => s + (i.data.total || 0), 0);
 
   return (
     <div>

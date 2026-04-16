@@ -237,12 +237,12 @@ export default function ProfitabilityScreen() {
       {/* Header + Controls */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-1 skeuo-well rounded-xl p-1">
-          {[
-            { k: 'Resumen', v: 'overview' },
-            { k: 'Por Proyecto', v: 'projects' },
-            { k: 'Flujo de Caja', v: 'cashflow' },
-          ].map(t => (
-            <button key={t.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === t.v ? 'bg-[var(--skeuo-raised)] text-[var(--foreground)] font-medium shadow-[var(--skeuo-shadow-raised-sm)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setViewMode(t.v as any)}>{t.k}</button>
+          {([
+            { k: 'Resumen', v: 'overview' as const },
+            { k: 'Por Proyecto', v: 'projects' as const },
+            { k: 'Flujo de Caja', v: 'cashflow' as const },
+          ]).map(t => (
+            <button key={t.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === t.v ? 'bg-[var(--skeuo-raised)] text-[var(--foreground)] font-medium shadow-[var(--skeuo-shadow-raised-sm)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setViewMode(t.v)}>{t.k}</button>
           ))}
         </div>
         <select className="skeuo-input px-3 py-1.5 text-[13px] text-[var(--foreground)] outline-none rounded-lg" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>

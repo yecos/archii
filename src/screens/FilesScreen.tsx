@@ -4,8 +4,8 @@ import { XCircle } from 'lucide-react';
 import { useUI, useAuth, useFirestore, useOneDrive, useGallery } from '@/hooks/useDomain';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import { fmtSize } from '@/lib/helpers';
-import { getFirebase, QuerySnapshot } from '@/lib/firebase-service';
-import type { Project } from '@/lib/types';
+import { getFirebase, QuerySnapshot, QueryDocSnapshot } from '@/lib/firebase-service';
+import type { Project, OneDriveFile, GalleryPhoto } from '@/lib/types';
 import {
   StatsBar, ProjectSidebar, FilesToolbar, FileGridCard, FileListRow,
   FilesEmpty, Lightbox,
@@ -49,7 +49,7 @@ export default function FilesScreen() {
     const unsub = db.collectionGroup('files').orderBy('createdAt', 'desc').onSnapshot(
       (snap: QuerySnapshot) => {
         const files: UnifiedFile[] = [];
-        snap.forEach((doc: any) => {
+        snap.forEach((doc: QueryDocSnapshot) => {
           const d = doc.data();
           // Extract projectId from document reference: projects/{pid}/files/{fid}
           const projectId = doc.ref?.parent?.parent?.id || '';
@@ -71,7 +71,7 @@ export default function FilesScreen() {
         setAllLocalFiles(files);
         setLoadingFiles(false);
       },
-      (err: any) => {
+      (err: Error) => {
         console.error('[ArchiFlow] Error loading global files:', err);
         setLoadingFiles(false);
       }
@@ -85,8 +85,8 @@ export default function FilesScreen() {
     // Find which project folder is currently being browsed
     const projName = od.odBreadcrumbs.length > 0 ? od.odBreadcrumbs[0].name : 'OneDrive';
     return od.oneDriveFiles
-      .filter((f: any) => !f.folder)
-      .map((f: any) => ({
+      .filter((f: OneDriveFile) => !f.folder)
+      .map((f: OneDriveFile) => ({
         id: f.id,
         name: f.name || 'Archivo',
         source: 'onedrive' as const,
@@ -103,7 +103,7 @@ export default function FilesScreen() {
 
   /* ---- Build Gallery photos ---- */
   const galFiles: UnifiedFile[] = useMemo(() => {
-    return gal.galleryPhotos.map((p: any) => {
+    return gal.galleryPhotos.map((p: GalleryPhoto) => {
       const proj = projects.find((pr: Project) => pr.id === p.data?.projectId);
       return {
         id: p.id,

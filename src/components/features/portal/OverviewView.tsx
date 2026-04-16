@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
+import type { Invoice, Expense } from '@/lib/types';
 import WelcomeHeader from './WelcomeHeader';
 import KpiCards from './KpiCards';
 import ProjectCardsGrid from './ProjectCardsGrid';
@@ -31,7 +32,7 @@ export default function OverviewView({ onSelectProject }: OverviewViewProps) {
 
   const myInvoices = useMemo(
     () =>
-      inv.invoices.filter((i: any) =>
+      inv.invoices.filter((i: Invoice) =>
         myProjects.some((p) => p.id === i.data.projectId),
       ),
     [inv.invoices, myProjects],
@@ -40,7 +41,7 @@ export default function OverviewView({ onSelectProject }: OverviewViewProps) {
   const pendingInvoices = useMemo(
     () =>
       myInvoices.filter(
-        (i: any) => i.data.status === 'Enviada' || i.data.status === 'Borrador',
+        (i: Invoice) => i.data.status === 'Enviada' || i.data.status === 'Borrador',
       ),
     [myInvoices],
   );
@@ -87,8 +88,8 @@ export default function OverviewView({ onSelectProject }: OverviewViewProps) {
 
   // Budget info per project
   const getProjectBudget = (projectId: string) => {
-    const exps = fs.expenses.filter((e: any) => e.data.projectId === projectId);
-    const spent = exps.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+    const exps = fs.expenses.filter((e: Expense) => e.data.projectId === projectId);
+    const spent = exps.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
     const budget = fs.projects.find((p) => p.id === projectId)?.data?.budget || 0;
     return { spent, budget };
   };

@@ -66,7 +66,7 @@ interface FirestoreContextType {
   saveCompany: () => Promise<void>;
 
   // CRUD Functions — Files
-  uploadFile: (e: any) => Promise<void>;
+  uploadFile: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   deleteFile: (file: ProjectFile) => Promise<void>;
 
   // CRUD Functions — Work Phases
@@ -85,7 +85,7 @@ interface FirestoreContextType {
   updateUserName: (newName: string) => Promise<void>;
 
   // Helper functions
-  fileToBase64: (file: any) => Promise<string>;
+  fileToBase64: (file: File) => Promise<string>;
 
   // Computed values
   currentProject: Project | undefined;
@@ -158,7 +158,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
-    const unsubs: any[] = [];
+    const unsubs: (() => void)[] = [];
     unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setSuppliers(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando suppliers:', err); }));
@@ -236,7 +236,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   // ===== CRUD FUNCTIONS =====
 
-  const fileToBase64 = useCallback((file: any): Promise<string> => {
+  const fileToBase64 = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -522,7 +522,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   }, [editingId, forms, showToast, closeModal, setEditingId, companies, authUser]);
 
   // --- Files ---
-  const uploadFile = useCallback(async (e: any) => {
+  const uploadFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];
     if (!file || !selectedProjectId) return;
     if (file.size > 10 * 1024 * 1024) { showToast('El archivo no puede superar 10 MB', 'error'); return; }

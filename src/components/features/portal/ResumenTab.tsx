@@ -2,9 +2,10 @@ import React, { useMemo } from 'react';
 import { useFirestore } from '@/hooks/useDomain';
 import { CheckCircle2, TrendingUp } from 'lucide-react';
 import { fmtCOP } from '@/lib/helpers';
+import type { Project, Expense, Task } from '@/lib/types';
 
 interface ResumenTabProps {
-  project: any;
+  project: Project;
 }
 
 export default function ResumenTab({ project }: ResumenTabProps) {
@@ -12,21 +13,21 @@ export default function ResumenTab({ project }: ResumenTabProps) {
   const proj = project;
 
   const projectExpenses = useMemo(
-    () => fs.expenses.filter((e: any) => e.data.projectId === project.id),
+    () => fs.expenses.filter((e: Expense) => e.data.projectId === project.id),
     [fs.expenses, project.id],
   );
   const projectTasks = useMemo(
-    () => fs.tasks.filter((t: any) => t.data.projectId === project.id),
+    () => fs.tasks.filter((t: Task) => t.data.projectId === project.id),
     [fs.tasks, project.id],
   );
   const completedTasks = useMemo(
-    () => projectTasks.filter((t: any) => t.data.status === 'Completado').length,
+    () => projectTasks.filter((t: Task) => t.data.status === 'Completado').length,
     [projectTasks],
   );
 
   const expensesByCategory = useMemo(() => {
     const cats: Record<string, number> = {};
-    projectExpenses.forEach((e: any) => {
+    projectExpenses.forEach((e: Expense) => {
       cats[e.data.category] = (cats[e.data.category] || 0) + (Number(e.data.amount) || 0);
     });
     return Object.entries(cats)

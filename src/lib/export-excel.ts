@@ -5,6 +5,7 @@
  */
 
 import type XLSX from 'xlsx';
+import type { Task, Project, Expense, TimeEntry, InvProduct, InvCategory, InvMovement } from '@/lib/types';
 
 function fmtCOPFull(n: number): string {
   if (!n || n === 0) return '0';
@@ -36,7 +37,7 @@ async function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
    EXPORTAR TAREAS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export async function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]) {
+export async function exportTasksExcel(tasks: Task[], projects: Project[], teamUsers: { id: string; data: { name: string } }[]) {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
@@ -50,7 +51,7 @@ export async function exportTasksExcel(tasks: any[], projects: any[], teamUsers:
       Estado: t.data.status || '-',
       Asignado: assignee?.data.name || '-',
       'Fecha Límite': t.data.dueDate || '-',
-      'Creado': t.data.createdAt ? (t.data.createdAt.toDate ? t.data.createdAt.toDate().toLocaleDateString('es-CO') : new Date(t.data.createdAt).toLocaleDateString('es-CO')) : '-',
+      'Creado': t.data.createdAt?.toDate?.()?.toLocaleDateString('es-CO') || '-',
     };
   });
 
@@ -93,7 +94,7 @@ export async function exportTasksExcel(tasks: any[], projects: any[], teamUsers:
    EXPORTAR GASTOS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export async function exportExpensesExcel(expenses: any[], projects: any[]) {
+export async function exportExpensesExcel(expenses: Expense[], projects: Project[]) {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
@@ -146,7 +147,7 @@ export async function exportExpensesExcel(expenses: any[], projects: any[]) {
    EXPORTAR TIEMPO A EXCEL
    ═══════════════════════════════════════════════ */
 
-export async function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: any[]) {
+export async function exportTimeExcel(timeEntries: TimeEntry[], projects: Project[], teamUsers: { id: string; data: { name: string } }[]) {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
@@ -206,7 +207,7 @@ export async function exportTimeExcel(timeEntries: any[], projects: any[], teamU
    EXPORTAR INVENTARIO A EXCEL
    ═══════════════════════════════════════════════ */
 
-export async function exportInventoryExcel(products: any[], categories: any[], movements: any[]) {
+export async function exportInventoryExcel(products: InvProduct[], categories: InvCategory[], movements: InvMovement[]) {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
@@ -269,7 +270,7 @@ export async function exportInventoryExcel(products: any[], categories: any[], m
    EXPORTAR PROYECTOS A EXCEL
    ═══════════════════════════════════════════════ */
 
-export async function exportProjectsExcel(projects: any[], tasks: any[], expenses: any[]) {
+export async function exportProjectsExcel(projects: Project[], tasks: Task[], expenses: Expense[]) {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 

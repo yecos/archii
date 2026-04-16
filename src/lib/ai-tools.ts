@@ -14,6 +14,9 @@ import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
 
 const FV = getAdminFieldValue();
 
+/** Admin SDK document spread type — preserves dynamic fields with proper typing. */
+type AdminDoc = Record<string, unknown> & { id: string };
+
 /* ===== Factory: crea todas las tools con userId inyectado ===== */
 export function createAgentTools(userId: string) {
   const db = getAdminDb();
@@ -200,8 +203,7 @@ export function createAgentTools(userId: string) {
           if (projectId) snap = await db.collection('tasks').where('projectId', '==', projectId).limit(15).get();
           else if (userId) snap = await db.collection('tasks').where('assignees', 'array-contains', userId).limit(15).get();
           else snap = await db.collection('tasks').orderBy('createdAt', 'desc').limit(15).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let tasks = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          let tasks = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (status) tasks = tasks.filter((t: Record<string, unknown>) => t.status === status);
           if (tasks.length === 0) return { success: true, tasks: [], message: 'No se encontraron tareas' };
           const summary = tasks.slice(0, 10).map((t: Record<string, unknown>) =>
@@ -227,8 +229,7 @@ export function createAgentTools(userId: string) {
           const snap = await db.collection('tasks').orderBy('dueDate', 'asc').limit(50).get();
           const now = new Date().toISOString().split('T')[0];
           const future = new Date(Date.now() + (days || 7) * 86400000).toISOString().split('T')[0];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let tasks = snap.docs.map(d => ({ id: d.id, ...d.data() as any }))
+          let tasks = (snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[])
             .filter((t: Record<string, unknown>) => t.dueDate && t.dueDate <= future && t.dueDate >= now && t.status !== 'Completado');
           if (projectId) tasks = tasks.filter((t: Record<string, unknown>) => t.projectId === projectId);
           if (tasks.length === 0) return { success: true, count: 0, message: `No hay tareas venciendo en ${days || 7} días` };
@@ -254,8 +255,7 @@ export function createAgentTools(userId: string) {
         try {
           const { projectId, category, limit } = args as { projectId: string; category?: string; limit?: number };
           const snap = await db.collection('expenses').where('projectId', '==', projectId).orderBy('createdAt', 'desc').limit(limit || 10).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let expenses = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          let expenses = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (category) expenses = expenses.filter((e: Record<string, unknown>) => e.category === category);
           const total = expenses.reduce((s: number, e: Record<string, unknown>) => s + (Number(e.amount) || 0), 0);
           if (expenses.length === 0) return { success: true, total: 0, message: 'Sin gastos registrados' };
@@ -325,8 +325,7 @@ export function createAgentTools(userId: string) {
         try {
           const { search, warehouse, lowStock } = args as { search?: string; warehouse?: string; lowStock?: boolean };
           const snap = await db.collection('invProducts').orderBy('createdAt', 'desc').limit(50).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let products = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          let products = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
 
           // Filter by search
           if (search) {
@@ -384,33 +383,32 @@ export function createAgentTools(userId: string) {
         try {
           const { warehouse } = args as { warehouse?: string };
           const snap = await db.collection('invProducts').orderBy('createdAt', 'desc').limit(100).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const products = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          const products = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
 
           const alerts: string[] = [];
           let criticalCount = 0;
           let lowCount = 0;
 
           for (const p of products) {
-            const ws = p.warehouseStock as Record<string, number> || {};
+            const ws = (p.warehouseStock as Record<string, number>) || {};
             const total = Object.values(ws).reduce((s: number, v) => s + (Number(v) || 0), 0);
             const minStock = Number(p.minStock) || 5;
 
             if (total === 0) {
               criticalCount++;
-              alerts.push(`🔴 AGOTADO: ${p.name} (${p.sku || '-'}), precio $${(Number(p.price) || 0).toLocaleString('es-CO')}/${p.unit || 'ud'}`);
+              alerts.push(`🔴 AGOTADO: ${(p.name as string)} (${(p.sku as string) || '-'}), precio $${(Number(p.price) || 0).toLocaleString('es-CO')}/${(p.unit as string) || 'ud'}`);
             } else if (total <= minStock) {
               lowCount++;
               const deficit = minStock - total;
               const reorderCost = deficit * (Number(p.price) || 0);
-              alerts.push(`🟡 STOCK BAJO: ${p.name} — Stock: ${total}, Mínimo: ${minStock}, Pedir: ${deficit} uds (~$${reorderCost.toLocaleString('es-CO')})`);
+              alerts.push(`🟡 STOCK BAJO: ${(p.name as string)} — Stock: ${total}, Mínimo: ${minStock}, Pedir: ${deficit} uds (~$${reorderCost.toLocaleString('es-CO')})`);
             }
           }
 
           if (alerts.length === 0) return { success: true, criticalCount: 0, lowCount: 0, message: '✅ Inventario saludable — todos los productos están por encima del mínimo de stock.' };
 
           const totalReorderCost = products.reduce((s, p) => {
-            const ws = p.warehouseStock as Record<string, number> || {};
+            const ws = (p.warehouseStock as Record<string, number>) || {};
             const total = Object.values(ws).reduce((s2: number, v) => s2 + (Number(v) || 0), 0);
             const minStock = Number(p.minStock) || 5;
             if (total < minStock) return s + (minStock - total) * (Number(p.price) || 0);
@@ -500,8 +498,7 @@ export function createAgentTools(userId: string) {
         try {
           const { projectId, status } = args as { projectId?: string; status?: string };
           const snap = await db.collection('invoices').orderBy('createdAt', 'desc').limit(30).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let invoices = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          let invoices = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (projectId) invoices = invoices.filter((inv: Record<string, unknown>) => inv.projectId === projectId);
           if (status) invoices = invoices.filter((inv: Record<string, unknown>) => inv.status === status);
 
@@ -674,8 +671,7 @@ export function createAgentTools(userId: string) {
         try {
           const { projectId, status } = args as { projectId?: string; status?: string };
           const snap = await db.collection('quotations').orderBy('createdAt', 'desc').limit(20).get();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let quotations = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+          let quotations = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (projectId) quotations = quotations.filter((q: Record<string, unknown>) => q.projectId === projectId);
           if (status) quotations = quotations.filter((q: Record<string, unknown>) => q.status === status);
 
@@ -754,8 +750,7 @@ export function createAgentTools(userId: string) {
           const snap = await db.collection('meetings').orderBy('date', 'asc').limit(30).get();
           const now = new Date().toISOString().split('T')[0];
           const future = new Date(Date.now() + (days || 7) * 86400000).toISOString().split('T')[0];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let meetings = snap.docs.map(d => ({ id: d.id, ...d.data() as any }))
+          let meetings = (snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[])
             .filter((m: Record<string, unknown>) => (m.date as string) >= now && (m.date as string) <= future);
           if (projectId) meetings = meetings.filter((m: Record<string, unknown>) => m.projectId === projectId);
 

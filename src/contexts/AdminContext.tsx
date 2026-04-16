@@ -13,14 +13,14 @@ interface AdminContextType {
   adminFilterAssignee: string; setAdminFilterAssignee: React.Dispatch<React.SetStateAction<string>>;
   adminFilterProject: string; setAdminFilterProject: React.Dispatch<React.SetStateAction<string>>;
   adminFilterPriority: string; setAdminFilterPriority: React.Dispatch<React.SetStateAction<string>>;
-  adminTooltipTask: any; setAdminTooltipTask: React.Dispatch<React.SetStateAction<any>>;
+  adminTooltipTask: Task | null; setAdminTooltipTask: React.Dispatch<React.SetStateAction<Task | null>>;
   adminTooltipPos: { x: number; y: number }; setAdminTooltipPos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
   adminPermSection: string; setAdminPermSection: React.Dispatch<React.SetStateAction<string>>;
   rolePerms: Record<string, string[]>; setRolePerms: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   toggleRolePerm: (permName: string, role: string) => void;
 
   // Computed values
-  adminFilteredTasks: any[];
+  adminFilteredTasks: Task[];
 
   // Gantt helpers (re-exported from @/lib/gantt-helpers)
   GANTT_DAYS: number;
@@ -29,9 +29,9 @@ interface AdminContextType {
   GANTT_PRIO_CFG: Record<string, { label: string; bg: string; color: string }>;
   getMonday: (d: Date) => Date;
   getGanttDays: () => Date[];
-  getTaskBar: (task: any, days: Date[]) => { left: number; width: number } | null;
-  buildGanttRows: (memberTasks: any[]) => any[][];
-  findOverlaps: (memberTasks: any[]) => Set<string>;
+  getTaskBar: (task: Task, days: Date[]) => { left: number; width: number } | null;
+  buildGanttRows: (memberTasks: Task[]) => Task[][];
+  findOverlaps: (memberTasks: Task[]) => Set<string>;
   getProjectColor: (projId: string) => string;
   getProjectColorLight: (projId: string) => string;
 }

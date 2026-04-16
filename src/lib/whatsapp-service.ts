@@ -8,6 +8,8 @@
  * (/api/whatsapp/webhook, /api/whatsapp/notify) via dynamic import.
  */
 
+import type { FirestoreTimestamp } from '@/lib/types';
+
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v25.0';
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
 
@@ -62,9 +64,10 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<{ s
 
     const data = await response.json();
     return { success: true };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error de conexion:', err.message);
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('[ArchiFlow WhatsApp] Error de conexion:', msg);
+    return { success: false, error: msg };
   }
 }
 
@@ -110,9 +113,10 @@ export async function sendWhatsAppButtons(
     }
 
     return { success: true };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error conexion botones:', err.message);
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('[ArchiFlow WhatsApp] Error conexion botones:', msg);
+    return { success: false, error: msg };
   }
 }
 
@@ -139,7 +143,8 @@ export interface WhatsAppMessage {
   buttonId?: string;
 }
 
-export function parseWebhookPayload(body: any): WhatsAppMessage | null {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseWebhookPayload(body: Record<string, any>): WhatsAppMessage | null {
   try {
     const entry = body?.entry?.[0];
     const change = entry?.changes?.[0];
@@ -177,8 +182,8 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
     if (!msgBody) return null;
 
     return { from, name, body: msgBody, messageId, timestamp, type: msgType, buttonId };
-  } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error parseando webhook:', err.message);
+  } catch (err: unknown) {
+    console.error('[ArchiFlow WhatsApp] Error parseando webhook:', err);
     return null;
   }
 }
@@ -190,6 +195,6 @@ export interface WhatsAppLink {
   userId: string;
   userEmail: string;
   userName: string;
-  linkedAt: any;
+  linkedAt: FirestoreTimestamp | null;
   active: boolean;
 }
