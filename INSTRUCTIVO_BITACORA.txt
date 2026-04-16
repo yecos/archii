@@ -221,6 +221,39 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 13:15 | FEATURE v29 — Fotos en Firebase Storage (migración base64)
+  Estado: COMPLETADO
+  Commit: 44aa89b
+  Build: exitoso (16 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: Las fotos se almacenaban como strings base64 directamente en
+    documentos Firestore, causando documentos de 4-10 MB que exceden el
+    limite de 1 MB por documento. Se migran 4 subsistemas a Firebase
+    Storage con URLs de descarga y compresión automática.
+
+  Tarea 29.1 — CDN Script firebase-storage-compat.js:
+    * Agregado script tag en layout.tsx (Firebase 10.12.0 compat)
+    * Cargado sincrónicamente DESPUES de firebase-firestore-compat.js
+    * Bucket: archiflow-prod-2026.firebasestorage.app
+
+  Tarea 29.2 — Helpers reutilizables (firebase-service.ts, +122 lineas):
+    * compressImage(file): Canvas, max 1600px, JPEG 80%, threshold 800KB
+    * dataUrlToFile(dataUrl, fileName): base64 a File
+    * uploadToStorage(fileOrBase64, storagePath, onProgress?)
+    * deleteFromStorage(storagePath)
+
+  Tarea 29.3 — Pantallas migradas:
+    * FieldNotesScreen: photos[] a Storage (fieldNotes/{uid}/{proj}/)
+    * PhotoLogScreen: beforePhoto/afterPhoto a Storage
+    * CommentsContext/DailyLog: photos[] a Storage (dailyLogs/{uid}/{proj}/)
+
+  Tarea 29.4 — Backward Compatible:
+    * Display funciona con URLs y base64 legacy
+    * Solo sube si string empieza con "data:" (base64)
+    * URLs existentes se preservan al editar
+
+  Archivos: 5 modificados, +169 lineas
+
 2026-04-17 04:00 | REFACTOR — P10 Type Safety Final Round: 96 any eliminados, 21 archivos
   Estado: COMPLETADO
   Commit: 00adcbd
