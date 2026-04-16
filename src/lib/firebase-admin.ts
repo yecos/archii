@@ -83,7 +83,7 @@ function getAdminConfig() {
     try {
       _initMethod = 'FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY';
       console.log(`[ArchiFlow Admin] Using individual credentials (${clientEmail})`);
-      return cert({ client_email: clientEmail, private_key: privateKey, type: 'service_account' });
+      return cert({ clientEmail, privateKey, projectId: APP_PROJECT_ID } as import('firebase-admin/app').ServiceAccount);
     } catch (e) {
       _initError = `Error using individual credentials: ${e instanceof Error ? e.message : e}`;
       console.error('[ArchiFlow Admin]', _initError);

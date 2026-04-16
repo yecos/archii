@@ -4,6 +4,7 @@ import {
   parseWebhookPayload,
   sendWhatsAppMessage,
   sendWhatsAppButtons,
+  markAsRead,
 } from "@/lib/whatsapp-service";
 import {
   getWelcomeMessage,
@@ -14,6 +15,9 @@ import { aiReply } from "@/lib/whatsapp-ai";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { WhatsAppLinkedUser } from "@/lib/types";
+
+// Bot mention keywords (triggers bot response in groups)
+const BOT_MENTIONS = ['archiflow', 'archi', 'bot', 'ayuda', '@archiflow'];
 
 // ─── GET: Verificacion del webhook (Meta envia esto al configurar) ───
 export async function GET(request: NextRequest) {
@@ -62,6 +66,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    // Log group messages for debugging
+    if (message.isGroup) {
+      console.log(`[WhatsApp Group] "${message.name}" in "${message.groupName}": ${message.body.substring(0, 80)}`);
+    }
+
+    // ── Group message handling ──
+    if (message.isGroup) {
+      await handleGroupMessage(message);
+      return NextResponse.json({ ok: true });
+    }
+
+    // ── Direct message handling ──
+    // Marcar como leido
+    markAsRead(message.messageId).catch(() => {});
+
     // Enviar respuesta de manera segura con fallback
     await safeReply(message);
 
@@ -70,6 +89,86 @@ export async function POST(request: NextRequest) {
     const msg = error instanceof Error ? error.message : 'Error desconocido';
     console.error("[ArchiFlow WhatsApp] Error en webhook POST:", msg);
     return NextResponse.json({ ok: true }); // Siempre 200 para Meta
+  }
+}
+
+// ─── Group Message Handler ───
+// In groups, the bot only responds when mentioned or when a command is detected.
+// The sender must be a linked user to get AI responses.
+async function handleGroupMessage(message: any) {
+  try {
+    const body = message.body.toLowerCase().trim();
+
+    // Check if the message mentions the bot
+    const mentionsBot = BOT_MENTIONS.some(m => body.includes(m));
+
+    // Check if it's a direct command
+    const isCommand = ['resumen', 'estado', 'gastos', 'tareas', 'equipo', 'ayuda', 'help', 'menu'].some(cmd => body.startsWith(cmd));
+
+    if (!mentionsBot && !isCommand) {
+      // Not for us — ignore silently
+      return;
+    }
+
+    // Look up the sender's linked account
+    const db = getAdminDb();
+    const linkSnap = await db
+      .collection("whatsappLinks")
+      .where("whatsappPhone", "==", message.from)
+      .where("active", "==", true)
+      .limit(1)
+      .get();
+
+    if (linkSnap.empty) {
+      // Sender not linked — respond with link instructions
+      const replyTo = message.groupId || message.from;
+      await sendWhatsAppMessage(replyTo,
+        `Hola ${message.name}! Para usar ArchiFlow en este grupo necesitas vincular tu cuenta.\n\n` +
+        `Escribe *ayuda* para ver como hacerlo.`
+      );
+      return;
+    }
+
+    const linkData = { id: linkSnap.docs[0].id, ...linkSnap.docs[0].data() } as WhatsAppLinkedUser;
+
+    // Strip the bot mention from the message for cleaner AI processing
+    let cleanMessage = message.body;
+    for (const mention of BOT_MENTIONS) {
+      cleanMessage = cleanMessage.replace(new RegExp(`@?${mention}`, 'gi'), '').trim();
+    }
+    // If the remaining message is empty (was just a mention), provide help
+    if (!cleanMessage || cleanMessage.length < 2) {
+      cleanMessage = 'resumen';
+    }
+
+    // Use AI Agent for group messages
+    const replyTo = message.groupId || message.from;
+    try {
+      const aiText = await aiReply(cleanMessage, linkData, db, {
+        isGroup: true,
+        groupName: message.groupName,
+        senderName: message.name,
+      });
+
+      // Prefix with @mention in group context
+      const groupReply = message.name ? `@${message.name}\n\n${aiText}` : aiText;
+      const textResult = await sendWhatsAppMessage(replyTo, groupReply);
+      if (!textResult.success) {
+        console.error("[WhatsApp Group] Error sending reply:", textResult.error);
+      }
+    } catch (aiErr) {
+      console.warn('[WhatsApp Group] AI failed, falling back to commands:', aiErr instanceof Error ? aiErr.message : aiErr);
+      try {
+        const cmdResult = await processCommand(cleanMessage, linkData, db);
+        const groupReply = message.name ? `@${message.name}\n\n${cmdResult.text}` : cmdResult.text;
+        await sendWhatsAppMessage(replyTo, groupReply);
+      } catch (cmdErr) {
+        console.error('[WhatsApp Group] Command fallback also failed:', cmdErr instanceof Error ? cmdErr.message : cmdErr);
+      }
+    }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    console.error("[WhatsApp Group] Error:", msg);
   }
 }
 

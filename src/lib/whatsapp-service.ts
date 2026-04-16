@@ -132,15 +132,65 @@ export function verifyWebhook(mode: string, token: string, challenge: string): {
   return { verified: false };
 }
 
+// ─── Send typing indicator (shows "typing..." in WhatsApp) ───
+export async function sendTypingIndicator(to: string): Promise<void> {
+  const config = getConfig();
+  if (!config) return;
+  try {
+    await fetch(`${BASE_URL}/${config.phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: to.replace(/[^0-9]/g, ''),
+        type: 'reaction',
+        reaction: { message_id: '0', emoji: '⏳' },
+      }),
+    });
+  } catch {
+    // Typing indicator is nice-to-have, never block on failure
+  }
+}
+
+// ─── Mark message as read ───
+export async function markAsRead(messageId: string): Promise<void> {
+  const config = getConfig();
+  if (!config) return;
+  try {
+    await fetch(`${BASE_URL}/${config.phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        status: 'read',
+        message_id: messageId,
+      }),
+    });
+  } catch {
+    // Read receipt is nice-to-have, never block on failure
+  }
+}
+
 // ─── Parse incoming webhook (POST) ───
 export interface WhatsAppMessage {
-  from: string;
-  name: string;
-  body: string;
+  from: string;           // Sender phone (individual in both DM and groups)
+  name: string;           // Sender name
+  body: string;           // Message text
   messageId: string;
   timestamp: string;
   type: 'text' | 'interactive' | 'unknown';
   buttonId?: string;
+  isGroup?: boolean;      // true if message is from a group
+  groupId?: string;       // WhatsApp group ID
+  groupName?: string;     // Group name
+  contextId?: string;     // Message ID being replied to (if any)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,9 +205,17 @@ export function parseWebhookPayload(body: Record<string, any>): WhatsAppMessage 
     if (value?.statuses) return null;
 
     const from = message.from || '';
-    const name = value?.contacts?.[0]?.profile?.name || 'Usuario';
+    const name = value?.contacts?.[0]?.profile?.name || value?.contacts?.[0]?.wa_id || 'Usuario';
     const messageId = message.id || '';
     const timestamp = message.timestamp || '';
+
+    // Group detection: in WhatsApp Cloud API, group messages have context.group_id
+    // or the 'from' is a group ID (starts with specific patterns)
+    const context = message.context;
+    const groupId = context?.group_id || null;
+    const groupName = context?.group_name || null;
+    const isGroup = !!groupId;
+    const contextId = context?.id || null;
 
     let msgBody = '';
     let msgType: WhatsAppMessage['type'] = 'unknown';
@@ -181,7 +239,7 @@ export function parseWebhookPayload(body: Record<string, any>): WhatsAppMessage 
 
     if (!msgBody) return null;
 
-    return { from, name, body: msgBody, messageId, timestamp, type: msgType, buttonId };
+    return { from, name, body: msgBody, messageId, timestamp, type: msgType, buttonId, isGroup, groupId: groupId || undefined, groupName: groupName || undefined, contextId: contextId || undefined };
   } catch (err: unknown) {
     console.error('[ArchiFlow WhatsApp] Error parseando webhook:', err);
     return null;

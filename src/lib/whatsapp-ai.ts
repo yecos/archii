@@ -4,6 +4,10 @@
  * Permite conversar naturalmente por WhatsApp y usar las mismas
  * herramientas que el chat web (crear tareas, proyectos, consultar datos).
  *
+ * Soporta:
+ *   - Mensajes directos (DM) — conversación 1:1 con historial
+ *   - Grupos de WhatsApp — responde solo cuando se menciona "Archiflow"
+ *
  * Flujo:
  *   WhatsApp → webhook → aiReply() → AI Agent (generateText + tools) → WhatsApp
  *
@@ -25,15 +29,33 @@ const WHATSAPP_HISTORY_COLLECTION = 'whatsappHistory';
 /* ===== WhatsApp-specific System Prompt ===== */
 const WHATSAPP_SYSTEM_PROMPT = `Eres ArchiFlow AI, el asistente inteligente de ArchiFlow — una plataforma de gestión de proyectos de construcción y arquitectura. El usuario te está hablando por WhatsApp.
 
+Tienes acceso a herramientas que te permiten:
+- Consultar proyectos, tareas, gastos, presupuestos, inventario, facturas, cotizaciones y reuniones
+- Crear nuevas tareas, gastos, facturas, cotizaciones y reuniones
+- Actualizar el estado de tareas
+- Generar reportes de proyectos
+
 Reglas IMPORTANTES:
 1. SIEMPRE respondes en español.
-2. Formato: usa emojis, negritas con *asteriscos* y texto simple. NO uses markdown, listas numeradas con guiones, ni formato complejo.
-3. Sé conciso — WhatsApp tiene límite de 4096 caracteres.
-4. Cuando crees o modifiques algo, confirma con un resumen corto.
-5. Usa formato de moneda colombiana (COP) cuando menciones montos.
-6. Si el usuario pregunta algo que no requiere herramientas (saludos, chiste, etc.), responde naturalmente.
-7. Para datos que necesites buscar, usa las herramientas disponibles.
-8. No inventes datos — usa las herramientas para consultar información real.`;
+2. Formato: usa emojis, negritas con *asteriscos* y texto simple. NO uses markdown complejo, ni listas numeradas con guiones, ni tablas.
+3. Sé conciso — WhatsApp tiene límite de 4096 caracteres. Prefiere respuestas cortas y directas.
+4. Cuando crees o modifiques algo, confirma con un resumen corto de lo que hiciste.
+5. Usa formato de moneda colombiana (COP $XX.XXX) cuando menciones montos.
+6. Si el usuario pregunta algo general (saludos, chiste, clima), responde naturalmente SIN usar herramientas.
+7. Para datos que necesites buscar, usa SIEMPRE las herramientas. NUNCA inventes datos.
+8. Si una herramienta falla, explica el error de forma simple y sugiere una alternativa.
+9. Cuando listes información, usa emojis como bullets: 📌, ✅, 🔴, 🟢, 📊, 💰, etc.
+10. Sé proactivo: si el usuario pregunta "cómo va X", consulta los datos reales y da un resumen.`;
+
+/* ===== Group System Prompt ===== */
+const GROUP_SYSTEM_PROMPT = `Eres ArchiFlow AI, el asistente inteligente de ArchiFlow en un grupo de WhatsApp. Alguien te mencionó en el grupo.
+
+REGLAS ESPECIALES PARA GRUPOS:
+1. Responde de forma CONCISA — en grupos las respuestas largas molestan. Máximo 3-4 líneas por punto.
+2. NO uses saludos largos. Ve directo al punto.
+3. Si te preguntan algo privado (ej: "cuánto gané"), sugiere que te escriban por privado.
+4. Identifícate al inicio si la pregunta es ambigua: "ArchiFlow: ..."
+5. Las mismas herramientas de consulta y creación están disponibles.`;
 
 /* ===== Types ===== */
 interface ChatMessage {
@@ -42,15 +64,32 @@ interface ChatMessage {
   timestamp: number;
 }
 
+/** Options for aiReply */
+export interface AiReplyOptions {
+  isGroup?: boolean;
+  groupId?: string;
+  groupName?: string;
+  senderName?: string;
+}
+
 /* ===== History Management ===== */
 
+/** Get a unique history key based on phone and optional group context */
+function getHistoryKey(phone: string, options?: AiReplyOptions): string {
+  const cleanPhone = phone.replace('+', '');
+  if (options?.isGroup && options?.groupId) {
+    // Separate history per group to keep contexts clean
+    return `group_${options.groupId}_${cleanPhone}`;
+  }
+  return cleanPhone;
+}
+
 /** Load recent conversation history from Firestore */
-async function loadHistory(phone: string, db: Firestore): Promise<ChatMessage[]> {
+async function loadHistory(key: string, db: Firestore): Promise<ChatMessage[]> {
   try {
-    // Try to find existing conversation document
     const snap = await db
       .collection(WHATSAPP_HISTORY_COLLECTION)
-      .doc(phone.replace('+', ''))
+      .doc(key)
       .get();
 
     if (!snap.exists) return [];
@@ -58,7 +97,6 @@ async function loadHistory(phone: string, db: Firestore): Promise<ChatMessage[]>
     const data = snap.data();
     const history: ChatMessage[] = data?.messages || [];
 
-    // Return only recent messages
     return history.slice(-MAX_HISTORY_MESSAGES);
   } catch (err) {
     console.warn('[WhatsApp AI] Error loading history:', err instanceof Error ? err.message : err);
@@ -67,18 +105,16 @@ async function loadHistory(phone: string, db: Firestore): Promise<ChatMessage[]>
 }
 
 /** Save a message to conversation history in Firestore */
-async function saveToHistory(phone: string, role: 'user' | 'assistant', content: string, db: Firestore): Promise<void> {
+async function saveToHistory(key: string, role: 'user' | 'assistant', content: string, db: Firestore): Promise<void> {
   try {
-    const docId = phone.replace('+', '');
     const FV = getAdminFieldValue();
     const msg: ChatMessage = { role, content: content.substring(0, 500), timestamp: Date.now() };
 
-    const docRef = db.collection(WHATSAPP_HISTORY_COLLECTION).doc(docId);
+    const docRef = db.collection(WHATSAPP_HISTORY_COLLECTION).doc(key);
     const doc = await docRef.get();
 
     if (doc.exists) {
       const existing = doc.data()?.messages || [];
-      // Keep only last 20 messages to avoid bloat
       const updated = [...existing, msg].slice(-20);
       await docRef.update({ messages: updated, updatedAt: FV.serverTimestamp() });
     } else {
@@ -143,13 +179,15 @@ export async function aiReply(
   userMessage: string,
   link: WhatsAppLinkedUser,
   db: Firestore,
+  options?: AiReplyOptions,
 ): Promise<string> {
   const phone = link.whatsappPhone || 'unknown';
   const userId = link.userId;
+  const historyKey = getHistoryKey(phone, options);
 
   try {
     // 1. Load conversation history
-    const history = await loadHistory(phone, db);
+    const history = await loadHistory(historyKey, db);
 
     // 2. Build messages array for AI
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
@@ -157,15 +195,30 @@ export async function aiReply(
       { role: 'user', content: userMessage },
     ];
 
-    // 3. Add date context to system prompt
+    // 3. Build context-aware system prompt
     const today = new Date().toLocaleDateString('es-CO', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
-    const systemPrompt = WHATSAPP_SYSTEM_PROMPT + `\n\nFecha actual: ${today}`;
+
+    let systemPrompt = WHATSAPP_SYSTEM_PROMPT;
+
+    // Add user context for personalized responses
     if (link.userName) {
-      // Include user name for personalized responses
-      // Note: don't add to system prompt directly to avoid re-creating it
+      systemPrompt += `\n\nEl usuario se llama ${link.userName}. Puedes usar su nombre para personalizar las respuestas.`;
     }
+
+    // Add group context
+    if (options?.isGroup) {
+      systemPrompt += '\n\n' + GROUP_SYSTEM_PROMPT;
+      if (options.senderName) {
+        systemPrompt += `\n\nLa persona que te mencionó es ${options.senderName}.`;
+      }
+      if (options.groupName) {
+        systemPrompt += `\nEstás en el grupo "${options.groupName}".`;
+      }
+    }
+
+    systemPrompt += `\n\nFecha actual: ${today}`;
 
     // 4. Get AI model via router
     const { model, provider, modelName } = await routeAIRequest({
@@ -173,7 +226,7 @@ export async function aiReply(
       messages,
       userId,
     });
-    console.log(`[WhatsApp AI] Using ${provider} (${modelName}) for user ${userId} (${link.userName})`);
+    console.log(`[WhatsApp AI] Using ${provider} (${modelName}) for user ${userId} (${link.userName})${options?.isGroup ? ` in group ${options.groupName}` : ''}`);
 
     // 5. Create tools with user context
     const tools = createAgentTools(userId);
@@ -184,12 +237,12 @@ export async function aiReply(
       system: systemPrompt,
       messages,
       tools,
-      maxSteps: 5,
-      maxOutputTokens: 1500,
+      stopWhen: stepCountIs(5),
+      maxOutputTokens: options?.isGroup ? 1000 : 1500,  // Shorter responses in groups
       temperature: 0.7,
-      onStepFinish({ text, toolCalls }) {
+      onStepFinish({ toolCalls }: { toolCalls?: any[] }) {
         if (toolCalls?.length) {
-          console.log(`[WhatsApp AI] Tools used: ${toolCalls.map(tc => tc.toolName).join(', ')}`);
+          console.log(`[WhatsApp AI] Tools used: ${toolCalls.map((tc: any) => tc.toolName).join(', ')}`);
         }
       },
     });
@@ -201,8 +254,8 @@ export async function aiReply(
     responseText = formatForWhatsApp(responseText);
 
     // 9. Save both user message and AI response to history (fire-and-forget)
-    saveToHistory(phone, 'user', userMessage, db).catch(() => {});
-    saveToHistory(phone, 'assistant', responseText, db).catch(() => {});
+    saveToHistory(historyKey, 'user', userMessage, db).catch(() => {});
+    saveToHistory(historyKey, 'assistant', responseText, db).catch(() => {});
 
     return responseText;
 
@@ -211,7 +264,7 @@ export async function aiReply(
     console.error(`[WhatsApp AI] Error: ${msg}`);
 
     // Save user message to history even on failure
-    saveToHistory(phone, 'user', userMessage, db).catch(() => {});
+    saveToHistory(historyKey, 'user', userMessage, db).catch(() => {});
 
     // Check if it's a provider error
     if (msg.includes('PERMISSION_DENIED') || msg.includes('No hay API keys')) {
