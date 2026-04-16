@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
-import { getFirebase, snapToDocs } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Camera, Trash2, Pencil } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
@@ -140,13 +140,27 @@ export default function PhotoLogScreen() {
       const space = formNewSpace.trim() || formSpace;
       if (!space) { showToast('Selecciona o crea un espacio', 'error'); return; }
 
+      // Upload base64 photos to Storage, keep existing URLs as-is
+      let finalBefore = formBeforePhoto;
+      let finalAfter = formAfterPhoto;
+      const uid = auth.authUser?.uid || 'anon';
+
+      if (formBeforePhoto.startsWith('data:')) {
+        const result = await uploadToStorage(formBeforePhoto, `photoLog/${uid}/${formProject}/before_${Date.now()}.jpg`);
+        finalBefore = result.downloadURL;
+      }
+      if (formAfterPhoto.startsWith('data:')) {
+        const result = await uploadToStorage(formAfterPhoto, `photoLog/${uid}/${formProject}/after_${Date.now()}.jpg`);
+        finalAfter = result.downloadURL;
+      }
+
       const entryData = {
         projectId: formProject,
         space,
         phase: formPhase,
         progress: formProgress,
-        beforePhoto: formBeforePhoto,
-        afterPhoto: formAfterPhoto,
+        beforePhoto: finalBefore,
+        afterPhoto: finalAfter,
         caption: formCaption,
         updatedAt: ts,
       };

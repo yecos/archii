@@ -51,6 +51,7 @@ export const viewport: Viewport = {
 const FB_APP = "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js";
 const FB_AUTH = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js";
 const FB_FS = "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js";
+const FB_STORAGE = "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js";
 
 export default function RootLayout({
   children,
@@ -89,6 +90,7 @@ export default function RootLayout({
         <script src={FB_APP} />
         <script src={FB_AUTH} />
         <script src={FB_FS} />
+        <script src={FB_STORAGE} />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {

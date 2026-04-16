@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
-import { getFirebase, snapToDocs } from '@/lib/firebase-service';
+import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
@@ -142,6 +142,18 @@ export default function FieldNotesScreen() {
       const participants = formParticipants.filter(p => p.trim());
       const commitments = formCommitments.filter(c => c.trim());
 
+      // Upload base64 photos to Storage, keep existing URLs as-is
+      const photoUrls: string[] = [];
+      for (let i = 0; i < formPhotos.length; i++) {
+        const photo = formPhotos[i];
+        if (photo.startsWith('data:')) {
+          const result = await uploadToStorage(photo, `fieldNotes/${auth.authUser?.uid || 'anon'}/${formProject}/${Date.now()}_${i}.jpg`);
+          photoUrls.push(result.downloadURL);
+        } else {
+          photoUrls.push(photo);
+        }
+      }
+
       const noteData = {
         projectId: formProject,
         date: formDate,
@@ -152,7 +164,7 @@ export default function FieldNotesScreen() {
         laborCount: participants.length,
         observations: formObservations,
         commitments,
-        photos: formPhotos,
+        photos: photoUrls,
         supervisor: formSupervisor || auth.authUser?.displayName || '',
         updatedAt: ts,
       };

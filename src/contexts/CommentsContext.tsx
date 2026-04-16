@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
-import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot, uploadToStorage } from '@/lib/firebase-service';
 import type { Comment, DailyLog } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -85,17 +85,31 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
     if (!selectedProjectId) { showToast('Selecciona un proyecto', 'error'); return; }
     const lf = logForm;
     if (!lf.date) { showToast('La fecha es obligatoria', 'error'); return; }
-    const db = getFirebase().firestore();
-    const data: Record<string, any> = {
-      projectId: selectedProjectId, date: lf.date, weather: lf.weather || '', temperature: Number(lf.temperature) || 0,
-      activities: (lf.activities || ['']).filter((a: string) => a.trim()), laborCount: Number(lf.laborCount) || 0,
-      equipment: (lf.equipment || ['']).filter((e: string) => e.trim()), materials: (lf.materials || ['']).filter((m: string) => m.trim()),
-      observations: lf.observations || '', photos: lf.photos || [], supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
-      createdBy: authUser?.uid, updatedAt: serverTimestamp(),
-    };
     try {
+      // Upload photos to Storage (base64 → download URLs)
+      const rawPhotos: string[] = lf.photos || [];
+      const photoUrls: string[] = [];
+      const uid = authUser?.uid || 'anon';
+      for (let i = 0; i < rawPhotos.length; i++) {
+        const p = rawPhotos[i];
+        if (p.startsWith('data:')) {
+          const result = await uploadToStorage(p, `dailyLogs/${uid}/${selectedProjectId}/${Date.now()}_${i}.jpg`);
+          photoUrls.push(result.downloadURL);
+        } else if (p) {
+          photoUrls.push(p); // already a URL
+        }
+      }
+
+      const db = getFirebase().firestore();
+      const data: Record<string, unknown> = {
+        projectId: selectedProjectId, date: lf.date, weather: lf.weather || '', temperature: Number(lf.temperature) || 0,
+        activities: (lf.activities || ['']).filter((a: string) => a.trim()), laborCount: Number(lf.laborCount) || 0,
+        equipment: (lf.equipment || ['']).filter((e: string) => e.trim()), materials: (lf.materials || ['']).filter((m: string) => m.trim()),
+        observations: lf.observations || '', photos: photoUrls, supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
+        createdBy: authUser?.uid, updatedAt: serverTimestamp(),
+      };
       if (selectedLogId) { await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(selectedLogId).update(data); showToast('Bitácora actualizada'); }
-      else { data.createdAt = serverTimestamp(); await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data); showToast('Bitácora creada'); }
+      else { (data as Record<string, unknown>).createdAt = serverTimestamp(); await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data); showToast('Bitácora creada'); }
       setDailyLogTab('list'); setSelectedLogId(null); resetLogForm();
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al guardar', 'error'); }
   };
