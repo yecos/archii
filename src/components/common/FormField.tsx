@@ -87,7 +87,7 @@ export function ModalFooter({ onCancel, onSubmit, submitLabel, cancelLabel = 'Ca
           {cancelLabel}
         </button>
         <button
-          className="skeuo-btn px-4 py-2 text-[13px] font-semibold bg-[var(--af-accent)] text-[var(--primary-foreground)] hover:bg-[var(--af-accent2)]"
+          className="px-4 py-2 text-[13px] font-semibold rounded-[calc(var(--radius)-2px)] bg-[var(--af-accent)] text-white hover:bg-[var(--af-accent2)] transition-all cursor-pointer border border-[var(--af-accent)]/30"
           onClick={onSubmit}
           disabled={submitDisabled}
         >
