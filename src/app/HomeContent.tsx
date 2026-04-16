@@ -77,6 +77,7 @@ const FieldNotesScreen = dynamic(() => import('@/screens/FieldNotesScreen'), { s
 const PhotoLogScreen = dynamic(() => import('@/screens/PhotoLogScreen'), { ssr: false });
 const InspectionsScreen = dynamic(() => import('@/screens/InspectionsScreen'), { ssr: false });
 const TemplatesScreen = dynamic(() => import('@/screens/TemplatesScreen'), { ssr: false });
+const ChangeOrdersScreen = dynamic(() => import('@/screens/ChangeOrdersScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -223,6 +224,7 @@ function AppContent() {
             {displayScreen === 'photoLog' && <ErrorBoundary label="Bitácora Fotográfica"><PhotoLogScreen /></ErrorBoundary>}
             {displayScreen === 'inspections' && <ErrorBoundary label="Inspecciones"><InspectionsScreen /></ErrorBoundary>}
             {displayScreen === 'templates' && <ErrorBoundary label="Templates"><TemplatesScreen /></ErrorBoundary>}
+            {displayScreen === 'changeOrders' && <ErrorBoundary label="Control de Cambios"><ChangeOrdersScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

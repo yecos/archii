@@ -557,6 +557,35 @@ export interface FieldNote {
   };
 }
 
+// Change Order (Control de Cambios)
+export type ChangeOrderStatus = 'Borrador' | 'Solicitada' | 'En Revisión' | 'Aprobada' | 'Rechazada' | 'Implementada';
+export type ChangeOrderCategory = 'Cambio de Alcance' | 'Diseño' | 'Condición de Sitio' | 'Solicitud del Cliente' | 'Normativa' | 'Error de Construcción' | 'Otro';
+
+export interface ChangeOrder {
+  id: string;
+  data: {
+    number: string;
+    projectId: string;
+    projectName: string;
+    title: string;
+    description: string;
+    category: ChangeOrderCategory;
+    status: ChangeOrderStatus;
+    reason: string;
+    impactBudget: number; // positive = cost increase, negative = savings
+    impactDays: number;   // positive = delay, negative = time savings
+    requestedBy: string;
+    approvedBy: string;
+    approvedAt: FirestoreTimestamp | null;
+    implementedAt: FirestoreTimestamp | null;
+    dueDate: string;
+    notes: string;
+    createdAt: FirestoreTimestamp | null;
+    createdBy: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
 // Photo Log Entry
 export interface PhotoLogEntry {
   id: string;
@@ -1013,6 +1042,7 @@ export const NAV_ITEMS = [
   { id: 'reports', icon: '📈', label: 'Reportes' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
   { id: 'settings', icon: '🎨', label: 'Configuración' },
+  { id: 'changeOrders', icon: '🔄', label: 'Control de Cambios' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1043,6 +1073,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   photoLog: 'Bitácora Fotográfica',
   inspections: 'Inspecciones',
   templates: 'Templates de Proyecto',
+  changeOrders: 'Control de Cambios',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1106,6 +1137,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'fieldNotes', label: 'Minutas de Obra', icon: '📝' },
       { id: 'photoLog', label: 'Bitácora Fotográfica', icon: '📸' },
       { id: 'inspections', label: 'Inspecciones', icon: '🔍' },
+      { id: 'changeOrders', label: 'Control de Cambios', icon: '🔄' },
     ],
   },
   {
