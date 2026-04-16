@@ -221,6 +221,39 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 03:00 | REFACTOR — P9 Type Safety Round 2: 103 any eliminados en 11 archivos
+  Estado: COMPLETADO
+  Commit: a7e5387
+  Build: exitoso (15 static + 15 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-p9-types-round2-20260417
+
+  Contexto: Segunda ronda de type safety. Se atacaron los 11 archivos de
+    produccion (sin tests) con mayor deuda tipada. Tres agentes trabajaron
+    en paralelo para maximizar velocidad.
+
+  Archivos tipados (11):
+    * export-csv.ts: 5 funciones de export con Project, Task, Expense, etc.
+    * gantt-helpers.ts: getTaskBar, buildGanttRows, findOverlaps con Task
+    * ActivityTimeline.tsx: todas las entidades con tipos concretos
+    * audit-trail.ts: any→unknown para change tracking diff objects
+    * ChatContext.tsx: PendingFile[], BlobEvent, MediaStreamTrack, msgData
+    * GalleryContext.tsx: GalleryPhoto, ChangeEvent<HTMLInputElement>
+    * MessageList.tsx: ChatMessage[], PendingFile[], form setter
+    * QuotationContext.tsx: value: unknown para updates genericos
+    * import-data.ts: parseDate/parseNumber con union types, err:unknown
+    * firestore-actions.ts: QuotationSection/Item/Payment, Record<string,unknown>
+    * ProjectArchivos.tsx: OneDriveFile[], ProjectFile[]
+
+  Cambios auxiliares:
+    * types.ts: FirestoreTimestamp.toDate() agregado al tipo
+    * OneDriveContext.tsx: odGalleryPhotos tipado como OneDriveFile[]
+    * types.ts: OneDriveFile extendido con propiedades adicionales
+
+  Deuda tipada global:
+    * Antes de P8: 396 (345 :any + 51 as any)
+    * Despues de P9: 205 (155 :any + 50 as any)
+    * Reduccion acumulada: -48% en 2 rondas
+
 2026-04-17 02:30 | FEATURE v26 — Control de Cambios (Change Orders)
   Estado: COMPLETADO
   Commit: fbe929e
