@@ -24,6 +24,7 @@ import InstallBanner from '@/components/layout/InstallBanner';
 import NotifPanel from '@/components/layout/NotifPanel';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import OfflineBanner from '@/components/common/OfflineBanner';
+import SWUpdateToast from '@/components/common/SWUpdateToast';
 
 /* ─── Features (lazy) ─── */
 const LightboxViewer = dynamic(() => import('@/components/features/LightboxViewer'), { ssr: false });
@@ -80,6 +81,7 @@ const TemplatesScreen = dynamic(() => import('@/screens/TemplatesScreen'), { ssr
 const ChangeOrdersScreen = dynamic(() => import('@/screens/ChangeOrdersScreen'), { ssr: false });
 const ProfitabilityScreen = dynamic(() => import('@/screens/ProfitabilityScreen'), { ssr: false });
 const PredictiveAIScreen = dynamic(() => import('@/screens/PredictiveAIScreen'), { ssr: false });
+const OfflineStatusScreen = dynamic(() => import('@/screens/OfflineStatusScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -229,6 +231,7 @@ function AppContent() {
             {displayScreen === 'changeOrders' && <ErrorBoundary label="Control de Cambios"><ChangeOrdersScreen /></ErrorBoundary>}
             {displayScreen === 'profitability' && <ErrorBoundary label="Dashboard de Rentabilidad"><ProfitabilityScreen /></ErrorBoundary>}
             {displayScreen === 'predictiveAI' && <ErrorBoundary label="IA Predictiva"><PredictiveAIScreen /></ErrorBoundary>}
+            {displayScreen === 'offlineStatus' && <ErrorBoundary label="Estado Offline"><OfflineStatusScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>
@@ -255,6 +258,7 @@ function AppContent() {
       <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
       <AIAgentPanel isOpen={aiAgentOpen} onClose={() => setAIAgentOpen(false)} />
       <FloatingChatBubble />
+      <SWUpdateToast />
     </div>
   );
 }

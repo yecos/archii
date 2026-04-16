@@ -41,6 +41,7 @@ import AdminProvider from './AdminContext';
 import ChatProvider from './ChatContext';
 import NotifPreferencesProvider from './NotifPreferencesContext';
 import NotifProvider from './NotifContext';
+import { OfflineQueueProvider } from './OfflineQueueContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -59,7 +60,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                             <ChatProvider>
                               <NotifPreferencesProvider>
                                 <NotifProvider>
-                                  {children}
+                                  <OfflineQueueProvider>
+                                    {children}
+                                  </OfflineQueueProvider>
                                 </NotifProvider>
                               </NotifPreferencesProvider>
                             </ChatProvider>
