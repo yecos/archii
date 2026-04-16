@@ -285,8 +285,8 @@ export default function MessageList(props: MessageListProps) {
           <div className="px-3 pt-2.5 pb-1 animate-fadeIn" style={{ animationDuration: '0.15s' }}>
             <div className="flex items-center gap-2 bg-[var(--skeuo-raised)] rounded-lg px-3 py-2 border-l-2 border-l-[var(--af-accent)] shadow-[var(--skeuo-shadow-raised-sm)]">
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-semibold text-[var(--af-accent)]">Respondiendo a {chatReplyingTo.userName || 'Usuario'}</div>
-                <div className="text-[11px] text-[var(--af-text3)] truncate">{(chatReplyingTo.text || '').substring(0, 100)}</div>
+                <div className="text-[10px] font-semibold text-[var(--af-accent)]">Respondiendo a {typeof chatReplyingTo.userName === 'string' ? chatReplyingTo.userName : 'Usuario'}</div>
+                <div className="text-[11px] text-[var(--af-text3)] truncate">{(typeof chatReplyingTo.text === 'string' ? chatReplyingTo.text : '').substring(0, 100)}</div>
               </div>
               <button
                 className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent flex-shrink-0"

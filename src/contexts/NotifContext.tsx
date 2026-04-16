@@ -186,8 +186,8 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         const ts = d.timestamp;
         loaded.push({
           id: doc.id,
-          title: d.title || '',
-          body: d.body || '',
+          title: typeof d.title === 'string' ? d.title : String(d.title ?? ''),
+          body: typeof d.body === 'string' ? d.body : String(d.body ?? ''),
           icon: d.icon || '🔔',
           type: d.type || 'info',
           read: d.read || false,

@@ -79,9 +79,9 @@ export default function MessageBubble({
             className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
             style={{ background: getAvatarHSL(m.uid || ''), color: '#fff' }}
           >
-            {(m.userName || '?')[0].toUpperCase()}
+            {(typeof m.userName === 'string' ? m.userName : 'Usuario')[0].toUpperCase()}
           </div>
-          <span className="text-[11px] font-semibold text-[var(--foreground)]">{m.userName || 'Equipo'}</span>
+          <span className="text-[11px] font-semibold text-[var(--foreground)]">{typeof m.userName === 'string' ? m.userName : 'Equipo'}</span>
           <span className="text-[10px] text-[var(--af-text3)]">{ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       )}
@@ -103,8 +103,8 @@ export default function MessageBubble({
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }}>
-          <div className="text-[10px] font-semibold text-[var(--af-accent)]">{typeof m.replyTo === 'object' && m.replyTo !== null ? (m.replyTo.userName || 'Usuario') : 'Usuario'}</div>
-          <div className="text-[11px] text-[var(--af-text3)] truncate">{(typeof m.replyTo === 'object' && m.replyTo !== null ? (m.replyTo.text || '') : '').substring(0, 80)}</div>
+          <div className="text-[10px] font-semibold text-[var(--af-accent)]">{typeof m.replyTo === 'object' && m.replyTo !== null ? (typeof m.replyTo.userName === 'string' ? m.replyTo.userName : 'Usuario') : 'Usuario'}</div>
+          <div className="text-[11px] text-[var(--af-text3)] truncate">{(typeof m.replyTo === 'object' && m.replyTo !== null ? (typeof m.replyTo.text === 'string' ? m.replyTo.text : '') : '').substring(0, 80)}</div>
         </div>
       )}
 
@@ -116,7 +116,7 @@ export default function MessageBubble({
         {/* TEXT */}
         {msgType === 'TEXT' && m.text && (
           <div className={`px-3.5 py-2.5 text-[13px] leading-relaxed ${isMe ? 'bg-[var(--accent)] text-[var(--af-accent2)] border border-[var(--af-accent)]/20' : 'bg-[var(--af-bg3)] text-[var(--foreground)]'}`}>
-            {m.text.split('\n').map((l: string, i: number) => <span key={i}>{l}{i < m.text.split('\n').length - 1 ? <br /> : ''}</span>)}
+            {(typeof m.text === 'string' ? m.text : '').split('\n').map((l: string, i: number) => <span key={i}>{l}{i < (typeof m.text === 'string' ? m.text : '').split('\n').length - 1 ? <br /> : ''}</span>)}
           </div>
         )}
 

@@ -23,6 +23,31 @@ interface FileAttachment {
 }
 
 /* ===== CHAT CONTEXT ===== */
+
+/** Sanitize Firestore message data to ensure all renderable fields are primitives */
+function sanitizeMessage(raw: Record<string, unknown>): Record<string, unknown> {
+  const msg = { ...raw };
+  // Ensure text fields are strings
+  if (typeof msg.text !== 'string') msg.text = msg.text != null ? String(msg.text) : '';
+  if (typeof msg.userName !== 'string') msg.userName = msg.userName != null ? String(msg.userName) : 'Usuario';
+  if (typeof msg.type !== 'string') msg.type = 'TEXT';
+  if (typeof msg.fileName !== 'string') msg.fileName = msg.fileName != null ? String(msg.fileName) : '';
+  if (typeof msg.fileType !== 'string') msg.fileType = msg.fileType != null ? String(msg.fileType) : '';
+  if (typeof msg.uid !== 'string') msg.uid = msg.uid != null ? String(msg.uid) : '';
+  // Convert Firestore Timestamp to native Date for createdAt
+  if (msg.createdAt != null && typeof msg.createdAt === 'object' && 'toDate' in (msg.createdAt as object)) {
+    msg.createdAt = (msg.createdAt as { toDate: () => Date }).toDate();
+  }
+  // Sanitize replyTo sub-object if present
+  if (msg.replyTo != null && typeof msg.replyTo === 'object') {
+    const rt = { ...(msg.replyTo as Record<string, unknown>) };
+    if (typeof rt.userName !== 'string') rt.userName = rt.userName != null ? String(rt.userName) : 'Usuario';
+    if (typeof rt.text !== 'string') rt.text = rt.text != null ? String(rt.text) : '';
+    if (typeof rt.uid !== 'string') rt.uid = rt.uid != null ? String(rt.uid) : '';
+    msg.replyTo = rt;
+  }
+  return msg;
+}
 interface ChatContextType {
   // State
   messages: ChatMessage[];
@@ -159,17 +184,17 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     let unsub: () => void;
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); showToast('Error al cargar mensajes. Intenta de nuevo.', 'error'); });
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
       unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: directMessages snapshot failed:', err); showToast('Error al cargar mensajes directos.', 'error'); });
     } else {
       unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
-        setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
+        setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); showToast('Error al cargar mensajes del proyecto.', 'error'); });
     }
     return () => { unsub(); setMessages([]); };

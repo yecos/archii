@@ -72,7 +72,7 @@ function MiniMsg({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
     if (isAudio) return { icon: '\uD83C\uDFA4', text: 'Nota de voz' };
     if (isImage) return { icon: '\uD83D\uDDBC\uFE0F', text: 'Foto' };
     if (isFile) return { icon: '\uD83D\uDCE4', text: msg.fileName || 'Archivo' };
-    return { icon: null, text: msg.text || '' };
+    return { icon: null, text: typeof msg.text === 'string' ? msg.text : (msg.text != null ? String(msg.text) : '') };
   }, [msg, isAudio, isImage, isFile]);
 
   const time = fmtTime(msg.createdAt);
@@ -89,7 +89,7 @@ function MiniMsg({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
       )}
       <div className={`flex flex-col ${isOwn ? 'items-end max-w-[75%]' : 'max-w-[80%]'}`}>
         {!isOwn && (
-          <span className="text-[10px] font-semibold text-[var(--af-text3)] mb-0.5 px-1">{msg.userName}</span>
+          <span className="text-[10px] font-semibold text-[var(--af-text3)] mb-0.5 px-1">{typeof msg.userName === 'string' ? msg.userName : 'Usuario'}</span>
         )}
         <div
           className="rounded-2xl px-3 py-1.5 text-[13px] leading-relaxed"
