@@ -1,10 +1,12 @@
 /**
  * /api/ai-debug — Endpoint de diagnóstico para la IA.
- * Verifica si las API keys están configuradas y si Firebase Admin funciona.
+ * Verifica si las API keys están configuradas, si Firebase Admin funciona,
+ * y si la conexión Firestore es operativa.
  * Solo accesible para usuarios autenticados (no expone las keys).
  */
 
 import { requireAuth } from '@/lib/api-auth';
+import { testAdminConnection, getAdminInitStatus } from '@/lib/firebase-admin';
 import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -35,14 +37,30 @@ export async function GET(request: NextRequest) {
       message: openaiKey ? `Configurada (${openaiKey.slice(0, 6)}...${openaiKey.slice(-4)})` : 'NO configurada',
     });
 
-    // 2. Check Firebase Admin
+    // 2. Check Firebase Admin credentials
     const adminCreds = process.env.FIREBASE_ADMIN_CREDENTIALS;
     checks.push({
       name: 'FIREBASE_ADMIN_CREDENTIALS',
       ok: !!adminCreds,
-      message: adminCreds ? 'Configuradas' : 'NO configuradas (usando ADC)',
+      message: adminCreds ? 'Configuradas' : 'NO configuradas',
     });
 
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    checks.push({
+      name: 'FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY',
+      ok: !!(clientEmail && privateKey),
+      message: clientEmail ? `Configuradas (${clientEmail})` : 'NO configuradas',
+    });
+
+    const gac = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    checks.push({
+      name: 'GOOGLE_APPLICATION_CREDENTIALS',
+      ok: !!gac,
+      message: gac ? 'Configuradas' : 'NO configuradas',
+    });
+
+    // 3. Check project ID
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     checks.push({
       name: 'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
@@ -50,18 +68,46 @@ export async function GET(request: NextRequest) {
       message: projectId || 'NO configurado',
     });
 
-    // 3. Summary
-    const keysOk = checks.filter(c => ['GROQ_API_KEY', 'MISTRAL_API_KEY', 'OPENAI_API_KEY'].includes(c.name) && c.ok).length;
-    const anyKey = keysOk > 0;
+    // 4. Test Firestore connection (real test)
+    const initStatus = getAdminInitStatus();
+    checks.push({
+      name: 'Admin SDK Init Method',
+      ok: true,
+      message: initStatus.method,
+    });
+
+    const connectionTest = await testAdminConnection();
+    checks.push({
+      name: 'Firestore Connection',
+      ok: connectionTest.ok,
+      message: connectionTest.ok
+        ? 'Firestore funciona correctamente'
+        : `PERMISSION_DENIED: ${connectionTest.error?.substring(0, 120)}`,
+    });
+
+    // 5. Summary
+    const aiKeysOk = checks.filter(c => ['GROQ_API_KEY', 'MISTRAL_API_KEY', 'OPENAI_API_KEY'].includes(c.name) && c.ok).length;
+    const firestoreOk = connectionTest.ok;
+    const anyCred = checks.filter(c => ['FIREBASE_ADMIN_CREDENTIALS', 'FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY', 'GOOGLE_APPLICATION_CREDENTIALS'].includes(c.name) && c.ok).length > 0;
+
+    let summary = '';
+    if (aiKeysOk === 0) {
+      summary = 'NINGUNA API key de IA configurada. La IA no funcionará. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en Vercel → Settings → Environment Variables.';
+    } else if (!firestoreOk) {
+      summary = `La IA tiene ${aiKeysOk} key(s) configurada(s) PERO Firestore NO funciona (${initStatus.method}). Necesitas configurar FIREBASE_ADMIN_CREDENTIALS en Vercel → Settings → Environment Variables. Descarga las credenciales desde Firebase Console → Project Settings → Service Accounts → Generate New Private Key, y pega el JSON como valor de la variable.`;
+    } else {
+      summary = `${aiKeysOk} API key(s) de IA configurada(s). Firestore funciona (${initStatus.method}). Todo debería estar OK.`;
+    }
 
     return new Response(JSON.stringify({
-      ok: anyKey,
+      ok: aiKeysOk > 0 && firestoreOk,
       user: { uid: user.uid, email: user.email },
-      keysConfigured: keysOk,
+      aiKeysConfigured: aiKeysOk,
+      firestoreWorking: firestoreOk,
+      credentialsFound: anyCred,
+      adminInit: initStatus,
       checks,
-      summary: anyKey
-        ? `${keysOk} API key(s) configurada(s). La IA debería funcionar.`
-        : 'NINGUNA API key configurada. La IA no funcionará hasta que agregues al menos una en Vercel → Settings → Environment Variables.',
+      summary,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
