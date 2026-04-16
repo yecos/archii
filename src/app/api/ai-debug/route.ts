@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       message: projectId || 'NO configurado',
     });
 
-    // 4. Test Firestore connection (real test)
+    // 4. Check project mismatch
     const initStatus = getAdminInitStatus();
     checks.push({
       name: 'Admin SDK Init Method',
@@ -76,27 +76,50 @@ export async function GET(request: NextRequest) {
       message: initStatus.method,
     });
 
+    checks.push({
+      name: 'Project ID (App)',
+      ok: true,
+      message: initStatus.projectId,
+    });
+
+    checks.push({
+      name: 'Project ID (Credentials)',
+      ok: !initStatus.mismatch,
+      message: initStatus.credProjectId || 'No disponible',
+    });
+
+    checks.push({
+      name: 'Project ID Match',
+      ok: !initStatus.mismatch,
+      message: initStatus.mismatch
+        ? `CONFLICTO: App usa "${initStatus.projectId}" pero credenciales son para "${initStatus.credProjectId}"`
+        : 'OK — Coinciden',
+    });
+
+    // 5. Test Firestore connection (real test)
     const connectionTest = await testAdminConnection();
     checks.push({
       name: 'Firestore Connection',
       ok: connectionTest.ok,
       message: connectionTest.ok
         ? 'Firestore funciona correctamente'
-        : `PERMISSION_DENIED: ${connectionTest.error?.substring(0, 120)}`,
+        : `ERROR: ${connectionTest.error?.substring(0, 150)}`,
     });
 
-    // 5. Summary
+    // 6. Summary
     const aiKeysOk = checks.filter(c => ['GROQ_API_KEY', 'MISTRAL_API_KEY', 'OPENAI_API_KEY'].includes(c.name) && c.ok).length;
     const firestoreOk = connectionTest.ok;
     const anyCred = checks.filter(c => ['FIREBASE_ADMIN_CREDENTIALS', 'FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY', 'GOOGLE_APPLICATION_CREDENTIALS'].includes(c.name) && c.ok).length > 0;
 
     let summary = '';
-    if (aiKeysOk === 0) {
-      summary = 'NINGUNA API key de IA configurada. La IA no funcionará. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en Vercel → Settings → Environment Variables.';
+    if (initStatus.mismatch) {
+      summary = `CONFLICTO DE PROYECTOS: La app usa "${initStatus.projectId}" pero las credenciales son para "${initStatus.credProjectId}". SOLUCION: Ve a Firebase Console del proyecto "${initStatus.projectId}" → Project Settings → Service Accounts → Generate New Private Key. Copia ese JSON y reemplaza FIREBASE_ADMIN_CREDENTIALS en Vercel.`;
+    } else if (aiKeysOk === 0) {
+      summary = 'NINGUNA API key de IA configurada. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en Vercel.';
     } else if (!firestoreOk) {
-      summary = `La IA tiene ${aiKeysOk} key(s) configurada(s) PERO Firestore NO funciona (${initStatus.method}). Necesitas configurar FIREBASE_ADMIN_CREDENTIALS en Vercel → Settings → Environment Variables. Descarga las credenciales desde Firebase Console → Project Settings → Service Accounts → Generate New Private Key, y pega el JSON como valor de la variable.`;
+      summary = `Firestore NO funciona. Configura FIREBASE_ADMIN_CREDENTIALS con las credenciales del proyecto "${initStatus.projectId}" en Vercel → Settings → Environment Variables.`;
     } else {
-      summary = `${aiKeysOk} API key(s) de IA configurada(s). Firestore funciona (${initStatus.method}). Todo debería estar OK.`;
+      summary = `${aiKeysOk} API key(s) de IA OK. Firestore OK. Todo funciona.`;
     }
 
     return new Response(JSON.stringify({
