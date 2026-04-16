@@ -425,10 +425,12 @@ export async function generateFinancialReport(
   const relevantInvoices = invoices.filter((inv) =>
     project ? inv.data.projectId === project.id : true,
   );
-  const filteredInvoices = filterByDate(
-    relevantInvoices.map((inv) => ({ ...inv, data: { ...inv.data, date: inv.data.issueDate } as any })),
-    dateRange,
-  ).map((item) => relevantInvoices.find((inv) => inv.id === item.id) || item);
+  const invoiceDateItems = relevantInvoices.map((inv) => ({
+    id: inv.id,
+    data: { ...inv.data, date: inv.data.issueDate } as Invoice['data'] & { date: string },
+  }));
+  const filteredInvoices = filterByDate(invoiceDateItems, dateRange)
+    .map((item) => relevantInvoices.find((inv) => inv.id === item.id) || item);
 
   const totalBudget = project ? project.data.budget : projects.reduce((s, p) => s + (p.data.budget || 0), 0);
   const totalSpent = filteredExpenses.reduce((s, e) => s + (e.data.amount || 0), 0);

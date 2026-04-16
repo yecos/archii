@@ -60,8 +60,8 @@ export class PresenceService {
     const ref = db.collection(PRESENCE_COLLECTION).doc(this.userId);
 
     // Register onDisconnect cleanup — runs when client disconnects gracefully or ungracefully
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ref as any).onDisconnect().set({
+    // Compat SDK DocumentReference lacks onDisconnect in npm types
+    (ref as unknown as { onDisconnect(): { set(data: unknown, options?: unknown): Promise<unknown> } }).onDisconnect().set({
       userId: this.userId,
       userName: this.userName,
       userPhoto: this.userPhoto,
@@ -171,11 +171,10 @@ export function subscribeToOnlineUsers(callback: (users: OnlineUserDoc[]) => voi
     return db.collection(PRESENCE_COLLECTION)
       .where('online', '==', true)
       .onSnapshot((snap: unknown) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const querySnap = snap as any;
+        const querySnap = snap as { docs?: Array<{ id: string; data: () => PresenceData }> };
         const users: OnlineUserDoc[] = [];
         if (querySnap.docs && Array.isArray(querySnap.docs)) {
-          querySnap.docs.forEach((doc: { id: string; data: () => PresenceData }) => {
+          querySnap.docs.forEach((doc) => {
             users.push({ id: doc.id, data: doc.data() });
           });
         }

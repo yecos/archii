@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import { FileText, Building2, DollarSign, HardHat, Calendar, Download, Loader2, ChevronDown, Filter, Sparkles, Image, PenTool, BarChart3 } from 'lucide-react';
-import type { Project, FieldNote, Inspection, DailyLog } from '@/lib/types';
+import type { Project, FieldNote, Inspection, DailyLog, Company } from '@/lib/types';
 import {
   generateProjectReport,
   generateFinancialReport,
@@ -97,7 +97,7 @@ export default function ReportGeneratorScreen() {
   }, []);
 
   // Company data (first company)
-  const [company, setCompany] = useState<{ id: string; data: { name: string; nit: string; address?: string; phone?: string; email?: string; legalName?: string } } | undefined>();
+  const [company, setCompany] = useState<Company | undefined>();
 
   useEffect(() => {
     const fb = getFirebase();
@@ -105,7 +105,7 @@ export default function ReportGeneratorScreen() {
     const db = fb.firestore();
     const unsub = db.collection('companies').limit(1).onSnapshot(
       (snap) => {
-        const docs = snapToDocs(snap) as any[];
+        const docs = snapToDocs(snap) as Company[];
         if (docs.length > 0) setCompany(docs[0]);
       },
       () => {},
@@ -131,7 +131,7 @@ export default function ReportGeneratorScreen() {
           expenses,
           invoices,
           teamUsers,
-          company as any,
+          company,
           dateRange,
           options,
         );
@@ -142,7 +142,7 @@ export default function ReportGeneratorScreen() {
           projects,
           expenses,
           invoices,
-          company as any,
+          company,
           dateRange,
           options,
         );
@@ -159,7 +159,7 @@ export default function ReportGeneratorScreen() {
             ? inspections.filter((i) => i.data.projectId === selectedProjectData.id)
             : inspections,
         };
-        await generateFieldReport(selectedProjectData, fieldData, company as any, dateRange, options);
+        await generateFieldReport(selectedProjectData, fieldData, company, dateRange, options);
         showToast('Reporte de Obra generado exitosamente');
       }
     } catch (err) {

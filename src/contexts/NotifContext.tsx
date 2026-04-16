@@ -10,7 +10,8 @@ import { fmtDate } from '@/lib/helpers';
 import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts';
 import { useNotifPreferencesContext } from './NotifPreferencesContext';
 import { useUIStore } from '@/stores/ui-store';
-import type { NotifEventType, NotifEntry } from '@/lib/types';
+import { getFirebase } from '@/lib/firebase-service';
+import type { NotifEventType, NotifEntry, ChangeOrder, ChatMessage, Meeting, Approval, InvMovement, InvTransfer, Project, Expense, Task } from '@/lib/types';
 
 interface NotifData {
   type?: string;
@@ -78,7 +79,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [notifHistory, setNotifHistory] = useState<NotifEntry[]>([]);
-  const [changeOrders, setChangeOrders] = useState<any[]>([]);
+  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
     chat: true, tasks: true, meetings: true, approvals: true, inventory: true, projects: true,
   });
@@ -91,15 +92,15 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const [persistenceReady, setPersistenceReady] = useState(false);
 
   // Refs
-  const prevMessagesRef = useRef<any[]>([]);
-  const prevTasksRef = useRef<any[]>([]);
-  const prevMeetingsRef = useRef<any[]>([]);
-  const prevApprovalsRef = useRef<any[]>([]);
-  const prevMovementsRef = useRef<any[]>([]);
-  const prevTransfersRef = useRef<any[]>([]);
-  const prevProjectsRef = useRef<any[]>([]);
-  const prevExpensesRef = useRef<any[]>([]);
-  const prevChangeOrdersRef = useRef<any[]>([]);
+  const prevMessagesRef = useRef<ChatMessage[]>([]);
+  const prevTasksRef = useRef<Task[]>([]);
+  const prevMeetingsRef = useRef<Meeting[]>([]);
+  const prevApprovalsRef = useRef<Approval[]>([]);
+  const prevMovementsRef = useRef<InvMovement[]>([]);
+  const prevTransfersRef = useRef<InvTransfer[]>([]);
+  const prevProjectsRef = useRef<Project[]>([]);
+  const prevExpensesRef = useRef<Expense[]>([]);
+  const prevChangeOrdersRef = useRef<ChangeOrder[]>([]);
   const isTabVisibleRef = useRef(true);
   const firstLoadDoneRef = useRef(false);
   const overdueCheckedRef = useRef<string>('');
@@ -109,12 +110,12 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   // Load changeOrders from Firestore client-side
   useEffect(() => {
     if (!authUser?.uid || !persistenceReady) return;
-    const fb = (window as any).firebase;
+    const fb = getFirebase();
     if (!fb?.firestore) return;
     const db = fb.firestore();
     const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').limit(50)
-      .onSnapshot((snap: any) => {
-        setChangeOrders(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      .onSnapshot((snap) => {
+        setChangeOrders(snap.docs.map((d) => ({ id: d.id, data: d.data() } as unknown as ChangeOrder)));
       }, () => {});
     return () => unsub();
   }, [authUser, persistenceReady]);
@@ -125,7 +126,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const persistNotifToFirestore = useCallback(async (entry: NotifEntry) => {
     if (!authUser?.uid) return;
     try {
-      const fb = (window as any).firebase;
+      const fb = getFirebase();
       if (!fb?.firestore) return;
       const db = fb.firestore();
       await db.collection('users').doc(authUser.uid).collection('notifications').doc(entry.id).set({
@@ -143,7 +144,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const markReadInFirestore = useCallback(async (id: string) => {
     if (!authUser?.uid) return;
     try {
-      const fb = (window as any).firebase;
+      const fb = getFirebase();
       if (!fb?.firestore) return;
       const db = fb.firestore();
       await db.collection('users').doc(authUser.uid).collection('notifications').doc(id).update({ read: true });
@@ -156,13 +157,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const markAllReadInFirestore = useCallback(async () => {
     if (!authUser?.uid) return;
     try {
-      const fb = (window as any).firebase;
+      const fb = getFirebase();
       if (!fb?.firestore) return;
       const db = fb.firestore();
       const snap = await db.collection('users').doc(authUser.uid).collection('notifications')
         .where('read', '==', false).limit(100).get();
       const batch = db.batch();
-      snap.docs.forEach((doc: any) => batch.update(doc.ref, { read: true }));
+      snap.docs.forEach((doc) => batch.update(doc.ref, { read: true }));
       await batch.commit();
     } catch (err) {
       console.warn('[NotifContext] Firestore markAllRead failed:', err);
@@ -172,15 +173,15 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   // Load notifications from Firestore on mount
   useEffect(() => {
     if (!authUser?.uid) return;
-    const fb = (window as any).firebase;
+    const fb = getFirebase();
     if (!fb?.firestore) return;
     const db = fb.firestore();
     const notifsRef = db.collection('users').doc(authUser.uid).collection('notifications')
       .orderBy('timestamp', 'desc').limit(100);
 
-    const unsubscribe = notifsRef.onSnapshot((snap: any) => {
+    const unsubscribe = notifsRef.onSnapshot((snap) => {
       const loaded: NotifEntry[] = [];
-      snap.docs.forEach((doc: any) => {
+      snap.docs.forEach((doc) => {
         const d = doc.data();
         const ts = d.timestamp;
         loaded.push({
@@ -198,12 +199,12 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       setNotifHistory(prev => {
         // Merge: keep in-memory notifs that aren't from Firestore yet
         const fsIds = new Set(loaded.map(n => n.id));
-        const localOnly = prev.filter((n: any) => !n._synced && !fsIds.has(n.id));
+        const localOnly = prev.filter((n) => !('_synced' in n && n._synced) && !fsIds.has(n.id));
         return [...loaded, ...localOnly].slice(0, 100);
       });
       setPersistenceReady(true);
-    }, (err: any) => {
-      console.warn('[NotifContext] Firestore listener error:', err);
+    }, (err: unknown) => {
+      console.warn('[NotifContext] Firestore listener error:', err instanceof Error ? err.message : String(err));
       setPersistenceReady(true);
     });
 
@@ -216,7 +217,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (!authUser?.uid || !persistenceReady) return;
     const cleanup = async () => {
       try {
-        const fb = (window as any).firebase;
+        const fb = getFirebase();
         if (!fb?.firestore) return;
         const db = fb.firestore();
         const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -224,7 +225,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
           .where('timestamp', '<', cutoff).limit(200).get();
         if (snap.empty) return;
         const batch = db.batch();
-        snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+        snap.docs.forEach((doc) => batch.delete(doc.ref));
         await batch.commit();
         console.log(`[NotifContext] Cleaned ${snap.size} old notifications`);
       } catch (err) {
@@ -431,16 +432,16 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (!firstLoadDoneRef.current) return;
     if (!changeOrders || changeOrders.length === 0) { prevChangeOrdersRef.current = []; return; }
     const prev = prevChangeOrdersRef.current;
-    const newCO = changeOrders.filter((c: any) => !prev.find((p: any) => p.id === c.id));
-    const changedCO = changeOrders.filter((c: any) => {
-      const p = prev.find((pp: any) => pp.id === c.id);
+    const newCO = changeOrders.filter((c) => !prev.find((p) => p.id === c.id));
+    const changedCO = changeOrders.filter((c) => {
+      const p = prev.find((pp) => pp.id === c.id);
       return p && p.data.status !== c.data.status;
     });
     if (notifPrefs.projects) {
-      newCO.forEach((co: any) => {
+      newCO.forEach((co) => {
         sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${co.data.title || co.data.number}" · ${co.data.status}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
       });
-      changedCO.forEach((co: any) => {
+      changedCO.forEach((co) => {
         const statusEmoji = co.data.status === 'Aprobada' ? '✅' : co.data.status === 'Rechazada' ? '❌' : co.data.status === 'Implementada' ? '🎉' : '📝';
         const isUrgent = co.data.status === 'Aprobada' || co.data.status === 'Rechazada';
         const fn = isUrgent ? sendBrowserNotif : sendNotif;

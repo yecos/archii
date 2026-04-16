@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 // ─── Group Message Handler ───
 // In groups, the bot only responds when mentioned or when a command is detected.
 // The sender must be a linked user to get AI responses.
-async function handleGroupMessage(message: any) {
+async function handleGroupMessage(message: WhatsAppMessage) {
   try {
     const body = message.body.toLowerCase().trim();
 

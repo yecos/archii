@@ -21,7 +21,7 @@ import {
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 import dynamic from 'next/dynamic';
-import type { Task, Expense, Invoice, TeamUser, DailyLog, Project, FirestoreTimestamp, NotifEntry } from '@/lib/types';
+import type { Task, Expense, Invoice, TeamUser, DailyLog, Project, FirestoreTimestamp, NotifEntry, Approval } from '@/lib/types';
 
 /* ===== Lazy-loaded chart component ===== */
 const WidgetCharts = dynamic(() => import('@/components/dashboard/WidgetCharts'), {
@@ -168,7 +168,7 @@ function KPIWidget({ projects, tasks, expenses, pendingApprovals }: {
   projects: Project[];
   tasks: Task[];
   expenses: Expense[];
-  pendingApprovals: any[];
+  pendingApprovals: Approval[];
 }) {
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [expenses]);
   const overdueTasks = useMemo(() => tasks.filter((t: Task) => {

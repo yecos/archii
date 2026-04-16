@@ -240,9 +240,9 @@ export async function aiReply(
       stopWhen: stepCountIs(5),
       maxOutputTokens: options?.isGroup ? 1000 : 1500,  // Shorter responses in groups
       temperature: 0.7,
-      onStepFinish({ toolCalls }: { toolCalls?: any[] }) {
+      onStepFinish({ toolCalls }) {
         if (toolCalls?.length) {
-          console.log(`[WhatsApp AI] Tools used: ${toolCalls.map((tc: any) => tc.toolName).join(', ')}`);
+          console.log(`[WhatsApp AI] Tools used: ${toolCalls.map((tc) => tc.toolName).join(', ')}`);
         }
       },
     });
