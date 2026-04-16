@@ -70,7 +70,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
           key={tab.id}
           ref={setBtnRef(tab.id)}
           onClick={() => onTabChange(tab.id)}
-          className={`tab-btn relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-lg transition-colors duration-200 cursor-pointer border-none bg-transparent whitespace-nowrap flex-shrink-0 ${
+          className={`tab-btn relative z-10 flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 text-[13px] rounded-lg transition-colors duration-200 cursor-pointer border-none bg-transparent whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0 ${
             activeTab === tab.id
               ? 'text-[var(--foreground)] font-medium'
               : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'

@@ -47,19 +47,21 @@ export default function AdminScreen() {
             <h2 className="text-xl font-bold flex items-center gap-2"><Shield size={20} className="text-[var(--af-accent)]" />Panel de Administración</h2>
             <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Gestiona tu equipo, proyectos y permisos</p>
           </div>
-          <AnimatedTabs
-            tabs={[
-              { id: 'timeline', label: 'Timeline' },
-              { id: 'dashboard', label: 'Dashboard' },
-              { id: 'approvals', label: `Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
-              { id: 'permissions', label: 'Permisos' },
-              { id: 'team', label: 'Equipo' },
-              { id: 'audit', label: 'Cambios' },
-            ]}
-            activeTab={adminTab}
-            onTabChange={(id) => setAdminTab(id)}
-            className="mb-5 overflow-x-auto"
-          />
+          <div className="-mx-3 sm:mx-0 mb-5">
+            <AnimatedTabs
+              tabs={[
+                { id: 'timeline', label: 'Timeline' },
+                { id: 'dashboard', label: 'Dashboard' },
+                { id: 'approvals', label: `Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
+                { id: 'permissions', label: 'Permisos' },
+                { id: 'team', label: 'Equipo' },
+                { id: 'audit', label: 'Cambios' },
+              ]}
+              activeTab={adminTab}
+              onTabChange={(id) => setAdminTab(id)}
+              className="px-3 sm:px-0 overflow-x-auto"
+            />
+          </div>
 
           {/* ===== TIMELINE TAB ===== */}
           {adminTab === 'timeline' && (() => {
@@ -303,7 +305,7 @@ export default function AdminScreen() {
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-1 skeuo-well rounded-xl p-1 w-fit overflow-x-auto">
+              <div className="flex gap-1 skeuo-well rounded-xl p-1 overflow-x-auto scrollbar-none max-w-full -mx-1">
                 {(['all', 'Pendiente', 'Aprobada', 'Rechazada'] as const).map(status => (
                   <button key={status} className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${approvalView === status ? 'bg-[var(--skeuo-raised)] text-[var(--foreground)] font-semibold shadow-[var(--skeuo-shadow-btn)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setApprovalView(status)}>
                     {status === 'all' ? `Todos (${allApprovals.length})` : status === 'Pendiente' ? `Pendientes (${pending.length})` : status === 'Aprobada' ? `Aprobadas (${approved.length})` : `Rechazadas (${rejected.length})`}
@@ -370,9 +372,9 @@ export default function AdminScreen() {
           {/* ===== PERMISSIONS TAB ===== */}
           {adminTab === 'permissions' && (<div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2"><Shield size={18} className="text-[var(--af-accent)]" />Permisos y Roles</h3>
-            <div className="flex gap-1 mb-4">
+            <div className="flex gap-1 mb-4 overflow-x-auto scrollbar-none -mx-3 sm:mx-0 px-3 sm:px-0">
               {[{ id: 'roles', label: 'Roles' }, { id: 'permissions', label: 'Permisos por rol' }].map(tab => (
-                <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all ${adminPermSection === tab.id ? 'bg-[var(--af-accent)] text-background shadow-[var(--skeuo-shadow-btn)]' : 'skeuo-btn text-[var(--muted-foreground)]'}`} onClick={() => setAdminPermSection(tab.id)}>{tab.label}</button>
+                <button key={tab.id} className={`px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all whitespace-nowrap flex-shrink-0 ${adminPermSection === tab.id ? 'bg-[var(--af-accent)] text-background shadow-[var(--skeuo-shadow-btn)]' : 'skeuo-btn text-[var(--muted-foreground)]'}`} onClick={() => setAdminPermSection(tab.id)}>{tab.label}</button>
               ))}
             </div>
 
