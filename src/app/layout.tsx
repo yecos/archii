@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
 import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
@@ -159,8 +158,6 @@ export default function RootLayout({
         {children}
         {/* Global providers: Toaster + ConfirmDialog */}
         <AppProviders />
-        {/* AI Assistant - Floating wrapper */}
-        <AIFloatingWrapper />
         {/* Keyboard Shortcuts - Global initialization */}
         <KeyboardShortcutsInitializer />
         </ThemeProvider>
