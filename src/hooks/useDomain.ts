@@ -47,3 +47,6 @@ export { useNotifContext as useNotif } from '@/contexts/NotifContext';
 
 // Notification Preferences domain
 export { useNotifPreferencesContext as useNotifPreferences } from '@/contexts/NotifPreferencesContext';
+
+// Presence domain
+export { usePresenceContext as usePresence } from '@/contexts/PresenceContext';

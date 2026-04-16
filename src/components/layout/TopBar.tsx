@@ -5,7 +5,9 @@ import { useUIContext as useUI } from '@/contexts/UIContext';
 import { useAuthContext as useAuth } from '@/contexts/AuthContext';
 import { useFirestoreContext as useFirestore } from '@/contexts/FirestoreContext';
 import { useNotifContext as useNotif } from '@/contexts/NotifContext';
+import { usePresenceContext as usePresence } from '@/contexts/PresenceContext';
 import { avatarColor } from '@/lib/helpers';
+import { OnlineCounter } from '@/components/ui/PresenceIndicator';
 import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Monitor, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
 
 export default React.memo(function TopBar() {
@@ -13,6 +15,7 @@ export default React.memo(function TopBar() {
   const auth = useAuth();
   const fs = useFirestore();
   const notif = useNotif();
+  const { onlineCount } = usePresence();
   const { theme, setTheme, resolvedTheme } = useTheme();
 
   // Theme toggle: cycles light → dark → system → light
@@ -53,6 +56,10 @@ export default React.memo(function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Online counter */}
+        <div className="hidden sm:block">
+          <OnlineCounter count={onlineCount} />
+        </div>
         {/* Notification bell */}
         <button
           className="skeuo-btn w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer shadow-[var(--skeuo-shadow-raised-sm)] transition-all relative"

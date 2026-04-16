@@ -4,8 +4,10 @@ import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useTimeTracking } from '@/hooks/useDomain';
+import { usePresence } from '@/hooks/useDomain';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
+import { PresenceViewingNow } from '@/components/ui/PresenceIndicator';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, CheckSquare, Upload, CheckCheck, Trash2, RotateCcw, SquareCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
@@ -95,6 +97,7 @@ export default function TasksScreen() {
   const { loading, getUserName, teamUsers } = useAuth();
   const { tasks, projects, toggleTask, changeTaskStatus, deleteTask, openEditTask } = useFirestore();
   const { timeEntries } = useTimeTracking();
+  const { usersOnSameScreen } = usePresence();
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -368,7 +371,7 @@ export default function TasksScreen() {
       )}
 
       {/* Stats bar */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)]">
           <span className="font-semibold text-[var(--foreground)]">{taskStats.total}</span> tareas
         </div>
@@ -385,6 +388,12 @@ export default function TasksScreen() {
           <div className="flex items-center gap-1.5 text-[12px] text-red-400">
             <span className="w-2 h-2 rounded-full bg-red-500" />
             <span className="font-semibold">{taskStats.overdue}</span> vencidas
+          </div>
+        )}
+        {/* Presence badge */}
+        {usersOnSameScreen.length > 0 && (
+          <div className="ml-auto">
+            <PresenceViewingNow users={usersOnSameScreen} screenName="Tareas" variant="pill" />
           </div>
         )}
       </div>

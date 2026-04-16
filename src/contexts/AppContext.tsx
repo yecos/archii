@@ -24,6 +24,7 @@ import React from 'react';
  *                         ChatProvider (consumes UIContext, AuthContext)
  *                           NotifPreferencesProvider (consumes AuthContext)
  *                             NotifProvider (consumes many contexts)
+ *                               PresenceProvider (consumes UIContext, AuthContext)
  */
 
 import UIProvider from './UIContext';
@@ -42,6 +43,7 @@ import ChatProvider from './ChatContext';
 import NotifPreferencesProvider from './NotifPreferencesContext';
 import NotifProvider from './NotifContext';
 import { OfflineQueueProvider } from './OfflineQueueContext';
+import PresenceProvider from './PresenceContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -61,7 +63,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                               <NotifPreferencesProvider>
                                 <NotifProvider>
                                   <OfflineQueueProvider>
-                                    {children}
+                                    <PresenceProvider>
+                                      {children}
+                                    </PresenceProvider>
                                   </OfflineQueueProvider>
                                 </NotifProvider>
                               </NotifPreferencesProvider>

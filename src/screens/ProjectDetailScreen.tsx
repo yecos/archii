@@ -5,6 +5,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useOneDrive } from '@/hooks/useDomain';
 import { useGallery } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
+import { usePresence } from '@/hooks/useDomain';
 import { fmtCOP, statusColor } from '@/lib/helpers';
 import ProjectResumen from '@/components/features/project/ProjectResumen';
 import ProjectTareas from '@/components/features/project/ProjectTareas';
@@ -13,6 +14,7 @@ import ProjectArchivos from '@/components/features/project/ProjectArchivos';
 import ProjectObra from '@/components/features/project/ProjectObra';
 import ProjectPortal from '@/components/features/project/ProjectPortal';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
+import { PresenceViewingNow } from '@/components/ui/PresenceIndicator';
 import { Copy, Edit3, Trash2 } from 'lucide-react';
 
 export default function ProjectDetailScreen() {
@@ -22,6 +24,7 @@ export default function ProjectDetailScreen() {
   const od = useOneDrive();
   const gal = useGallery();
   const cmt = useComments();
+  const { usersOnSameProject } = usePresence();
 
   if (!fs.currentProject) return null;
 
@@ -91,6 +94,8 @@ export default function ProjectDetailScreen() {
           </div>
         </div>
         {fs.projectBudget > 0 && <div className="mt-3 text-xs text-[var(--muted-foreground)]">{fs.projectSpent > fs.projectBudget ? <span className="text-red-400 font-medium">⚠️ Excedido por {fmtCOP(fs.projectSpent - fs.projectBudget)}</span> : `Restante: ${fmtCOP(fs.projectBudget - fs.projectSpent)} (${Math.round((fs.projectSpent / fs.projectBudget) * 100)}% del presupuesto)`}</div>}
+        {/* Presence: who else is viewing this project */}
+        <PresenceViewingNow users={usersOnSameProject} projectName={fs.currentProject.data.name} variant="card" />
       </div>
 
       {/* Tab navigation */}
