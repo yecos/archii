@@ -238,15 +238,15 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   }, [selectedProjectId, showToast]);
   navigateToRef.current = navigateTo;
 
-  // Get platform info
-  const platform = useMemo(() => {
-    if (typeof window === 'undefined') return 'web';
+  // Get platform info — initialize as 'web' to avoid hydration mismatch, update after mount
+  const [platform, setPlatform] = useState('web');
+  useEffect(() => {
     const ua = navigator.userAgent;
-    if (/android/i.test(ua)) return 'android';
-    if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
-    if (/win/i.test(ua)) return 'windows';
-    if (/mac/i.test(ua)) return 'mac';
-    return 'web';
+    if (/android/i.test(ua)) setPlatform('android');
+    else if (/iPad|iPhone|iPod/.test(ua)) setPlatform('ios');
+    else if (/win/i.test(ua)) setPlatform('windows');
+    else if (/mac/i.test(ua)) setPlatform('mac');
+    else setPlatform('web');
   }, []);
 
   const screenTitles = SCREEN_TITLES;

@@ -129,7 +129,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <div className="animate-fadeIn flex flex-col md:h-full pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-0" style={{ minHeight: 0, flex: 1 }}>
+    <div className="animate-fadeIn flex flex-col md:h-full pb-[calc(60px+env(safe-area-inset-bottom,0px))] md:pb-0" style={{ minHeight: 0, flex: 1 }} suppressHydrationWarning>
 
       {/* ===== SIDEBAR ===== */}
       <ChatSidebar

@@ -238,22 +238,28 @@ export default React.memo(function Sidebar({
     return defaults;
   }, []);
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return getDefaultExpanded();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => getDefaultExpanded());
+
+  // Load expanded groups from localStorage after mount
+  useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         // Merge with defaults so new groups get their defaultOpen
         const defaults = getDefaultExpanded();
-        return { ...defaults, ...parsed };
+        setExpandedGroups(prev => ({ ...defaults, ...parsed, ...prev }));
       }
     } catch { /* ignore */ }
-    return getDefaultExpanded();
-  });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist expanded state
+  // Persist expanded state (only after initial load from localStorage)
+  const initialLoadDone = useRef(false);
   useEffect(() => {
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(expandedGroups));
     } catch { /* ignore */ }

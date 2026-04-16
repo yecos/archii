@@ -96,7 +96,7 @@ export default function MessageList(props: MessageListProps) {
   } = props;
 
   return (
-    <div className={`${chatMobileShow ? 'flex' : 'hidden'} md:flex flex-col flex-1 min-h-0 overflow-hidden bg-background`}>
+    <div className={`${chatMobileShow ? 'flex' : 'hidden'} md:flex flex-col flex-1 min-h-0 overflow-hidden bg-background`} suppressHydrationWarning>
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--border)] flex-shrink-0 backdrop-blur-xl bg-[var(--card)]/80 z-10">
         <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)] transition-colors lg:hidden" onClick={() => { setChatMobileShow(false); setShowEmojiPicker(false); }}>

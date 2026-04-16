@@ -74,6 +74,7 @@ export default function MessageBubble({
       key={m.id}
       className={`group relative flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameSender ? 'mt-0.5' : 'mt-3'} animate-fadeIn`}
       style={{ animationDuration: '0.2s' }}
+      suppressHydrationWarning
       onContextMenu={(e) => { e.preventDefault(); onSetChatMenuMsg(m.id); onSetShowReactionPicker(null); }}
     >
       {/* Sender info (show for new sender groups) */}

@@ -75,10 +75,16 @@ export default function GeolocationProvider({ children }: { children: React.Reac
   const [teamLocations, setTeamLocations] = useState<TeamMemberLocation[]>([]);
   const [locationHistory, setLocationHistory] = useState<LocationHistoryEntry[]>([]);
   const [geofenceAlerts, setGeofenceAlerts] = useState<GeofenceAlert[]>([]);
-  const [trackingEnabled, setTrackingEnabledState] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(HISTORY_KEY) === 'true';
-  });
+  const [trackingEnabled, setTrackingEnabledState] = useState(false);
+
+  // Load tracking preference from localStorage after mount
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(HISTORY_KEY) === 'true') {
+        setTrackingEnabledState(true);
+      }
+    } catch { /* noop */ }
+  }, []);
 
   const watchIdRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

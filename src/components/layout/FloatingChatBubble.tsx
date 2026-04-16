@@ -134,6 +134,7 @@ export default React.memo(function FloatingChatBubble() {
   const [replyText, setReplyText] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const [isOnLeft, setIsOnLeft] = useState(true);
 
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const barRef = useRef<HTMLDivElement>(null);
@@ -142,13 +143,10 @@ export default React.memo(function FloatingChatBubble() {
   const msgsEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Derived ───
-  const isOnLeft = pos.x < window.innerWidth / 2;
-
   // ─── Popup position ───
   const popupStyle = useMemo(() => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
     let left: number | undefined;
     let right: number | undefined;
     if (isOnLeft) {
@@ -162,8 +160,8 @@ export default React.memo(function FloatingChatBubble() {
 
   // ─── Create menu position ───
   const createMenuStyle = useMemo(() => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
     let left: number | undefined;
     let right: number | undefined;
     const menuWidth = 200;
@@ -213,15 +211,21 @@ export default React.memo(function FloatingChatBubble() {
         const p = JSON.parse(saved);
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        setPos({
+        const newPos = {
           x: Math.max(EDGE_MARGIN, Math.min(p.x, vw - BAR_WIDTH - EDGE_MARGIN)),
           y: Math.max(EDGE_MARGIN, Math.min(p.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
-        });
+        };
+        setPos(newPos);
+        setIsOnLeft(newPos.x < vw / 2);
       } else {
-        setPos({ x: window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8, y: window.innerHeight - BAR_HEIGHT - 80 });
+        const defaultX = window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8;
+        setPos({ x: defaultX, y: window.innerHeight - BAR_HEIGHT - 80 });
+        setIsOnLeft(defaultX < window.innerWidth / 2);
       }
     } catch {
-      setPos({ x: window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8, y: window.innerHeight - BAR_HEIGHT - 80 });
+      const defaultX = window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8;
+      setPos({ x: defaultX, y: window.innerHeight - BAR_HEIGHT - 80 });
+      setIsOnLeft(defaultX < window.innerWidth / 2);
     }
     setInitialized(true);
   }, []);
@@ -237,10 +241,14 @@ export default React.memo(function FloatingChatBubble() {
     const handler = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      setPos(prev => ({
-        x: Math.max(EDGE_MARGIN, Math.min(prev.x, vw - BAR_WIDTH - EDGE_MARGIN)),
-        y: Math.max(EDGE_MARGIN, Math.min(prev.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
-      }));
+      setPos(prev => {
+        const newPos = {
+          x: Math.max(EDGE_MARGIN, Math.min(prev.x, vw - BAR_WIDTH - EDGE_MARGIN)),
+          y: Math.max(EDGE_MARGIN, Math.min(prev.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
+        };
+        setIsOnLeft(newPos.x < vw / 2);
+        return newPos;
+      });
     };
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
@@ -364,10 +372,11 @@ export default React.memo(function FloatingChatBubble() {
 
       // Snap to nearest edge
       const vw = window.innerWidth;
-      setPos(prev => ({
-        x: prev.x < vw / 2 ? EDGE_MARGIN : vw - BAR_WIDTH - EDGE_MARGIN,
-        y: prev.y,
-      }));
+      setPos(prev => {
+        const newX = prev.x < vw / 2 ? EDGE_MARGIN : vw - BAR_WIDTH - EDGE_MARGIN;
+        setIsOnLeft(newX < vw / 2);
+        return { x: newX, y: prev.y };
+      });
     };
 
     bar.addEventListener('pointermove', onPointerMove);
@@ -387,10 +396,6 @@ export default React.memo(function FloatingChatBubble() {
           0% { opacity: 0; transform: scale(0.85) translateY(8px); }
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        @keyframes createMenuIn {
-          0% { opacity: 0; transform: scale(0.9) translateX(${isOnLeft ? '-8px' : '8px'}); }
-          100% { opacity: 1; transform: scale(1) translateX(0); }
-        }
         @keyframes chatBubbleShimmer {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
@@ -404,8 +409,20 @@ export default React.memo(function FloatingChatBubble() {
           0%, 100% { box-shadow: 0 2px 12px var(--af-accent)/20; }
           50% { box-shadow: 0 2px 20px var(--af-accent)/40, 0 0 0 4px var(--af-accent)/10; }
         }
-        @keyframes itemSlideIn {
-          0% { opacity: 0; transform: translateX(${isOnLeft ? '-8px' : '8px'}); }
+        @keyframes createMenuInLeft {
+          0% { opacity: 0; transform: scale(0.9) translateX(-8px); }
+          100% { opacity: 1; transform: scale(1) translateX(0); }
+        }
+        @keyframes createMenuInRight {
+          0% { opacity: 0; transform: scale(0.9) translateX(8px); }
+          100% { opacity: 1; transform: scale(1) translateX(0); }
+        }
+        @keyframes itemSlideInLeft {
+          0% { opacity: 0; transform: translateX(-8px); }
+          100% { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes itemSlideInRight {
+          0% { opacity: 0; transform: translateX(8px); }
           100% { opacity: 1; transform: translateX(0); }
         }
       `}</style>
@@ -520,7 +537,7 @@ export default React.memo(function FloatingChatBubble() {
             boxShadow: '0 8px 40px rgba(0,0,0,0.18), 0 0 0 1px var(--skeuo-edge-dark)/20',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            animation: 'createMenuIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            animation: `createMenuIn${isOnLeft ? 'Left' : 'Right'} 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)`,
           }}
         >
           <div className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--skeuo-edge-light)' }}>
@@ -537,7 +554,7 @@ export default React.memo(function FloatingChatBubble() {
                   style={{
                     background: 'transparent',
                     color: 'var(--foreground)',
-                    animation: `itemSlideIn 0.2s ease ${i * 40}ms both`,
+                    animation: `itemSlideIn${isOnLeft ? 'Left' : 'Right'} 0.2s ease ${i * 40}ms both`,
                   }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--af-accent)/8'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
