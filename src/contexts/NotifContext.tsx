@@ -439,13 +439,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     if (notifPrefs.projects) {
       newCO.forEach((co) => {
-        sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${String(co.data.title || co.data.number ?? '')}" · ${String(co.data.status ?? '')}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+        sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${String(co.data.title || (co.data.number ?? ''))}" · ${String(co.data.status ?? '')}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
       });
       changedCO.forEach((co) => {
         const statusEmoji = co.data.status === 'Aprobada' ? '✅' : co.data.status === 'Rechazada' ? '❌' : co.data.status === 'Implementada' ? '🎉' : '📝';
         const isUrgent = co.data.status === 'Aprobada' || co.data.status === 'Rechazada';
         const fn = isUrgent ? sendBrowserNotif : sendNotif;
-        fn(`${statusEmoji} Cambio de orden ${String(co.data.status ?? '').toLowerCase()}`, `"${String(co.data.title || co.data.number ?? '')}"${co.data.impactBudget ? ` · Impacto: $${Number(co.data.impactBudget).toLocaleString('es-CO')}` : ''}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+        fn(`${statusEmoji} Cambio de orden ${String(co.data.status ?? '').toLowerCase()}`, `"${String(co.data.title || (co.data.number ?? ''))}"${co.data.impactBudget ? ` · Impacto: $${Number(co.data.impactBudget).toLocaleString('es-CO')}` : ''}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
       });
     }
     prevChangeOrdersRef.current = changeOrders;
