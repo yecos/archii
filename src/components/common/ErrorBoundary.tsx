@@ -3,7 +3,7 @@ import React, { Component, ReactNode } from 'react';
 
 /* ===== Error Boundary =====
  * Captura errores de renderizado en componentes hijos.
- * Muestra una UI de fallback en vez de romper toda la app.
+ * Muestra una UI de fallback con diagnóstico detallado.
  */
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -15,31 +15,43 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  componentStack: string;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, componentStack: '' };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ArchiFlow] ErrorBoundary caught:', error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack || '' });
+    // Log full diagnostic info
+    console.error(`[ArchiFlow] ErrorBoundary "${this.props.label || 'unknown'}" caught:`, error);
+    console.error('[ArchiFlow] Component stack:', errorInfo.componentStack);
+    // Try to log additional info about the error
+    try {
+      // React #300 errors sometimes include info about the object in the error
+      const errorAny = error as any;
+      if (errorAny.args) {
+        console.error('[ArchiFlow] Error args:', errorAny.args);
+      }
+    } catch { /* noop */ }
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, componentStack: '' });
   };
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
-      const label = this.props.label || 'pantalla';
+      const label = this.props.label || 'componente';
 
       return (
         <div style={{
@@ -56,18 +68,37 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             ⚠️
           </div>
           <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: 'var(--foreground, #f0f0ee)' }}>
-            Error al cargar {label}
+            Error en {label}
           </h3>
-          <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #9a9b9e)', maxWidth: '300px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #9a9b9e)', maxWidth: '340px', marginBottom: '12px', wordBreak: 'break-word' }}>
             {this.state.error?.message || 'Algo salió mal. Intenta de nuevo.'}
           </p>
+          {/* Diagnostic: show component stack */}
+          {this.state.componentStack && (
+            <details style={{
+              marginBottom: '16px', maxWidth: '400px', width: '100%', textAlign: 'left',
+              fontSize: '11px', color: 'var(--muted-foreground, #9a9b9e)',
+            }}>
+              <summary style={{ cursor: 'pointer', marginBottom: '4px', fontWeight: 500 }}>
+                🔍 Diagnóstico
+              </summary>
+              <pre style={{
+                background: 'rgba(0,0,0,0.05)', borderRadius: '8px',
+                padding: '8px 12px', overflow: 'auto', maxHeight: '200px',
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                fontSize: '10px', lineHeight: 1.4,
+              }}>
+                {this.state.componentStack}
+              </pre>
+            </details>
+          )}
           <button
             onClick={this.handleRetry}
             style={{
               padding: '8px 20px', borderRadius: '10px',
-              border: '1px solid rgba(var(--af-accent-rgb),0.3)',
-              background: 'rgba(var(--af-accent-rgb),0.1)',
-              color: 'var(--af-accent)', fontSize: '13px', fontWeight: 500,
+              border: '1px solid var(--border)',
+              background: 'var(--af-bg3, rgba(0,0,0,0.05))',
+              color: 'var(--foreground)', fontSize: '13px', fontWeight: 500,
               cursor: 'pointer',
             }}
           >

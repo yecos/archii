@@ -32,6 +32,58 @@ const CommandPalette = dynamic(() => import('@/components/archiflow/CommandPalet
 const AIAgentPanel = dynamic(() => import('@/components/archiflow/AIAgentPanel'), { ssr: false });
 const FloatingChatBubble = dynamic(() => import('@/components/layout/FloatingChatBubble'), { ssr: false });
 
+/* ─── Global React Error Diagnostic ─── */
+function ReactErrorDiagnostic() {
+  const [errors, setErrors] = useState<Array<{ message: string; source: string; stack: string; time: number }>>([]);
+
+  useEffect(() => {
+    // Override console.error to capture React rendering errors
+    const origError = console.error;
+    console.error = (...args: unknown[]) => {
+      const msg = args.map(a => typeof a === 'string' ? a : '').join(' ');
+      if (msg.includes('error #300') || msg.includes('Objects are not valid') || msg.includes('object is not valid')) {
+        // Extract component stack from React's additional args
+        let source = '';
+        for (const arg of args) {
+          if (typeof arg === 'string' && arg.includes('at ')) {
+            source = arg;
+            break;
+          }
+        }
+        const fullMessage = args.map(a => typeof a === 'string' ? a : typeof a === 'object' ? JSON.stringify(a) : String(a)).join('\n');
+        setErrors(prev => [...prev.slice(-4), { message: fullMessage, source, stack: '', time: Date.now() }]);
+      }
+      origError(...args);
+    };
+    return () => { console.error = origError; };
+  }, []);
+
+  if (errors.length === 0) return null;
+  const lastError = errors[errors.length - 1];
+
+  return (
+    <div
+      className="fixed z-[9999] cursor-pointer"
+      style={{ bottom: 16, left: '50%', transform: 'translateX(-50%)' }}
+      onClick={() => setErrors([])}
+    >
+      <div
+        className="px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 text-white text-[12px]"
+        style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', maxWidth: '90vw', minWidth: '280px' }}
+      >
+        <span style={{ fontSize: '16px' }}>🔍</span>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold">React Error #300 detectado</div>
+          <div className="text-[10px] opacity-80 truncate mt-0.5" style={{ maxWidth: '60vw' }}>
+            {lastError.message.split('\n').find(l => l.includes('at ')) || lastError.message.substring(0, 120)}
+          </div>
+        </div>
+        <span className="text-[10px] opacity-60">(click para cerrar)</span>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Modals (lazy — solo se cargan cuando se abren) ─── */
 const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), { ssr: false });
 const TaskModal = dynamic(() => import('@/components/modals/TaskModal'), { ssr: false });
@@ -272,11 +324,24 @@ function AppContent() {
       <CompanyModal open={!!modals.company} onClose={() => closeModal('company')} />
       <ImportDataModal open={!!modals.importData} onClose={() => closeModal('importData')} />
 
-      <LightboxViewer />
-      <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
-      <AIAgentPanel isOpen={aiAgentOpen} onClose={() => setAIAgentOpen(false)} />
-      <FloatingChatBubble />
-      <SWUpdateToast />
+      <ErrorBoundary label="LightboxViewer" fallback={null}>
+        <LightboxViewer />
+      </ErrorBoundary>
+      <ErrorBoundary label="CommandPalette" fallback={null}>
+        <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
+      </ErrorBoundary>
+      <ErrorBoundary label="AIAgentPanel" fallback={null}>
+        <AIAgentPanel isOpen={aiAgentOpen} onClose={() => setAIAgentOpen(false)} />
+      </ErrorBoundary>
+      <ErrorBoundary label="FloatingChatBubble" fallback={null}>
+        <FloatingChatBubble />
+      </ErrorBoundary>
+      <ErrorBoundary label="SWUpdateToast" fallback={null}>
+        <SWUpdateToast />
+      </ErrorBoundary>
+
+      {/* Global React error diagnostic */}
+      <ReactErrorDiagnostic />
     </div>
   );
 }
