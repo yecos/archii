@@ -9,7 +9,7 @@ import {
   Sparkles, Timer, Receipt, BarChart3, ChevronDown, ClipboardList, ShoppingCart,
   FileSearch, ClipboardCheck as InspectionIcon, FilePen, HardHat,
   Briefcase, Palette, GalleryHorizontalEnd, FileSpreadsheet, LayoutTemplate,
-  Download,
+  Download, ArrowLeftRight, Gem, Brain, WifiOff, Zap, ScanLine, ClipboardPen, Film, Link, MapPin, HardDriveDownload,
 } from 'lucide-react';
 
 /** Firebase auth user — loaded via CDN, so no npm type available. */
@@ -82,6 +82,18 @@ const ITEM_ICONS: Record<string, React.ReactNode> = {
   settings: <Palette size={18} className="stroke-current" />,
   admin: <Settings size={18} className="stroke-current" />,
   install: <Download size={18} className="stroke-current" />,
+  changeOrders: <ArrowLeftRight size={18} className="stroke-current" />,
+  profitability: <Gem size={18} className="stroke-current" />,
+  predictiveAI: <Brain size={18} className="stroke-current" />,
+  offlineStatus: <WifiOff size={18} className="stroke-current" />,
+  reportGenerator: <Sparkles size={18} className="stroke-current" />,
+  automations: <Zap size={18} className="stroke-current" />,
+  qrScanner: <ScanLine size={18} className="stroke-current" />,
+  formBuilder: <ClipboardPen size={18} className="stroke-current" />,
+  timeLapse: <Film size={18} className="stroke-current" />,
+  apiWebhooks: <Link size={18} className="stroke-current" />,
+  geolocation: <MapPin size={18} className="stroke-current" />,
+  backup: <HardDriveDownload size={18} className="stroke-current" />,
 };
 
 /* ===== Badge mapping ===== */
