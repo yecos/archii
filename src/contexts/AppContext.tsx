@@ -12,26 +12,30 @@ import React from 'react';
  *
  *   UIProvider
  *     AuthProvider          (consumes UIContext)
- *       OneDriveProvider    (consumes UIContext, AuthContext)
- *         FirestoreProvider  (consumes UIContext, AuthContext, OneDriveContext)
- *           CommentsProvider (consumes UIContext, AuthContext)
- *             InvoiceProvider (consumes UIContext, AuthContext)
- *               InventoryProvider (consumes UIContext, AuthContext)
- *                 GalleryProvider (consumes UIContext, AuthContext)
- *                   TimeTrackingProvider (consumes UIContext, AuthContext)
- *                     CalendarProvider (consumes UIContext, AuthContext)
- *                       AdminProvider (consumes FirestoreContext)
- *                         ChatProvider (consumes UIContext, AuthContext)
- *                           NotifPreferencesProvider (consumes AuthContext)
- *                             NotifProvider (consumes many contexts)
- *                               PresenceProvider (consumes UIContext, AuthContext)
- *                                 AutomationProvider (consumes UIContext, AuthContext)
- *                                   GeolocationProvider (consumes UIContext, AuthContext, FirestoreContext)
- *                                     TenantProvider (consumes UIContext, AuthContext)
+ *       TenantProvider      (consumes UIContext, AuthContext) — MUST be before all providers that use useTenantId()
+ *         OneDriveProvider  (consumes UIContext, AuthContext)
+ *           FirestoreProvider  (consumes UIContext, AuthContext, OneDriveContext, TenantContext)
+ *             CommentsProvider (consumes UIContext, AuthContext, TenantContext)
+ *               InvoiceProvider (consumes UIContext, AuthContext, TenantContext)
+ *                 QuotationProvider (consumes UIContext, AuthContext, TenantContext)
+ *                   InventoryProvider (consumes UIContext, AuthContext, TenantContext)
+ *                     GalleryProvider (consumes UIContext, AuthContext, TenantContext)
+ *                       TimeTrackingProvider (consumes UIContext, AuthContext, TenantContext)
+ *                         CalendarProvider (consumes UIContext, AuthContext, TenantContext)
+ *                           AdminProvider (consumes FirestoreContext)
+ *                             ChatProvider (consumes UIContext, AuthContext, TenantContext)
+ *                               NotifPreferencesProvider (consumes AuthContext)
+ *                                 NotifProvider (consumes many contexts, TenantContext)
+ *                                   PresenceProvider (consumes UIContext, AuthContext)
+ *                                     AutomationProvider (consumes UIContext, AuthContext)
+ *                                       GeolocationProvider (consumes UIContext, AuthContext, FirestoreContext)
+ *                                         OfflineQueueProvider
+ *                                           I18nProvider
  */
 
 import UIProvider from './UIContext';
 import AuthProvider from './AuthContext';
+import TenantProvider from './TenantContext';
 import OneDriveProvider from './OneDriveContext';
 import FirestoreProvider from './FirestoreContext';
 import CommentsProvider from './CommentsContext';
@@ -50,51 +54,50 @@ import PresenceProvider from './PresenceContext';
 import AutomationProvider from './AutomationContext';
 import { I18nProvider } from './I18nContext';
 import GeolocationProvider from './GeolocationContext';
-import TenantProvider from './TenantContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
       <AuthProvider>
-        <OneDriveProvider>
-          <FirestoreProvider>
-            <CommentsProvider>
-              <InvoiceProvider>
-                <QuotationProvider>
-                  <InventoryProvider>
-                    <GalleryProvider>
-                      <TimeTrackingProvider>
-                        <CalendarProvider>
-                          <AdminProvider>
-                            <ChatProvider>
-                              <NotifPreferencesProvider>
-                                <NotifProvider>
-                                  <OfflineQueueProvider>
-                                    <PresenceProvider>
-                                      <AutomationProvider>
-                                        <GeolocationProvider>
-                                          <I18nProvider>
-                                            <TenantProvider>
+        <TenantProvider>
+          <OneDriveProvider>
+            <FirestoreProvider>
+              <CommentsProvider>
+                <InvoiceProvider>
+                  <QuotationProvider>
+                    <InventoryProvider>
+                      <GalleryProvider>
+                        <TimeTrackingProvider>
+                          <CalendarProvider>
+                            <AdminProvider>
+                              <ChatProvider>
+                                <NotifPreferencesProvider>
+                                  <NotifProvider>
+                                    <OfflineQueueProvider>
+                                      <PresenceProvider>
+                                        <AutomationProvider>
+                                          <GeolocationProvider>
+                                            <I18nProvider>
                                               {children}
-                                            </TenantProvider>
-                                          </I18nProvider>
-                                        </GeolocationProvider>
-                                      </AutomationProvider>
-                                    </PresenceProvider>
-                                  </OfflineQueueProvider>
-                                </NotifProvider>
-                              </NotifPreferencesProvider>
-                            </ChatProvider>
-                          </AdminProvider>
-                        </CalendarProvider>
-                      </TimeTrackingProvider>
-                    </GalleryProvider>
-                  </InventoryProvider>
-                </QuotationProvider>
-              </InvoiceProvider>
-            </CommentsProvider>
-          </FirestoreProvider>
-        </OneDriveProvider>
+                                            </I18nProvider>
+                                          </GeolocationProvider>
+                                        </AutomationProvider>
+                                      </PresenceProvider>
+                                    </OfflineQueueProvider>
+                                  </NotifProvider>
+                                </NotifPreferencesProvider>
+                              </ChatProvider>
+                            </AdminProvider>
+                          </CalendarProvider>
+                        </TimeTrackingProvider>
+                      </GalleryProvider>
+                    </InventoryProvider>
+                  </QuotationProvider>
+                </InvoiceProvider>
+              </CommentsProvider>
+            </FirestoreProvider>
+          </OneDriveProvider>
+        </TenantProvider>
       </AuthProvider>
     </UIProvider>
   );
