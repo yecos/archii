@@ -30,7 +30,7 @@ interface AuthContextType {
   // Functions
   doLogin: () => Promise<void>;
   doRegister: () => Promise<void>;
-  doGoogleLogin: () => Promise<void>;
+  doGoogleLogin: () => Promise<boolean>;
   doMicrosoftLogin: () => Promise<void>;
   doLogout: () => Promise<void>;
   doPasswordReset: (email: string) => Promise<void>;
@@ -225,7 +225,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [showToast]);
 
-  const doGoogleLogin = useCallback(async () => {
+  const doGoogleLogin = useCallback(async (): Promise<boolean> => {
     try {
       const fb = getFirebase();
       const authInstance = fb.auth();
@@ -234,6 +234,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         const provider = new fb.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         await authInstance.signInWithPopup(provider);
+        return true;
       } catch (popupErr: unknown) {
         const popErr = popupErr as { code?: string };
         if (popErr.code === 'auth/popup-blocked') {
@@ -241,14 +242,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const redirectProvider = new fb.auth.GoogleAuthProvider();
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);
-          return;
+          return true; // Will complete on redirect
         }
         throw popupErr;
       }
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       console.error('[ArchiFlow Auth] Google login error:', err.code, err.message, e);
-      if (err.code === 'auth/popup-closed-by-user') return;
+      if (err.code === 'auth/popup-closed-by-user') return false;
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
@@ -259,6 +260,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
       };
       showToast(msgs[err.code || ''] || `Error con Google: ${err.code || err.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
+      return false;
     }
   }, [showToast]);
 

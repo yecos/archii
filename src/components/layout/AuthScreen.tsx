@@ -6,7 +6,7 @@ interface AuthScreenProps {
   setForms: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   doLogin: () => void;
   doRegister: () => void;
-  doGoogleLogin: () => void;
+  doGoogleLogin: () => Promise<boolean>;
   doMicrosoftLogin: () => void;
   doPasswordReset?: (email: string) => Promise<void>;
   showToast: (msg: string, type?: string) => void;
@@ -211,10 +211,17 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
   const handleGoogleClick = async () => {
     setAuthLoading(true);
     try {
-      await doGoogleLogin();
-    } finally {
-      setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 3000);
+      const success = await doGoogleLogin();
+      if (!success) {
+        setAuthLoading(false);
+        return;
+      }
+    } catch {
+      setAuthLoading(false);
+      return;
     }
+    // Keep loading for redirect flow or successful popup (onAuthStateChanged will handle transition)
+    setTimeout(() => { if (mountedRef.current) setAuthLoading(false); }, 5000);
   };
 
   const handleMicrosoftClick = async () => {
