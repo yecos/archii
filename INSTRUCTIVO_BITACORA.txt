@@ -221,6 +221,67 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 01:30 | FEATURE v33 — Unificar Sistema de Templates
+  Estado: COMPLETADO
+  Commit: 9630ee4
+  Build: exitoso (17 static + 16 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-v33-templates-20260416-0106
+
+  Contexto: Sexta feature del plan de mejoras. El sistema de templates estaba
+    duplicado: ProjectModal tenía 5 templates hardcodeados con datos planos,
+    TemplatesScreen tenía 4 templates con fases estructuradas (phasesData),
+    y FirestoreContext importaba PROJECT_TEMPLATES desde el componente UI.
+    "Crear proyecto desde plantilla" en TemplatesScreen no abría el modal.
+
+  Tarea 33.1 — Fuente única de verdad (src/lib/templates.ts, 200+ lineas):
+    * UnifiedTemplate type: id, name, icon, description, phases, tasks,
+      phasesData: TemplatePhase[], isBuiltIn
+    * BUILT_IN_TEMPLATES: 6 templates (residencial, comercial, remodelacion,
+      obra-nueva, interiorismo, consultoria) con phasesData completos
+    * BLANK_TEMPLATE: "Proyecto en blanco" (id = '')
+    * ALL_BUILT_IN_TEMPLATES: blank + built-ins
+    * Helpers: findTemplateById(), countTemplateTasks(), countTemplatePhases(),
+      firestoreDocToTemplate(), mergeTemplates(), flattenTemplateTasks()
+
+  Tarea 33.2 — Fix FirestoreContext.saveProject():
+    * Eliminado import de PROJECT_TEMPLATES desde ProjectModal (anti-pattern)
+    * Ahora usa findTemplateById() + flattenTemplateTasks() de templates.ts
+    * Tareas se crean con campo `phase` asociado (antes eran huérfanas)
+    * Work phases se crean desde phasesData (no desde flat phases)
+    * Soporta tanto built-in como custom templates
+
+  Tarea 33.3 — Refactor ProjectModal.tsx:
+    * Ya NO define PROJECT_TEMPLATES localmente
+    * Lee custom templates de Firestore en tiempo real (onSnapshot)
+    * Muestra dos secciones: "Plantillas" (built-in) + "Mis Plantillas" (custom)
+    * Preview mejorado: muestra fases + cuenta de tareas
+    * Eliminado `export { PROJECT_TEMPLATES }` (ya no existe)
+    * Cada task con fase asociada visible en preview
+
+  Tarea 33.4 — Fix TemplatesScreen.createProjectFromTemplate():
+    * ANTES: navegaba a 'projects' pero NO abría el modal (datos perdidos)
+    * AHORA: llama ui.openModal('project') + pre-selecciona template
+    * Eliminados campos muertos projTemplateName, projTemplatePhases
+    * Usa tipos de templates.ts en vez de CustomTemplate local
+    * Grid de gallery: 3 columnas en vez de 4 (mejor legibilidad)
+
+  Problemas resueltos:
+    * Definiciones duplicadas de templates (ProjectModal vs TemplatesScreen)
+    * Datos inconsistentes (mismo ID, diferente contenido)
+    * FirestoreContext importando desde componente UI
+    * Flujo roto "crear desde plantilla" (no abría modal)
+    * Tareas sin fase asociada al crear desde template
+    * Custom templates invisibles en ProjectModal
+    * Tipo ProjectTemplate incompleto (sin phasesData)
+
+  Archivos creados (1):
+    src/lib/templates.ts (200+ lineas)
+  Archivos modificados (3):
+    src/components/modals/ProjectModal.tsx (+180, -167)
+    src/contexts/FirestoreContext.tsx (+35, -20)
+    src/screens/TemplatesScreen.tsx (+180, -160)
+  Total: +453, -185 lineas netas (4 archivos)
+
 2026-04-16 01:00 | FEATURE v32 — Modo Offline PWA (app shell + sync queue + UI)
   Estado: COMPLETADO
   Commit: fdcc9bb
