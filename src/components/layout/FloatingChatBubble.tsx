@@ -62,57 +62,72 @@ const QUICK_CREATE_ITEMS = [
   { id: 'photo', label: 'Foto', icon: Camera, screen: 'photoLog', modal: null },
 ];
 
-/* ===== Mini Message Bubble ===== */
+/* ===== Mini Message Bubble (defensive — catches #310 errors per message) ===== */
 function MiniMsg({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
-  const isAudio = msg.type === 'AUDIO';
-  const isImage = msg.type === 'IMAGE';
-  const isFile = msg.type === 'FILE';
+  try {
+    const msgType = typeof msg.type === 'string' ? msg.type : '';
+    const isAudio = msgType === 'AUDIO';
+    const isImage = msgType === 'IMAGE';
+    const isFile = msgType === 'FILE';
 
-  const preview = useMemo(() => {
-    if (isAudio) return { icon: '\uD83C\uDFA4', text: 'Nota de voz' };
-    if (isImage) return { icon: '\uD83D\uDDBC\uFE0F', text: 'Foto' };
-    if (isFile) return { icon: '\uD83D\uDCE4', text: msg.fileName || 'Archivo' };
-    return { icon: null, text: typeof msg.text === 'string' ? msg.text : (msg.text != null ? String(msg.text) : '') };
-  }, [msg, isAudio, isImage, isFile]);
+    const preview = useMemo(() => {
+      try {
+        if (isAudio) return { icon: '\uD83C\uDFA4', text: 'Nota de voz' };
+        if (isImage) return { icon: '\uD83D\uDDBC\uFE0F', text: 'Foto' };
+        if (isFile) return { icon: '\uD83D\uDCE4', text: typeof msg.fileName === 'string' ? msg.fileName : 'Archivo' };
+        return { icon: null, text: typeof msg.text === 'string' ? msg.text : (msg.text != null ? String(msg.text) : '') };
+      } catch { return { icon: null, text: '' }; }
+    }, [msg, isAudio, isImage, isFile]);
 
-  const time = fmtTime(msg.createdAt);
+    const time = fmtTime(msg.createdAt);
+    const safeName = typeof msg.userName === 'string' ? msg.userName : 'Usuario';
+    const safeText = String(preview.text ?? '');
 
-  return (
-    <div className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
-      {!isOwn && (
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white/90 mt-0.5"
-          style={{ background: `hsl(${avatarHue(msg.userName || '?')}, 55%, 45%)` }}
-        >
-          {getInitials(msg.userName)}
-        </div>
-      )}
-      <div className={`flex flex-col ${isOwn ? 'items-end max-w-[75%]' : 'max-w-[80%]'}`}>
+    return (
+      <div className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
         {!isOwn && (
-          <span className="text-[10px] font-semibold text-[var(--af-text3)] mb-0.5 px-1">{typeof msg.userName === 'string' ? msg.userName : 'Usuario'}</span>
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white/90 mt-0.5"
+            style={{ background: `hsl(${avatarHue(safeName)}, 55%, 45%)` }}
+          >
+            {getInitials(safeName)}
+          </div>
         )}
-        <div
-          className="rounded-2xl px-3 py-1.5 text-[13px] leading-relaxed"
-          style={{
-            background: isOwn ? 'var(--af-accent)' : 'var(--af-bg3, var(--muted))',
-            color: isOwn ? 'var(--background)' : 'var(--foreground)',
-            borderTopRightRadius: isOwn ? 4 : undefined,
-            borderTopLeftRadius: isOwn ? undefined : 4,
-          }}
-        >
-          {preview.icon && <span className="mr-1">{preview.icon}</span>}
-          {preview.text?.slice(0, 120)}
-          {preview.text?.length > 120 ? '...' : ''}
+        <div className={`flex flex-col ${isOwn ? 'items-end max-w-[75%]' : 'max-w-[80%]'}`}>
+          {!isOwn && (
+            <span className="text-[10px] font-semibold text-[var(--af-text3)] mb-0.5 px-1">{safeName}</span>
+          )}
+          <div
+            className="rounded-2xl px-3 py-1.5 text-[13px] leading-relaxed"
+            style={{
+              background: isOwn ? 'var(--af-accent)' : 'var(--af-bg3, var(--muted))',
+              color: isOwn ? 'var(--background)' : 'var(--foreground)',
+              borderTopRightRadius: isOwn ? 4 : undefined,
+              borderTopLeftRadius: isOwn ? undefined : 4,
+            }}
+          >
+            {preview.icon && <span className="mr-1">{preview.icon}</span>}
+            {safeText.slice(0, 120)}
+            {safeText.length > 120 ? '...' : ''}
+          </div>
+          <span className="text-[9px] text-[var(--af-text3)] mt-0.5 px-1">{time}</span>
         </div>
-        <span className="text-[9px] text-[var(--af-text3)] mt-0.5 px-1">{time}</span>
+        {isOwn && (
+          <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white/90 mt-0.5" style={{ background: 'var(--af-accent)' }}>
+            Yo
+          </div>
+        )}
       </div>
-      {isOwn && (
-        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white/90 mt-0.5" style={{ background: 'var(--af-accent)' }}>
-          Yo
+    );
+  } catch {
+    return (
+      <div className="flex gap-2">
+        <div className="rounded-2xl px-3 py-1.5 text-[13px] text-[var(--muted-foreground)] italic" style={{ background: 'var(--af-bg3, var(--muted))' }}>
+          Mensaje
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
 }
 
 /* ===== Main Component ===== */

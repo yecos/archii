@@ -49,7 +49,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      // Use !== undefined so that fallback={null} actually renders null (null is falsy)
+      if (this.props.fallback !== undefined) return this.props.fallback;
 
       const label = this.props.label || 'componente';
 
