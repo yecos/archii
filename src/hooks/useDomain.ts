@@ -56,3 +56,6 @@ export { useI18n } from '@/contexts/I18nContext';
 
 // Geolocation domain
 export { useGeolocationContext as useGeolocation } from '@/contexts/GeolocationContext';
+
+// Multi-tenant domain
+export { useTenantContext as useTenant } from '@/contexts/TenantContext';

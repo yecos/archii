@@ -88,6 +88,9 @@ const QRScannerScreen = dynamic(() => import('@/screens/QRScannerScreen'), { ssr
 const GeolocationScreen = dynamic(() => import('@/screens/GeolocationScreen'), { ssr: false });
 const BackupScreen = dynamic(() => import('@/screens/BackupScreen'), { ssr: false });
 const FormBuilderScreen = dynamic(() => import('@/screens/FormBuilderScreen'), { ssr: false });
+const MultiTenantScreen = dynamic(() => import('@/screens/MultiTenantScreen'), { ssr: false });
+const TimeLapseScreen = dynamic(() => import('@/screens/TimeLapseScreen'), { ssr: false });
+const ApiWebhooksScreen = dynamic(() => import('@/screens/ApiWebhooksScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -242,8 +245,11 @@ function AppContent() {
             {displayScreen === 'automations' && <ErrorBoundary label="Flujos Automatizados"><AutomationScreen /></ErrorBoundary>}
             {displayScreen === 'qrScanner' && <ErrorBoundary label="Escáner QR"><QRScannerScreen /></ErrorBoundary>}
             {displayScreen === 'formBuilder' && <ErrorBoundary label="Generador de Formularios"><FormBuilderScreen /></ErrorBoundary>}
+            {displayScreen === 'timeLapse' && <ErrorBoundary label="Time-lapse"><TimeLapseScreen /></ErrorBoundary>}
+            {displayScreen === 'apiWebhooks' && <ErrorBoundary label="API & Webhooks"><ApiWebhooksScreen /></ErrorBoundary>}
             {displayScreen === 'geolocation' && <ErrorBoundary label="Geolocalización GPS"><GeolocationScreen /></ErrorBoundary>}
             {displayScreen === 'backup' && <ErrorBoundary label="Copia de Seguridad"><BackupScreen /></ErrorBoundary>}
+            {displayScreen === 'multiTenant' && <ErrorBoundary label="Multitenant"><MultiTenantScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

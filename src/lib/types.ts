@@ -656,6 +656,51 @@ export interface Comment {
   };
 }
 
+/* ===== MULTI-TENANT TYPES ===== */
+
+export type TenantPlan = 'free' | 'pro' | 'enterprise';
+
+export interface TenantSettings {
+  primaryColor?: string;
+  secondaryColor?: string;
+  customLogo?: string;
+}
+
+export interface TenantLimits {
+  maxProjects: number;
+  maxUsers: number;
+  maxStorage: number; // in MB
+}
+
+export interface TenantStats {
+  userCount: number;
+  projectCount: number;
+  storageUsed: number; // in MB
+}
+
+export interface Tenant {
+  id: string;
+  data: {
+    name: string;
+    domain: string;
+    logo?: string;
+    plan: TenantPlan;
+    settings: TenantSettings;
+    limits: TenantLimits;
+    stats: TenantStats;
+    createdAt: FirestoreTimestamp | null;
+    createdBy?: string;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
+/** Plan limits configuration */
+export const TENANT_PLAN_LIMITS: Record<TenantPlan, { label: string; maxProjects: number; maxUsers: number; maxStorage: number; color: string; icon: string }> = {
+  free: { label: 'Free', maxProjects: 3, maxUsers: 5, maxStorage: 1024, color: 'text-emerald-400', icon: '🌱' },
+  pro: { label: 'Pro', maxProjects: 20, maxUsers: 25, maxStorage: 10240, color: 'text-blue-400', icon: '⚡' },
+  enterprise: { label: 'Enterprise', maxProjects: -1, maxUsers: -1, maxStorage: -1, color: 'text-amber-400', icon: '👑' },
+};
+
 export interface TimeSession {
   entryId: string | null;
   startTime: number | null;
@@ -1057,6 +1102,9 @@ export const NAV_ITEMS = [
   { id: 'formBuilder', icon: '📝', label: 'Generador Formularios' },
   { id: 'geolocation', icon: '🗺️', label: 'Geolocalización GPS' },
   { id: 'backup', icon: '💾', label: 'Copia de Seguridad' },
+  { id: 'timeLapse', icon: '🎬', label: 'Time-Lapse' },
+  { id: 'apiWebhooks', icon: '🔗', label: 'API & Webhooks' },
+  { id: 'multiTenant', icon: '🏢', label: 'Multitenant' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1097,6 +1145,9 @@ export const SCREEN_TITLES: Record<string, string> = {
   formBuilder: 'Generador de Formularios',
   geolocation: 'Geolocalización GPS',
   backup: 'Copia de Seguridad',
+  timeLapse: 'Time-Lapse Automático',
+  apiWebhooks: 'API & Webhooks',
+  multiTenant: 'Multitenant',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1211,6 +1262,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'admin', label: 'Admin', icon: '⚙️' },
       { id: 'offlineStatus', label: 'Estado Offline', icon: '📡' },
       { id: 'backup', label: 'Copia de Seguridad', icon: '💾' },
+      { id: 'timeLapse', label: 'Time-lapse', icon: '🎬' },
+      { id: 'apiWebhooks', label: 'API & Webhooks', icon: '🔗' },
+      { id: 'multiTenant', label: 'Multitenant', icon: '🏢' },
     ],
   },
 ];

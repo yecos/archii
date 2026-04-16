@@ -27,6 +27,7 @@ import React from 'react';
  *                               PresenceProvider (consumes UIContext, AuthContext)
  *                                 AutomationProvider (consumes UIContext, AuthContext)
  *                                   GeolocationProvider (consumes UIContext, AuthContext, FirestoreContext)
+ *                                     TenantProvider (consumes UIContext, AuthContext)
  */
 
 import UIProvider from './UIContext';
@@ -49,6 +50,7 @@ import PresenceProvider from './PresenceContext';
 import AutomationProvider from './AutomationContext';
 import { I18nProvider } from './I18nContext';
 import GeolocationProvider from './GeolocationContext';
+import TenantProvider from './TenantContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -72,7 +74,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                                       <AutomationProvider>
                                         <GeolocationProvider>
                                           <I18nProvider>
-                                            {children}
+                                            <TenantProvider>
+                                              {children}
+                                            </TenantProvider>
                                           </I18nProvider>
                                         </GeolocationProvider>
                                       </AutomationProvider>
