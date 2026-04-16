@@ -221,6 +221,54 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 12:30 | FEATURE v28 — Edición en Minutas, Bitácora Fotográfica e Inspecciones
+  Estado: COMPLETADO
+  Commit: a7ce5b1
+  Build: exitoso (16 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: Las pantallas de obra/campo solo permitían crear y eliminar
+    registros. Se agrega funcionalidad completa de edición con patrón
+    consistente en las 3 pantallas.
+
+  Tarea 28.1 — FieldNotesScreen.tsx (Minutas de Obra):
+    * Estado editingId: string | null para rastrear documento en edición
+    * populateForm(note): carga datos existentes en formulario
+    * openEdit(note): abre formulario en modo edición con datos precargados
+    * saveNote() branching: si editingId → .update(), sino → .add()
+    * Preserva commitmentFulfilled existente al editar compromisos
+    * Botón Pencil azul junto a Trash2 rojo en acciones de cada card
+    * Header dinámico: "Nueva Minuta" vs "Editar Minuta de Obra"
+    * Botón submit: "Registrar Minuta" vs "Guardar Cambios"
+
+  Tarea 28.2 — PhotoLogScreen.tsx (Bitácora Fotográfica):
+    * Patrón idéntico: editingId, populateForm, openEdit
+    * saveEntry() branching create/update con updatedAt
+    * Botones Editar (azul) y Eliminar (rojo) en modal de detalle
+    * Antes: deleteEntry() existía pero no tenía trigger en UI
+    * Ahora: ambos botones accesibles desde el detalle del registro
+    * Header dinámico y botón submit condicional
+
+  Tarea 28.3 — InspectionsScreen.tsx (Inspecciones):
+    * Patrón idéntico con soporte para items dinámicos
+    * populateForm carga InspectionItem[] completo (descripción, resultado,
+      puntaje, notas)
+    * saveInspection() update conservando status existente
+    * Score auto-recalculado al editar items
+    * Botón Pencil junto a acciones de workflow (Iniciar/Aprobar/Rechazar)
+
+  Patrón uniforme aplicado:
+    * tab: 'list' | 'create' | 'edit' (antes solo 'list' | 'create')
+    * editingId: string | null para distinguir create vs edit
+    * resetForm() limpia editingId al volver
+    * Icono Pencil (lucide-react) con color azul consistente
+    * Toast "actualizada" vs "registrada/creada" según modo
+
+  Archivos modificados (3):
+    src/screens/FieldNotesScreen.tsx (+87, -12)
+    src/screens/PhotoLogScreen.tsx (+65, -15)
+    src/screens/InspectionsScreen.tsx (+48, -9)
+  Total: +200 lineas netas (3 archivos)
+
 2026-04-17 04:00 | FEATURE v27 — Dashboard de Rentabilidad
   Estado: COMPLETADO
   Commit: 8b25841
