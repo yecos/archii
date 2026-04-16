@@ -196,12 +196,12 @@ export default function AISuggestionsPanel({ isOpen, onClose, onNavigate }: AISu
     [onNavigate, onClose]
   );
 
-  // Auto-fetch overview when panel opens
+  // Auto-fetch overview when panel opens AND user is authenticated
   useEffect(() => {
-    if (isOpen && !fetchedTabs.has('overview')) {
+    if (isOpen && authUser) {
       fetchSuggestions('overview');
     }
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, authUser, fetchSuggestions]);
 
   if (!isOpen) return null;
 
