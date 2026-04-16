@@ -221,6 +221,61 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 04:00 | FEATURE v27 — Dashboard de Rentabilidad
+  Estado: COMPLETADO
+  Commit: 8b25841
+  Build: exitoso (15 static + 15 dynamic routes, 0 errores TypeScript)
+
+  Contexto: Segunda feature del plan de mejoras. Se crea un dashboard
+    financiero consolidado con datos de proyectos, gastos, facturas,
+    cotizaciones y horas facturables.
+
+  Tarea 27.1 — Pantalla ProfitabilityScreen.tsx (350+ lineas):
+    * 3 vistas con tabs: Resumen, Por Proyecto, Flujo de Caja
+    * Filtro por proyecto individual o "Todos"
+
+  Tarea 27.2 — Vista Resumen:
+    * 4 KPIs principales: Presupuesto Total, Gastado (con %),
+      Facturado, Cobrado (con tasa de cobro)
+    * 4 KPIs secundarios: Margen de Ganancia (%), Pipeline Cotizaciones,
+      Facturas Vencidas, Horas Facturables (valor COP)
+    * Grafico de tendencia mensual (6 meses): barras apiladas
+      Facturado vs Gastado con valores en COP
+    * Desglose de gastos por categoria (5 cats) con barras de progreso
+    * Panel de alertas de riesgo: proyectos con presupuesto >= 80%
+      o facturas vencidas, max 5 mostradas
+
+  Tarea 27.3 — Vista Por Proyecto:
+    * Tabla de todos los proyectos con:
+      - Barra de presupuesto (color semaforo: verde/amarillo/rojo)
+      - Estado, avance %
+      - 5 metricas: Facturado, Cobrado, Margen, Tasa de Cobro, Hrs Bill
+    * Indicador de riesgo con dot verde/amarillo/rojo
+    * Ordenado por presupuesto descendente
+
+  Tarea 27.4 — Vista Flujo de Caja:
+    * Estado de caja: Total Cobrado (verde), Por Cobrar (azul),
+      Vencido (rojo), Balance Neto (verde/rojo segun signo)
+    * Pipeline de Ingresos: cotizaciones activas (Aprobada/Enviada)
+    * Facturas por cobrar con numero, proyecto, estado, fecha vencimiento
+    * Max 5 items por seccion
+
+  Tarea 27.5 — Datos integrados de 4 fuentes:
+    * FirestoreContext: projects (budget), expenses (amount, category)
+    * InvoiceContext: invoices (total, status, paidDate)
+    * TimeTrackingContext: timeEntries (duration, billable, rate)
+    * QuotationContext: quotations (grandTotal, status)
+
+  Tarea 27.6 — Navegacion:
+    * NAV_ITEMS: { id: 'profitability', icon: '💎', label: 'Rentabilidad' }
+    * SCREEN_TITLES: profitability: 'Dashboard de Rentabilidad'
+    * NAV_GROUPS: grupo "Herramientas" (entre Reportes y Templates)
+    * HomeContent.tsx: dynamic import + route registration
+
+  Archivos creados (1): src/screens/ProfitabilityScreen.tsx
+  Archivos modificados (2): src/lib/types.ts, src/app/HomeContent.tsx
+  Total: +573 lineas (3 archivos)
+
 2026-04-17 03:00 | REFACTOR — P9 Type Safety Round 2: 103 any eliminados en 11 archivos
   Estado: COMPLETADO
   Commit: a7e5387
