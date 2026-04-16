@@ -188,7 +188,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
           id: doc.id,
           title: typeof d.title === 'string' ? d.title : String(d.title ?? ''),
           body: typeof d.body === 'string' ? d.body : String(d.body ?? ''),
-          icon: d.icon || '🔔',
+          icon: typeof d.icon === 'string' ? d.icon : '🔔',
           type: d.type || 'info',
           read: d.read || false,
           timestamp: ts?.toDate ? ts.toDate() : new Date(d.timestamp || Date.now()),
@@ -594,7 +594,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     const type = data?.type || 'info';
     const notifEntry: NotifEntry & { _synced?: boolean } = {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-      title, body, icon: icon || '🔔', type, read: false,
+      title, body, icon: typeof icon === 'string' ? icon : '🔔', type, read: false,
       timestamp: new Date(), screen: data?.screen || null, itemId: data?.itemId || null,
     };
     setNotifHistory(prev => [notifEntry, ...prev].slice(0, 100));

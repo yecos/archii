@@ -63,6 +63,8 @@ function sanitizeMessage(raw: Record<string, unknown>): Record<string, unknown> 
   if (typeof msg.type !== 'string') msg.type = 'TEXT';
   if (typeof msg.fileName !== 'string') msg.fileName = msg.fileName != null ? String(msg.fileName) : '';
   if (typeof msg.fileType !== 'string') msg.fileType = msg.fileType != null ? String(msg.fileType) : '';
+  if (typeof msg.fileData !== 'string' && msg.fileData != null) msg.fileData = String(msg.fileData);
+  if (typeof msg.audioData !== 'string' && msg.audioData != null) msg.audioData = String(msg.audioData);
   if (typeof msg.uid !== 'string') msg.uid = msg.uid != null ? String(msg.uid) : '';
   if (typeof msg.audioDuration !== 'number') msg.audioDuration = 0;
   if (typeof msg.fileSize !== 'number') msg.fileSize = 0;

@@ -190,7 +190,7 @@ function ToolCallBadge({ toolCall }: { toolCall: ToolCallInfo }) {
       </button>
       {expanded && toolCall.result && (
         <div className="px-2.5 pb-2 text-[10px] text-[var(--muted-foreground)] bg-black/10 border-t border-[var(--border)] whitespace-pre-wrap max-h-[200px] overflow-y-auto">
-          {toolCall.result}
+          {typeof toolCall.result === 'string' ? toolCall.result : String(toolCall.result)}
         </div>
       )}
     </div>
@@ -690,7 +690,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             } else if (ev.t === 'tc') {
               // Tool call started — show as "running"
               liveToolCalls.push({
-                name: ev.n || 'herramienta',
+                name: typeof ev.n === 'string' ? ev.n : String(ev.n ?? 'herramienta'),
                 args: ev.a || {},
                 status: 'running',
               });
@@ -704,10 +704,10 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
               } else {
                 // No matching running call, add as new
                 liveToolCalls.push({
-                  name: ev.n || 'herramienta',
+                  name: typeof ev.n === 'string' ? ev.n : String(ev.n ?? 'herramienta'),
                   args: {},
                   status: ev.e ? 'error' : 'success',
-                  result: ev.r || '',
+                  result: typeof ev.r === 'string' ? ev.r : ev.r != null ? String(ev.r) : '',
                 });
               }
               updateStream(fullContent, liveToolCalls);
