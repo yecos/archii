@@ -4,6 +4,7 @@ import { MessageCircle, Plus, Sparkles, X, Send, CornerDownRight, FolderPlus, Cl
 import { useUIContext } from '@/contexts/UIContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { usePresence } from '@/hooks/useDomain';
 import { useUIStore } from '@/stores/ui-store';
 import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 
@@ -63,7 +64,7 @@ const QUICK_CREATE_ITEMS = [
 ];
 
 /* ===== Mini Message Bubble (defensive — catches #310 errors per message) ===== */
-function MiniMsg({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
+function MiniMsg({ msg, isOwn, isSenderOnline }: { msg: ChatMessage; isOwn: boolean; isSenderOnline: boolean }) {
   try {
     const msgType = typeof msg.type === 'string' ? msg.type : '';
     const isAudio = msgType === 'AUDIO';
@@ -86,11 +87,16 @@ function MiniMsg({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
     return (
       <div className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
         {!isOwn && (
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white/90 mt-0.5"
-            style={{ background: `hsl(${avatarHue(safeName)}, 55%, 45%)` }}
-          >
-            {getInitials(safeName)}
+          <div className="relative flex-shrink-0">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white/90 mt-0.5"
+              style={{ background: `hsl(${avatarHue(safeName)}, 55%, 45%)` }}
+            >
+              {getInitials(safeName)}
+            </div>
+            {isSenderOnline && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-[var(--background)]" />
+            )}
           </div>
         )}
         <div className={`flex flex-col ${isOwn ? 'items-end max-w-[75%]' : 'max-w-[80%]'}`}>
@@ -135,6 +141,7 @@ export default React.memo(function FloatingChatBubble() {
   const { screen, navigateTo, openModal, openModal: ctxOpenModal } = useUIContext();
   const { messages, sendMessage } = useChatContext();
   const { authUser } = useAuthContext();
+  const { onlineCount, onlineUsers } = usePresence();
   const chatUnread = useUIStore((s) => s.chatUnread);
   const setAIAgentOpen = useUIStore((s) => s.setAIAgentOpen);
   const aiAgentOpen = useUIStore((s) => s.aiAgentOpen);
@@ -469,10 +476,16 @@ export default React.memo(function FloatingChatBubble() {
               <div className="text-[13px] font-semibold truncate" style={{ fontFamily: "'DM Serif Display', serif" }}>
                 Chat General
               </div>
-              <div className="text-[10px] text-[var(--af-text3)]">
+              <div className="text-[10px] text-[var(--af-text3)] flex items-center gap-1.5">
                 {chatUnread > 0
                   ? `${chatUnread} mensaje${chatUnread > 1 ? 's' : ''} nuevo${chatUnread > 1 ? 's' : ''}`
                   : `${messages.length} mensaje${messages.length !== 1 ? 's' : ''}`}
+                {onlineCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-emerald-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {onlineCount}
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -498,7 +511,7 @@ export default React.memo(function FloatingChatBubble() {
               </div>
             ) : (
               messages.slice(-MAX_PREVIEW_MSGS).map((msg) => (
-                <MiniMsg key={msg.id} msg={msg} isOwn={msg.uid === authUser?.uid} />
+                <MiniMsg key={msg.id} msg={msg} isOwn={msg.uid === authUser?.uid} isSenderOnline={onlineUsers.some(u => u.id === msg.uid)} />
               ))
             )}
             <div ref={msgsEndRef} />

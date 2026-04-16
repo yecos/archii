@@ -1,8 +1,9 @@
 'use client';
-import React, { RefObject } from 'react';
+import React, { RefObject, useMemo } from 'react';
 import { Pause, Play, Download, MoreVertical } from 'lucide-react';
 import { getAvatarHSL, QUICK_REACTIONS } from './chat-helpers';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
+import { usePresence } from '@/hooks/useDomain';
 import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 
 interface MessageBubbleProps {
@@ -69,6 +70,10 @@ export default function MessageBubble({
   const isMenuOpen = chatMenuMsg === m.id;
   const isReactionOpen = showReactionPicker === m.id;
 
+  // Presence
+  const { onlineUsers } = usePresence();
+  const isSenderOnline = useMemo(() => onlineUsers.some(u => u.id === m.uid), [onlineUsers, m.uid]);
+
   return (
     <div
       key={m.id}
@@ -80,11 +85,16 @@ export default function MessageBubble({
       {/* Sender info (show for new sender groups) */}
       {!isSameSender && !isMe && (
         <div className="flex items-center gap-2 mb-1 ml-1">
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-            style={{ background: getAvatarHSL(m.uid || ''), color: '#fff' }}
-          >
-            {(typeof m.userName === 'string' ? m.userName : 'Usuario')[0].toUpperCase()}
+          <div className="relative flex-shrink-0">
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+              style={{ background: getAvatarHSL(m.uid || ''), color: '#fff' }}
+            >
+              {(typeof m.userName === 'string' ? m.userName : 'Usuario')[0].toUpperCase()}
+            </div>
+            {isSenderOnline && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1.5 ring-[var(--background)]" />
+            )}
           </div>
           <span className="text-[11px] font-semibold text-[var(--foreground)]">{typeof m.userName === 'string' ? m.userName : 'Equipo'}</span>
           <span className="text-[10px] text-[var(--af-text3)]">{ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>

@@ -1,6 +1,7 @@
 'use client';
 import { Search } from 'lucide-react';
 import { getAvatarHSL } from './chat-helpers';
+import { usePresence } from '@/hooks/useDomain';
 import type { TeamUser, Project } from '@/lib/types';
 
 interface ChatSidebarProps {
@@ -30,6 +31,11 @@ export default function ChatSidebar({
   onSelectDm,
   onSelectProject,
 }: ChatSidebarProps) {
+  const { onlineUsers } = usePresence();
+
+  // Build a Set of online user IDs for O(1) lookups
+  const onlineIds = new Set(onlineUsers.map(u => u.id));
+
   return (
     <div className={`${chatMobileShow ? 'hidden md:flex' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent md:border-r-0 md:border-l md:border-l-[var(--skeuo-edge-light)]`}>
       {/* Search */}
@@ -57,7 +63,15 @@ export default function ChatSidebar({
         {/* Colaboradores (DM) */}
         {teamUsers.length > 0 && (
           <div className="mt-1">
-            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Colaboradores ({teamUsers.length})</div>
+            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] flex items-center gap-2">
+              <span>Colaboradores ({teamUsers.length})</span>
+              {onlineIds.size > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {onlineIds.size} en línea
+                </span>
+              )}
+            </div>
             {teamUsers
               .filter(u => u.id !== authUserUid && (!chatSearch || u.data.name.toLowerCase().includes((chatSearch || '').toLowerCase()) || (u.data.email || '').toLowerCase().includes((chatSearch || '').toLowerCase())))
               .map(u => (
@@ -73,7 +87,11 @@ export default function ChatSidebar({
                     >
                       {u.data.photoURL ? <img src={u.data.photoURL} alt={u.data.name || "Avatar"} className="w-full h-full rounded-full object-cover" loading="lazy" /> : (u.data.name || u.data.email || '?')[0].toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[var(--card)]" />
+                    {onlineIds.has(u.id) ? (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[var(--card)]" title="En línea" />
+                    ) : (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gray-400/60 border-2 border-[var(--card)]" title="Desconectado" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-medium truncate text-[var(--foreground)]">{u.data.name || u.data.email}</div>
