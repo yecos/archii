@@ -1,20 +1,31 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, User, Sparkles, Loader2, CheckCircle, AlertCircle, RefreshCw, Trash2, MessageSquarePlus, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, Send, Bot, User, Sparkles, Loader2, CheckCircle, AlertCircle, RefreshCw, Trash2, MessageSquarePlus, ChevronDown, ChevronRight, Copy, Check, Paperclip, XCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useFirestoreContext } from '@/contexts/FirestoreContext';
+import { useUIContext } from '@/contexts/UIContext';
 import { useUIStore } from '@/stores/ui-store';
 import { getFirebase } from '@/lib/firebase-service';
 
 /* ===== Types ===== */
+interface ToolCallInfo {
+  name: string;
+  args: Record<string, unknown>;
+  result?: string;
+  status?: 'running' | 'success' | 'error';
+}
+
 interface AgentMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  toolCalls?: Array<{ name: string; args: Record<string, unknown>; result?: string }>;
+  toolCalls?: ToolCallInfo[];
   isStreaming?: boolean;
+  images?: string[]; // base64 or URLs
 }
 
 interface ChatSession {
@@ -22,8 +33,10 @@ interface ChatSession {
   title: string;
   messages: AgentMessage[];
   projectContext: string;
+  projectId?: string;
   createdAt: Date;
   updatedAt: Date;
+  synced?: boolean; // has been synced to Firestore
 }
 
 interface DebugInfo {
@@ -38,12 +51,12 @@ interface AIAgentPanelProps {
 }
 
 const QUICK_PROMPTS = [
-  '¿Cuál es el estado del proyecto?',
-  '¿Qué tareas vencen esta semana?',
-  '¿Qué materiales tienen stock bajo?',
-  '¿Cuánto presupuesto queda?',
+  'Cual es el estado del proyecto?',
+  'Que tareas vencen esta semana?',
+  'Que materiales tienen stock bajo?',
+  'Cuanto presupuesto queda?',
   'Dame el reporte del proyecto',
-  '¿Qué facturas están pendientes?',
+  'Que facturas estan pendientes?',
 ];
 
 const MAX_SESSIONS = 20;
@@ -60,27 +73,7 @@ function generateTitle(firstMessage: string): string {
   return clean.substring(0, 40) + '...';
 }
 
-/** Renderiza markdown básico en el contenido del asistente */
-function renderMarkdown(text: string): string {
-  return text
-    // Code blocks
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-black/20 rounded-lg p-3 my-2 overflow-x-auto text-xs"><code>$2</code></pre>')
-    // Bold
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code class="bg-black/20 px-1.5 py-0.5 rounded text-xs">$1</code>')
-    // Bullet lists
-    .replace(/^• (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    // Numbered lists
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
-    // Newlines
-    .replace(/\n/g, '<br/>');
-}
-
-/* ===== Storage Keys ===== */
+/* ===== Storage Keys (localStorage fallback) ===== */
 const STORAGE_KEY_SESSIONS = 'archiflow-ai-sessions';
 const STORAGE_KEY_ACTIVE = 'archiflow-ai-active-session';
 
@@ -93,9 +86,9 @@ function loadSessions(): ChatSession[] {
     const parsed = JSON.parse(raw);
     return (Array.isArray(parsed) ? parsed : []).map((s: Record<string, unknown>) => ({
       id: (s.id as string) || generateId(),
-      title: (s.title as string) || 'Conversación',
+      title: (s.title as string) || 'Conversacion',
       projectContext: (s.projectContext as string) || '',
-      ...s,
+      projectId: (s.projectId as string) || undefined,
       createdAt: new Date(s.createdAt as string | number),
       updatedAt: new Date(s.updatedAt as string | number),
       messages: (s.messages as Array<Record<string, unknown>> || []).map((m) => ({
@@ -104,6 +97,7 @@ function loadSessions(): ChatSession[] {
         role: (m.role as 'user' | 'assistant') || 'user',
         content: (m.content as string) || '',
         timestamp: new Date(m.timestamp as string | number),
+        images: (m.images as string[]) || undefined,
       })),
     }));
   } catch {
@@ -137,12 +131,79 @@ function saveActiveSessionId(id: string) {
   } catch { /* noop */ }
 }
 
+/* ===== Markdown Components ===== */
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <div className="prose prose-sm prose-invert max-w-none
+      prose-p:my-1 prose-p:leading-relaxed
+      prose-headings:my-2 prose-headings:text-[var(--foreground)]
+      prose-h1:text-base prose-h2:text-sm prose-h3:text-xs
+      prose-li:my-0.5
+      prose-pre:bg-black/30 prose-pre:rounded-lg prose-pre:p-2 prose-pre:my-2 prose-pre:text-xs
+      prose-code:text-xs prose-code:bg-black/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+      prose-pre:code:bg-transparent prose-pre:code:px-0 prose-pre:code:py-0
+      prose-strong:text-[var(--foreground)]
+      prose-table:text-xs prose-th:text-[var(--foreground)] prose-td:text-[var(--muted-foreground)]
+      prose-a:text-[var(--af-accent)]
+      prose-blockquote:border-[var(--af-accent)]/30 prose-blockquote:text-[var(--muted-foreground)]
+      [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4
+    ">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/* ===== ToolCallBadge Component ===== */
+function ToolCallBadge({ toolCall }: { toolCall: ToolCallInfo }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!toolCall) return null;
+
+  const statusIcon = toolCall.status === 'running'
+    ? <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+    : toolCall.status === 'error'
+      ? <AlertCircle className="w-3 h-3 text-red-400" />
+      : <CheckCircle className="w-3 h-3 text-emerald-400" />;
+
+  const statusLabel = toolCall.status === 'running'
+    ? 'Ejecutando...'
+    : toolCall.status === 'error'
+      ? 'Error'
+      : 'Completado';
+
+  return (
+    <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--background)]/50 overflow-hidden">
+      <button
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] transition-colors cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {statusIcon}
+        <span className="font-medium text-[var(--foreground)]">{toolCall.name}</span>
+        <span className="truncate text-[10px] opacity-70">
+          {JSON.stringify(toolCall.args).substring(0, 50)}...
+        </span>
+        <span className="ml-auto text-[10px]">{statusLabel}</span>
+        {toolCall.result && (
+          <ChevronRight className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+        )}
+      </button>
+      {expanded && toolCall.result && (
+        <div className="px-2.5 pb-2 text-[10px] text-[var(--muted-foreground)] bg-black/10 border-t border-[var(--border)] whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+          {toolCall.result}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ===== Component ===== */
 export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   const { authUser } = useAuthContext();
   const { projects } = useFirestoreContext();
   const aiProjectContext = useUIStore((s) => s.aiProjectContext);
   const currentScreen = useUIStore((s) => s.currentScreen);
+  const { selectedProjectId } = useUIContext();
 
   // Sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -154,8 +215,11 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [debugLoading, setDebugLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const hasCheckedDebug = useRef(false);
   const sessionsInitialized = useRef(false);
@@ -164,6 +228,10 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   const activeSession = sessions.find(s => s.id === activeSessionId) || null;
   const messages = activeSession?.messages || [];
   const projectContext = activeSession?.projectContext || '';
+  const activeProject = useMemo(() =>
+    projects.find(p => p.id === (activeSession?.projectId || selectedProjectId)),
+    [projects, activeSession?.projectId, selectedProjectId]
+  );
 
   /* ===== Initialize Sessions ===== */
   useEffect(() => {
@@ -176,12 +244,12 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       const savedActive = loadActiveSessionId();
       setActiveSessionId(savedActive && loaded.some(s => s.id === savedActive) ? savedActive : loaded[0].id);
     } else {
-      // Create first session
       const newSession: ChatSession = {
         id: generateId(),
-        title: 'Nueva conversación',
+        title: 'Nueva conversacion',
         messages: [],
-        projectContext: '',
+        projectContext: aiProjectContext || '',
+        projectId: selectedProjectId || undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -192,16 +260,18 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     }
   }, []);
 
-  /* ===== Auto-set project context ===== */
+  /* ===== Auto-set project context from active project ===== */
   useEffect(() => {
-    if (!activeSessionId || !aiProjectContext) return;
+    if (!activeSessionId) return;
     setSessions(prev => prev.map(s => {
-      if (s.id !== activeSessionId || s.projectContext) return s;
-      return { ...s, projectContext: aiProjectContext, updatedAt: new Date() };
+      if (s.id !== activeSessionId) return s;
+      if (s.projectContext) return s; // don't override if already set
+      if (!aiProjectContext) return s;
+      return { ...s, projectContext: aiProjectContext, projectId: selectedProjectId || s.projectId, updatedAt: new Date() };
     }));
-  }, [aiProjectContext, activeSessionId]);
+  }, [aiProjectContext, activeSessionId, selectedProjectId]);
 
-  /* ===== Persist sessions ===== */
+  /* ===== Persist sessions to localStorage ===== */
   useEffect(() => {
     if (sessions.length === 0) return;
     saveSessions(sessions);
@@ -211,6 +281,44 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   useEffect(() => {
     if (activeSessionId) saveActiveSessionId(activeSessionId);
   }, [activeSessionId]);
+
+  /* ===== Sync session to Firestore (debounced) ===== */
+  useEffect(() => {
+    if (!activeSessionId || !authUser || !activeSession || activeSession.messages.length === 0) return;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const fb = getFirebase();
+        const currentUser = fb.auth().currentUser;
+        if (!currentUser) return;
+        const token = await currentUser.getIdToken();
+
+        await fetch('/api/ai-chat-history', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            sessionId: activeSessionId,
+            title: activeSession.title,
+            messages: activeSession.messages.slice(-30).map(m => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp.toISOString(),
+              images: m.images,
+              toolCalls: m.toolCalls,
+            })),
+            projectContext: activeSession.projectContext,
+            projectId: activeSession.projectId,
+          }),
+        });
+      } catch {
+        // Silent fail — localStorage is the primary store
+      }
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [sessions, activeSessionId, authUser, activeSession]);
 
   /* ===== Scroll ===== */
   const scrollToBottom = useCallback(() => {
@@ -225,6 +333,15 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     }
   }, [isOpen]);
 
+  /* ===== Autogrow textarea ===== */
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+  }, [input]);
+
   /* ===== Debug ===== */
   const runDebug = useCallback(async () => {
     if (hasCheckedDebug.current) return;
@@ -234,7 +351,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       const fb = getFirebase();
       const currentUser = fb.auth().currentUser;
       if (!currentUser) {
-        setDebugInfo({ ok: false, summary: 'No hay sesión de Firebase activa.' });
+        setDebugInfo({ ok: false, summary: 'No hay sesion de Firebase activa.' });
         setDebugLoading(false);
         return;
       }
@@ -255,13 +372,42 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     if (isOpen) runDebug();
   }, [isOpen, runDebug]);
 
+  /* ===== Copy message ===== */
+  const copyMessage = useCallback((msgId: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(msgId);
+    setTimeout(() => setCopiedId(null), 2000);
+  }, []);
+
+  /* ===== Image handling ===== */
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      if (file.size > 5 * 1024 * 1024) return; // 5MB limit
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        setPendingImages(prev => [...prev, base64]);
+      };
+      reader.readAsDataURL(file);
+    });
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  const removePendingImage = useCallback((index: number) => {
+    setPendingImages(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   /* ===== Session Management ===== */
   const createNewSession = useCallback(() => {
     const newSession: ChatSession = {
       id: generateId(),
-      title: 'Nueva conversación',
+      title: 'Nueva conversacion',
       messages: [],
       projectContext: aiProjectContext || '',
+      projectId: selectedProjectId || undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -273,11 +419,13 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     setActiveSessionId(newSession.id);
     saveActiveSessionId(newSession.id);
     setSessionListOpen(false);
-  }, [aiProjectContext]);
+    setPendingImages([]);
+  }, [aiProjectContext, selectedProjectId]);
 
   const switchSession = useCallback((id: string) => {
     setActiveSessionId(id);
     setSessionListOpen(false);
+    setPendingImages([]);
   }, []);
 
   const deleteSession = useCallback((id: string) => {
@@ -300,7 +448,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
   const clearAllSessions = useCallback(() => {
     const newSession: ChatSession = {
       id: generateId(),
-      title: 'Nueva conversación',
+      title: 'Nueva conversacion',
       messages: [],
       projectContext: '',
       createdAt: new Date(),
@@ -314,21 +462,31 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
 
   const updateSessionProjectContext = useCallback((context: string) => {
     if (!activeSessionId) return;
+    const selectedProject = projects.find(p => `${p.data.name} (ID: ${p.id})` === context);
     setSessions(prev => prev.map(s => {
       if (s.id !== activeSessionId) return s;
-      return { ...s, projectContext: context, updatedAt: new Date() };
+      return {
+        ...s,
+        projectContext: context,
+        projectId: selectedProject?.id || undefined,
+        updatedAt: new Date(),
+      };
     }));
-  }, [activeSessionId]);
+  }, [activeSessionId, projects]);
 
   /* ===== Send Message ===== */
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading || !activeSessionId) return;
+  const sendMessage = useCallback(async (content: string, images?: string[]) => {
+    if (!content.trim() && (!images || images.length === 0)) return;
+    if (isLoading || !activeSessionId) return;
 
+    // Build user message with optional image references
+    let userContent = content.trim();
     const userMsg: AgentMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: content.trim(),
+      content: userContent,
       timestamp: new Date(),
+      images: images && images.length > 0 ? images : undefined,
     };
 
     const assistantId = `assistant-${Date.now()}`;
@@ -355,19 +513,24 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     }));
 
     setInput('');
+    setPendingImages([]);
     setIsLoading(true);
 
-    // Build messages array for the API (only previous messages, not the placeholder)
+    // Build messages array for the API
     const currentSession = sessions.find(s => s.id === activeSessionId);
     const apiMessages = [...(currentSession?.messages || []), userMsg]
       .slice(-30)
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => ({
+        role: m.role,
+        content: m.content,
+        images: m.images,
+      }));
 
     try {
       if (!authUser) throw new Error('No autenticado');
       const fb = getFirebase();
       const currentUser = fb.auth().currentUser;
-      if (!currentUser) throw new Error('No hay sesión activa. Recarga la página e intenta de nuevo.');
+      if (!currentUser) throw new Error('No hay sesion activa. Recarga la pagina e intenta de nuevo.');
       const token = await currentUser.getIdToken();
 
       abortRef.current = new AbortController();
@@ -381,20 +544,21 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
         body: JSON.stringify({
           messages: apiMessages,
           projectContext: projectContext || undefined,
+          projectId: activeSession?.projectId || selectedProjectId || undefined,
         }),
         signal: abortRef.current.signal,
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: 'Error de conexión' }));
+        const errData = await response.json().catch(() => ({ error: 'Error de conexion' }));
         const errMsg = errData.error || `Error ${response.status}`;
         let helpfulMsg = errMsg;
         if (errMsg.includes('API keys') || errMsg.includes('api keys')) {
           helpfulMsg = 'No hay API keys configuradas. Configura GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en Vercel.';
-        } else if (errMsg.includes('límite de tasa') || errMsg.includes('rate limit')) {
-          helpfulMsg = 'Proveedores en límite de tasa. Espera unos segundos.';
+        } else if (errMsg.includes('limite de tasa') || errMsg.includes('rate limit')) {
+          helpfulMsg = 'Proveedores en limite de tasa. Espera unos segundos.';
         } else if (response.status === 401) {
-          helpfulMsg = 'Sesión expirada. Recarga la página.';
+          helpfulMsg = 'Sesion expirada. Recarga la pagina.';
         }
         throw new Error(helpfulMsg);
       }
@@ -412,7 +576,6 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
 
-        // Update session with streaming content
         const capturedContent = fullContent;
         setSessions(prev => prev.map(s => {
           if (s.id !== activeSessionId) return s;
@@ -457,17 +620,17 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [isLoading, activeSessionId, sessions, authUser, projectContext]);
+  }, [isLoading, activeSessionId, sessions, authUser, projectContext, activeSession?.projectId, selectedProjectId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    sendMessage(input, pendingImages.length > 0 ? pendingImages : undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      sendMessage(input, pendingImages.length > 0 ? pendingImages : undefined);
     }
   };
 
@@ -481,7 +644,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[460px] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-2xl animate-slideInRight">
+      <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[480px] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-2xl animate-slideInRight">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
@@ -494,7 +657,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
                 <div className={`w-1.5 h-1.5 rounded-full ${debugLoading ? 'bg-yellow-400 animate-pulse' : isAIOK ? 'bg-emerald-400' : debugInfo ? 'bg-red-400' : 'bg-[var(--muted-foreground)]'}`} />
               </div>
               <p className="text-[11px] text-[var(--muted-foreground)]">
-                {debugLoading ? 'Verificando...' : isAIOK ? 'Conectado' : debugInfo ? 'Sin conexión' : `${sessions.length} sesión(es)`}
+                {debugLoading ? 'Verificando...' : isAIOK ? 'Conectado' : debugInfo ? 'Sin conexion' : `${sessions.length} sesion(es)`}
               </p>
             </div>
           </div>
@@ -502,7 +665,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             <button
               className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
               onClick={createNewSession}
-              title="Nueva conversación"
+              title="Nueva conversacion"
             >
               <MessageSquarePlus className="w-4 h-4" />
             </button>
@@ -523,7 +686,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
               className="w-full flex items-center justify-between bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] hover:border-[var(--af-accent)]/30 transition-colors cursor-pointer"
               onClick={() => setSessionListOpen(!sessionListOpen)}
             >
-              <span className="truncate">{activeSession?.title || 'Nueva conversación'}</span>
+              <span className="truncate">{activeSession?.title || 'Nueva conversacion'}</span>
               <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 ml-2 transition-transform ${sessionListOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -556,19 +719,27 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             )}
           </div>
 
-          {/* Project context */}
-          <select
-            className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer hover:border-[var(--af-accent)]/30 transition-colors"
-            value={projectContext}
-            onChange={e => updateSessionProjectContext(e.target.value)}
-          >
-            <option value="">Sin contexto de proyecto</option>
-            {projects.map(p => (
-              <option key={p.id} value={`${p.data.name} (ID: ${p.id})`}>
-                {p.data.name || 'Sin nombre'}
-              </option>
-            ))}
-          </select>
+          {/* Project context with auto-detect */}
+          <div className="flex items-center gap-2">
+            {activeProject && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/20 text-[10px] text-[var(--af-accent)]">
+                <Sparkles className="w-2.5 h-2.5" />
+                <span className="truncate max-w-[120px]">{activeProject.data.name}</span>
+              </div>
+            )}
+            <select
+              className="flex-1 bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none cursor-pointer hover:border-[var(--af-accent)]/30 transition-colors"
+              value={projectContext}
+              onChange={e => updateSessionProjectContext(e.target.value)}
+            >
+              <option value="">Sin contexto de proyecto</option>
+              {projects.map(p => (
+                <option key={p.id} value={`${p.data.name} (ID: ${p.id})`}>
+                  {p.data.name || 'Sin nombre'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Messages */}
@@ -580,14 +751,14 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
               </div>
               <h3 className="text-sm font-semibold mb-1">Agente IA de ArchiFlow</h3>
               <p className="text-xs text-[var(--muted-foreground)] mb-3 max-w-[280px] mx-auto">
-                Tareas, inventario, facturación, cotizaciones, reuniones y reportes. Todo desde este chat.
+                Tareas, inventario, facturacion, cotizaciones, reuniones y reportes. Todo desde este chat.
               </p>
 
               {/* Debug status */}
               {debugLoading && (
                 <div className="flex items-center justify-center gap-2 text-xs text-yellow-400 mb-3">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Verificando conexión...
+                  Verificando conexion...
                 </div>
               )}
 
@@ -653,44 +824,72 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
           )}
 
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
               {msg.role === 'assistant' && (
                 <div className="w-7 h-7 rounded-lg bg-[var(--af-accent)]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Bot className="w-3.5 h-3.5 text-[var(--af-accent)]" />
                 </div>
               )}
-              <div className={`max-w-[82%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
+              <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed relative ${
                 msg.role === 'user'
-                  ? 'bg-[var(--af-accent)] text-background'
+                  ? 'bg-[var(--af-accent)] text-[var(--background)]'
                   : 'bg-[var(--af-bg3)] border border-[var(--border)]'
               }`}>
+                {/* Message images */}
+                {msg.images && msg.images.length > 0 && (
+                  <div className="flex gap-1.5 mb-2 flex-wrap">
+                    {msg.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`Adjunto ${i + 1}`}
+                        className="max-h-[120px] max-w-[160px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(img, '_blank')}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {msg.role === 'assistant' && msg.content.startsWith('Error:') ? (
                   <span className="text-red-400 text-xs">{msg.content}</span>
                 ) : msg.role === 'assistant' ? (
-                  <span className={msg.isStreaming ? 'opacity-80' : ''} dangerouslySetInnerHTML={{
-                    __html: msg.content
-                      ? renderMarkdown(msg.content)
-                      : `<span class="flex items-center gap-2 text-[var(--muted-foreground)]"><svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Pensando...</span>`,
-                  }} />
+                  msg.content ? (
+                    <span className={msg.isStreaming ? 'opacity-80' : ''}>
+                      <MarkdownContent content={msg.content} />
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Pensando...
+                    </span>
+                  )
                 ) : (
-                  <span>{msg.content}</span>
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
                 )}
 
                 {/* Tool calls badges */}
                 {msg.toolCalls && msg.toolCalls.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2 space-y-1.5">
                     {msg.toolCalls.map((tc, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-[10px] text-[var(--muted-foreground)]">
-                        <CheckCircle className="w-3 h-3 text-emerald-400" />
-                        <span>{tc.name}: {JSON.stringify(tc.args).substring(0, 60)}</span>
-                      </div>
+                      <ToolCallBadge key={i} toolCall={tc} />
                     ))}
                   </div>
+                )}
+
+                {/* Copy button */}
+                {msg.role === 'assistant' && !msg.isStreaming && msg.content && !msg.content.startsWith('Error:') && (
+                  <button
+                    className="absolute -bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-md bg-[var(--background)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer"
+                    onClick={() => copyMessage(msg.id, msg.content)}
+                    title="Copiar mensaje"
+                  >
+                    {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  </button>
                 )}
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 rounded-lg bg-[var(--af-accent)] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User className="w-3.5 h-3.5 text-background" />
+                  <User className="w-3.5 h-3.5 text-[var(--background)]" />
                 </div>
               )}
             </div>
@@ -699,9 +898,46 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Pending images preview */}
+        {pendingImages.length > 0 && (
+          <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--af-bg3)]">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative flex-shrink-0 group">
+                  <img src={img} alt={`Pendiente ${i + 1}`} className="w-16 h-16 rounded-lg object-cover" />
+                  <button
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    onClick={() => removePendingImage(i)}
+                  >
+                    <XCircle className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Input */}
         <form onSubmit={handleSubmit} className="p-4 border-t border-[var(--border)]">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-end">
+            {/* Attach image button */}
+            <button
+              type="button"
+              className="w-10 h-10 rounded-xl bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer flex-shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              title="Adjuntar imagen"
+              disabled={isLoading}
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleImageUpload}
+            />
             <textarea
               ref={inputRef}
               className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-xl px-3 py-2.5 text-sm text-[var(--foreground)] outline-none resize-none min-h-[40px] max-h-[120px] focus:border-[var(--af-accent)]"
@@ -714,15 +950,15 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
             />
             <button
               type="submit"
-              className="w-10 h-10 rounded-xl bg-[var(--af-accent)] text-background flex items-center justify-center hover:bg-[var(--af-accent2)] transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
-              disabled={!input.trim() || isLoading}
+              className="w-10 h-10 rounded-xl bg-[var(--af-accent)] text-[var(--background)] flex items-center justify-center hover:bg-[var(--af-accent2)] transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
+              disabled={(!input.trim() && pendingImages.length === 0) || isLoading}
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
           <div className="flex items-center justify-between mt-1.5">
             <span className="text-[10px] text-[var(--muted-foreground)]">
-              Enter para enviar · Shift+Enter nueva línea
+              Enter para enviar · Shift+Enter nueva linea
             </span>
             {isLoading && (
               <button
