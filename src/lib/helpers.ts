@@ -19,19 +19,33 @@ export const fmtCOP = (n: number): string => {
 /**
  * Formatea un timestamp de Firebase o Date a fecha legible en español.
  */
-export const fmtDate = (ts: FirestoreTimestamp | string | Date | null | undefined): string => {
+export const fmtDate = (ts: FirestoreTimestamp | string | Date | number | null | undefined): string => {
   if (!ts) return '—';
-  const d = typeof ts === 'string' || ts instanceof Date ? new Date(ts) : ts.toDate();
-  return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+  try {
+    const d = typeof ts === 'string' || ts instanceof Date
+      ? new Date(ts)
+      : typeof ts === 'number'
+        ? new Date(ts)
+        : ts.toDate();
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return '—'; }
 };
 
 /**
  * Formatea un timestamp a fecha y hora completas.
  */
-export const fmtDateTime = (ts: FirestoreTimestamp | string | Date | null | undefined): string => {
+export const fmtDateTime = (ts: FirestoreTimestamp | string | Date | number | null | undefined): string => {
   if (!ts) return '—';
-  const d = typeof ts === 'string' || ts instanceof Date ? new Date(ts) : ts.toDate();
-  return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  try {
+    const d = typeof ts === 'string' || ts instanceof Date
+      ? new Date(ts)
+      : typeof ts === 'number'
+        ? new Date(ts)
+        : ts.toDate();
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return '—'; }
 };
 
 /**
