@@ -470,10 +470,10 @@ export default function AdminScreen() {
                 const isAdminMember = (m.data?.role === 'Admin') || ADMIN_EMAILS.includes(m.data?.email || '');
                 return (<div key={m.id} className="card-elevated rounded-xl p-4 relative group">
                   {/* Delete button */}
-                  {isAdminMember && !isSelf && (
+                  {!isSelf && (
                     <button
                       onClick={async () => {
-                        if (!(await confirm({ title: 'Eliminar usuario', description: '¿Eliminar a ' + (m.data?.name || m.data?.email) + '? Esta acción no se puede deshacer.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
+                        if (!(await confirm({ title: 'Eliminar usuario', description: '¿Eliminar a ' + (m.data?.name || m.data?.email) + ' del equipo? Esta acción no se puede deshacer.', confirmText: 'Eliminar', variant: 'destructive' }))) return;
                         try {
                           const db = getFirebase().firestore();
                           await db.collection('users').doc(m.id).delete();
