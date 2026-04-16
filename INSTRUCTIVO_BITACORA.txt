@@ -221,6 +221,80 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 18:30 | SESION — Correccion de 7 bugs + Revision multitenant
+  Estado: COMPLETADO
+  Commit: 3997b95
+  Tag: backup-pre-bugs-fixes-20260417-001
+
+  Contexto: Sesion enfocada en corregir bugs reportados por el usuario.
+    Se corrigieron 7 issues criticos y se reviso multitenant.
+
+  Tarea 1 — BUG-20260417-001: Boton de borrar no funciona en proyectos/tareas (CRITICA)
+    * Causa: useConfirmDialog usaba useSyncExternalStore con snapshot que no
+      coincidia con la lectura directa de resolveRef en el componente ConfirmDialog.
+      Esto causaba que el dialogo nunca se abriera (React no detectaba el cambio).
+    * Solucion: Refactorizado useConfirmDialog para usar React useState + useEffect
+      con listener en vez de useSyncExternalStore. isOpen ahora se propaga
+      correctamente como prop al componente ConfirmDialog.
+    * Archivos: src/hooks/useConfirmDialog.tsx, src/components/layout/AppProviders.tsx
+
+  Tarea 2 — BUG-20260417-002: Conexion a Microsoft (ALTA)
+    * Causa: Token restore siempre asignaba 55 minutos de expiracion sin importar
+      la edad real del token. Si el usuario estaba fuera >55 min, el token
+      expirado se tratava como valido.
+    * Solucion: Se guarda msTokenSavedAt (timestamp) al autenticarse con MS.
+      Al restaurar, se calcula el tiempo restante real basandose en savedAt.
+      Tambien se limpia msTokenSavedAt en disconnectMicrosoft.
+    * Archivos: src/contexts/AuthContext.tsx, src/contexts/OneDriveContext.tsx
+
+  Tarea 3 — BUG-20260417-003: Login Google (ALTA)
+    * Causa probable: CSP bloqueaba content.googleapis.com usado por Google Auth.
+    * Solucion: Agregado https://content.googleapis.com a connect-src en CSP.
+    * Nota: Si persiste, verificar Firebase Console > Auth > Authorized domains.
+    * Archivo: next.config.ts
+
+  Tarea 4 — BUG-20260417-004: Panel admin sale mal en movil (MEDIA)
+    * Problema: Padding excesivo, botones de navegacion muy largos, sin titulo.
+    * Solucion: Padding reducido en mobile (p-3), titulo visible solo en desktop,
+      botones compactos (iconos ▶/◀ en vez de texto), texto con truncate.
+    * Archivo: src/screens/AdminScreen.tsx
+
+  Tarea 5 — BUG-20260417-005: Chat roto (ALTA)
+    * Causa: sanitizeMessage no sanitizaba audioDuration, fileSize ni reactions.
+      MessageBubble.tsx no manejaba correctamente Date objects (ya convertidos
+      por sanitizeMessage) y podia intentar llamar .toDate() en un Date nativo.
+    * Solucion: sanitizeMessage ahora sanitiza todos los campos numericos y
+      reactions. MessageBubble usa check instanceof Date antes de .toDate().
+    * Archivos: src/contexts/ChatContext.tsx, src/components/features/chat/MessageBubble.tsx
+
+  Tarea 6 — Revision: Multitenant (MEDIA)
+    * Hallazgo: TenantContext detecta dominio y permite switching, pero las
+      queries Firestore (proyectos, tareas, etc.) NO filtran por tenantId.
+      Todas las consultas cargan datos de todos los tenants.
+    * Decision: Documentado como pendiente. Requiere refactor grande de
+      FirestoreContext para agregar filtro tenantId a todas las queries.
+    * Archivo revisado: src/contexts/TenantContext.tsx
+
+  Tarea 7 — MEJORA: Tareas desde plantilla (MEDIA)
+    * Problema: Al crear proyecto con plantilla, las tareas se creaban con
+      status 'Por hacer' y no habia error handling en batch.commit().
+    * Solucion: Tasks creados con status 'Borrador' y campo fromTemplate: true.
+      Agregado try/catch en batch commit. Toast informativo con conteo.
+    * Archivo: src/contexts/FirestoreContext.tsx
+
+  Archivos modificados en esta sesion (9):
+    src/hooks/useConfirmDialog.tsx (reescrito)
+    src/components/layout/AppProviders.tsx (simplificado)
+    src/contexts/AuthContext.tsx (+2 lineas)
+    src/contexts/OneDriveContext.tsx (+5, -2 lineas)
+    src/contexts/ChatContext.tsx (+18 lineas)
+    src/contexts/FirestoreContext.tsx (+18, -8 lineas)
+    src/screens/AdminScreen.tsx (+7, -5 lineas)
+    src/components/features/chat/MessageBubble.tsx (+6, -3 lineas)
+    next.config.ts (+1 linea)
+
+--- FIN DE SESION 2026-04-17 -------------------------------------------
+
 2026-04-16 22:02 | SESION — Cierre de sesion + WhatsApp AI v3 + Actualizacion Instructivo
   Estado: COMPLETADO
   Commit: c1fcf38
