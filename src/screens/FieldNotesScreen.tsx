@@ -7,7 +7,8 @@ import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service
 import EmptyState from '@/components/ui/EmptyState';
 import SignatureModal from '@/components/modals/SignatureModal';
 import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
-import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool } from 'lucide-react';
+import AnnotatePhotoModal from '@/components/modals/AnnotatePhotoModal';
+import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool, Edit3 } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -71,6 +72,7 @@ export default function FieldNotesScreen() {
   const [formPhotos, setFormPhotos] = useState<string[]>([]);
   const [formSignatures, setFormSignatures] = useState<SignatureRecord[]>([]);
   const [sigModalOpen, setSigModalOpen] = useState(false);
+  const [annotateModal, setAnnotateModal] = useState<{ open: boolean; src: string; idx: number }>({ open: false, src: '', idx: 0 });
 
   // Load notes
   useEffect(() => {
@@ -394,8 +396,15 @@ export default function FieldNotesScreen() {
                           <div className="text-[11px] font-semibold text-[var(--af-accent)] uppercase tracking-wide mb-1.5">Fotos ({note.data.photos.length})</div>
                           <div className="grid grid-cols-3 gap-2">
                             {note.data.photos.slice(0, 6).map((photo: string, i: number) => (
-                              <div key={i} className="aspect-square rounded-lg overflow-hidden bg-[var(--skeuo-inset)]">
+                              <div key={i} className="aspect-square rounded-lg overflow-hidden bg-[var(--skeuo-inset)] relative group">
                                 <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                                <button
+                                  className="absolute top-1 right-1 w-6 h-6 rounded-md bg-black/40 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                  onClick={e => { e.stopPropagation(); setAnnotateModal({ open: true, src: photo, idx: i }); }}
+                                  title="Anotar foto"
+                                >
+                                  <Edit3 size={11} />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -566,6 +575,13 @@ export default function FieldNotesScreen() {
         documentTitle={formDate ? `Minuta ${formDate}` : 'Minuta de Obra'}
         existingSignatures={formSignatures}
         onSign={(sigs) => setFormSignatures(sigs)}
+      />
+
+      <AnnotatePhotoModal
+        open={annotateModal.open}
+        onClose={() => setAnnotateModal({ open: false, src: '', idx: 0 })}
+        src={annotateModal.src}
+        title={`Foto ${annotateModal.idx + 1} — ${formDate || 'Minuta'}`}
       />
     </div>
   );
