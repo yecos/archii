@@ -53,7 +53,6 @@ function AlertDialogContent({
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
-        style={{ position: 'relative' }}
         data-slot="alert-dialog-content"
         className={cn(
           "bg-[var(--skeuo-raised)] border border-[var(--skeuo-edge-light)] shadow-[var(--skeuo-shadow-raised-lg)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg p-6 duration-200 sm:max-w-lg",
@@ -61,8 +60,10 @@ function AlertDialogContent({
         )}
         {...props}
       >
-        <div className="absolute top-0 inset-x-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-[var(--af-accent)] via-[var(--af-accent2)] to-[var(--af-accent)] opacity-50" />
-        {children}
+        <div className="relative">
+          <div className="absolute top-0 inset-x-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-[var(--af-accent)] via-[var(--af-accent2)] to-[var(--af-accent)] opacity-50 pointer-events-none" />
+          {children}
+        </div>
       </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
   )
