@@ -258,6 +258,87 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       saveSessions([newSession]);
       saveActiveSessionId(newSession.id);
     }
+
+    // Load sessions from Firestore (cloud backup — merge with localStorage)
+    const loadFromFirestore = async () => {
+      try {
+        const fb = getFirebase();
+        const currentUser = fb.auth().currentUser;
+        if (!currentUser) return;
+        const token = await currentUser.getIdToken();
+
+        const res = await fetch('/api/ai-chat-history', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const cloudSessions: Array<Record<string, unknown>> = data.sessions || [];
+        if (cloudSessions.length === 0) return;
+
+        setSessions(prev => {
+          // Merge: cloud sessions overwrite local if newer or not present
+          const localMap = new Map(prev.map(s => [s.id, s]));
+          const merged: ChatSession[] = [];
+
+          // Add all cloud sessions
+          for (const cs of cloudSessions) {
+            const cloudSession: ChatSession = {
+              id: cs.id as string || generateId(),
+              title: (cs.title as string) || 'Conversacion',
+              messages: ((cs.messages || []) as Array<Record<string, unknown>>).map(m => ({
+                ...m,
+                id: (m.id as string) || generateId(),
+                role: (m.role as 'user' | 'assistant') || 'user',
+                content: (m.content as string) || '',
+                timestamp: new Date(m.timestamp as string),
+                images: (m.images as string[]) || undefined,
+                toolCalls: (m.toolCalls as ToolCallInfo[]) || undefined,
+              })),
+              projectContext: (cs.projectContext as string) || '',
+              projectId: (cs.projectId as string) || undefined,
+              createdAt: new Date(cs.createdAt as string),
+              updatedAt: new Date(cs.updatedAt as string),
+            };
+
+            const local = localMap.get(cloudSession.id);
+            if (!local || new Date(cloudSession.updatedAt) > new Date(local.updatedAt)) {
+              merged.push(cloudSession);
+              localMap.delete(cloudSession.id);
+            } else {
+              merged.push(local);
+              localMap.delete(cloudSession.id);
+            }
+          }
+
+          // Add remaining local sessions not in cloud
+          for (const local of localMap.values()) {
+            merged.push(local);
+          }
+
+          // Sort by updatedAt desc, limit to MAX_SESSIONS
+          merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+          const finalSessions = merged.slice(0, MAX_SESSIONS);
+          saveSessions(finalSessions);
+
+          // Keep active session if it still exists
+          const activeId = activeSessionId || loadActiveSessionId();
+          if (activeId && finalSessions.some(s => s.id === activeId)) {
+            return finalSessions;
+          }
+          if (finalSessions.length > 0) {
+            setActiveSessionId(finalSessions[0].id);
+            saveActiveSessionId(finalSessions[0].id);
+          }
+          return finalSessions;
+        });
+      } catch (err) {
+        // Silent fail — localStorage is the primary store
+        console.warn('[Agent] Could not load history from Firestore:', err instanceof Error ? err.message : err);
+      }
+    };
+
+    // Delay Firestore load slightly to not block UI
+    setTimeout(loadFromFirestore, 1500);
   }, []);
 
   /* ===== Auto-set project context from active project ===== */
@@ -480,7 +561,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
     if (isLoading || !activeSessionId) return;
 
     // Build user message with optional image references
-    let userContent = content.trim();
+    const userContent = content.trim();
     const userMsg: AgentMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -567,35 +648,90 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
       if (!reader) throw new Error('No se pudo leer la respuesta del servidor.');
 
       const decoder = new TextDecoder();
+      let buffer = '';
       let fullContent = '';
+      const liveToolCalls: ToolCallInfo[] = [];
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        fullContent += chunk;
-
-        const capturedContent = fullContent;
+      // Helper: update session with current content and tool calls
+      const updateStream = (text: string, toolCalls: ToolCallInfo[]) => {
         setSessions(prev => prev.map(s => {
           if (s.id !== activeSessionId) return s;
           return {
             ...s,
             messages: s.messages.map(m =>
-              m.id === assistantId ? { ...m, content: capturedContent } : m
+              m.id === assistantId
+                ? { ...m, content: text, toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined }
+                : m
             ),
             updatedAt: new Date(),
           };
         }));
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          // Try parsing as JSON event (new format with tool calls)
+          try {
+            const ev = JSON.parse(line);
+
+            if (ev.t === 'text') {
+              // Text delta from the AI
+              fullContent += ev.c || '';
+              updateStream(fullContent, liveToolCalls);
+            } else if (ev.t === 'tc') {
+              // Tool call started — show as "running"
+              liveToolCalls.push({
+                name: ev.n || 'herramienta',
+                args: ev.a || {},
+                status: 'running',
+              });
+              updateStream(fullContent, liveToolCalls);
+            } else if (ev.t === 'tr') {
+              // Tool result received — update status
+              const lastRunning = [...liveToolCalls].reverse().find(tc => tc.status === 'running');
+              if (lastRunning) {
+                lastRunning.status = ev.e ? 'error' : 'success';
+                lastRunning.result = ev.r || '';
+              } else {
+                // No matching running call, add as new
+                liveToolCalls.push({
+                  name: ev.n || 'herramienta',
+                  args: {},
+                  status: ev.e ? 'error' : 'success',
+                  result: ev.r || '',
+                });
+              }
+              updateStream(fullContent, liveToolCalls);
+            } else if (ev.t === 'err') {
+              console.error('[Agent] Stream error event:', ev.m);
+            }
+            // 'done' event — ignore, handled by loop exit
+          } catch {
+            // If not JSON, treat as plain text (backward compatibility)
+            fullContent += line;
+            updateStream(fullContent, liveToolCalls);
+          }
+        }
       }
 
-      // Finalize
+      // Finalize — mark streaming as complete
       setSessions(prev => prev.map(s => {
         if (s.id !== activeSessionId) return s;
         return {
           ...s,
           messages: s.messages.map(m =>
-            m.id === assistantId ? { ...m, content: fullContent, isStreaming: false } : m
+            m.id === assistantId
+              ? { ...m, content: fullContent, isStreaming: false, toolCalls: liveToolCalls.length > 0 ? [...liveToolCalls] : undefined }
+              : m
           ),
           updatedAt: new Date(),
         };

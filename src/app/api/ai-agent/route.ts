@@ -2,6 +2,7 @@
  * /api/ai-agent — AI Agent endpoint with streaming + function calling.
  * Fase 2: Tools consolidadas desde ai-tools.ts, soporta Mistral + 4 proveedores.
  * Fase 4: Auto-enriches project context from Firestore when projectId is provided.
+ * Fase 5: fullStream con tool calls visibles para el cliente + soporte de imágenes.
  */
 
 import { streamText, stepCountIs } from 'ai';
@@ -113,17 +114,39 @@ export async function POST(request: NextRequest) {
     const today = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     sysPrompt += `\n\nFecha actual: ${today}`;
 
-    const { model, provider, modelName } = await routeAIRequest({ taskType: 'chat', messages, userId: user.uid });
-    console.log(`[ArchiFlow Agent] ${provider} (${modelName}) user=${user.uid} project=${projectId || 'none'}`);
+    // Check if any message has images — use vision task type
+    const hasImages = messages.some(m => m.images && m.images.length > 0);
+
+    const { model, provider, modelName } = await routeAIRequest({
+      taskType: hasImages ? 'vision' : 'chat',
+      messages,
+      userId: user.uid,
+    });
+    console.log(`[ArchiFlow Agent] ${provider} (${modelName}) user=${user.uid} project=${projectId || 'none'} images=${hasImages}`);
 
     // Tools consolidadas con userId inyectado
     const tools = createAgentTools(user.uid);
 
-    // Convert messages for AI SDK — only text content for now
-    const aiMessages = messages.map(m => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    // Convert messages for AI SDK — support multi-content with images
+    const aiMessages = messages.map(m => {
+      // If message has images and is from user, use multi-content format
+      if (m.images && m.images.length > 0 && m.role === 'user') {
+        const contentParts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [
+          { type: 'text', text: m.content || 'Describe esta imagen' },
+        ];
+        for (const img of m.images) {
+          contentParts.push({ type: 'image' as const, image: img });
+        }
+        return {
+          role: 'user' as const,
+          content: contentParts,
+        };
+      }
+      return {
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      };
+    });
 
     const result = streamText({
       model,
@@ -139,7 +162,84 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return result.toTextStreamResponse();
+    // Use fullStream to send both text and tool call events to the client
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for await (const part of result.fullStream as any) {
+            const partType = part.type;
+
+            if (partType === 'text-delta') {
+              // Text chunk — accumulate in client
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: 'text', c: part.text || '' }) + '\n')
+              );
+            } else if (partType === 'tool-call') {
+              // Tool being called — show in UI as "running"
+              controller.enqueue(
+                encoder.encode(JSON.stringify({
+                  t: 'tc',
+                  id: part.toolCallId || '',
+                  n: part.toolName || '',
+                  a: part.input || part.args || {},
+                }) + '\n')
+              );
+            } else if (partType === 'tool-result') {
+              // Tool finished — show in UI with result
+              const output = part.output ?? part.result ?? '';
+              controller.enqueue(
+                encoder.encode(JSON.stringify({
+                  t: 'tr',
+                  id: part.toolCallId || '',
+                  n: part.toolName || '',
+                  r: typeof output === 'string' ? output : JSON.stringify(output),
+                  e: part.isError ? true : undefined,
+                }) + '\n')
+              );
+            } else if (partType === 'tool-error') {
+              // Tool error
+              controller.enqueue(
+                encoder.encode(JSON.stringify({
+                  t: 'tr',
+                  id: part.toolCallId || '',
+                  n: part.toolName || '',
+                  r: part.error ? String(part.error) : 'Error en herramienta',
+                  e: true,
+                }) + '\n')
+              );
+            } else if (partType === 'error') {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({
+                  t: 'err',
+                  m: part.error ? String(part.error) : 'Error desconocido',
+                }) + '\n')
+              );
+            }
+            // Ignore other parts: start, finish, finish-step, start-step, etc.
+          }
+          controller.enqueue(encoder.encode(JSON.stringify({ t: 'done' }) + '\n'));
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : 'Error en stream';
+          console.error('[Agent] Stream error:', errMsg);
+          controller.enqueue(
+            encoder.encode(JSON.stringify({ t: 'err', m: errMsg }) + '\n')
+          );
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    });
 
   } catch (err: unknown) {
     if (err instanceof Response) return err;
