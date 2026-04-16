@@ -50,3 +50,6 @@ export { useNotifPreferencesContext as useNotifPreferences } from '@/contexts/No
 
 // Presence domain
 export { usePresenceContext as usePresence } from '@/contexts/PresenceContext';
+
+// i18n domain
+export { useI18n } from '@/contexts/I18nContext';

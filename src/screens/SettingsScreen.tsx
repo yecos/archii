@@ -10,7 +10,9 @@ import {
   DEFAULT_THEME,
   type ColorThemeId,
 } from '@/lib/themes';
-import { Check, Sun, Moon, Monitor, Palette, Info } from 'lucide-react';
+import { Check, Sun, Moon, Monitor, Palette, Info, Globe } from 'lucide-react';
+import { useI18n } from '@/hooks/useDomain';
+import { LOCALE_LABELS, type Locale } from '@/lib/i18n';
 
 /* ─── Color Theme Card ─── */
 function ThemeCard({
@@ -61,13 +63,14 @@ function ThemeCard({
 
 /* ─── Display Mode Toggle ─── */
 const DISPLAY_MODES = [
-  { value: 'light' as const, label: 'Claro', icon: Sun },
-  { value: 'dark' as const, label: 'Oscuro', icon: Moon },
-  { value: 'system' as const, label: 'Sistema', icon: Monitor },
+  { value: 'light' as const, labelKey: 'settings.light', icon: Sun },
+  { value: 'dark' as const, labelKey: 'settings.dark', icon: Moon },
+  { value: 'system' as const, labelKey: 'settings.system', icon: Monitor },
 ];
 
 function DisplayModeToggle() {
   const { theme, setTheme } = useTheme();
+  const { t } = useI18n();
 
   return (
     <div className="flex gap-2 flex-wrap">
@@ -87,11 +90,11 @@ function DisplayModeToggle() {
                   : 'skeuo-btn text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
               }
             `}
-            aria-label={`Modo ${mode.label}`}
+            aria-label={t(mode.labelKey)}
             aria-pressed={isActive}
           >
             <Icon size={16} strokeWidth={2} />
-            <span>{mode.label}</span>
+            <span>{t(mode.labelKey)}</span>
           </button>
         );
       })}
@@ -111,6 +114,7 @@ export default function SettingsScreen() {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
   const ui = useUI();
+  const { locale, setLocale, t } = useI18n();
 
   useEffect(() => {
     setMounted(true);
@@ -151,11 +155,11 @@ export default function SettingsScreen() {
             className="text-xl font-bold text-[var(--foreground)]"
             style={{ fontFamily: "'DM Serif Display', serif" }}
           >
-            Configuración
+            {t('settings.title')}
           </h1>
         </div>
         <p className="text-[13px] text-[var(--muted-foreground)] ml-[42px]">
-          Personaliza la apariencia de ArchiFlow
+          {t('settings.subtitle')}
         </p>
       </div>
 
@@ -166,7 +170,7 @@ export default function SettingsScreen() {
           className="text-[15px] font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2"
         >
           <span className="text-base">🎨</span>
-          Tema de Color
+          {t('settings.colorTheme')}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {COLOR_THEMES.map((theme) => (
@@ -187,12 +191,52 @@ export default function SettingsScreen() {
           className="text-[15px] font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2"
         >
           <span className="text-base">🖱️</span>
-          Modo de visualización
+          {t('settings.displayMode')}
         </h2>
         <DisplayModeToggle />
         <p className="text-[11px] text-[var(--muted-foreground)] mt-2">
-          El modo «Sistema» sigue la preferencia de tu dispositivo.
+          {t('settings.systemDesc')}
         </p>
+      </section>
+
+      {/* ── Section 2.5: Language Selector ── */}
+      <section className="mb-6" aria-labelledby="language-heading">
+        <h2
+          id="language-heading"
+          className="text-[15px] font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2"
+        >
+          <Globe size={16} className="stroke-[var(--muted-foreground)]" />
+          {t('settings.language')}
+        </h2>
+        <p className="text-[11px] text-[var(--muted-foreground)] mb-3">
+          {t('settings.languageDesc')}
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {(Object.entries(LOCALE_LABELS) as [Locale, typeof LOCALE_LABELS[Locale]][]).map(([loc, info]) => {
+            const isActive = locale === loc;
+            return (
+              <button
+                key={loc}
+                onClick={() => setLocale(loc)}
+                className={`
+                  flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium
+                  transition-all duration-200 cursor-pointer border
+                  ${
+                    isActive
+                      ? 'bg-[var(--af-accent)] text-[var(--primary-foreground)] border-[var(--af-accent)] shadow-[var(--skeuo-shadow-btn)]'
+                      : 'skeuo-btn text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  }
+                `}
+                aria-label={info.native}
+                aria-pressed={isActive}
+              >
+                <span className="text-base">{info.flag}</span>
+                <span>{info.native}</span>
+                {isActive && <Check size={14} strokeWidth={3} />}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {/* ── Section 3: App Info ── */}
@@ -202,28 +246,34 @@ export default function SettingsScreen() {
           className="text-[15px] font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2"
         >
           <Info size={16} className="stroke-[var(--muted-foreground)]" />
-          Información
+          {t('settings.info')}
         </h2>
         <div className="card-elevated rounded-xl p-4 space-y-2">
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-[var(--muted-foreground)]">Aplicación</span>
+            <span className="text-[var(--muted-foreground)]">{t('settings.application')}</span>
             <span className="font-medium text-[var(--foreground)]">ArchiFlow 2.0</span>
           </div>
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-[var(--muted-foreground)]">Tema activo</span>
+            <span className="text-[var(--muted-foreground)]">{t('settings.activeTheme')}</span>
             <span className="font-medium text-[var(--foreground)]">
               {COLOR_THEMES.find((t) => t.id === activeTheme)?.icon}{' '}
               {COLOR_THEMES.find((t) => t.id === activeTheme)?.name}
             </span>
           </div>
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-[var(--muted-foreground)]">Modo</span>
-            <span className="font-medium text-[var(--foreground)] capitalize">
-              {resolvedTheme === 'dark' ? 'Oscuro' : resolvedTheme === 'light' ? 'Claro' : 'Sistema'}
+            <span className="text-[var(--muted-foreground)]">{t('settings.language')}</span>
+            <span className="font-medium text-[var(--foreground)]">
+              {LOCALE_LABELS[locale].flag} {LOCALE_LABELS[locale].native}
             </span>
           </div>
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-[var(--muted-foreground)]">Versión</span>
+            <span className="text-[var(--muted-foreground)]">{t('settings.mode')}</span>
+            <span className="font-medium text-[var(--foreground)] capitalize">
+              {resolvedTheme === 'dark' ? t('settings.dark') : resolvedTheme === 'light' ? t('settings.light') : t('settings.system')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-[13px]">
+            <span className="text-[var(--muted-foreground)]">{t('settings.version')}</span>
             <span className="font-medium text-[var(--foreground)]">2.0.0</span>
           </div>
         </div>

@@ -45,6 +45,7 @@ import NotifProvider from './NotifContext';
 import { OfflineQueueProvider } from './OfflineQueueContext';
 import PresenceProvider from './PresenceContext';
 import AutomationProvider from './AutomationContext';
+import { I18nProvider } from './I18nContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -66,7 +67,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                                   <OfflineQueueProvider>
                                     <PresenceProvider>
                                       <AutomationProvider>
-                                        {children}
+                                        <I18nProvider>
+                                          {children}
+                                        </I18nProvider>
                                       </AutomationProvider>
                                     </PresenceProvider>
                                   </OfflineQueueProvider>
