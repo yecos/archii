@@ -39,6 +39,7 @@ interface NotifContextType {
   setNotifFilterCat: React.Dispatch<React.SetStateAction<string>>;
   showNotifBanner: boolean;
   setShowNotifBanner: React.Dispatch<React.SetStateAction<boolean>>;
+  persistenceReady: boolean;
 
   // Functions
   sendNotif: (title: string, body: string, icon?: string, tag?: string, data?: NotifData) => void;
@@ -59,6 +60,9 @@ interface NotifContextType {
 
 const NotifContext = createContext<NotifContextType | null>(null);
 
+/** Deduplication window: ignore same-tag notifications within 10s */
+const DEDUP_WINDOW_MS = 10_000;
+
 export default function NotifProvider({ children }: { children: React.ReactNode }) {
   const { showToast, navigateToRef, selectedProjectId } = useUIContext();
   const { authUser } = useAuthContext();
@@ -74,6 +78,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [notifHistory, setNotifHistory] = useState<NotifEntry[]>([]);
+  const [changeOrders, setChangeOrders] = useState<any[]>([]);
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
     chat: true, tasks: true, meetings: true, approvals: true, inventory: true, projects: true,
   });
@@ -83,6 +88,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const [inAppNotifs, setInAppNotifs] = useState<(NotifEntry & { ts?: number })[]>([]);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
+  const [persistenceReady, setPersistenceReady] = useState(false);
 
   // Refs
   const prevMessagesRef = useRef<any[]>([]);
@@ -93,9 +99,143 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const prevTransfersRef = useRef<any[]>([]);
   const prevProjectsRef = useRef<any[]>([]);
   const prevExpensesRef = useRef<any[]>([]);
+  const prevChangeOrdersRef = useRef<any[]>([]);
   const isTabVisibleRef = useRef(true);
   const firstLoadDoneRef = useRef(false);
   const overdueCheckedRef = useRef<string>('');
+  const dedupMapRef = useRef<Record<string, number>>({});
+  const firestoreUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Load changeOrders from Firestore client-side
+  useEffect(() => {
+    if (!authUser?.uid || !persistenceReady) return;
+    const fb = (window as any).firebase;
+    if (!fb?.firestore) return;
+    const db = fb.firestore();
+    const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').limit(50)
+      .onSnapshot((snap: any) => {
+        setChangeOrders(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      }, () => {});
+    return () => unsub();
+  }, [authUser, persistenceReady]);
+
+  // ===== FIRESTORE PERSISTENCE =====
+
+  // Save notification to Firestore
+  const persistNotifToFirestore = useCallback(async (entry: NotifEntry) => {
+    if (!authUser?.uid) return;
+    try {
+      const fb = (window as any).firebase;
+      if (!fb?.firestore) return;
+      const db = fb.firestore();
+      await db.collection('users').doc(authUser.uid).collection('notifications').doc(entry.id).set({
+        ...entry,
+        timestamp: fb.firestore.FieldValue.serverTimestamp(),
+        _synced: true,
+      });
+    } catch (err) {
+      // Silent fail — notifications still work in-memory
+      console.warn('[NotifContext] Firestore persist failed:', err);
+    }
+  }, [authUser]);
+
+  // Mark as read in Firestore
+  const markReadInFirestore = useCallback(async (id: string) => {
+    if (!authUser?.uid) return;
+    try {
+      const fb = (window as any).firebase;
+      if (!fb?.firestore) return;
+      const db = fb.firestore();
+      await db.collection('users').doc(authUser.uid).collection('notifications').doc(id).update({ read: true });
+    } catch (err) {
+      console.warn('[NotifContext] Firestore markRead failed:', err);
+    }
+  }, [authUser]);
+
+  // Mark all as read in Firestore
+  const markAllReadInFirestore = useCallback(async () => {
+    if (!authUser?.uid) return;
+    try {
+      const fb = (window as any).firebase;
+      if (!fb?.firestore) return;
+      const db = fb.firestore();
+      const snap = await db.collection('users').doc(authUser.uid).collection('notifications')
+        .where('read', '==', false).limit(100).get();
+      const batch = db.batch();
+      snap.docs.forEach((doc: any) => batch.update(doc.ref, { read: true }));
+      await batch.commit();
+    } catch (err) {
+      console.warn('[NotifContext] Firestore markAllRead failed:', err);
+    }
+  }, [authUser]);
+
+  // Load notifications from Firestore on mount
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    const fb = (window as any).firebase;
+    if (!fb?.firestore) return;
+    const db = fb.firestore();
+    const notifsRef = db.collection('users').doc(authUser.uid).collection('notifications')
+      .orderBy('timestamp', 'desc').limit(100);
+
+    const unsubscribe = notifsRef.onSnapshot((snap: any) => {
+      const loaded: NotifEntry[] = [];
+      snap.docs.forEach((doc: any) => {
+        const d = doc.data();
+        const ts = d.timestamp;
+        loaded.push({
+          id: doc.id,
+          title: d.title || '',
+          body: d.body || '',
+          icon: d.icon || '🔔',
+          type: d.type || 'info',
+          read: d.read || false,
+          timestamp: ts?.toDate ? ts.toDate() : new Date(d.timestamp || Date.now()),
+          screen: d.screen || null,
+          itemId: d.itemId || null,
+        });
+      });
+      setNotifHistory(prev => {
+        // Merge: keep in-memory notifs that aren't from Firestore yet
+        const fsIds = new Set(loaded.map(n => n.id));
+        const localOnly = prev.filter((n: any) => !n._synced && !fsIds.has(n.id));
+        return [...loaded, ...localOnly].slice(0, 100);
+      });
+      setPersistenceReady(true);
+    }, (err: any) => {
+      console.warn('[NotifContext] Firestore listener error:', err);
+      setPersistenceReady(true);
+    });
+
+    firestoreUnsubscribeRef.current = unsubscribe;
+    return () => { unsubscribe(); firestoreUnsubscribeRef.current = null; };
+  }, [authUser]);
+
+  // Cleanup: delete notifications older than 7 days from Firestore
+  useEffect(() => {
+    if (!authUser?.uid || !persistenceReady) return;
+    const cleanup = async () => {
+      try {
+        const fb = (window as any).firebase;
+        if (!fb?.firestore) return;
+        const db = fb.firestore();
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const snap = await db.collection('users').doc(authUser.uid).collection('notifications')
+          .where('timestamp', '<', cutoff).limit(200).get();
+        if (snap.empty) return;
+        const batch = db.batch();
+        snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`[NotifContext] Cleaned ${snap.size} old notifications`);
+      } catch (err) {
+        console.warn('[NotifContext] Cleanup failed:', err);
+      }
+    };
+    // Run once on load, then daily
+    const timer = setTimeout(cleanup, 5000);
+    const iv = setInterval(cleanup, 24 * 60 * 60 * 1000);
+    return () => { clearTimeout(timer); clearInterval(iv); };
+  }, [authUser, persistenceReady]);
 
   // ===== EFFECTS =====
 
@@ -142,6 +282,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
 
   // After loading finishes, mark all current data as "seen"
   useEffect(() => {
+    if (!persistenceReady) return;
     if (!firstLoadDoneRef.current) {
       const timer = setTimeout(() => {
         prevMessagesRef.current = messages;
@@ -156,14 +297,16 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [messages, tasks, meetings, approvals, invMovements, invTransfers, projects, expenses]);
+  }, [messages, tasks, meetings, approvals, invMovements, invTransfers, projects, expenses, persistenceReady]);
 
   // Calculate unread count
   useEffect(() => {
     setUnreadCount(notifHistory.filter(n => !n.read).length);
   }, [notifHistory]);
 
-  // Detect new chat messages
+  // ===== EVENT DETECTION =====
+
+  // Detect new chat messages (with dedup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (messages.length === 0) { prevMessagesRef.current = []; return; }
@@ -178,7 +321,15 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         const msgType = lastMsg.type || 'TEXT';
         const typeLabel = msgType === 'AUDIO' ? '🎤 Nota de voz' : msgType === 'IMAGE' ? '🖼️ Imagen' : msgType === 'FILE' ? '📎 Archivo' : '';
         const bodyText = lastMsg.text?.substring(0, 120) || (msgType === 'AUDIO' ? '🎵 Nota de voz' : msgType === 'IMAGE' ? '📷 Foto' : msgType === 'FILE' ? `📎 ${lastMsg.fileName || 'Archivo'}` : '');
-        sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId, eventType: 'chat_message' });
+        // Smart grouping: bundle multiple messages
+        const count = otherMsgs.length;
+        const title = count > 1
+          ? `${count} mensajes nuevos en ${projName}`
+          : `${senderName} en ${projName}`;
+        const body = count > 1
+          ? `Último: ${senderName} — ${typeLabel}${bodyText}`
+          : `${typeLabel}${bodyText}`;
+        sendBrowserNotif(title, body, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId, eventType: 'chat_message' });
         useUIStore.getState().incrementChatUnread();
       }
     }
@@ -275,6 +426,30 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     prevTransfersRef.current = invTransfers;
   }, [invMovements, invTransfers, invProducts, notifPrefs.inventory]);
 
+  // ★ NEW: Detect change order events
+  useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
+    if (!changeOrders || changeOrders.length === 0) { prevChangeOrdersRef.current = []; return; }
+    const prev = prevChangeOrdersRef.current;
+    const newCO = changeOrders.filter((c: any) => !prev.find((p: any) => p.id === c.id));
+    const changedCO = changeOrders.filter((c: any) => {
+      const p = prev.find((pp: any) => pp.id === c.id);
+      return p && p.data.status !== c.data.status;
+    });
+    if (notifPrefs.projects) {
+      newCO.forEach((co: any) => {
+        sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${co.data.title || co.data.number}" · ${co.data.status}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+      });
+      changedCO.forEach((co: any) => {
+        const statusEmoji = co.data.status === 'Aprobada' ? '✅' : co.data.status === 'Rechazada' ? '❌' : co.data.status === 'Implementada' ? '🎉' : '📝';
+        const isUrgent = co.data.status === 'Aprobada' || co.data.status === 'Rechazada';
+        const fn = isUrgent ? sendBrowserNotif : sendNotif;
+        fn(`${statusEmoji} Cambio de orden ${co.data.status.toLowerCase()}`, `"${co.data.title || co.data.number}"${co.data.impactBudget ? ` · Impacto: $${Number(co.data.impactBudget).toLocaleString('es-CO')}` : ''}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+      });
+    }
+    prevChangeOrdersRef.current = changeOrders;
+  }, [changeOrders, notifPrefs.projects]);
+
   // Meeting reminder check
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
@@ -318,7 +493,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     prevProjectsRef.current = projects;
   }, [projects, notifPrefs.projects]);
 
-  // Overdue tasks reminder
+  // Overdue tasks reminder (smart: only once per day, respects preferences)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.tasks || !authUser) return;
@@ -331,7 +506,15 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         t.data.assigneeId === authUser?.uid && t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today
       );
       if (myOverdue.length > 0) {
-        sendNotif(`⚠️ ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`, myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '), undefined, 'overdue-daily', { type: 'reminder', screen: 'tasks', eventType: 'task_due_soon' });
+        const urgentCount = myOverdue.filter(t => {
+          if (!t.data.dueDate) return false;
+          const days = Math.floor((Date.now() - new Date(t.data.dueDate).getTime()) / 86400000);
+          return days >= 3;
+        }).length;
+        const prefix = urgentCount > 0 ? `🚨 ${urgentCount} urgente${urgentCount > 1 ? 's' : ''}` : `⚠️`;
+        sendNotif(`${prefix} ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`,
+          myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '),
+          undefined, 'overdue-daily', { type: 'reminder', screen: 'tasks', eventType: 'task_due_soon' });
       }
     };
     check();
@@ -399,8 +582,16 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     // Check granular event preference — if eventType is specified and disabled, skip
     const eventType = data?.eventType as NotifEventType | undefined;
     if (eventType && !isEventEnabled(eventType)) return;
+
+    // ★ Deduplication: skip if same tag was notified within window
+    if (tag) {
+      const lastTime = dedupMapRef.current[tag];
+      if (lastTime && Date.now() - lastTime < DEDUP_WINDOW_MS) return;
+      dedupMapRef.current[tag] = Date.now();
+    }
+
     const type = data?.type || 'info';
-    const notifEntry = {
+    const notifEntry: NotifEntry & { _synced?: boolean } = {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
       title, body, icon: icon || '🔔', type, read: false,
       timestamp: new Date(), screen: data?.screen || null, itemId: data?.itemId || null,
@@ -408,6 +599,10 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     setNotifHistory(prev => [notifEntry, ...prev].slice(0, 100));
     setInAppNotifs(prev => [...prev, { ...notifEntry, ts: Date.now() }]);
     setTimeout(() => setInAppNotifs(prev => prev.filter(n => Date.now() - (n.ts || 0) < 5000)), 5500);
+
+    // ★ Persist to Firestore (async, non-blocking)
+    persistNotifToFirestore(notifEntry);
+
     playNotifSound(type);
     vibrateNotif();
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -417,7 +612,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
         setTimeout(() => n.close(), 8000);
       } catch (e: unknown) { console.warn('OS Notification error:', e); }
     }
-  }, [playNotifSound, vibrateNotif, navigateToRef, isEventEnabled]);
+  }, [playNotifSound, vibrateNotif, navigateToRef, isEventEnabled, persistNotifToFirestore]);
 
   const sendBrowserNotif = sendNotif;
 
@@ -469,10 +664,12 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
 
   const markNotifRead = (id: string) => {
     setNotifHistory(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    markReadInFirestore(id);
   };
 
   const markAllNotifRead = () => {
     setNotifHistory(prev => prev.map(n => ({ ...n, read: true })));
+    markAllReadInFirestore();
   };
 
   const clearNotifHistory = () => {
@@ -491,12 +688,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     inAppNotifs, setInAppNotifs,
     notifFilterCat, setNotifFilterCat,
     showNotifBanner, setShowNotifBanner,
+    persistenceReady,
     sendNotif, sendBrowserNotif,
     playNotifSound, vibrateNotif,
     requestNotifPermission, dismissNotifBanner,
     toggleNotifPref, markNotifRead, markAllNotifRead, clearNotifHistory,
     navigateToRef, isTabVisibleRef,
-  }), [notifPermission, notifHistory, notifPrefs, showNotifPanel, unreadCount, notifSound, inAppNotifs, notifFilterCat, showNotifBanner, sendNotif, sendBrowserNotif, playNotifSound, vibrateNotif, requestNotifPermission, dismissNotifBanner, toggleNotifPref, markNotifRead, markAllNotifRead, clearNotifHistory]);
+  }), [notifPermission, notifHistory, notifPrefs, showNotifPanel, unreadCount, notifSound, inAppNotifs, notifFilterCat, showNotifBanner, persistenceReady, sendNotif, sendBrowserNotif, playNotifSound, vibrateNotif, requestNotifPermission, dismissNotifBanner, toggleNotifPref, markNotifRead, markAllNotifRead, clearNotifHistory]);
 
   return <NotifContext.Provider value={value}>{children}</NotifContext.Provider>;
 }

@@ -50,7 +50,7 @@ function getAdminConfig() {
     try {
       _initMethod = 'FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY';
       console.log(`[ArchiFlow Admin] Using individual credentials (${clientEmail})`);
-      return cert({ client_email: clientEmail, private_key: privateKey, type: 'service_account' });
+      return cert({ clientEmail, privateKey });
     } catch (e) {
       _initError = `Error using individual credentials: ${e instanceof Error ? e.message : e}`;
       console.error('[ArchiFlow Admin]', _initError);
@@ -99,10 +99,7 @@ export function getAdminApp(): App {
 
 export function getAdminDb(): Firestore {
   if (_adminDb) return _adminDb;
-  _adminDb = getFirestore(getAdminApp(), {
-    // Use REST transport instead of gRPC — more reliable on Vercel/serverless
-    preferRest: true,
-  });
+  _adminDb = getFirestore(getAdminApp());
   return _adminDb;
 }
 
