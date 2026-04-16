@@ -197,17 +197,15 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
   const closeModal = useCallback((n: string) => { setModals(p => ({ ...p, [n]: false })); setEditingId(null); }, []);
 
   const showToast = useCallback((msg: string, type = 'success') => {
-    // Intentar con sonner primero (Toaster puede no renderizar con React 19)
     try {
       const opts = { duration: 3500 };
       if (type === 'error') toast.error(msg, opts);
       else if (type === 'warning') toast.warning(msg, opts);
       else toast.success(msg, opts);
-    } catch (err) {
-      console.warn('[ArchiFlow] UI: Sonner toast failed:', err);
+    } catch {
+      // Sonner fallback: show DOM toast if Sonner fails
+      showToastDOM(msg, type as 'success' | 'error' | 'warning' | 'info');
     }
-    // Siempre mostrar toast DOM inline como garantía (funciona siempre)
-    showToastDOM(msg, type as 'success' | 'error' | 'warning' | 'info');
   }, []);
 
   const handleInstall = useCallback(async () => {
