@@ -221,6 +221,97 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 01:00 | FEATURE v32 — Modo Offline PWA (app shell + sync queue + UI)
+  Estado: COMPLETADO
+  Commit: fdcc9bb
+  Build: exitoso (17 static + 16 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-v32-offline-20260416-0055
+
+  Contexto: Quinta feature del plan de mejoras. La app ya tenía PWA básico
+    (manifest, SW v4, install flow, offline banner), pero faltaba el soporte
+    real para funcionar offline: app shell no se cacheaba, no había cola de
+    mutations, y el estado offline no se usaba en la UI de datos.
+
+  Tarea 32.1 — Service Worker v5 (public/sw.js, 340+ lineas):
+    * Cache version archiflow-v5 con 3 stores: shell, data, general
+    * App shell caching: stale-while-revalidate para _next/static/*
+    * Navigation: network-first con cache fallback a /
+    * Static assets (images, fonts): stale-while-revalidate
+    * API GET requests: network-first con cache corto (5 min)
+    * Non-GET requests: si offline, responden 202 + se encolan para sync
+    * Background Sync API: evento 'sync' replay mutations encoladas
+    * IndexedDB offline-queue para persistir mutations del SW
+    * Mensajes: SKIP_WAITING, CLEAR_CACHE, NAVIGATE, REGISTER_SYNC,
+      GET_CACHE_SIZE, GET_OFFLINE_QUEUE_SIZE, ONLINE
+    * SW_UPDATE notification a clientes en activate
+    * Push notifications con tag único y renotify
+    * trimCache() para limitar data cache a 200 items
+
+  Tarea 32.2 — OfflineQueue Context (src/contexts/OfflineQueueContext.tsx, 280+):
+    * IndexedDB persistence: mutations sobreviven recarga de página
+    * Tipos de mutation: add, set, update, delete
+    * Ejecutor de mutations: usa Firebase compat SDK directamente
+    * Auto-replay al reconectarse (online event listener)
+    * MAX_RETRIES = 3 con tracking de lastError
+    * Estado reactivo: pendingMutations, isSyncing, syncProgress
+    * Comunicación bidireccional con SW via postMessage
+    * Register background sync al encolar operaciones
+    * Hook: useOfflineQueue() con todas las operaciones
+
+  Tarea 32.3 — OfflineBanner mejorado (src/components/common/OfflineBanner.tsx):
+    * 4 estados visuales: offline (rojo), syncing (azul con progress bar),
+      pending sync (ámbar con botón sincronizar), back online (verde)
+    * Muestra count de operaciones pendientes
+    * Progress bar animada durante sync
+    * Auto-hide al reconectarse sin ops pendientes (4s)
+    * Botón "Sincronizar ahora" manual
+
+  Tarea 32.4 — OfflineIndicator (src/components/common/OfflineIndicator.tsx):
+    * 3 variantes: dot (2.5px circle), badge (pill con icono), full (card)
+    * Colores semáforo: verde=online, azul=syncing, ámbar=pendientes, rojo=offline
+    * Para usar en headers, sidebars, o pantallas de detalle
+
+  Tarea 32.5 — SW Update Toast (src/components/common/SWUpdateToast.tsx):
+    * Detecta SW waiting via registration.waiting + message events
+    * Toast flotante en bottom-right con botón "Actualizar ahora"
+    * skipWaiting + reload automático
+    * Re-check cada 60s, dismiss por 5 min
+    * Animación slideUp
+
+  Tarea 32.6 — Pantalla Estado Offline (src/screens/OfflineStatusScreen.tsx, 300+):
+    * Header con icono HardDrive + descripción
+    * Card de estado de conexión (Online/Offline badge)
+    * Feature pills: App Shell, Persistencia, Sync Queue, PWA
+    * Card de sincronización con progress bar + contadores (3-column grid)
+    * Lista expandible de mutations pendientes con:
+      - Icono por tipo (color-coded)
+      - Label + collection + timestamp
+      - Retry count badge
+      - Expand: tipo, datos JSON, error, botones retry/eliminar
+    * Card de almacenamiento local (cache size, IndexedDB)
+    * Sección "Cómo funciona" con 4 pasos explicativos
+    * Herramientas: refresh cache size, clear queue
+
+  Tarea 32.7 — Integración:
+    * NAV_ITEMS: { id: 'offlineStatus', icon: '📡', label: 'Estado Offline' }
+    * SCREEN_TITLES: offlineStatus: 'Estado Offline'
+    * NAV_GROUPS: grupo "Sistema" (debajo de Admin)
+    * HomeContent.tsx: dynamic import + route + SWUpdateToast global
+    * AppContext.tsx: OfflineQueueProvider al final del provider chain
+
+  Archivos creados (4):
+    src/contexts/OfflineQueueContext.tsx (280+ lineas)
+    src/components/common/OfflineIndicator.tsx (100+ lineas)
+    src/components/common/SWUpdateToast.tsx (110+ lineas)
+    src/screens/OfflineStatusScreen.tsx (300+ lineas)
+  Archivos modificados (5):
+    public/sw.js (+340, -179)
+    src/components/common/OfflineBanner.tsx (+132, -40)
+    src/lib/types.ts (+4 lineas)
+    src/app/HomeContent.tsx (+4 lineas)
+    src/contexts/AppContext.tsx (+5 lineas)
+  Total: +1672 lineas (9 archivos)
+
 2026-04-16 20:00 | FEATURE v31 — Notificaciones Inteligentes (persistencia + dedup + agrupamiento)
   Estado: COMPLETADO
   Commit: dbfc986
