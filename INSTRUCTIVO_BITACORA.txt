@@ -577,6 +577,63 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     * Reduccion acumulada: -70% en 3 rondas
     * Los 117 restantes estan en 30+ archivos con 1-4 instancias cada uno
 
+2026-04-16 20:00 | REFACTOR — P10b Type Safety Sweep Final: 82 any eliminados, 53 archivos
+  Estado: COMPLETADO
+  Commit: 1d3b999
+  Build: exitoso (0 errores TypeScript nuevos)
+  Tag de respaldo: backup-pre-p10-final-sweep-20260416
+
+  Contexto: Cuarta ronda de type safety. Se atacaron los 82 any restantes
+    (63 :any + 19 as any) en componentes, contexts, screens, hooks, lib y
+    API routes. Se usaron 4 agentes paralelos para maximizar velocidad.
+
+  Tarea 10b.1 — Tipos base (types.ts + helpers.ts):
+    * types.ts: invItems→InvoiceItem[], sections→QuotationSection[],
+      payments→QuotationPayment[], replyTo→typed union
+    * helpers.ts: fmtDate/fmtDateTime params tipados como
+      FirestoreTimestamp|string|Date|null|undefined
+
+  Tarea 10b.2 — Contexts (4 archivos, 9 any):
+    * CalendarContext: meeting:any→Meeting (2)
+    * InvoiceContext: value:any→string|number (1)
+    * OneDriveContext: MsGraphDriveItem local type (2)
+    * UIContext: BeforeInstallPromptEvent global declaration (3)
+
+  Tarea 10b.3 — Calendario + Chat (6 archivos, 16 any):
+    * Calendar components (4): meeting:any→Meeting
+    * MessageBubble: ChatMessage type + FirestoreTimestamp cast
+    * ChatSidebar: TeamUser[], Project[]
+
+  Tarea 10b.4 — Portal + Modales (10 archivos, 17 any):
+    * Portal components (5): Project[], Comment[], GalleryPhoto[], ActivityLog
+    * Modals (5): Project, TeamUser, Company, RecurrencePattern types
+
+  Tarea 10b.5 — Screens (11 archivos, 17 any):
+    * catch(err:any)→catch(err:unknown) con instanceof Error (5 archivos)
+    * TooltipProps de recharts, FirestoreTimestamp casts
+    * (window as any).firebase→getFirebase() en PredictiveAIScreen
+
+  Tarea 10b.6 — Layout + ArchiFlow + API + Misc (18 archivos, 23 any):
+    * (window as any).firebase→getFirebase() (4 archivos)
+    * AuthScreen: Window+Turnstile type, HTMLScriptElement filter
+    * AuditLogTable: as FirestoreTimestamp (2)
+    * LightboxViewer: OneDriveFile cast sin as any
+    * API routes: WhatsAppMessage interface, Firestore QuerySnapshot
+    * TimeProgressBar: union type con narrowing
+    * files/types.ts: toDate con type guards
+    * NotifPanel: Record<string, string> en vez de as any
+
+  Tarea 10b.7 — Errores TypeScript post-removal corregidos:
+    * Union type narrowing (FirestoreTimestamp|string|Date) en 6 archivos
+    * Firestore Record<string,any>→typed con as unknown as Type (3 archivos)
+    * ChatMessage.replyTo narrowing con typeof guard
+    * Array.from filter type predicate
+
+  Deuda tipada global (produccion, sin tests):
+    * Despues de P10b: ~35 (solo tests + firebase-service.ts intencional)
+    * Codigo fuente productivo: 0 any
+    * Reduccion acumulada: -91% desde P8
+
 2026-04-16 12:30 | FEATURE v28 — Edición en Minutas, Bitácora Fotográfica e Inspecciones
   Estado: COMPLETADO
   Commit: a7ce5b1
