@@ -1,11 +1,13 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil } from 'lucide-react';
+import SignatureModal from '@/components/modals/SignatureModal';
+import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
+import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -24,6 +26,7 @@ interface FieldNote {
     commitments: string[];
     commitmentFulfilled: boolean[];
     photos: string[];
+    signatures?: SignatureRecord[];
     supervisor: string;
     createdAt: FirestoreTimestamp | null;
     createdBy: string;
@@ -66,6 +69,8 @@ export default function FieldNotesScreen() {
   const [formCommitments, setFormCommitments] = useState<string[]>(['']);
   const [formSupervisor, setFormSupervisor] = useState('');
   const [formPhotos, setFormPhotos] = useState<string[]>([]);
+  const [formSignatures, setFormSignatures] = useState<SignatureRecord[]>([]);
+  const [sigModalOpen, setSigModalOpen] = useState(false);
 
   // Load notes
   useEffect(() => {
@@ -108,6 +113,7 @@ export default function FieldNotesScreen() {
     setFormCommitments(['']);
     setFormSupervisor('');
     setFormPhotos([]);
+    setFormSignatures([]);
     setEditingId(null);
   };
 
@@ -122,6 +128,7 @@ export default function FieldNotesScreen() {
     setFormCommitments(note.data.commitments?.length ? note.data.commitments : ['']);
     setFormSupervisor(note.data.supervisor || '');
     setFormPhotos(note.data.photos || []);
+    setFormSignatures(note.data.signatures || []);
     setEditingId(note.id);
   };
 
@@ -166,6 +173,7 @@ export default function FieldNotesScreen() {
         commitments,
         photos: photoUrls,
         supervisor: formSupervisor || auth.authUser?.displayName || '',
+        signatures: formSignatures,
         updatedAt: ts,
       };
 
@@ -400,6 +408,11 @@ export default function FieldNotesScreen() {
                           Supervisor: <span className="text-[var(--foreground)]">{note.data.supervisor}</span>
                         </div>
                       )}
+
+                      {/* Signatures */}
+                      {note.data.signatures && note.data.signatures.length > 0 && (
+                        <SignatureDisplay signatures={note.data.signatures} compact />
+                      )}
                     </div>
                   )}
 
@@ -519,10 +532,41 @@ export default function FieldNotesScreen() {
           </div>
         </div>
 
+        {/* Signatures */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium flex items-center gap-1.5">
+              <PenTool size={14} /> Firmas Digitales
+              {formSignatures.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 ml-1">{formSignatures.length}</span>
+              )}
+            </span>
+          </div>
+          {formSignatures.length > 0 && (
+            <SignatureDisplay signatures={formSignatures} compact />
+          )}
+          <button
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--af-accent)] hover:text-[var(--af-accent)] transition-colors"
+            onClick={() => setSigModalOpen(true)}
+          >
+            <PenTool size={14} /> {formSignatures.length > 0 ? 'Agregar Firma' : 'Firmar Minuta'}
+          </button>
+        </div>
+
         <button className="skeuo-btn w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveNote}>
           {isEditing ? 'Guardar Cambios' : 'Registrar Minuta'}
         </button>
       </div>
+
+      <SignatureModal
+        open={sigModalOpen}
+        onClose={() => setSigModalOpen(false)}
+        documentType="minuta"
+        documentRef={editingId || undefined}
+        documentTitle={formDate ? `Minuta ${formDate}` : 'Minuta de Obra'}
+        existingSignatures={formSignatures}
+        onSign={(sigs) => setFormSignatures(sigs)}
+      />
     </div>
   );
 }

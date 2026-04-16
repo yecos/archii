@@ -5,7 +5,9 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, Trash2, CheckCircle, XCircle, Clock, MinusCircle, Pencil } from 'lucide-react';
+import SignatureModal from '@/components/modals/SignatureModal';
+import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
+import { Plus, Trash2, CheckCircle, XCircle, Clock, MinusCircle, Pencil, PenTool } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -36,6 +38,7 @@ interface Inspection {
     score: number;
     items: InspectionItem[];
     notes: string;
+    signatures?: SignatureRecord[];
     createdAt: FirestoreTimestamp | null;
     createdBy: string;
   };
@@ -134,6 +137,8 @@ export default function InspectionsScreen() {
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formItems, setFormItems] = useState<InspectionItem[]>([emptyItem()]);
   const [formNotes, setFormNotes] = useState('');
+  const [formSignatures, setFormSignatures] = useState<SignatureRecord[]>([]);
+  const [sigModalOpen, setSigModalOpen] = useState(false);
 
   // Load
   useEffect(() => {
@@ -177,6 +182,7 @@ export default function InspectionsScreen() {
     setFormDate(new Date().toISOString().split('T')[0]);
     setFormItems([emptyItem()]);
     setFormNotes('');
+    setFormSignatures([]);
     setEditingId(null);
   };
 
@@ -188,6 +194,7 @@ export default function InspectionsScreen() {
     setFormDate(insp.data.date || new Date().toISOString().split('T')[0]);
     setFormItems(insp.data.items?.length ? insp.data.items : [emptyItem()]);
     setFormNotes(insp.data.notes || '');
+    setFormSignatures(insp.data.signatures || []);
     setEditingId(insp.id);
   };
 
@@ -223,6 +230,7 @@ export default function InspectionsScreen() {
         score: formScore,
         items: formItems,
         notes: formNotes,
+        signatures: formSignatures,
         updatedAt: ts,
       };
 
@@ -361,6 +369,10 @@ export default function InspectionsScreen() {
                         );
                       })}
                       {insp.data.notes && <div className="text-[12px] text-[var(--muted-foreground)] italic">Notas: {insp.data.notes}</div>}
+                      {/* Signatures */}
+                      {insp.data.signatures && insp.data.signatures.length > 0 && (
+                        <SignatureDisplay signatures={insp.data.signatures} compact />
+                      )}
                     </div>
                   )}
 
@@ -460,10 +472,41 @@ export default function InspectionsScreen() {
         {/* Notes */}
         <textarea className="w-full skeuo-input px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas generales..." value={formNotes} onChange={e => setFormNotes(e.target.value)} />
 
+        {/* Signatures */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium flex items-center gap-1.5">
+              <PenTool size={14} /> Firmas Digitales
+              {formSignatures.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 ml-1">{formSignatures.length}</span>
+              )}
+            </span>
+          </div>
+          {formSignatures.length > 0 && (
+            <SignatureDisplay signatures={formSignatures} compact />
+          )}
+          <button
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-dashed border-[var(--border)] text-[12px] text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--af-accent)] hover:text-[var(--af-accent)] transition-colors"
+            onClick={() => setSigModalOpen(true)}
+          >
+            <PenTool size={14} /> {formSignatures.length > 0 ? 'Agregar Firma' : 'Firmar Inspeccion'}
+          </button>
+        </div>
+
         <button className="skeuo-btn w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveInspection}>
-          {isEditing ? 'Guardar Cambios' : 'Crear Inspección'}
+          {isEditing ? 'Guardar Cambios' : 'Crear Inspeccion'}
         </button>
       </div>
+
+      <SignatureModal
+        open={sigModalOpen}
+        onClose={() => setSigModalOpen(false)}
+        documentType="inspeccion"
+        documentRef={editingId || undefined}
+        documentTitle={formTitle || 'Inspeccion de Calidad'}
+        existingSignatures={formSignatures}
+        onSign={(sigs) => setFormSignatures(sigs)}
+      />
     </div>
   );
 }
