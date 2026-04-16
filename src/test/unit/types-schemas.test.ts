@@ -170,8 +170,8 @@ describe('types constants', () => {
   });
 
   describe('NAV_ITEMS', () => {
-    it('has 21 items', () => {
-      expect(NAV_ITEMS).toHaveLength(21);
+    it('has 34 items', () => {
+      expect(NAV_ITEMS).toHaveLength(34);
     });
 
     it('first item is dashboard', () => {

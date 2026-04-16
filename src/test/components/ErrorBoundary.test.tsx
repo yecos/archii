@@ -40,7 +40,7 @@ describe('ErrorBoundary', () => {
         <ThrowOnRender message="Test crash" />
       </ErrorBoundary>
     );
-    expect(screen.getByText(/Error al cargar/)).toBeDefined();
+    expect(screen.getByText(/Error en/)).toBeDefined();
   });
 
   it('shows custom label in error message', () => {
@@ -49,16 +49,16 @@ describe('ErrorBoundary', () => {
         <ThrowOnRender message="Crash" />
       </ErrorBoundary>
     );
-    expect(screen.getByText('Error al cargar Dashboard')).toBeDefined();
+    expect(screen.getByText('Error en Dashboard')).toBeDefined();
   });
 
-  it('shows default label "pantalla" when no label provided', () => {
+  it('shows default label "componente" when no label provided', () => {
     render(
       <ErrorBoundary>
         <ThrowOnRender message="Crash" />
       </ErrorBoundary>
     );
-    expect(screen.getByText('Error al cargar pantalla')).toBeDefined();
+    expect(screen.getByText('Error en componente')).toBeDefined();
   });
 
   it('shows error message from the thrown error', () => {
@@ -87,7 +87,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
     expect(screen.getByTestId('custom-fallback')).toBeDefined();
-    expect(screen.queryByText(/Error al cargar/)).toBeNull();
+    expect(screen.queryByText(/Error en/)).toBeNull();
   });
 
   it('renders "Reintentar" button', () => {
@@ -110,7 +110,7 @@ describe('ErrorBoundary', () => {
     const retryBtn = screen.getByText('Reintentar');
     fireEvent.click(retryBtn);
     // Error should persist since ThrowOnRender always throws
-    expect(screen.getByText(/Error al cargar/)).toBeDefined();
+    expect(screen.getByText(/Error en/)).toBeDefined();
   });
 
   it('logs error to console.error via componentDidCatch', () => {

@@ -67,6 +67,7 @@ describe('AI Router', () => {
   describe('routeAIRequest', () => {
     it('throws error when no API keys are configured (all providers unavailable)', async () => {
       delete process.env.GROQ_API_KEY;
+      delete process.env.MISTRAL_API_KEY;
       delete process.env.OPENAI_API_KEY;
 
       await expect(
@@ -74,7 +75,7 @@ describe('AI Router', () => {
           taskType: 'chat',
           messages: [{ role: 'user', content: 'hello' }],
         }),
-      ).rejects.toThrow(/Todos los proveedores de IA están en límite de tasa/);
+      ).rejects.toThrow(/No hay API keys de IA configuradas/);
     });
 
     it('routes to Groq when GROQ_API_KEY is set', async () => {
@@ -104,7 +105,7 @@ describe('AI Router', () => {
         messages: [{ role: 'user', content: 'analyze this' }],
       });
 
-      expect(result.provider).toBe('Groq');
+      expect(result.provider).toBe('Groq 70B');
       expect(result.modelName).toBe('llama-3.1-70b-versatile');
     });
 

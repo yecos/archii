@@ -134,7 +134,7 @@ export default React.memo(function FloatingChatBubble() {
   const [replyText, setReplyText] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
-  const [isOnLeft, setIsOnLeft] = useState(true);
+  // Derived from pos.x — no separate state needed (avoids setState-inside-setState #300)
 
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const barRef = useRef<HTMLDivElement>(null);
@@ -142,6 +142,9 @@ export default React.memo(function FloatingChatBubble() {
   const createMenuRef = useRef<HTMLDivElement>(null);
   const msgsEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ─── isOnLeft derived from pos.x (no setState needed) ───
+  const isOnLeft = typeof window !== 'undefined' ? pos.x < window.innerWidth / 2 : true;
 
   // ─── Popup position ───
   const popupStyle = useMemo(() => {
@@ -156,7 +159,7 @@ export default React.memo(function FloatingChatBubble() {
     }
     const top = Math.max(EDGE_MARGIN, Math.min(pos.y + BTN_SIZE, vh - POPUP_MAX_HEIGHT - EDGE_MARGIN));
     return { left, right, top, maxHeight: Math.min(POPUP_MAX_HEIGHT, vh - top - EDGE_MARGIN) };
-  }, [pos, isOnLeft]);
+  }, [pos]);
 
   // ─── Create menu position ───
   const createMenuStyle = useMemo(() => {
@@ -174,7 +177,7 @@ export default React.memo(function FloatingChatBubble() {
     const btnOffset = BTN_SIZE + BAR_GAP + BAR_PADDING;
     const top = Math.max(EDGE_MARGIN, Math.min(pos.y + btnOffset, vh - 320 - EDGE_MARGIN));
     return { left, right, top };
-  }, [pos, isOnLeft]);
+  }, [pos]);
 
   // ─── Auto-scroll messages in popup ───
   useEffect(() => {
@@ -216,16 +219,13 @@ export default React.memo(function FloatingChatBubble() {
           y: Math.max(EDGE_MARGIN, Math.min(p.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
         };
         setPos(newPos);
-        setIsOnLeft(newPos.x < vw / 2);
       } else {
         const defaultX = window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8;
         setPos({ x: defaultX, y: window.innerHeight - BAR_HEIGHT - 80 });
-        setIsOnLeft(defaultX < window.innerWidth / 2);
       }
     } catch {
       const defaultX = window.innerWidth - BAR_WIDTH - EDGE_MARGIN - 8;
       setPos({ x: defaultX, y: window.innerHeight - BAR_HEIGHT - 80 });
-      setIsOnLeft(defaultX < window.innerWidth / 2);
     }
     setInitialized(true);
   }, []);
@@ -241,14 +241,10 @@ export default React.memo(function FloatingChatBubble() {
     const handler = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      setPos(prev => {
-        const newPos = {
-          x: Math.max(EDGE_MARGIN, Math.min(prev.x, vw - BAR_WIDTH - EDGE_MARGIN)),
-          y: Math.max(EDGE_MARGIN, Math.min(prev.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
-        };
-        setIsOnLeft(newPos.x < vw / 2);
-        return newPos;
-      });
+      setPos(prev => ({
+        x: Math.max(EDGE_MARGIN, Math.min(prev.x, vw - BAR_WIDTH - EDGE_MARGIN)),
+        y: Math.max(EDGE_MARGIN, Math.min(prev.y, vh - BAR_HEIGHT - EDGE_MARGIN)),
+      }));
     };
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
@@ -374,7 +370,6 @@ export default React.memo(function FloatingChatBubble() {
       const vw = window.innerWidth;
       setPos(prev => {
         const newX = prev.x < vw / 2 ? EDGE_MARGIN : vw - BAR_WIDTH - EDGE_MARGIN;
-        setIsOnLeft(newX < vw / 2);
         return { x: newX, y: prev.y };
       });
     };

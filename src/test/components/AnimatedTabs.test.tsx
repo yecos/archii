@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
 
-// Mock ResizeObserver for jsdom
+// Mock ResizeObserver and scrollIntoView for jsdom
 beforeEach(() => {
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   } as any;
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe('AnimatedTabs', () => {
