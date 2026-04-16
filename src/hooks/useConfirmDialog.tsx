@@ -9,7 +9,6 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogCancel,
-  AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 
 // ── State management outside React (simple global store) ──────────────────────
@@ -112,16 +111,18 @@ export function ConfirmDialog({
           <AlertDialogCancel onClick={() => onOpenChange(false)}>
             {optionsRef.cancelText}
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
+          {/* Use plain button instead of AlertDialogAction to avoid Radix race condition
+              (AlertDialogAction auto-fires onOpenChange(false) BEFORE onClick, resolving promise as false) */}
+          <button
+            onClick={(e) => { e.preventDefault(); onConfirm(); }}
             className={
               optionsRef.variant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : ""
+                ? "inline-flex h-10 items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground ring-offset-background transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
+                : "inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
             }
           >
             {optionsRef.confirmText}
-          </AlertDialogAction>
+          </button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
