@@ -221,6 +221,48 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-17 04:00 | REFACTOR — P10 Type Safety Final Round: 96 any eliminados, 21 archivos
+  Estado: COMPLETADO
+  Commit: 00adcbd
+  Build: exitoso (15 static + 16 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-p10-types-final-20260417
+
+  Contexto: Tercera y ultima ronda de type safety. Se atacaron tanto los
+    as any concentrados (ai-tools, GanttScreen, AuthContext) como los : any
+    dispersos en 14 archivos con 3-5 instancias cada uno. Tres agentes
+    trabajaron en paralelo.
+
+  Tarea 10.1 — as any eliminados (29 en 6 archivos):
+    * ai-tools.ts (8): AdminDoc local type, as string en interpolaciones
+    * GanttScreen.tsx (6): casts innecesarios removidos (tipos ya coinciden)
+    * AuthContext.tsx (5): AuthNamespace tipado, credential, providers
+    * date-utils.ts (4): FirestoreTimestampWithToDate interface local
+    * firebase-service.ts (1 code, 2 comments): unknown chain cast
+    * NotifContext.tsx (3): as number[], checkBudgetAlerts sin cast
+
+  Tarea 10.2 — : any eliminados (63 en 14 archivos):
+    * FilesScreen, whatsapp-service, export-excel (5 c/u)
+    * FirestoreContext, AdminContext, ResumenTab, ProjectDetailView,
+      FacturasTab (5 c/u)
+    * TemplatesScreen, NotifContext, OverviewView, ReportsCharts,
+      DashboardCharts (4 c/u)
+    * PurchaseOrdersScreen (3)
+    * ProfitabilityScreen (1): as const en vez de as any
+
+  Tarea 10.3 — Dependencias faltantes reparadas:
+    * react-markdown + remark-gfm instalados (faltaban de commit concurrente)
+
+  Tarea 10.4 — Interfaces nuevas en firebase-service.ts:
+    * AuthNamespace con Persistence, GoogleAuthProvider, OAuthProvider
+    * OAuthCredential, AuthProviderConstructor interfaces
+    * DocRef extendido con parent? opcional
+
+  Deuda tipada global (produccion, sin tests):
+    * Inicio de sesion (P8): 396 (345 :any + 51 as any)
+    * Despues de P10: 117 (94 :any + 23 as any)
+    * Reduccion acumulada: -70% en 3 rondas
+    * Los 117 restantes estan en 30+ archivos con 1-4 instancias cada uno
+
 2026-04-16 12:30 | FEATURE v28 — Edición en Minutas, Bitácora Fotográfica e Inspecciones
   Estado: COMPLETADO
   Commit: a7ce5b1
