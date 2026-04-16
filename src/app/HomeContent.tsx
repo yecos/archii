@@ -239,7 +239,7 @@ function AppContent() {
         <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto md:max-w-sm z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: '380px' }}>
           {inAppNotifs.map(n => (
             <div key={n.id} className="pointer-events-auto card-elevated p-3 shadow-2xl flex items-start gap-3 animate-slideUp cursor-pointer hover:border-[var(--af-accent)]/30 transition-all" style={{ width: '340px', maxWidth: 'calc(100vw - 32px)' }} onClick={() => { markNotifRead(n.id); if (n.screen) navigateTo(n.screen, n.itemId); }}>
-              <div className="text-lg flex-shrink-0 mt-0.5">{n.icon}</div>
+              <div className="text-lg flex-shrink-0 mt-0.5">{typeof n.icon === 'string' ? n.icon : '🔔'}</div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium leading-tight">{n.title}</div>
                 <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-2 leading-snug">{n.body}</div>
