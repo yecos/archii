@@ -15,8 +15,6 @@ import { initializeApp, cert, getApps, getApp, type App } from 'firebase-admin/a
 import { getFirestore, type Firestore, type FieldValue } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
-const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026';
-
 // Track initialization status for diagnostics
 let _initMethod = 'none';
 let _initError: string | null = null;
@@ -25,7 +23,7 @@ let _initError: string | null = null;
  * Returns a description of how the Admin SDK was initialized.
  */
 export function getAdminInitStatus(): { method: string; error: string | null; projectId: string } {
-  return { method: _initMethod, error: _initError, projectId: FIREBASE_PROJECT_ID };
+  return { method: _initMethod, error: _initError, projectId: getAdminProjectId() };
 }
 
 // Credenciales para firebase-admin desde variables de entorno
@@ -34,9 +32,12 @@ function getAdminConfig() {
   const credJson = process.env.FIREBASE_ADMIN_CREDENTIALS;
   if (credJson) {
     try {
+      const parsed = JSON.parse(credJson);
       _initMethod = 'FIREBASE_ADMIN_CREDENTIALS';
-      console.log('[ArchiFlow Admin] Using FIREBASE_ADMIN_CREDENTIALS');
-      return cert(JSON.parse(credJson));
+      console.log(`[ArchiFlow Admin] Using FIREBASE_ADMIN_CREDENTIALS (project: ${parsed.project_id})`);
+      // Sync project ID from credentials to avoid mismatch
+      if (parsed.project_id) FIREBASE_PROJECT_ID_OVERRIDEN = parsed.project_id;
+      return cert(parsed);
     } catch (e) {
       _initError = `Error parsing FIREBASE_ADMIN_CREDENTIALS: ${e instanceof Error ? e.message : e}`;
       console.error('[ArchiFlow Admin]', _initError);
@@ -65,6 +66,7 @@ function getAdminConfig() {
       if (parsed.client_email && parsed.private_key) {
         _initMethod = 'GOOGLE_APPLICATION_CREDENTIALS (JSON)';
         console.log('[ArchiFlow Admin] Using GOOGLE_APPLICATION_CREDENTIALS as JSON');
+        if (parsed.project_id) FIREBASE_PROJECT_ID_OVERRIDEN = parsed.project_id;
         return cert(parsed);
       }
     } catch {
@@ -84,14 +86,23 @@ function getAdminConfig() {
 let _adminApp: ReturnType<typeof initializeApp> | null = null;
 let _adminDb: ReturnType<typeof getFirestore> | null = null;
 
+// Allow project_id override from credentials JSON to avoid mismatch
+let FIREBASE_PROJECT_ID_OVERRIDEN: string | null = null;
+
+export function getAdminProjectId(): string {
+  return FIREBASE_PROJECT_ID_OVERRIDEN || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026';
+}
+
 export function getAdminApp(): App {
   if (_adminApp) return _adminApp;
   if (getApps().length > 0) {
     _adminApp = getApp();
   } else {
+    // getAdminConfig() may set FIREBASE_PROJECT_ID_OVERRIDEN
+    const credential = getAdminConfig();
     _adminApp = initializeApp({
-      projectId: FIREBASE_PROJECT_ID,
-      credential: getAdminConfig(),
+      projectId: FIREBASE_PROJECT_ID_OVERRIDEN || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026',
+      credential,
     });
   }
   return _adminApp;
