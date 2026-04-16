@@ -12,7 +12,20 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
 
-const FV = getAdminFieldValue();
+// Lazy init for FieldValue — avoids crashing at module load if Admin SDK isn't ready
+let _FV: ReturnType<typeof getAdminFieldValue> | null = null;
+function FV(): ReturnType<typeof getAdminFieldValue> {
+  if (!_FV) {
+    try {
+      _FV = getAdminFieldValue();
+    } catch (err) {
+      console.warn('[AI Tools] FieldValue init failed:', err);
+      // Provide a minimal fallback so tools don't crash
+      return { serverTimestamp: () => new Date(), deleteField: () => ({ __delete__: true }), arrayUnion: (...items: unknown[]) => ({ __arrayUnion__: items }), arrayRemove: (...items: unknown[]) => ({ __arrayRemove__: items }), increment: (n: number) => ({ __increment__: n }) } as unknown as ReturnType<typeof getAdminFieldValue>;
+    }
+  }
+  return _FV;
+}
 
 /** Admin SDK document spread type — preserves dynamic fields with proper typing. */
 type AdminDoc = Record<string, unknown> & { id: string };
@@ -43,13 +56,14 @@ export function createAgentTools(userId: string) {
             projectId: string; title: string; description?: string; priority?: string;
             dueDate?: string; assigneeId?: string; phase?: string;
           };
+          const fv = FV();
           const ref = await db.collection('tasks').add({
             title, description: description || '', priority: priority || 'Media',
             status: 'Pendiente', dueDate: dueDate || '',
             assignees: assigneeId ? [assigneeId] : [],
             phase: phase || '',
-            createdAt: FV.serverTimestamp(), createdBy: userId,
-            updatedAt: FV.serverTimestamp(), projectId,
+            createdAt: fv.serverTimestamp(), createdBy: userId,
+            updatedAt: fv.serverTimestamp(), projectId,
           });
           return { success: true, id: ref.id, action: 'created', message: `Tarea "${title}" creada` };
         } catch (err: unknown) {
@@ -68,7 +82,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { taskId, newStatus } = args as { taskId: string; newStatus: string };
-          await db.collection('tasks').doc(taskId).update({ status: newStatus, updatedAt: FV.serverTimestamp(), updatedBy: userId });
+          await db.collection('tasks').doc(taskId).update({ status: newStatus, updatedAt: FV().serverTimestamp(), updatedBy: userId });
           return { success: true, message: `Tarea → ${newStatus}` };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Error desconocido';
@@ -97,7 +111,7 @@ export function createAgentTools(userId: string) {
             concept, amount, category: category || 'Otro',
             date: date || new Date().toISOString().split('T')[0],
             supplier: supplier || '',
-            createdAt: FV.serverTimestamp(), createdBy: userId, projectId,
+            createdAt: FV().serverTimestamp(), createdBy: userId, projectId,
           });
           return { success: true, message: `Gasto $${amount.toLocaleString('es-CO')} registrado` };
         } catch (err: unknown) {
@@ -123,7 +137,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { taskId, ...fields } = args as { taskId: string; title?: string; description?: string; priority?: string; dueDate?: string };
-          const updateData: Record<string, unknown> = { updatedAt: FV.serverTimestamp(), updatedBy: userId };
+          const updateData: Record<string, unknown> = { updatedAt: FV().serverTimestamp(), updatedBy: userId };
           if (fields.title !== undefined) updateData.title = fields.title;
           if (fields.description !== undefined) updateData.description = fields.description;
           if (fields.priority !== undefined) updateData.priority = fields.priority;
@@ -473,7 +487,7 @@ export function createAgentTools(userId: string) {
             status: 'Borrador', items: invoiceItems,
             subtotal, tax, total,
             notes: notes || '', issueDate: today, dueDate: dueDate || '',
-            createdAt: FV.serverTimestamp(), createdBy: userId,
+            createdAt: FV().serverTimestamp(), createdBy: userId,
           });
 
           return {
@@ -642,7 +656,7 @@ export function createAgentTools(userId: string) {
             validUntil, notes: notes || '', internalNotes: '',
             terms: 'La cotización tiene vigencia de 30 días. Precios sujetos a disponibilidad.',
             bankName: '', bankAccount: '', bankAccountType: '', bankHolder: '',
-            createdAt: FV.serverTimestamp(), createdBy: userId,
+            createdAt: FV().serverTimestamp(), createdBy: userId,
           });
 
           const secSummary = quotationSections.map(s =>
@@ -723,7 +737,7 @@ export function createAgentTools(userId: string) {
             description: description || '',
             attendees: attendees || [],
             createdBy: userId,
-            createdAt: FV.serverTimestamp(),
+            createdAt: FV().serverTimestamp(),
             recurrence: 'none',
           });
           const durationStr = duration ? `${duration} min` : '60 min';
