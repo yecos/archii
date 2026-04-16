@@ -1105,6 +1105,7 @@ export const NAV_ITEMS = [
   { id: 'timeLapse', icon: '🎬', label: 'Time-Lapse' },
   { id: 'apiWebhooks', icon: '🔗', label: 'API & Webhooks' },
   { id: 'multiTenant', icon: '🏢', label: 'Multitenant' },
+  { id: 'install', icon: '📲', label: 'Instalar App' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1148,6 +1149,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   timeLapse: 'Time-Lapse Automático',
   apiWebhooks: 'API & Webhooks',
   multiTenant: 'Multitenant',
+  install: 'Instalar App',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1265,6 +1267,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'timeLapse', label: 'Time-lapse', icon: '🎬' },
       { id: 'apiWebhooks', label: 'API & Webhooks', icon: '🔗' },
       { id: 'multiTenant', label: 'Multitenant', icon: '🏢' },
+      { id: 'install', label: 'Instalar App', icon: '📲' },
     ],
   },
 ];

@@ -9,6 +9,7 @@ import {
   Sparkles, Timer, Receipt, BarChart3, ChevronDown, ClipboardList, ShoppingCart,
   FileSearch, ClipboardCheck as InspectionIcon, FilePen, HardHat,
   Briefcase, Palette, GalleryHorizontalEnd, FileSpreadsheet, LayoutTemplate,
+  Download,
 } from 'lucide-react';
 
 /** Firebase auth user — loaded via CDN, so no npm type available. */
@@ -80,6 +81,7 @@ const ITEM_ICONS: Record<string, React.ReactNode> = {
   team: <Users size={18} className="stroke-current" />,
   settings: <Palette size={18} className="stroke-current" />,
   admin: <Settings size={18} className="stroke-current" />,
+  install: <Download size={18} className="stroke-current" />,
 };
 
 /* ===== Badge mapping ===== */
