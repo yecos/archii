@@ -4,7 +4,7 @@ import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { useOneDriveContext } from './OneDriveContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
-import { PROJECT_TEMPLATES } from '@/components/modals/ProjectModal';
+import { findTemplateById, flattenTemplateTasks } from '@/lib/templates';
 import type { Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, Company, Subtask } from '@/lib/types';
 import { DEFAULT_PHASES } from '@/lib/types';
 import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
@@ -275,24 +275,39 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         // Create template tasks + phases if template selected
         const tplId = forms.projTemplate;
         if (tplId) {
-          const tpl = PROJECT_TEMPLATES.find(t => t.id === tplId);
-          if (tpl && (tpl.tasks.length > 0 || tpl.phases.length > 0)) {
-            const batch = db.batch();
-            tpl.tasks.forEach((taskTitle: string, idx: number) => {
-              batch.set(db.collection('tasks').doc(), {
-                projectId: ref.id, title: taskTitle, status: 'Por hacer', priority: 'Media',
-                assigneeId: '', dueDate: '', description: '', progress: 0,
-                createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order: idx,
+          const tpl = findTemplateById(tplId);
+          if (tpl) {
+            const flatTasks = flattenTemplateTasks(tpl);
+            if (flatTasks.length > 0) {
+              const batch = db.batch();
+              // Create tasks with phase association
+              flatTasks.forEach(({ phase, task, order }) => {
+                batch.set(db.collection('tasks').doc(), {
+                  projectId: ref.id, title: task, status: 'Por hacer', priority: 'Media',
+                  assigneeId: '', dueDate: '', description: '', progress: 0, phase: phase || '',
+                  createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order,
+                });
               });
-            });
-            tpl.phases.forEach((phaseName: string, idx: number) => {
-              batch.set(db.collection('workPhases').doc(), {
-                projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
-                startDate: '', endDate: '', description: '',
-                createdAt: ts, updatedAt: ts,
-              });
-            });
-            await batch.commit();
+              // Create work phases
+              if (tpl.phasesData?.length) {
+                tpl.phasesData.forEach((phaseData, idx: number) => {
+                  batch.set(db.collection('workPhases').doc(), {
+                    projectId: ref.id, name: phaseData.name, status: 'Pendiente', order: idx,
+                    startDate: '', endDate: '', description: '',
+                    createdAt: ts, updatedAt: ts,
+                  });
+                });
+              } else if (tpl.phases?.length) {
+                tpl.phases.forEach((phaseName: string, idx: number) => {
+                  batch.set(db.collection('workPhases').doc(), {
+                    projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
+                    startDate: '', endDate: '', description: '',
+                    createdAt: ts, updatedAt: ts,
+                  });
+                });
+              }
+              await batch.commit();
+            }
           }
         }
       }

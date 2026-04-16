@@ -5,97 +5,13 @@ import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3, Layout, ArrowRight } from 'lucide-react';
-import type { ProjectTemplate } from '@/lib/types';
-
-/* ===== LOCAL TYPES ===== */
-
-interface TemplatePhase {
-  id: string;
-  name: string;
-  tasks: string[];
-}
-
-interface CustomTemplate extends ProjectTemplate {
-  phasesData: TemplatePhase[];
-  isBuiltIn?: boolean;
-}
+import {
+  BUILT_IN_TEMPLATES, firestoreDocToTemplate,
+  countTemplateTasks, countTemplatePhases,
+  type UnifiedTemplate, type TemplatePhase,
+} from '@/lib/templates';
 
 const ICON_OPTIONS = ['🏠', '🏢', '🏗️', '🔨', '📐', '🏠', '🏬', '✨', '🌍', '📐'];
-
-/* ===== BUILT-IN TEMPLATES ===== */
-
-const BUILT_IN_TEMPLATES: CustomTemplate[] = [
-  {
-    id: 'residencial',
-    name: 'Residencial',
-    icon: '🏠',
-    description: 'Plantilla para proyectos de vivienda residencial con fases completas de construcción',
-    phases: ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'],
-    tasks: ['Diseño arquitectónico', 'Estudio de suelos', 'Licencias', 'Cimentación', 'Muros estructurales', 'Cubierta', 'Instalación eléctrica', 'Instalación hidráulica', 'Acabados de piso', 'Acabados de pared', 'Carpintería', 'Pintura', 'Entrega final'],
-    phasesData: [
-      { id: 'p1', name: 'Planos', tasks: ['Diseño arquitectónico', 'Diseño estructural', 'Estudio de suelos', 'Licencias y permisos'] },
-      { id: 'p2', name: 'Cimentación', tasks: ['Excavación', 'Zapatas', 'Vigas de cimentación', 'Losa de entrepiso'] },
-      { id: 'p3', name: 'Estructura', tasks: ['Muros estructurales', 'Columnas', 'Vigas', 'Cubierta'] },
-      { id: 'p4', name: 'Instalaciones', tasks: ['Instalación eléctrica', 'Instalación hidráulica', 'Instalación sanitaria', 'Gas'] },
-      { id: 'p5', name: 'Acabados', tasks: ['Muros divisorios', 'Acabados de piso', 'Acabados de pared', 'Carpintería', 'Pintura', 'Instalaciones finales'] },
-      { id: 'p6', name: 'Entrega', tasks: ['Limpieza final', 'Pruebas de instalaciones', 'Acta de entrega'] },
-    ],
-    isBuiltIn: true,
-  },
-  {
-    id: 'comercial',
-    name: 'Comercial',
-    icon: '🏢',
-    description: 'Plantilla para proyectos de construcción comercial, oficinas y locales',
-    phases: ['Diseño', 'Permisos', 'Obra Civil', 'Instalaciones', 'Acabados', 'Entrega'],
-    tasks: ['Estudio de mercado', 'Diseño comercial', 'Obra civil', 'Instalaciones técnicas', 'Acabados comerciales', 'Señalización', 'Entrega'],
-    phasesData: [
-      { id: 'c1', name: 'Diseño', tasks: ['Estudio de mercado', 'Diseño arquitectónico', 'Diseño de interiores'] },
-      { id: 'c2', name: 'Permisos', tasks: ['Licencia de construcción', 'Estudios ambientales', 'Aprobación de planos'] },
-      { id: 'c3', name: 'Obra Civil', tasks: ['Cimentación', 'Estructura', 'Cerramientos', 'Cubierta'] },
-      { id: 'c4', name: 'Instalaciones', tasks: ['Eléctrica', 'Hidráulica', 'HVAC', 'Incendio'] },
-      { id: 'c5', name: 'Acabados', tasks: ['Pisos', 'Techos falsos', 'Vidriería', 'Carpintería', 'Pintura'] },
-      { id: 'c6', name: 'Entrega', tasks: ['Señalización', 'Limpieza', 'Pruebas', 'Acta de entrega'] },
-    ],
-    isBuiltIn: true,
-  },
-  {
-    id: 'remodelacion',
-    name: 'Remodelación',
-    icon: '🔨',
-    description: 'Plantilla para proyectos de remodelación y renovación de espacios existentes',
-    phases: ['Diagnóstico', 'Diseño', 'Demolición', 'Reconstrucción', 'Acabados', 'Entrega'],
-    tasks: ['Inspección inicial', 'Diseño de remodelación', 'Demolición selectiva', 'Reparaciones', 'Nuevas instalaciones', 'Acabados', 'Entrega'],
-    phasesData: [
-      { id: 'r1', name: 'Diagnóstico', tasks: ['Inspección inicial', 'Levantamiento', 'Diagnóstico estructural'] },
-      { id: 'r2', name: 'Diseño', tasks: ['Diseño de remodelación', 'Presupuesto', 'Materiales'] },
-      { id: 'r3', name: 'Demolición', tasks: ['Demolición selectiva', 'Retiro de escombros', 'Limpieza'] },
-      { id: 'r4', name: 'Reconstrucción', tasks: ['Reparaciones estructurales', 'Nuevos muros', 'Modificaciones'] },
-      { id: 'r5', name: 'Acabados', tasks: ['Instalaciones', 'Acabados de piso', 'Acabados de pared', 'Carpintería', 'Pintura'] },
-      { id: 'r6', name: 'Entrega', tasks: ['Limpieza final', 'Pruebas', 'Acta de entrega'] },
-    ],
-    isBuiltIn: true,
-  },
-  {
-    id: 'obra-nueva',
-    name: 'Obra Nueva',
-    icon: '🏗️',
-    description: 'Plantilla completa para construcción de obra nueva desde cero',
-    phases: ['Planeación', 'Diseño', 'Licencias', 'Preparación', 'Construcción', 'Instalaciones', 'Acabados', 'Entrega'],
-    tasks: ['Estudio del terreno', 'Diseño completo', 'Permisos', 'Movimiento de tierras', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Paisajismo', 'Entrega'],
-    phasesData: [
-      { id: 'n1', name: 'Planeación', tasks: ['Estudio del terreno', 'Topografía', 'Análisis ambiental', 'Presupuesto'] },
-      { id: 'n2', name: 'Diseño', tasks: ['Diseño arquitectónico', 'Diseño estructural', 'Diseño de instalaciones', 'Modelado 3D'] },
-      { id: 'n3', name: 'Licencias', tasks: ['Licencia de construcción', 'Planos aprobados', 'Permisos ambientales'] },
-      { id: 'n4', name: 'Preparación', tasks: ['Limpieza del terreno', 'Movimiento de tierras', 'Campamento de obra', 'Vallas'] },
-      { id: 'n5', name: 'Construcción', tasks: ['Cimentación', 'Estructura', 'Muros', 'Cubierta', 'Escaleras'] },
-      { id: 'n6', name: 'Instalaciones', tasks: ['Eléctrica', 'Hidráulica', 'Sanitaria', 'Gas', 'Telecomunicaciones'] },
-      { id: 'n7', name: 'Acabados', tasks: ['Pisos', 'Paredes', 'Carpintería', 'Herrería', 'Pintura'] },
-      { id: 'n8', name: 'Entrega', tasks: ['Paisajismo', 'Limpieza', 'Pruebas', 'Documentación', 'Acta de entrega'] },
-    ],
-    isBuiltIn: true,
-  },
-];
 
 const emptyPhase = (): TemplatePhase => ({
   id: `phase-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -108,9 +24,9 @@ export default function TemplatesScreen() {
   const auth = useAuth();
   const { showToast } = ui;
 
-  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<UnifiedTemplate[]>([]);
   const [tab, setTab] = useState<'gallery' | 'preview' | 'editor'>('gallery');
-  const [selectedTemplate, setSelectedTemplate] = useState<CustomTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<UnifiedTemplate | null>(null);
 
   // Editor form state
   const [formName, setFormName] = useState('');
@@ -124,12 +40,7 @@ export default function TemplatesScreen() {
     const db = getFirebase().firestore();
     const unsub = db.collection('projectTemplates').onSnapshot((snap: QuerySnapshot) => {
       const docs = snapToDocs(snap);
-      const parsed = docs.map((d) => ({
-        ...d.data,
-        id: d.id,
-        isBuiltIn: false,
-        phasesData: d.data.phasesData || [],
-      })) as CustomTemplate[];
+      const parsed = docs.map((d) => firestoreDocToTemplate(d));
       setCustomTemplates(parsed);
     }, (err: Error) => console.error('[ArchiFlow] Templates: listen error:', err));
     return () => unsub();
@@ -139,36 +50,26 @@ export default function TemplatesScreen() {
     return [...BUILT_IN_TEMPLATES, ...customTemplates];
   }, [customTemplates]);
 
-  const totalTasks = (template: CustomTemplate) => {
-    const phaseTasks = template.phasesData?.reduce((s, p) => s + (p.tasks?.length || 0), 0) || 0;
-    return phaseTasks || template.tasks?.length || 0;
-  };
-
-  const phaseCount = (template: CustomTemplate) => {
-    return template.phasesData?.length || template.phases?.length || 0;
-  };
-
   // Open preview
-  const openPreview = (template: CustomTemplate) => {
+  const openPreview = (template: UnifiedTemplate) => {
     setSelectedTemplate(template);
     setTab('preview');
   };
 
-  // Create project from template
-  const createProjectFromTemplate = (template: CustomTemplate) => {
-    showToast('Navegando a crear proyecto con plantilla...', 'info');
-    // Use UI context to navigate to projects with template data
-    ui.setForms((prev: Record<string, any>) => ({
+  // Create project from template — NOW OPENS THE PROJECT MODAL
+  const createProjectFromTemplate = (template: UnifiedTemplate) => {
+    ui.setForms((prev: Record<string, string>) => ({
       ...prev,
       projTemplate: template.id,
-      projTemplateName: template.name,
-      projTemplatePhases: template.phasesData?.map(p => ({ name: p.name, tasks: p.tasks })) || template.phases,
+      projDesc: template.description || '',
+      projStatus: 'Concepto',
     }));
-    ui.navigateTo('projects');
+    ui.openModal('project');
+    showToast(`Plantilla "${template.name}" seleccionada`, 'info');
   };
 
   // Open editor for new template
-  const openEditor = (template?: CustomTemplate) => {
+  const openEditor = (template?: UnifiedTemplate) => {
     if (template) {
       setEditingId(template.id);
       setFormName(template.name);
@@ -195,7 +96,7 @@ export default function TemplatesScreen() {
       const phases = formPhases.filter(p => p.name.trim());
       const allTasks = phases.flatMap(p => p.tasks.filter(t => t.trim()));
 
-      const data: Record<string, any> = {
+      const data: Record<string, unknown> = {
         name: formName.trim(),
         icon: formIcon,
         description: formDescription,
@@ -209,8 +110,8 @@ export default function TemplatesScreen() {
         await db.collection('projectTemplates').doc(editingId).update(data);
         showToast('Plantilla actualizada');
       } else {
-        data.createdAt = ts;
-        data.createdBy = auth.authUser?.uid || '';
+        (data as Record<string, unknown>).createdAt = ts;
+        (data as Record<string, unknown>).createdBy = auth.authUser?.uid || '';
         await db.collection('projectTemplates').add(data);
         showToast('✅ Plantilla creada');
       }
@@ -289,8 +190,8 @@ export default function TemplatesScreen() {
         <div className="card-elevated rounded-xl p-4">
           <p className="text-sm text-[var(--muted-foreground)]">{selectedTemplate.description}</p>
           <div className="flex gap-4 mt-2 text-[11px] text-[var(--af-text3)]">
-            <span>{phaseCount(selectedTemplate)} fases</span>
-            <span>{totalTasks(selectedTemplate)} tareas</span>
+            <span>{countTemplatePhases(selectedTemplate)} fases</span>
+            <span>{countTemplateTasks(selectedTemplate)} tareas</span>
           </div>
         </div>
 
@@ -413,7 +314,7 @@ export default function TemplatesScreen() {
       {/* Built-in templates */}
       <div className="space-y-3">
         <div className="text-[13px] font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Plantillas Incluidas</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {BUILT_IN_TEMPLATES.map(template => (
             <div key={template.id} className="card-glass-subtle rounded-xl p-4 card-glass-hover cursor-pointer transition-all group" onClick={() => openPreview(template)}>
               <div className="flex items-center gap-3 mb-3">
@@ -423,9 +324,9 @@ export default function TemplatesScreen() {
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-semibold truncate">{template.name}</div>
                   <div className="flex gap-2 text-[10px] text-[var(--af-text3)]">
-                    <span>{phaseCount(template)} fases</span>
+                    <span>{countTemplatePhases(template)} fases</span>
                     <span>·</span>
-                    <span>{totalTasks(template)} tareas</span>
+                    <span>{countTemplateTasks(template)} tareas</span>
                   </div>
                 </div>
               </div>
@@ -456,7 +357,7 @@ export default function TemplatesScreen() {
             compact
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {customTemplates.map(template => (
               <div key={template.id} className="card-glass-subtle rounded-xl p-4 card-glass-hover cursor-pointer transition-all group" onClick={() => openPreview(template)}>
                 <div className="flex items-center gap-3 mb-3">
@@ -466,9 +367,9 @@ export default function TemplatesScreen() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold truncate">{template.name}</div>
                     <div className="flex gap-2 text-[10px] text-[var(--af-text3)]">
-                      <span>{phaseCount(template)} fases</span>
+                      <span>{countTemplatePhases(template)} fases</span>
                       <span>·</span>
-                      <span>{totalTasks(template)} tareas</span>
+                      <span>{countTemplateTasks(template)} tareas</span>
                     </div>
                   </div>
                 </div>
