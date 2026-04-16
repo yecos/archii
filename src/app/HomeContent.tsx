@@ -84,6 +84,7 @@ const PredictiveAIScreen = dynamic(() => import('@/screens/PredictiveAIScreen'),
 const OfflineStatusScreen = dynamic(() => import('@/screens/OfflineStatusScreen'), { ssr: false });
 const ReportGeneratorScreen = dynamic(() => import('@/screens/ReportGeneratorScreen'), { ssr: false });
 const AutomationScreen = dynamic(() => import('@/screens/AutomationScreen'), { ssr: false });
+const QRScannerScreen = dynamic(() => import('@/screens/QRScannerScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -236,6 +237,7 @@ function AppContent() {
             {displayScreen === 'offlineStatus' && <ErrorBoundary label="Estado Offline"><OfflineStatusScreen /></ErrorBoundary>}
             {displayScreen === 'reportGenerator' && <ErrorBoundary label="Generador de Reportes"><ReportGeneratorScreen /></ErrorBoundary>}
             {displayScreen === 'automations' && <ErrorBoundary label="Flujos Automatizados"><AutomationScreen /></ErrorBoundary>}
+            {displayScreen === 'qrScanner' && <ErrorBoundary label="Escáner QR"><QRScannerScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

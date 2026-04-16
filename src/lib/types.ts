@@ -1053,6 +1053,7 @@ export const NAV_ITEMS = [
   { id: 'predictiveAI', icon: '🧠', label: 'IA Predictiva' },
   { id: 'offlineStatus', icon: '📡', label: 'Estado Offline' },
   { id: 'automations', icon: '⚡', label: 'Automatizaciones' },
+  { id: 'qrScanner', icon: '📷', label: 'Escáner QR' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1089,6 +1090,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   predictiveAI: 'IA Predictiva',
   offlineStatus: 'Estado Offline',
   automations: 'Flujos Automatizados',
+  qrScanner: 'Escáner QR',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1188,6 +1190,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'predictiveAI', label: 'IA Predictiva', icon: '🧠' },
       { id: 'templates', label: 'Templates', icon: '📐' },
       { id: 'automations', label: 'Automatizaciones', icon: '⚡' },
+      { id: 'qrScanner', label: 'Escáner QR', icon: '📷' },
     ],
   },
   {
