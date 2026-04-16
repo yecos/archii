@@ -219,7 +219,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
           const errorMessage: Message = {
             id: `msg-${Date.now() + 1}`,
             role: 'assistant',
-            content: `⚠️ ${data.error}\n\n${data.help}`,
+            content: `⚠️ ${typeof data.error === 'string' ? data.error : String(data.error ?? 'Error desconocido')}\n\n${typeof data.help === 'string' ? data.help : ''}`,
             timestamp: new Date(),
             isError: true,
             isSetupRequired: true,
@@ -230,7 +230,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
           const errorMessage: Message = {
             id: `msg-${Date.now() + 1}`,
             role: 'assistant',
-            content: `⚠️ ${data.error || 'Error desconocido'}`,
+            content: `⚠️ ${typeof data.error === 'string' ? data.error : String(data.error ?? 'Error desconocido')}`,
             timestamp: new Date(),
             isError: true,
           };
@@ -242,7 +242,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       const assistantMessage: Message = {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
-        content: data.message,
+        content: typeof data.message === 'string' ? data.message : JSON.stringify(data.message ?? ''),
         displayContent: '',
         timestamp: new Date(),
         isTyping: true,

@@ -324,8 +324,8 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
                             </span>
                           </td>
                           {/* Entity Name */}
-                          <td className="py-2.5 px-3 font-medium max-w-[200px] truncate" title={entry.data.entityName}>
-                            {entry.data.entityName}
+                          <td className="py-2.5 px-3 font-medium max-w-[200px] truncate" title={String(entry.data.entityName ?? '')}>
+                            {String(entry.data.entityName ?? '')}
                           </td>
                           {/* Changes preview */}
                           <td className="py-2.5 px-3 text-[var(--muted-foreground)] max-w-[300px]">
@@ -394,11 +394,11 @@ export default function AuditLogTable({ teamUsers = [], projects = [] }: AuditLo
                   </div>
 
                   {/* Details */}
-                  <div className="text-sm font-medium mb-1">{entry.data.entityName}</div>
+                  <div className="text-sm font-medium mb-1">{String(entry.data.entityName ?? '')}</div>
                   <div className="text-[11px] text-[var(--muted-foreground)] mb-2">
                     <span>{AUDIT_ENTITY_LABELS[entry.data.entityType]}</span>
                     <span className="mx-1.5">·</span>
-                    <span>{entry.data.userName}</span>
+                    <span>{String(entry.data.userName ?? '')}</span>
                     {entry.data.projectId && (
                       <>
                         <span className="mx-1.5">·</span>

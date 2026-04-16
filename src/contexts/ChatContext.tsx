@@ -26,26 +26,41 @@ interface FileAttachment {
 
 /** Sanitize Firestore message data to ensure all renderable fields are primitives */
 function sanitizeMessage(raw: Record<string, unknown>): Record<string, unknown> {
-  const msg = { ...raw };
-  // Ensure text fields are strings
+  const msg: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (val == null) { msg[key] = val; continue; }
+    // Convert Firestore Timestamp to Date
+    if (typeof val === 'object' && !Array.isArray(val) && 'toDate' in (val as object) && typeof (val as { toDate: unknown }).toDate === 'function') {
+      msg[key] = (val as { toDate: () => Date }).toDate();
+      continue;
+    }
+    // Keep primitives as-is
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      msg[key] = val;
+      continue;
+    }
+    // Convert Date objects (already converted or native)
+    if (val instanceof Date) {
+      msg[key] = val;
+      continue;
+    }
+    // Nested object (e.g., replyTo) — recurse to sanitize
+    if (typeof val === 'object' && !Array.isArray(val)) {
+      msg[key] = sanitizeMessage(val as Record<string, unknown>);
+      continue;
+    }
+    // Arrays — keep as-is (e.g., reactions)
+    if (Array.isArray(val)) {
+      msg[key] = val;
+      continue;
+    }
+    // Fallback: convert anything else to string (DocumentReferences, GeoPoints, etc.)
+    msg[key] = String(val);
+  }
+  // Ensure critical text fields are always strings
   if (typeof msg.text !== 'string') msg.text = msg.text != null ? String(msg.text) : '';
   if (typeof msg.userName !== 'string') msg.userName = msg.userName != null ? String(msg.userName) : 'Usuario';
   if (typeof msg.type !== 'string') msg.type = 'TEXT';
-  if (typeof msg.fileName !== 'string') msg.fileName = msg.fileName != null ? String(msg.fileName) : '';
-  if (typeof msg.fileType !== 'string') msg.fileType = msg.fileType != null ? String(msg.fileType) : '';
-  if (typeof msg.uid !== 'string') msg.uid = msg.uid != null ? String(msg.uid) : '';
-  // Convert Firestore Timestamp to native Date for createdAt
-  if (msg.createdAt != null && typeof msg.createdAt === 'object' && 'toDate' in (msg.createdAt as object)) {
-    msg.createdAt = (msg.createdAt as { toDate: () => Date }).toDate();
-  }
-  // Sanitize replyTo sub-object if present
-  if (msg.replyTo != null && typeof msg.replyTo === 'object') {
-    const rt = { ...(msg.replyTo as Record<string, unknown>) };
-    if (typeof rt.userName !== 'string') rt.userName = rt.userName != null ? String(rt.userName) : 'Usuario';
-    if (typeof rt.text !== 'string') rt.text = rt.text != null ? String(rt.text) : '';
-    if (typeof rt.uid !== 'string') rt.uid = rt.uid != null ? String(rt.uid) : '';
-    msg.replyTo = rt;
-  }
   return msg;
 }
 interface ChatContextType {

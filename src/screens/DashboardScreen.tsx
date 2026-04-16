@@ -241,16 +241,16 @@ function RecentActivityWidget({ tasks, expenses, dailyLogs, projects, invoices }
     const items: { id: string; type: string; icon: string; color: string; title: string; subtitle: string; time: FirestoreTimestamp | null | undefined }[] = [];
 
     tasks.filter((t: Task) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 5).forEach((t: Task) => {
-      items.push({ id: `tc-${t.id}`, type: 'task', icon: '✅', color: 'bg-emerald-500', title: t.data.title, subtitle: `Tarea completada · ${projects.find((p: Project) => p.id === t.data.projectId)?.data?.name || ''}`, time: t.data.updatedAt });
+      items.push({ id: `tc-${t.id}`, type: 'task', icon: '✅', color: 'bg-emerald-500', title: String(t.data.title ?? ''), subtitle: `Tarea completada · ${String(projects.find((p: Project) => p.id === t.data.projectId)?.data?.name || '')}`, time: t.data.updatedAt });
     });
     expenses.slice(0, 5).forEach((e: Expense) => {
-      items.push({ id: `exp-${e.id}`, type: 'expense', icon: '💰', color: 'bg-[var(--af-accent)]', title: e.data.concept, subtitle: `${fmtCOP(Number(e.data.amount))} · ${e.data.category}`, time: e.data.createdAt });
+      items.push({ id: `exp-${e.id}`, type: 'expense', icon: '💰', color: 'bg-[var(--af-accent)]', title: String(e.data.concept ?? ''), subtitle: `${fmtCOP(Number(e.data.amount))} · ${String(e.data.category ?? '')}`, time: e.data.createdAt });
     });
     invoices.slice(0, 3).forEach((inv: Invoice) => {
-      items.push({ id: `inv-${inv.id}`, type: 'invoice', icon: '🧾', color: 'bg-purple-500', title: `Factura ${inv.data.number || ''}`.trim(), subtitle: `${fmtCOP(Number(inv.data.total))} · ${inv.data.status}`, time: inv.data.createdAt });
+      items.push({ id: `inv-${inv.id}`, type: 'invoice', icon: '🧾', color: 'bg-purple-500', title: `Factura ${String(inv.data.number || '')}`.trim(), subtitle: `${fmtCOP(Number(inv.data.total))} · ${String(inv.data.status ?? '')}`, time: inv.data.createdAt });
     });
     dailyLogs.slice(0, 3).forEach((l: DailyLog) => {
-      items.push({ id: `dl-${l.id}`, type: 'log', icon: '📝', color: 'bg-blue-500', title: `Bitácora ${l.data.date}`, subtitle: `${(l.data.activities || []).length} actividades`, time: l.data.createdAt });
+      items.push({ id: `dl-${l.id}`, type: 'log', icon: '📝', color: 'bg-blue-500', title: `Bitácora ${String(l.data.date ?? '')}`, subtitle: `${(l.data.activities || []).length} actividades`, time: l.data.createdAt });
     });
 
     items.sort((a, b) => {

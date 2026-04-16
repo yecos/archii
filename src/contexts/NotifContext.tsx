@@ -351,13 +351,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       newTasks.forEach(t => {
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif('📋 Nueva tarea asignada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: 'task_assigned' });
+          sendBrowserNotif('📋 Nueva tarea asignada', `"${String(t.data.title ?? '')}"${proj ? ` — ${String(proj.data.name)}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: 'task_assigned' });
         }
       });
       changedTasks.forEach(t => {
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif(t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''} · ${t.data.status}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: t.data.status === 'Completado' ? 'task_completed' as NotifEventType : 'task_assigned' as NotifEventType });
+          sendBrowserNotif(t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada', `"${String(t.data.title ?? '')}"${proj ? ` — ${String(proj.data.name)}` : ''} · ${String(t.data.status ?? '')}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id, eventType: t.data.status === 'Completado' ? 'task_completed' as NotifEventType : 'task_assigned' as NotifEventType });
         }
       });
     }
@@ -373,7 +373,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (newMeetings.length > 0 && notifPrefs.meetings) {
       newMeetings.forEach(m => {
         const proj = projects.find(p => p.id === m.data.projectId);
-        sendBrowserNotif('📅 Nueva reunión programada', `"${m.data.title}"${m.data.time ? ` a las ${m.data.time}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `meeting-${m.id}`, { type: 'meeting', screen: 'calendar', itemId: m.id, eventType: 'meeting_reminder' });
+        sendBrowserNotif('📅 Nueva reunión programada', `"${String(m.data.title ?? '')}"${m.data.time ? ` a las ${String(m.data.time)}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${String(proj.data.name)}` : ''}`, undefined, `meeting-${m.id}`, { type: 'meeting', screen: 'calendar', itemId: m.id, eventType: 'meeting_reminder' });
       });
     }
     prevMeetingsRef.current = meetings;
@@ -391,10 +391,10 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     if (notifPrefs.approvals) {
       newApprovals.forEach(a => {
-        sendBrowserNotif('📋 Nueva solicitud de aprobación', `"${a.data.title}" · Pendiente de revisión`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
+        sendBrowserNotif('📋 Nueva solicitud de aprobación', `"${String(a.data.title ?? '')}" · Pendiente de revisión`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
       });
       changedApprovals.forEach(a => {
-        sendBrowserNotif(a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada', `"${a.data.title}" · ${a.data.status}`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
+        sendBrowserNotif(a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada', `"${String(a.data.title ?? '')}" · ${String(a.data.status ?? '')}`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId, eventType: 'approval_action' });
       });
     }
     prevApprovalsRef.current = approvals;
@@ -439,13 +439,13 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     });
     if (notifPrefs.projects) {
       newCO.forEach((co) => {
-        sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${co.data.title || co.data.number}" · ${co.data.status}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+        sendBrowserNotif('🔄 Nuevo cambio solicitado', `"${String(co.data.title || co.data.number ?? '')}" · ${String(co.data.status ?? '')}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
       });
       changedCO.forEach((co) => {
         const statusEmoji = co.data.status === 'Aprobada' ? '✅' : co.data.status === 'Rechazada' ? '❌' : co.data.status === 'Implementada' ? '🎉' : '📝';
         const isUrgent = co.data.status === 'Aprobada' || co.data.status === 'Rechazada';
         const fn = isUrgent ? sendBrowserNotif : sendNotif;
-        fn(`${statusEmoji} Cambio de orden ${co.data.status.toLowerCase()}`, `"${co.data.title || co.data.number}"${co.data.impactBudget ? ` · Impacto: $${Number(co.data.impactBudget).toLocaleString('es-CO')}` : ''}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
+        fn(`${statusEmoji} Cambio de orden ${String(co.data.status ?? '').toLowerCase()}`, `"${String(co.data.title || co.data.number ?? '')}"${co.data.impactBudget ? ` · Impacto: $${Number(co.data.impactBudget).toLocaleString('es-CO')}` : ''}`, undefined, `co-${co.id}`, { type: 'project', screen: 'changeOrders', itemId: co.id, eventType: 'phase_change' });
       });
     }
     prevChangeOrdersRef.current = changeOrders;
@@ -466,7 +466,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
           const diff = meetingMinutes - nowMinutes;
           if (diff === 15 || diff === 5) {
             const proj = projects.find(p => p.id === m.data.projectId);
-            sendBrowserNotif(`⏰ Reunión en ${diff} minutos`, `"${m.data.title}" a las ${m.data.time}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `reminder-${m.id}-${diff}`, { type: 'meeting', screen: 'calendar', eventType: 'meeting_reminder' });
+            sendBrowserNotif(`⏰ Reunión en ${diff} minutos`, `"${String(m.data.title ?? '')}" a las ${String(m.data.time)}${proj ? ` — ${String(proj.data.name)}` : ''}`, undefined, `reminder-${m.id}-${diff}`, { type: 'meeting', screen: 'calendar', eventType: 'meeting_reminder' });
           }
         }
       });
@@ -488,7 +488,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
     if (notifPrefs.projects) {
       changedProjects.forEach(p => {
         const statusEmoji = (p.data.status as string) === 'Ejecucion' ? '🏗️' : (p.data.status as string) === 'Terminado' ? '🎉' : (p.data.status as string) === 'Diseno' ? '🎨' : '📁';
-        sendNotif(`${statusEmoji} Proyecto actualizado`, `"${p.data.name}" cambió a: ${p.data.status}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id, eventType: 'phase_change' });
+        sendNotif(`${statusEmoji} Proyecto actualizado`, `"${String(p.data.name ?? '')}" cambió a: ${String(p.data.status ?? '')}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id, eventType: 'phase_change' });
       });
     }
     prevProjectsRef.current = projects;

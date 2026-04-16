@@ -700,7 +700,7 @@ export default function AIAgentPanel({ isOpen, onClose }: AIAgentPanelProps) {
               const lastRunning = [...liveToolCalls].reverse().find(tc => tc.status === 'running');
               if (lastRunning) {
                 lastRunning.status = ev.e ? 'error' : 'success';
-                lastRunning.result = ev.r || '';
+                lastRunning.result = typeof ev.r === 'string' ? ev.r : ev.r != null ? String(ev.r) : '';
               } else {
                 // No matching running call, add as new
                 liveToolCalls.push({

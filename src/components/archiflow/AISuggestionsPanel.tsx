@@ -141,7 +141,7 @@ export default function AISuggestionsPanel({ isOpen, onClose, onNavigate }: AISu
         }
 
         if (data.error) {
-          setError(data.message || data.error);
+          setError(typeof data.message === 'string' ? data.message : typeof data.error === 'string' ? data.error : String(data.message || data.error || 'Error desconocido'));
           return;
         }
 
