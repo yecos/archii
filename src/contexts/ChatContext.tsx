@@ -61,6 +61,33 @@ function sanitizeMessage(raw: Record<string, unknown>): Record<string, unknown> 
   if (typeof msg.text !== 'string') msg.text = msg.text != null ? String(msg.text) : '';
   if (typeof msg.userName !== 'string') msg.userName = msg.userName != null ? String(msg.userName) : 'Usuario';
   if (typeof msg.type !== 'string') msg.type = 'TEXT';
+  if (typeof msg.fileName !== 'string') msg.fileName = msg.fileName != null ? String(msg.fileName) : '';
+  if (typeof msg.fileType !== 'string') msg.fileType = msg.fileType != null ? String(msg.fileType) : '';
+  if (typeof msg.uid !== 'string') msg.uid = msg.uid != null ? String(msg.uid) : '';
+  if (typeof msg.audioDuration !== 'number') msg.audioDuration = 0;
+  if (typeof msg.fileSize !== 'number') msg.fileSize = 0;
+  // Convert Firestore Timestamp to native Date for createdAt
+  if (msg.createdAt != null && typeof msg.createdAt === 'object' && 'toDate' in (msg.createdAt as object)) {
+    msg.createdAt = (msg.createdAt as { toDate: () => Date }).toDate();
+  }
+  // Sanitize replyTo sub-object if present
+  if (msg.replyTo != null && typeof msg.replyTo === 'object') {
+    const rt = { ...(msg.replyTo as Record<string, unknown>) };
+    if (typeof rt.userName !== 'string') rt.userName = rt.userName != null ? String(rt.userName) : 'Usuario';
+    if (typeof rt.text !== 'string') rt.text = rt.text != null ? String(rt.text) : '';
+    if (typeof rt.uid !== 'string') rt.uid = rt.uid != null ? String(rt.uid) : '';
+    msg.replyTo = rt;
+  }
+  // Sanitize reactions map - convert non-serializable values
+  if (msg.reactions != null && typeof msg.reactions === 'object') {
+    const cleanReactions: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(msg.reactions as Record<string, unknown>)) {
+      if (Array.isArray(val)) {
+        cleanReactions[key] = val.filter(v => typeof v === 'string');
+      }
+    }
+    msg.reactions = cleanReactions;
+  }
   return msg;
 }
 interface ChatContextType {

@@ -299,6 +299,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
         localStorage.setItem('msAccessToken', credential.accessToken);
         localStorage.setItem('msConnected', 'true');
+        localStorage.setItem('msTokenSavedAt', String(Date.now()));
         if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
         showToast('Conectado con Microsoft y OneDrive');
       } else {

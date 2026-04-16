@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useState, useEffect } from "react"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -44,11 +44,9 @@ export function confirm(opts?: string | ConfirmOptions): Promise<boolean> {
   })
 }
 
-let forceUpdate = 0
 const getListeners = new Set<() => void>()
 
 function emitChange() {
-  forceUpdate++
   getListeners.forEach((fn) => fn())
 }
 
@@ -57,19 +55,28 @@ function subscribe(listener: () => void) {
   return () => getListeners.delete(listener)
 }
 
-function getSnapshot() {
-  return forceUpdate
-}
-
 // ── Hook: useConfirmDialog ───────────────────────────────────────────────────
 
-/** Hook that must be mounted ONCE in the app (e.g. in layout.tsx) */
+/** Hook that must be mounted ONCE in the app (e.g. in AppProviders.tsx) */
 export function useConfirmDialog() {
+  // Track open state through React state so ConfirmDialog re-renders properly
+  const [isOpen, setIsOpen] = useState(false)
+
+  // Sync external changes to React state via listener
+  useEffect(() => {
+    const listener = () => { setIsOpen(resolveRef !== null) }
+    getListeners.add(listener)
+    // Initial sync in case a confirm() was called before mount
+    setIsOpen(resolveRef !== null)
+    return () => { getListeners.delete(listener) }
+  }, [])
+
   const handleOpenChange = useCallback((open: boolean) => {
     if (!open) {
       resolveRef?.(false)
       resolveRef = null
       emitChange()
+      setIsOpen(false)
     }
   }, [])
 
@@ -77,22 +84,23 @@ export function useConfirmDialog() {
     resolveRef?.(true)
     resolveRef = null
     emitChange()
+    setIsOpen(false)
   }, [])
 
-  return { subscribe, getSnapshot, handleOpenChange, handleConfirm }
+  return { isOpen, handleOpenChange, handleConfirm }
 }
 
 // ── Component: ConfirmDialog (mount once in layout) ──────────────────────────
 
 export function ConfirmDialog({
+  isOpen,
   onOpenChange,
   onConfirm,
 }: {
+  isOpen: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
-  const isOpen = resolveRef !== null
-
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>

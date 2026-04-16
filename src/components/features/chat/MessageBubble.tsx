@@ -52,9 +52,13 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const isMe = m.uid === authUserUid;
   const ts = m.createdAt
-    ? typeof m.createdAt === 'string' || m.createdAt instanceof Date
-      ? new Date(m.createdAt)
-      : m.createdAt.toDate()
+    ? (m.createdAt instanceof Date
+      ? m.createdAt
+      : typeof m.createdAt === 'string'
+        ? new Date(m.createdAt)
+        : typeof m.createdAt === 'object' && 'toDate' in (m.createdAt as object)
+          ? (m.createdAt as { toDate: () => Date }).toDate()
+          : new Date())
     : new Date();
   const msgType = m.type || 'TEXT';
   const prevMsg = mi > 0 ? groupMessages[mi - 1] : null;

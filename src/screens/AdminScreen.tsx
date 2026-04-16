@@ -42,7 +42,11 @@ export default function AdminScreen() {
       )}
 
       {isAdmin && (
-        <div className="animate-fadeIn p-4 sm:p-6">
+        <div className="animate-fadeIn p-3 sm:p-6">
+          <div className="hidden sm:block mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2"><Shield size={20} className="text-[var(--af-accent)]" />Panel de Administración</h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Gestiona tu equipo, proyectos y permisos</p>
+          </div>
           <AnimatedTabs
             tabs={[
               { id: 'timeline', label: 'Timeline' },
@@ -72,14 +76,14 @@ export default function AdminScreen() {
 
             return (<div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" />Admin Timeline</h3>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2"><BarChart3 size={18} className="text-[var(--af-accent)]" /><span className="truncate">Admin Timeline</span></h3>
                   <p className="text-xs text-[var(--muted-foreground)]">Vista de tareas del equipo en el tiempo</p>
                 </div>
-                <div className="flex gap-1.5">
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p - 1)}>◀ Anterior</button>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  <button className="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p - 1)}>◀</button>
                   <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(0)}>Hoy</button>
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p + 1)}>Siguiente ▶</button>
+                  <button className="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer skeuo-btn transition-all" onClick={() => setAdminWeekOffset(p => p + 1)}>▶</button>
                 </div>
               </div>
 

@@ -143,7 +143,12 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
       setMsConnected(true);
       setMsAccessToken(token);
       if (refreshToken) setMsRefreshToken(refreshToken);
-      setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+      // Calculate remaining time from when token was saved, max 55 min
+      const savedAt = Number(localStorage.getItem('msTokenSavedAt') || '0');
+      const elapsed = Date.now() - savedAt;
+      const maxAge = 55 * 60 * 1000;
+      const remaining = Math.max(0, maxAge - elapsed);
+      setMsTokenExpiry(Date.now() + remaining);
     }
   }, []);
 
@@ -171,6 +176,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
     localStorage.removeItem('msAccessToken');
     localStorage.removeItem('msConnected');
     localStorage.removeItem('msRefreshToken');
+    localStorage.removeItem('msTokenSavedAt');
     showToast('Microsoft desconectado');
   }, [showToast]);
   disconnectMicrosoftRef.current = disconnectMicrosoft;

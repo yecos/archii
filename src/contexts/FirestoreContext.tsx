@@ -281,34 +281,41 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
           if (tpl) {
             const flatTasks = flattenTemplateTasks(tpl);
             if (flatTasks.length > 0) {
-              const batch = db.batch();
-              // Create tasks with phase association
-              flatTasks.forEach(({ phase, task, order }) => {
-                batch.set(db.collection('tasks').doc(), {
-                  projectId: ref.id, title: task, status: 'Por hacer', priority: 'Media',
-                  assigneeId: '', dueDate: '', description: '', progress: 0, phase: phase || '',
-                  createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order,
-                });
-              });
-              // Create work phases
-              if (tpl.phasesData?.length) {
-                tpl.phasesData.forEach((phaseData, idx: number) => {
-                  batch.set(db.collection('workPhases').doc(), {
-                    projectId: ref.id, name: phaseData.name, status: 'Pendiente', order: idx,
-                    startDate: '', endDate: '', description: '',
-                    createdAt: ts, updatedAt: ts,
+              try {
+                const batch = db.batch();
+                // Create tasks with phase association, marked as template-sourced
+                flatTasks.forEach(({ phase, task, order }) => {
+                  batch.set(db.collection('tasks').doc(), {
+                    projectId: ref.id, title: task, status: 'Borrador', priority: 'Media',
+                    assigneeId: '', dueDate: '', description: '', progress: 0, phase: phase || '',
+                    createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order,
+                    fromTemplate: true,
                   });
                 });
-              } else if (tpl.phases?.length) {
-                tpl.phases.forEach((phaseName: string, idx: number) => {
-                  batch.set(db.collection('workPhases').doc(), {
-                    projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
-                    startDate: '', endDate: '', description: '',
-                    createdAt: ts, updatedAt: ts,
+                // Create work phases
+                if (tpl.phasesData?.length) {
+                  tpl.phasesData.forEach((phaseData, idx: number) => {
+                    batch.set(db.collection('workPhases').doc(), {
+                      projectId: ref.id, name: phaseData.name, status: 'Pendiente', order: idx,
+                      startDate: '', endDate: '', description: '',
+                      createdAt: ts, updatedAt: ts,
+                    });
                   });
-                });
+                } else if (tpl.phases?.length) {
+                  tpl.phases.forEach((phaseName: string, idx: number) => {
+                    batch.set(db.collection('workPhases').doc(), {
+                      projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
+                      startDate: '', endDate: '', description: '',
+                      createdAt: ts, updatedAt: ts,
+                    });
+                  });
+                }
+                await batch.commit();
+                showToast(`Proyecto creado con ${flatTasks.length} tareas de plantilla`);
+              } catch (tplErr) {
+                console.error('[ArchiFlow] Firestore: template tasks batch failed:', tplErr);
+                showToast('Proyecto creado pero hubo error al generar tareas de plantilla', 'warning');
               }
-              await batch.commit();
             }
           }
         }

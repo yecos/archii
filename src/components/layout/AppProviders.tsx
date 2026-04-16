@@ -1,6 +1,5 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { useConfirmDialog, ConfirmDialog } from "@/hooks/useConfirmDialog"
 
@@ -25,15 +24,13 @@ const TOASTER_PROPS = {
 }
 
 export function AppProviders() {
-  const { subscribe, getSnapshot, handleOpenChange, handleConfirm } = useConfirmDialog()
-
-  // Sync with external confirm state
-  useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const { isOpen, handleOpenChange, handleConfirm } = useConfirmDialog()
 
   return (
     <>
       <Toaster {...TOASTER_PROPS} />
       <ConfirmDialog
+        isOpen={isOpen}
         onOpenChange={handleOpenChange}
         onConfirm={handleConfirm}
       />
