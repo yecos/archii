@@ -5,7 +5,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, Trash2, CheckCircle, XCircle, Clock, MinusCircle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, XCircle, Clock, MinusCircle, Pencil } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -122,8 +122,9 @@ export default function InspectionsScreen() {
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
-  const [tab, setTab] = useState<'list' | 'create'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'edit'>('list');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form
   const [formTitle, setFormTitle] = useState('');
@@ -176,6 +177,24 @@ export default function InspectionsScreen() {
     setFormDate(new Date().toISOString().split('T')[0]);
     setFormItems([emptyItem()]);
     setFormNotes('');
+    setEditingId(null);
+  };
+
+  const populateForm = (insp: Inspection) => {
+    setFormTitle(insp.data.title);
+    setFormProject(insp.data.projectId);
+    setFormType(insp.data.type || 'General');
+    setFormInspector(insp.data.inspector || '');
+    setFormDate(insp.data.date || new Date().toISOString().split('T')[0]);
+    setFormItems(insp.data.items?.length ? insp.data.items : [emptyItem()]);
+    setFormNotes(insp.data.notes || '');
+    setEditingId(insp.id);
+  };
+
+  const openEdit = (insp: Inspection) => {
+    populateForm(insp);
+    setTab('edit');
+    setExpandedId(null);
   };
 
   const updateItem = (idx: number, field: keyof InspectionItem, value: any) => {
@@ -194,21 +213,31 @@ export default function InspectionsScreen() {
       const ts = fb.firestore.FieldValue.serverTimestamp();
       const proj = projects.find(p => p.id === formProject);
 
-      await db.collection('inspections').add({
+      const inspData = {
         title: formTitle,
         projectId: formProject,
         projectName: proj?.data.name || '',
         type: formType,
         inspector: formInspector || auth.authUser?.displayName || '',
-        status: 'Pendiente',
         date: formDate,
         score: formScore,
         items: formItems,
         notes: formNotes,
-        createdAt: ts,
-        createdBy: auth.authUser?.uid || '',
-      });
-      showToast('✅ Inspección creada');
+        updatedAt: ts,
+      };
+
+      if (editingId) {
+        await db.collection('inspections').doc(editingId).update(inspData);
+        showToast('Inspección actualizada');
+      } else {
+        await db.collection('inspections').add({
+          ...inspData,
+          status: 'Pendiente',
+          createdAt: ts,
+          createdBy: auth.authUser?.uid || '',
+        });
+        showToast('Inspección creada');
+      }
       resetForm();
       setTab('list');
     } catch (err) {
@@ -349,6 +378,9 @@ export default function InspectionsScreen() {
                     <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-red-400 hover:opacity-80" onClick={() => deleteInspection(insp.id)} title="Eliminar">
                       <Trash2 size={14} />
                     </button>
+                    <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-[var(--af-blue)] hover:opacity-80" onClick={() => openEdit(insp)} title="Editar">
+                      <Pencil size={14} />
+                    </button>
                   </div>
                 </div>
               );
@@ -359,11 +391,12 @@ export default function InspectionsScreen() {
     );
   }
 
-  // ===== CREATE VIEW =====
+  // ===== CREATE / EDIT VIEW =====
+  const isEditing = tab === 'edit' && editingId !== null;
   return (
     <div className="animate-fadeIn space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold">Nueva Inspección de Calidad</h3>
+        <h3 className="text-[15px] font-semibold">{isEditing ? 'Editar Inspección de Calidad' : 'Nueva Inspección de Calidad'}</h3>
         <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => { resetForm(); setTab('list'); }}>← Volver</button>
       </div>
 
@@ -428,7 +461,7 @@ export default function InspectionsScreen() {
         <textarea className="w-full skeuo-input px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas generales..." value={formNotes} onChange={e => setFormNotes(e.target.value)} />
 
         <button className="skeuo-btn w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveInspection}>
-          Crear Inspección
+          {isEditing ? 'Guardar Cambios' : 'Crear Inspección'}
         </button>
       </div>
     </div>

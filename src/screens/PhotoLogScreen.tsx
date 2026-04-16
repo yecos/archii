@@ -5,7 +5,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, Camera, Trash2 } from 'lucide-react';
+import { Plus, Camera, Trash2, Pencil } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -37,8 +37,9 @@ export default function PhotoLogScreen() {
   const [entries, setEntries] = useState<PhotoLogEntry[]>([]);
   const [filterProjectId, setFilterProjectId] = useState<string>('');
   const [spaceTab, setSpaceTab] = useState<string>('all');
-  const [tab, setTab] = useState<'list' | 'create'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'edit'>('list');
   const [detailEntry, setDetailEntry] = useState<PhotoLogEntry | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
   const [formProject, setFormProject] = useState('');
@@ -94,6 +95,25 @@ export default function PhotoLogScreen() {
     setFormBeforePhoto('');
     setFormAfterPhoto('');
     setFormCaption('');
+    setEditingId(null);
+  };
+
+  const populateForm = (entry: PhotoLogEntry) => {
+    setFormProject(entry.data.projectId);
+    setFormSpace(entry.data.space || '');
+    setFormNewSpace('');
+    setFormPhase(entry.data.phase || 'Acabados');
+    setFormProgress(entry.data.progress || 0);
+    setFormBeforePhoto(entry.data.beforePhoto || '');
+    setFormAfterPhoto(entry.data.afterPhoto || '');
+    setFormCaption(entry.data.caption || '');
+    setEditingId(entry.id);
+  };
+
+  const openEdit = (entry: PhotoLogEntry) => {
+    populateForm(entry);
+    setDetailEntry(null);
+    setTab('edit');
   };
 
   const handlePhotoUpload = (field: 'before' | 'after') => async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,13 +133,14 @@ export default function PhotoLogScreen() {
 
   const saveEntry = async () => {
     if (!formProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    const space = formNewSpace.trim() || formSpace;
-    if (!space) { showToast('Selecciona o crea un espacio', 'error'); return; }
     if (!formBeforePhoto && !formAfterPhoto) { showToast('Agrega al menos una foto', 'error'); return; }
     try {
       const fb = getFirebase();
       const ts = fb.firestore.FieldValue.serverTimestamp();
-      await fb.firestore().collection('photoLog').add({
+      const space = formNewSpace.trim() || formSpace;
+      if (!space) { showToast('Selecciona o crea un espacio', 'error'); return; }
+
+      const entryData = {
         projectId: formProject,
         space,
         phase: formPhase,
@@ -127,11 +148,21 @@ export default function PhotoLogScreen() {
         beforePhoto: formBeforePhoto,
         afterPhoto: formAfterPhoto,
         caption: formCaption,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: ts,
-        createdBy: auth.authUser?.uid || '',
-      });
-      showToast('✅ Entrada registrada');
+        updatedAt: ts,
+      };
+
+      if (editingId) {
+        await fb.firestore().collection('photoLog').doc(editingId).update(entryData);
+        showToast('Entrada actualizada');
+      } else {
+        await fb.firestore().collection('photoLog').add({
+          ...entryData,
+          date: new Date().toISOString().split('T')[0],
+          createdAt: ts,
+          createdBy: auth.authUser?.uid || '',
+        });
+        showToast('Entrada registrada');
+      }
       resetForm();
       setTab('list');
     } catch (err) {
@@ -192,13 +223,23 @@ export default function PhotoLogScreen() {
           </div>
           {detailEntry.data.caption && <div className="text-sm text-[var(--muted-foreground)] italic">{detailEntry.data.caption}</div>}
           <div className="text-[11px] text-[var(--af-text3)]">Fecha: {detailEntry.data.date}</div>
+          {/* Action buttons in detail modal */}
+          <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
+            <button className="skeuo-btn flex items-center gap-1.5 bg-[var(--af-blue)] text-white px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:opacity-80 transition-opacity" onClick={() => openEdit(detailEntry)}>
+              <Pencil size={14} /> Editar
+            </button>
+            <button className="skeuo-btn flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/30 px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-red-500/20 transition-colors" onClick={() => { deleteEntry(detailEntry.id); setDetailEntry(null); }}>
+              <Trash2 size={14} /> Eliminar
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ===== CREATE VIEW =====
-  if (tab === 'create') {
+  // ===== CREATE / EDIT VIEW =====
+  if (tab === 'create' || tab === 'edit') {
+    const isEditing = tab === 'edit' && editingId !== null;
     const availableSpaces = entries
       .filter(e => !formProject || e.data.projectId === formProject)
       .map(e => e.data.space)
@@ -208,7 +249,7 @@ export default function PhotoLogScreen() {
     return (
       <div className="animate-fadeIn space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[15px] font-semibold">Nuevo Registro Fotográfico</h3>
+          <h3 className="text-[15px] font-semibold">{isEditing ? 'Editar Registro Fotográfico' : 'Nuevo Registro Fotográfico'}</h3>
           <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => { resetForm(); setTab('list'); }}>← Volver</button>
         </div>
         <div className="card-elevated rounded-xl p-4 space-y-4">
@@ -280,7 +321,7 @@ export default function PhotoLogScreen() {
           <textarea className="w-full skeuo-input px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Descripción / Caption..." value={formCaption} onChange={e => setFormCaption(e.target.value)} />
 
           <button className="skeuo-btn w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveEntry}>
-            Registrar Entrada
+            {isEditing ? 'Guardar Cambios' : 'Registrar Entrada'}
           </button>
         </div>
       </div>

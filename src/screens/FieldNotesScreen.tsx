@@ -5,7 +5,7 @@ import { useFirestore } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil } from 'lucide-react';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -51,8 +51,9 @@ export default function FieldNotesScreen() {
 
   const [notes, setNotes] = useState<FieldNote[]>([]);
   const [filterProjectId, setFilterProjectId] = useState<string>('');
-  const [tab, setTab] = useState<'list' | 'create'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'edit'>('list');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
   const [formProject, setFormProject] = useState('');
@@ -107,6 +108,27 @@ export default function FieldNotesScreen() {
     setFormCommitments(['']);
     setFormSupervisor('');
     setFormPhotos([]);
+    setEditingId(null);
+  };
+
+  const populateForm = (note: FieldNote) => {
+    setFormProject(note.data.projectId);
+    setFormDate(note.data.date || new Date().toISOString().split('T')[0]);
+    setFormWeather(note.data.weather || 'Soleado');
+    setFormTemperature(note.data.temperature || 25);
+    setFormActivities(note.data.activities?.length ? note.data.activities : ['']);
+    setFormParticipants(note.data.participants?.length ? note.data.participants : ['']);
+    setFormObservations(note.data.observations || '');
+    setFormCommitments(note.data.commitments?.length ? note.data.commitments : ['']);
+    setFormSupervisor(note.data.supervisor || '');
+    setFormPhotos(note.data.photos || []);
+    setEditingId(note.id);
+  };
+
+  const openEdit = (note: FieldNote) => {
+    populateForm(note);
+    setTab('edit');
+    setExpandedId(null);
   };
 
   const saveNote = async () => {
@@ -120,7 +142,7 @@ export default function FieldNotesScreen() {
       const participants = formParticipants.filter(p => p.trim());
       const commitments = formCommitments.filter(c => c.trim());
 
-      await db.collection('fieldNotes').add({
+      const noteData = {
         projectId: formProject,
         date: formDate,
         weather: formWeather,
@@ -130,13 +152,30 @@ export default function FieldNotesScreen() {
         laborCount: participants.length,
         observations: formObservations,
         commitments,
-        commitmentFulfilled: new Array(commitments.length).fill(false),
         photos: formPhotos,
         supervisor: formSupervisor || auth.authUser?.displayName || '',
-        createdAt: ts,
-        createdBy: auth.authUser?.uid || '',
-      });
-      showToast('✅ Minuta registrada');
+        updatedAt: ts,
+      };
+
+      if (editingId) {
+        // Keep existing commitmentFulfilled, adjust length if commitments changed
+        const existingNote = notes.find(n => n.id === editingId);
+        const existingFulfilled = existingNote?.data.commitmentFulfilled || [];
+        const newFulfilled = commitments.map((_, i) => existingFulfilled[i] || false);
+        await db.collection('fieldNotes').doc(editingId).update({
+          ...noteData,
+          commitmentFulfilled: newFulfilled,
+        });
+        showToast('Minuta actualizada');
+      } else {
+        await db.collection('fieldNotes').add({
+          ...noteData,
+          commitmentFulfilled: new Array(commitments.length).fill(false),
+          createdAt: ts,
+          createdBy: auth.authUser?.uid || '',
+        });
+        showToast('Minuta registrada');
+      }
       resetForm();
       setTab('list');
     } catch (err) {
@@ -354,7 +393,10 @@ export default function FieldNotesScreen() {
 
                   {/* Actions */}
                   <div className="flex gap-1 mt-2 pt-2 border-t border-[var(--border)]" onClick={e => e.stopPropagation()}>
-                    <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-red-400 hover:opacity-80 transition-opacity" onClick={() => deleteNote(note.id)}>
+                    <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-[var(--af-blue)] hover:opacity-80 transition-opacity" onClick={() => openEdit(note)} title="Editar">
+                      <Pencil size={14} />
+                    </button>
+                    <button className="skeuo-badge px-2 py-1.5 rounded text-xs cursor-pointer text-red-400 hover:opacity-80 transition-opacity" onClick={() => deleteNote(note.id)} title="Eliminar">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -367,12 +409,13 @@ export default function FieldNotesScreen() {
     );
   }
 
-  // ===== CREATE VIEW =====
+  // ===== CREATE / EDIT VIEW =====
+  const isEditing = tab === 'edit' && editingId !== null;
   return (
     <div className="animate-fadeIn space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold">Nueva Minuta de Obra</h3>
-        <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setTab('list')}>← Volver</button>
+        <h3 className="text-[15px] font-semibold">{isEditing ? 'Editar Minuta de Obra' : 'Nueva Minuta de Obra'}</h3>
+        <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => { resetForm(); setTab('list'); }}>← Volver</button>
       </div>
 
       <div className="card-elevated rounded-xl p-4 space-y-4">
@@ -465,7 +508,7 @@ export default function FieldNotesScreen() {
         </div>
 
         <button className="skeuo-btn w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={saveNote}>
-          Registrar Minuta
+          {isEditing ? 'Guardar Cambios' : 'Registrar Minuta'}
         </button>
       </div>
     </div>
