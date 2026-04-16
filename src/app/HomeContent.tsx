@@ -79,6 +79,7 @@ const InspectionsScreen = dynamic(() => import('@/screens/InspectionsScreen'), {
 const TemplatesScreen = dynamic(() => import('@/screens/TemplatesScreen'), { ssr: false });
 const ChangeOrdersScreen = dynamic(() => import('@/screens/ChangeOrdersScreen'), { ssr: false });
 const ProfitabilityScreen = dynamic(() => import('@/screens/ProfitabilityScreen'), { ssr: false });
+const PredictiveAIScreen = dynamic(() => import('@/screens/PredictiveAIScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -227,6 +228,7 @@ function AppContent() {
             {displayScreen === 'templates' && <ErrorBoundary label="Templates"><TemplatesScreen /></ErrorBoundary>}
             {displayScreen === 'changeOrders' && <ErrorBoundary label="Control de Cambios"><ChangeOrdersScreen /></ErrorBoundary>}
             {displayScreen === 'profitability' && <ErrorBoundary label="Dashboard de Rentabilidad"><ProfitabilityScreen /></ErrorBoundary>}
+            {displayScreen === 'predictiveAI' && <ErrorBoundary label="IA Predictiva"><PredictiveAIScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

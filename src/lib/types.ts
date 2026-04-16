@@ -1048,6 +1048,7 @@ export const NAV_ITEMS = [
   { id: 'settings', icon: '🎨', label: 'Configuración' },
   { id: 'changeOrders', icon: '🔄', label: 'Control de Cambios' },
   { id: 'profitability', icon: '💎', label: 'Rentabilidad' },
+  { id: 'predictiveAI', icon: '🧠', label: 'IA Predictiva' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1080,6 +1081,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   templates: 'Templates de Proyecto',
   changeOrders: 'Control de Cambios',
   profitability: 'Dashboard de Rentabilidad',
+  predictiveAI: 'IA Predictiva',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1175,6 +1177,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'gallery', label: 'Galería', icon: '🖼️' },
       { id: 'reports', label: 'Reportes', icon: '📈' },
       { id: 'profitability', label: 'Rentabilidad', icon: '💎' },
+      { id: 'predictiveAI', label: 'IA Predictiva', icon: '🧠' },
       { id: 'templates', label: 'Templates', icon: '📐' },
     ],
   },
