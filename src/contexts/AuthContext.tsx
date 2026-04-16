@@ -147,11 +147,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const isAdminEmail = ADMIN_EMAILS.includes(user.email || '');
           if (!snap.exists) {
             await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
-          } else if (isAdminEmail) {
-            const current = snap.data()?.role;
-            if (current !== 'Admin') {
-              await ref.update({ role: 'Admin' });
-            }
+          } else {
+            // Sync photoURL and displayName from auth provider (Google, Microsoft, etc.)
+            const data = snap.data();
+            const updates: Record<string, unknown> = {};
+            if (user.photoURL && user.photoURL !== (data?.photoURL || '')) updates.photoURL = user.photoURL;
+            if (user.displayName && user.displayName !== (data?.name || '')) updates.name = user.displayName;
+            if (isAdminEmail && data?.role !== 'Admin') updates.role = 'Admin';
+            if (Object.keys(updates).length > 0) await ref.update(updates);
           }
         } catch (err) {
           console.error('[ArchiFlow Auth] Error creando/cargando documento de usuario:', err);
