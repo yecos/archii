@@ -221,6 +221,61 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-16 20:00 | FEATURE v31 — Notificaciones Inteligentes (persistencia + dedup + agrupamiento)
+  Estado: COMPLETADO
+  Commit: dbfc986
+  Build: exitoso (17 static + 15 dynamic routes, 0 errores TypeScript)
+  Tag de respaldo: backup-pre-v31-smart-notifs-20260416
+
+  Contexto: Cuarta feature del plan de mejoras. El sistema de notificaciones
+    ya era robusto (14 eventos, 6 canales), pero tenía 2 gaps críticos: historial
+    perdido al refrescar y sin deduplicación. Se mejoró con persistencia Firestore,
+    deduplicación inteligente, agrupamiento de mensajes y nuevo evento change orders.
+
+  Tarea 31.1 — Persistencia en Firestore:
+    * Todas las notificaciones se guardan en users/{uid}/notifications/
+    * Firestore listener en tiempo real (onSnapshot) con orden por timestamp
+    * Load al montar: merge notificaciones de Firestore + in-memory locales
+    * markRead() y markAllRead() persisten en Firestore (batch write)
+    * Auto-cleanup: elimina notificaciones > 7 días cada 24h
+    * Estado `persistenceReady` para coordinar carga antes de eventos
+    * merge inteligente: local-only (no _synced) + Firestore = historial unificado
+
+  Tarea 31.2 — Deduplicación inteligente:
+    * Mapa dedupMapRef con timestamp por tag
+    * Ventana de 10s: si un evento con mismo tag ya notificó, se ignora
+    * Previene notificaciones duplicadas por re-renders rápidos
+    * Complementa el tag del browser Notification API
+
+  Tarea 31.3 — Agrupamiento de mensajes:
+    * Múltiples mensajes nuevos en misma ventana se agrupan:
+      1 mensaje → "Juan en Chat General"
+      3+ mensajes → "3 mensajes nuevos en Chat General"
+    * Body muestra el último mensaje con prefijo "Último:"
+    * Funciona con chatProjectId como agrupador natural
+
+  Tarea 31.4 — Nuevo evento: Change Orders:
+    * Listener de collection changeOrders desde Firestore (client-side)
+    * Nuevo cambio: notificación browser + badge "projects"
+    * Cambio de estado (Aprobada/Rechazada/Implementada): browser notification
+    * Cambio menor (Borrador/En Revisión): solo in-app
+    * Muestra impacto presupuestal cuando existe
+
+  Tarea 31.5 — Mejoras en Overdue Tasks:
+    * Detección de tareas urgentes (> 3 días vencidas)
+    * Prefix diferenciado: "🚨 2 urgentes" vs "⚠️ 5 tareas vencidas"
+    * Mejor contexto en el body con nombres de tareas
+
+  Tarea 31.6 — Fix firebase-admin.ts:
+    * Corregido ServiceAccount (client_email → clientEmail, private_key → privateKey)
+    * Eliminado campo `type` no soportado por el tipo
+    * Eliminado `preferRest` option no compatible con getFirestore
+
+  Archivos modificados (2):
+    src/contexts/NotifContext.tsx (+205, -13)
+    src/lib/firebase-admin.ts (+18, -7)
+  Total: +223 lineas (2 archivos)
+
 2026-04-16 18:00 | FEATURE v30 — IA Predictiva (predicciones de presupuesto, cronograma y riesgos)
   Estado: COMPLETADO
   Commit: 4418e3b
