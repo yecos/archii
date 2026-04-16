@@ -286,7 +286,7 @@ export default function EmptyState({
   compact = false,
   className = '',
 }: EmptyStateProps) {
-  const Illustration = ILLUSTRATIONS[illustration];
+  const Illustration = ILLUSTRATIONS[illustration] ?? GenericIllustration;
   const size = compact ? 120 : 160;
 
   return (
@@ -297,7 +297,7 @@ export default function EmptyState({
         style={{ width: size, height: size }}
       >
         <svg {...svgBase(size)}>
-          <Illustration />
+          {Illustration ? <Illustration /> : null}
         </svg>
       </div>
 
