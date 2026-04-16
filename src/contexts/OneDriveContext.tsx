@@ -55,8 +55,8 @@ interface OneDriveContextType {
   setOdTab: React.Dispatch<React.SetStateAction<'files' | 'gallery'>>;
   galleryLoading: boolean;
   setGalleryLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  odGalleryPhotos: any[];
-  setOdGalleryPhotos: React.Dispatch<React.SetStateAction<any[]>>;
+  odGalleryPhotos: OneDriveFile[];
+  setOdGalleryPhotos: React.Dispatch<React.SetStateAction<OneDriveFile[]>>;
 
   // Functions
   disconnectMicrosoft: () => void;
@@ -111,7 +111,7 @@ export default function OneDriveProvider({ children }: { children: React.ReactNo
   const [odDragOver, setOdDragOver] = useState(false);
   const [odTab, setOdTab] = useState<'files' | 'gallery'>('files');
   const [galleryLoading, setGalleryLoading] = useState(false);
-  const [odGalleryPhotos, setOdGalleryPhotos] = useState<any[]>([]);
+  const [odGalleryPhotos, setOdGalleryPhotos] = useState<OneDriveFile[]>([]);
 
   // ===== EFFECTS =====
 

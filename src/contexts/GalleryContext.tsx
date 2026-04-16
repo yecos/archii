@@ -24,7 +24,7 @@ interface GalleryContextType {
   // CRUD Functions
   saveGalleryPhoto: () => Promise<void>;
   deleteGalleryPhoto: (id: string) => Promise<void>;
-  handleGalleryImageSelect: (e: any) => Promise<void>;
+  handleGalleryImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 
   // Lightbox Functions
   openLightbox: (photo: GalleryPhoto | OneDriveFile, idx: number) => void;
@@ -142,17 +142,17 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
         const storagePath = `gallery/${authUser?.uid}/${projectId}/${timestamp}_${file.name}`;
         const storageRef = storage.ref(storagePath);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const uploadTask: any = storageRef.put(compressed, {
+        const uploadTask = storageRef.put(compressed, {
           contentType: 'image/jpeg',
           customMetadata: { uploadedBy: authUser?.uid || '', projectId },
-        });
+        }) as unknown as {
+          on(event: string, next: (snap: { bytesTransferred: number; totalBytes: number }) => void, error: (err: Error) => void, complete: () => void): () => void;
+        };
 
         await new Promise<void>((resolveUpload, rejectUpload) => {
           uploadTask.on(
             'state_changed',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (snapshot: any) => {
+            (snapshot) => {
               const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
               setUploadProgress(30 + progress * 0.6); // 30-90%
             },
@@ -247,7 +247,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
     } catch (err) { console.error("[ArchiFlow]", err); }
   }, [showToast]);
 
-  const handleGalleryImageSelect = useCallback(async (e: any) => {
+  const handleGalleryImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { showToast('Solo se permiten imágenes', 'error'); return; }
@@ -268,12 +268,12 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
 
   const getFilteredGalleryPhotos = useCallback(() => {
     let photos = galleryPhotos;
-    if (galleryFilterProject !== 'all') photos = photos.filter((p: any) => p.data.projectId === galleryFilterProject);
-    if (galleryFilterCat !== 'all') photos = photos.filter((p: any) => p.data.categoryName === galleryFilterCat);
+    if (galleryFilterProject !== 'all') photos = photos.filter((p: GalleryPhoto) => p.data.projectId === galleryFilterProject);
+    if (galleryFilterCat !== 'all') photos = photos.filter((p: GalleryPhoto) => p.data.categoryName === galleryFilterCat);
     return photos;
   }, [galleryPhotos, galleryFilterProject, galleryFilterCat]);
 
-  const openLightbox = useCallback((photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); }, []);
+  const openLightbox = useCallback((photo: GalleryPhoto | OneDriveFile, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); }, []);
   const closeLightbox = useCallback(() => { setLightboxPhoto(null); setLightboxIndex(0); }, []);
   const lightboxPrev = useCallback(() => {
     const filtered = getFilteredGalleryPhotos();

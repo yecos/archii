@@ -6,6 +6,22 @@ import { getFirebase, serverTimestamp, QuerySnapshot, QueryDocSnapshot } from '@
 import { fmtSize } from '@/lib/helpers';
 import type { ChatMessage } from '@/lib/types';
 
+interface PendingFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+  preview: string | null;
+}
+
+interface FileAttachment {
+  data: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 /* ===== CHAT CONTEXT ===== */
 interface ChatContextType {
   // State
@@ -29,8 +45,8 @@ interface ChatContextType {
   setAudioPreviewUrl: React.Dispatch<React.SetStateAction<string | null>>;
   audioPreviewDuration: number;
   setAudioPreviewDuration: React.Dispatch<React.SetStateAction<number>>;
-  pendingFiles: any[];
-  setPendingFiles: React.Dispatch<React.SetStateAction<any[]>>;
+  pendingFiles: PendingFile[];
+  setPendingFiles: React.Dispatch<React.SetStateAction<PendingFile[]>>;
   chatDropActive: boolean;
   setChatDropActive: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -68,7 +84,7 @@ interface ChatContextType {
   setChatMsgSearch: React.Dispatch<React.SetStateAction<string>>;
 
   // Functions
-  sendMessage: (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => Promise<void>;
+  sendMessage: (textOverride?: string, audioData?: string, audioDur?: number, fileData?: FileAttachment) => Promise<void>;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<Blob | null>;
   cancelRecording: () => void;
@@ -107,7 +123,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   const [recVolume, setRecVolume] = useState(0);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
-  const [pendingFiles, setPendingFiles] = useState<any[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [chatDropActive, setChatDropActive] = useState(false);
 
   // Refs
@@ -140,7 +156,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!ready || !chatProjectId) return;
     const db = getFirebase().firestore();
-    let unsub: any;
+    let unsub: () => void;
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
@@ -167,13 +183,13 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
 
   // ===== FUNCTIONS =====
 
-  const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
+  const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: FileAttachment) => {
     const text = textOverride || forms.chatInput || '';
     if (!text && !audioData && !fileData) return;
     if (!chatProjectId) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || (authUser?.email || '').split('@')[0], createdAt: serverTimestamp() };
+      const msgData: Record<string, unknown> = { text, uid: authUser?.uid, userName: authUser?.displayName || (authUser?.email || '').split('@')[0], createdAt: serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -204,7 +220,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       analyserRef.current = analyser;
       const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
       const recorder = new MediaRecorder(stream, { mimeType });
-      recorder.ondataavailable = (e: any) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       recorder.start(100);
       mediaRecRef.current = recorder;
       setIsRecording(true);
@@ -229,7 +245,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       if (!recorder) { resolve(null); return; }
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioStreamRef.current?.getTracks().forEach((t: any) => t.stop());
+        audioStreamRef.current?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
         if (recTimerRef.current) clearInterval(recTimerRef.current);
         if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
         setIsRecording(false); setRecDuration(0); setRecVolume(0);
@@ -241,7 +257,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
 
   const cancelRecording = () => {
     mediaRecRef.current?.stop();
-    audioStreamRef.current?.getTracks().forEach((t: any) => t.stop());
+    audioStreamRef.current?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
     if (recTimerRef.current) clearInterval(recTimerRef.current);
     if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
     setIsRecording(false); setRecDuration(0); setRecVolume(0);

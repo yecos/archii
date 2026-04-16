@@ -6,6 +6,7 @@ import { useNotif } from '@/hooks/useDomain';
 import { useComments } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { Activity, Filter } from 'lucide-react';
+import type { Task, Project, Expense, Invoice, DailyLog, Approval, NotifEntry, FirestoreTimestamp } from '@/lib/types';
 
 /* ===== TYPES ===== */
 
@@ -25,7 +26,7 @@ interface TimelineEvent {
   type: EventType;
   title: string;
   description: string;
-  timestamp: any; // Firestore Timestamp | Date | string
+  timestamp: FirestoreTimestamp | Date | null;
   actorUid?: string;
   actorName?: string;
 }
@@ -60,9 +61,9 @@ const FILTER_MAP: Record<FilterTab, EventType[]> = {
 
 /* ===== HELPERS ===== */
 
-function formatRelativeTime(date: any): string {
+function formatRelativeTime(date: Date | FirestoreTimestamp | null): string {
   try {
-    const d = date?.toDate ? date.toDate() : new Date(date);
+    const d = date && 'toDate' in date ? date.toDate() : new Date(date as Date);
     if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
@@ -81,9 +82,9 @@ function formatRelativeTime(date: any): string {
   }
 }
 
-function toTimestamp(date: any): number {
+function toTimestamp(date: Date | FirestoreTimestamp | null): number {
   try {
-    const d = date?.toDate ? date.toDate() : new Date(date);
+    const d = date && 'toDate' in date ? date.toDate() : new Date(date as Date);
     return isNaN(d.getTime()) ? 0 : d.getTime();
   } catch (err) {
     console.error('[ArchiFlow] ActivityTimeline: parse timestamp failed:', err);
@@ -111,9 +112,9 @@ export default function ActivityTimeline() {
     const events: TimelineEvent[] = [];
 
     // Tasks completed (status === 'Completado', use updatedAt)
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       if (t.data?.status === 'Completado' && t.data?.updatedAt) {
-        const proj = projects.find((p: any) => p.id === t.data.projectId);
+        const proj = projects.find((p: Project) => p.id === t.data.projectId);
         events.push({
           id: `tc-${t.id}`,
           type: 'task_completed',
@@ -127,9 +128,9 @@ export default function ActivityTimeline() {
     });
 
     // New tasks created (use createdAt, exclude completed to avoid double)
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       if (t.data?.createdAt && t.data?.status !== 'Completado') {
-        const proj = projects.find((p: any) => p.id === t.data.projectId);
+        const proj = projects.find((p: Project) => p.id === t.data.projectId);
         events.push({
           id: `tn-${t.id}`,
           type: 'task_created',
@@ -145,9 +146,9 @@ export default function ActivityTimeline() {
     });
 
     // Expenses added
-    expenses.forEach((e: any) => {
+    expenses.forEach((e: Expense) => {
       if (e.data?.createdAt) {
-        const proj = projects.find((p: any) => p.id === e.data.projectId);
+        const proj = projects.find((p: Project) => p.id === e.data.projectId);
         const amount = Number(e.data.amount) || 0;
         events.push({
           id: `exp-${e.id}`,
@@ -162,7 +163,7 @@ export default function ActivityTimeline() {
     });
 
     // Invoices created
-    invoices.forEach((inv: any) => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.data?.createdAt) {
         const total = Number(inv.data.total) || 0;
         events.push({
@@ -178,7 +179,7 @@ export default function ActivityTimeline() {
     });
 
     // Daily logs added
-    dailyLogs.forEach((log: any) => {
+    dailyLogs.forEach((log: DailyLog) => {
       if (log.data?.createdAt) {
         events.push({
           id: `dl-${log.id}`,
@@ -193,7 +194,7 @@ export default function ActivityTimeline() {
     });
 
     // Notifications from history
-    notifHistory.forEach((n: any) => {
+    notifHistory.forEach((n: NotifEntry) => {
       if (n.timestamp) {
         events.push({
           id: `notif-${n.id}`,
@@ -206,7 +207,7 @@ export default function ActivityTimeline() {
     });
 
     // Pending approvals
-    pendingApprovals.forEach((a: any) => {
+    pendingApprovals.forEach((a: Approval) => {
       if (a.data?.createdAt) {
         events.push({
           id: `appr-${a.id}`,

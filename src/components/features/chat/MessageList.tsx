@@ -7,6 +7,15 @@ import EmojiPicker from './EmojiPicker';
 import EmptyState from '@/components/ui/EmptyState';
 import type { ChatMessage } from '@/lib/types';
 
+interface PendingFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+  preview: string | null;
+}
+
 interface MessageListProps {
   chatMobileShow: boolean;
   setChatMobileShow: (v: boolean) => void;
@@ -15,8 +24,8 @@ interface MessageListProps {
   convSubtitle: string;
   chatMsgSearch: string;
   setChatMsgSearch: (v: string) => void;
-  filteredMessages: any[];
-  messagesByDate: { date: Date; dateLabel: string; messages: any[] }[];
+  filteredMessages: ChatMessage[];
+  messagesByDate: { date: Date; dateLabel: string; messages: ChatMessage[] }[];
   chatDropActive: boolean;
   setChatDropActive: (v: boolean) => void;
   handleFileSelect: (files: FileList | File[] | null) => void;
@@ -48,7 +57,7 @@ interface MessageListProps {
   audioPreviewDuration: number;
   setAudioPreviewUrl: (v: string | null) => void;
   setAudioPreviewDuration: (v: number) => void;
-  pendingFiles: any[];
+  pendingFiles: PendingFile[];
   removePendingFile: (id: string) => void;
   showEmojiPicker: boolean;
   emojiSearch: string;
@@ -58,10 +67,10 @@ interface MessageListProps {
   recentEmojis: string[];
   filteredEmojis: string[] | null;
   insertEmoji: (emoji: string) => void;
-  chatReplyingTo: any;
+  chatReplyingTo: ChatMessage | null;
   setChatReplyingTo: (msg: ChatMessage | null) => void;
   formsChatInput: string;
-  setForms: (updater: (prev: any) => any) => void;
+  setForms: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
   handleMicButton: () => void;
   sendAll: () => void;
@@ -179,7 +188,7 @@ export default function MessageList(props: MessageListProps) {
             )}
 
             {/* Messages in group */}
-            {group.messages.map((m: any, mi: number) => (
+            {group.messages.map((m: ChatMessage, mi: number) => (
               <MessageBubble
                 key={m.id}
                 m={m}
@@ -299,7 +308,7 @@ export default function MessageList(props: MessageListProps) {
             className="flex-1 skeuo-input rounded-2xl px-4 py-2.5 text-[15px] min-w-0 placeholder:text-[var(--af-text3)]"
             placeholder="Escribe un mensaje..."
             value={formsChatInput || ''}
-            onChange={e => setForms((p: any) => ({ ...p, chatInput: e.target.value }))}
+            onChange={e => setForms((p) => ({ ...p, chatInput: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAll(); } }}
           />
           <button

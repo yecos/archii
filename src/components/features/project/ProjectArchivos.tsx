@@ -2,6 +2,7 @@
 import React from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { fmtSize } from '@/lib/helpers';
+import type { OneDriveFile, ProjectFile } from '@/lib/types';
 
 interface OdBreadcrumb {
   id: string;
@@ -14,10 +15,10 @@ interface OneDriveState {
   showOneDrive: boolean;
   odTab: 'files' | 'gallery';
   galleryLoading: boolean;
-  odGalleryPhotos: any[];
+  odGalleryPhotos: OneDriveFile[];
   msLoading: boolean;
   odSearchQuery: string;
-  odSearchResults: any[];
+  odSearchResults: OneDriveFile[];
   odSearching: boolean;
   odViewMode: 'list' | 'grid';
   odUploading: boolean;
@@ -27,15 +28,15 @@ interface OneDriveState {
   odProjectFolder: string | null;
   odCurrentFolder: string;
   odBreadcrumbs: OdBreadcrumb[];
-  oneDriveFiles: any[];
+  oneDriveFiles: OneDriveFile[];
   odRenaming: string | null;
   odRenameName: string;
   setOdTab: (tab: 'files' | 'gallery') => void;
   setShowOneDrive: (show: boolean) => void;
-  setOneDriveFiles: (files: any[]) => void;
+  setOneDriveFiles: (files: OneDriveFile[]) => void;
   setOdBreadcrumbs: (updater: OdBreadcrumb[] | ((prev: OdBreadcrumb[]) => OdBreadcrumb[])) => void;
   setOdSearchQuery: (query: string) => void;
-  setOdSearchResults: (results: any[]) => void;
+  setOdSearchResults: (results: OneDriveFile[]) => void;
   setOdViewMode: (mode: 'list' | 'grid') => void;
   setOdDragOver: (dragOver: boolean) => void;
   setOdRenaming: (id: string | null) => void;
@@ -61,14 +62,14 @@ interface ProjectArchivosProps {
   msConnected: boolean;
   doMicrosoftLogin: () => void;
   od: OneDriveState;
-  projectFiles: Array<{ id: string; data: Record<string, any> }>;
+  projectFiles: ProjectFile[];
   selectedProjectId: string | null;
   uploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  deleteFile: (file: any) => void;
+  deleteFile: (file: ProjectFile) => void;
   setForms: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
   openModal: (modal: string) => void;
   gal: {
-    setLightboxPhoto: (photo: any) => void;
+    setLightboxPhoto: (photo: OneDriveFile) => void;
     setLightboxIndex: (index: number) => void;
   };
 }
@@ -124,7 +125,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {od.odGalleryPhotos.map((photo: any, idx: number) => (
+                      {od.odGalleryPhotos.map((photo: OneDriveFile, idx: number) => (
                         <div key={photo.id || idx} className="relative group rounded-lg overflow-hidden cursor-pointer border border-[var(--border)] hover:border-[#00a4ef]/40 transition-all" onClick={() => { gal.setLightboxPhoto(photo); gal.setLightboxIndex(idx); }}>
                           <img
                             src={`${photo.thumbnailUrl || photo.thumbnailLarge || photo.webUrl}?access_token=${od.msAccessToken}`}
@@ -213,7 +214,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                       /* Search results */
                       <div className="space-y-1">
                         <div className="text-[10px] text-[var(--muted-foreground)] mb-2">{od.odSearchResults.length} resultado(s) para &quot;{od.odSearchQuery}&quot;</div>
-                        {od.odSearchResults.map((f: any) => (
+                        {od.odSearchResults.map((f: OneDriveFile) => (
                           <div key={f.id} className="flex items-center gap-2 py-2 px-2 skeuo-panel rounded-lg hover:bg-[var(--af-bg4)] transition-colors">
                             <span className="text-sm">{od.getFileIcon(f.mimeType || '', f.name)}</span>
                             <div className="flex-1 min-w-0">
@@ -237,7 +238,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                     ) : od.odViewMode === 'grid' ? (
                       /* Grid view */
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {od.oneDriveFiles.map((f: any) => (
+                        {od.oneDriveFiles.map((f: OneDriveFile) => (
                           <div key={f.id} className={`skeuo-panel rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { od.navigateToFolder(f.id); od.setOdBreadcrumbs((prev: OdBreadcrumb[]) => [...prev, { id: f.id, name: f.name }]); } }}>
                             <div className="w-9 h-9 bg-[var(--af-bg4)] rounded-lg flex items-center justify-center text-base mb-2">{od.getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                             <div className="text-[11px] font-medium truncate mb-0.5">
@@ -276,7 +277,7 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
                           <div className="w-[70px] text-right shrink-0 hidden sm:block">Fecha</div>
                           <div className="w-[60px] shrink-0"></div>
                         </div>
-                        {od.oneDriveFiles.map((f: any) => (
+                        {od.oneDriveFiles.map((f: OneDriveFile) => (
                           <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { od.navigateToFolder(f.id); od.setOdBreadcrumbs((prev: OdBreadcrumb[]) => [...prev, { id: f.id, name: f.name }]); } }}>
                             <div className="w-7 h-7 bg-[var(--af-bg3)] rounded-md flex items-center justify-center text-sm flex-shrink-0">{od.getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                             <div className="flex-1 min-w-0">

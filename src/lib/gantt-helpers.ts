@@ -4,6 +4,8 @@
  * Extraídas de FirestoreContext para reducir su tamaño.
  */
 
+import type { Task, Project } from '@/lib/types';
+
 export const GANTT_DAYS = 14;
 export const GANTT_DAY_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
@@ -39,7 +41,7 @@ export function getGanttDays(weekOffset: number): Date[] {
   return days;
 }
 
-export function getTaskBar(task: any, days: Date[]): { left: number; width: number } | null {
+export function getTaskBar(task: Task, days: Date[]): { left: number; width: number } | null {
   if (!task.data?.dueDate) return null;
   const tStart = new Date(task.data.startDate || task.data.dueDate);
   const tEnd = new Date(task.data.dueDate);
@@ -54,13 +56,13 @@ export function getTaskBar(task: any, days: Date[]): { left: number; width: numb
   return { left: leftPct, width: Math.min(widthPct, 100 - leftPct) };
 }
 
-export function buildGanttRows(memberTasks: any[]): any[][] {
-  const rows: any[][] = [];
-  memberTasks.forEach((t: any) => {
+export function buildGanttRows(memberTasks: Task[]): Task[][] {
+  const rows: Task[][] = [];
+  memberTasks.forEach((t: Task) => {
     if (!t.data?.dueDate) return;
     let placed = false;
     for (const row of rows) {
-      const overlaps = row.some((r: any) => {
+      const overlaps = row.some((r: Task) => {
         if (!r.data?.dueDate || !t.data?.dueDate) return false;
         return new Date(r.data.startDate || r.data.dueDate) <= new Date(t.data.dueDate) &&
                new Date(t.data.startDate || t.data.dueDate) <= new Date(r.data.dueDate);
@@ -72,7 +74,7 @@ export function buildGanttRows(memberTasks: any[]): any[][] {
   return rows;
 }
 
-export function findOverlaps(memberTasks: any[]): Set<string> {
+export function findOverlaps(memberTasks: Task[]): Set<string> {
   const overlapIds = new Set<string>();
   for (let i = 0; i < memberTasks.length; i++) {
     for (let j = i + 1; j < memberTasks.length; j++) {
@@ -88,13 +90,13 @@ export function findOverlaps(memberTasks: any[]): Set<string> {
   return overlapIds;
 }
 
-export function getProjectColor(projId: string, projects: any[]): string {
+export function getProjectColor(projId: string, projects: Project[]): string {
   const colors = ['#3b82f6','#8b5cf6','#f43f5e','#10b981','#f59e0b','#06b6d4','#ec4899','#84cc16','#6366f1','#f97316'];
   const idx = projects.findIndex(p => p.id === projId);
   return colors[Math.abs(idx) % colors.length];
 }
 
-export function getProjectColorLight(projId: string, projects: any[]): string {
+export function getProjectColorLight(projId: string, projects: Project[]): string {
   const map: Record<string, string> = {
     '#3b82f6':'#dbeafe','#8b5cf6':'#ede9fe','#f43f5e':'#ffe4e6','#10b981':'#d1fae5',
     '#f59e0b':'#fef3c7','#06b6d4':'#cffafe','#ec4899':'#fce7f3','#84cc16':'#ecfccb',

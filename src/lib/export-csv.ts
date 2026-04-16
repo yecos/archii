@@ -4,6 +4,8 @@
  * ArchiFlow v2.0 — Exportar datos tabulares a .csv (UTF-8 BOM para compatibilidad con Excel)
  */
 
+import type { Project, Task, Expense, Supplier, TimeEntry, TeamUser } from '@/lib/types';
+
 /**
  * Convert an array of objects to CSV string with UTF-8 BOM for Excel compatibility.
  * Handles commas, quotes, and newlines in values.
@@ -47,12 +49,12 @@ function downloadCSV(csv: string, filename: string) {
    EXPORTAR PROYECTOS A CSV
    ═══════════════════════════════════════════════ */
 
-export function exportProjectsCSV(projects: any[], tasks: any[], expenses: any[]) {
+export function exportProjectsCSV(projects: Project[], tasks: Task[], expenses: Expense[]) {
   const rows = projects.map(p => {
-    const projTasks = tasks.filter((t: any) => t.data.projectId === p.id);
-    const projExpenses = expenses.filter((e: any) => e.data.projectId === p.id);
-    const totalSpent = projExpenses.reduce((s: number, e: any) => s + (e.data.amount || 0), 0);
-    const completedTasks = projTasks.filter((t: any) => t.data.status === 'Completado').length;
+    const projTasks = tasks.filter((t: Task) => t.data.projectId === p.id);
+    const projExpenses = expenses.filter((e: Expense) => e.data.projectId === p.id);
+    const totalSpent = projExpenses.reduce((s: number, e: Expense) => s + (e.data.amount || 0), 0);
+    const completedTasks = projTasks.filter((t: Task) => t.data.status === 'Completado').length;
 
     return {
       'Proyecto': p.data.name,
@@ -77,13 +79,13 @@ export function exportProjectsCSV(projects: any[], tasks: any[], expenses: any[]
    EXPORTAR TAREAS A CSV
    ═══════════════════════════════════════════════ */
 
-export function exportTasksCSV(tasks: any[], projects: any[], teamUsers: any[]) {
+export function exportTasksCSV(tasks: Task[], projects: Project[], teamUsers: TeamUser[]) {
   const rows = tasks.map(t => {
-    const proj = projects.find((p: any) => p.id === t.data.projectId);
-    const assignee = teamUsers.find((u: any) => u.id === t.data.assigneeId);
+    const proj = projects.find((p: Project) => p.id === t.data.projectId);
+    const assignee = teamUsers.find((u: TeamUser) => u.id === t.data.assigneeId);
 
     const created = t.data.createdAt
-      ? (t.data.createdAt.toDate ? t.data.createdAt.toDate().toLocaleDateString('es-CO') : new Date(t.data.createdAt).toLocaleDateString('es-CO'))
+      ? t.data.createdAt.toDate().toLocaleDateString('es-CO')
       : '-';
 
     return {
@@ -104,9 +106,9 @@ export function exportTasksCSV(tasks: any[], projects: any[], teamUsers: any[]) 
    EXPORTAR GASTOS A CSV
    ═══════════════════════════════════════════════ */
 
-export function exportExpensesCSV(expenses: any[], projects: any[]) {
+export function exportExpensesCSV(expenses: Expense[], projects: Project[]) {
   const rows = expenses.map(e => {
-    const proj = projects.find((p: any) => p.id === e.data.projectId);
+    const proj = projects.find((p: Project) => p.id === e.data.projectId);
     return {
       'Concepto': e.data.concept,
       'Proyecto': proj?.data.name || '-',
@@ -123,7 +125,7 @@ export function exportExpensesCSV(expenses: any[], projects: any[]) {
    EXPORTAR PROVEEDORES A CSV
    ═══════════════════════════════════════════════ */
 
-export function exportSuppliersCSV(suppliers: any[]) {
+export function exportSuppliersCSV(suppliers: Supplier[]) {
   const rows = suppliers.map(s => ({
     'Proveedor': s.data.name,
     'Categoría': s.data.category || '-',
@@ -142,9 +144,9 @@ export function exportSuppliersCSV(suppliers: any[]) {
    EXPORTAR TIEMPO A CSV
    ═══════════════════════════════════════════════ */
 
-export function exportTimeCSV(timeEntries: any[], projects: any[]) {
+export function exportTimeCSV(timeEntries: TimeEntry[], projects: Project[]) {
   const rows = timeEntries.map(e => {
-    const proj = projects.find((p: any) => p.id === e.data.projectId);
+    const proj = projects.find((p: Project) => p.id === e.data.projectId);
     const mins = e.data.duration || 0;
     const h = Math.floor(mins / 60);
     const m = Math.round(mins % 60);

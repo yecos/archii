@@ -8,7 +8,7 @@
 import { getFirebase } from '@/lib/firebase-service';
 import type { FirebaseUserInfo } from '@/contexts/AuthContext';
 import { fileToBase64 } from '@/lib/helpers';
-import { DEFAULT_PHASES, ProjectFormData, TaskFormData, ExpenseFormData, SupplierFormData, CompanyFormData, ApprovalFormData, MeetingFormData, GalleryPhotoFormData, InvProductFormData, InvMovementFormData, InvTransferFormData, TimeEntryFormData, InvoiceFormData, QuotationFormData, CommentFormData, ChatMessageFormData } from '@/lib/types';
+import { DEFAULT_PHASES, ProjectFormData, TaskFormData, ExpenseFormData, SupplierFormData, CompanyFormData, ApprovalFormData, MeetingFormData, GalleryPhotoFormData, InvProductFormData, InvMovementFormData, InvTransferFormData, TimeEntryFormData, InvoiceFormData, QuotationFormData, CommentFormData, ChatMessageFormData, QuotationSection, QuotationItem, QuotationPayment } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
 
 type ToastFn = (msg: string, type?: string) => void;
@@ -73,7 +73,7 @@ export async function deleteProject(projectId: string, showToast: ToastFn) {
     for (const col of collections) {
       const snap = await db.collection('projects').doc(projectId).collection(col).get();
       const batch = db.batch();
-      snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
       if (snap.docs.length > 0) await batch.commit();
     }
     await db.collection('projects').doc(projectId).delete();
@@ -596,7 +596,7 @@ export async function deleteInvTransfer(transId: string, showToast: ToastFn) {
 export async function updateTransferStatus(transId: string, status: string, showToast: ToastFn) {
   return fbAction('actualizar transferencia', async () => {
     const fb = getFirebase();
-    const updates: any = { status };
+    const updates: Record<string, unknown> = { status };
     if (status === 'Completada') updates.completedAt = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invTransfers').doc(transId).update(updates);
     showToast(`Transferencia: ${status}`);
@@ -702,7 +702,7 @@ export function saveInvoice(data: InvoiceFormData, editingId: string | null, sho
 export async function updateInvoiceStatus(invoiceId: string, status: string, showToast: ToastFn) {
   return fbAction('actualizar factura', async () => {
     const fb = getFirebase();
-    const updates: any = { status };
+    const updates: Record<string, unknown> = { status };
     if (status === 'Pagada') updates.paidDate = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invoices').doc(invoiceId).update(updates);
     showToast(`Factura: ${status}`);
@@ -728,8 +728,8 @@ export function saveQuotation(data: QuotationFormData, editingId: string | null,
     const projData = proj?.exists ? proj.data() : {};
 
     // Recalculate all section totals
-    const sections = (data.sections || []).map((sec: any) => {
-      const items = (sec.items || []).map((item: any) => {
+    const sections = (data.sections || []).map((sec: QuotationSection) => {
+      const items = (sec.items || []).map((item: QuotationItem) => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.unitPrice) || 0;
         const vat = Number(item.vat) ?? 19;
@@ -743,22 +743,22 @@ export function saveQuotation(data: QuotationFormData, editingId: string | null,
           total: sub + (sub * vat / 100) - (sub * disc / 100),
         };
       });
-      const secSub = items.reduce((s: number, i: any) => s + (i.subtotal || 0), 0);
-      const secVat = items.reduce((s: number, i: any) => s + (i.vatAmount || 0), 0);
-      const secDisc = items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0);
+      const secSub = items.reduce((s: number, i: QuotationItem) => s + (i.subtotal || 0), 0);
+      const secVat = items.reduce((s: number, i: QuotationItem) => s + (i.vatAmount || 0), 0);
+      const secDisc = items.reduce((s: number, i: QuotationItem) => s + (i.discountAmount || 0), 0);
       return { ...sec, items, subtotal: secSub, vatTotal: secVat, discountTotal: secDisc, total: secSub + secVat - secDisc };
     });
 
     // Recalculate payments
-    const grandTotal = sections.reduce((s: number, sec: any) => s + (sec.total || 0), 0);
-    const payments = (data.payments || []).map((p: any) => ({
+    const grandTotal = sections.reduce((s: number, sec: QuotationSection) => s + (sec.total || 0), 0);
+    const payments = (data.payments || []).map((p: QuotationPayment) => ({
       ...p,
       amount: grandTotal * (Number(p.percentage) || 0) / 100,
     }));
 
-    const subtotal = sections.reduce((s: number, sec: any) => s + (sec.subtotal || 0), 0);
-    const vatTotal = sections.reduce((s: number, sec: any) => s + (sec.vatTotal || 0), 0);
-    const discountTotal = sections.reduce((s: number, sec: any) => s + (sec.discountTotal || 0), 0);
+    const subtotal = sections.reduce((s: number, sec: QuotationSection) => s + (sec.subtotal || 0), 0);
+    const vatTotal = sections.reduce((s: number, sec: QuotationSection) => s + (sec.vatTotal || 0), 0);
+    const discountTotal = sections.reduce((s: number, sec: QuotationSection) => s + (sec.discountTotal || 0), 0);
 
     const quoteData: Record<string, any> = {
       number: data.number || `COT-${Date.now().toString(36).toUpperCase()}`,

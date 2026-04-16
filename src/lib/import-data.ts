@@ -6,7 +6,7 @@
  */
 
 import type { TeamUser, Project, ProjectStatus, TaskPriority, TaskStatus } from '@/lib/types';
-import { getFirebase, serverTimestamp } from '@/lib/firebase-service';
+import { getFirebase, serverTimestamp, QueryDocSnapshot } from '@/lib/firebase-service';
 
 /* ===== Helpers ===== */
 
@@ -33,7 +33,7 @@ async function readSpreadsheet(file: File): Promise<Record<string, any>[]> {
 }
 
 /** Parse a date string supporting DD/MM/YYYY, YYYY-MM-DD, and Excel serial dates. */
-function parseDate(val: any): string {
+function parseDate(val: string | number | Date | null | undefined): string {
   if (!val) return '';
   if (val instanceof Date && !isNaN(val.getTime())) {
     return val.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -59,7 +59,7 @@ function parseDate(val: any): string {
 }
 
 /** Parse a number, handling COP format (dots as thousands separator, comma as decimal). */
-function parseNumber(val: any): number {
+function parseNumber(val: string | number | null | undefined): number {
   if (typeof val === 'number') return val;
   const s = String(val || '').trim();
   if (!s) return 0;
@@ -108,7 +108,7 @@ export async function importProjects(
   const db = getFirebase().firestore();
   const existingSnap = await db.collection('projects').get();
   const existingNames = new Set<string>();
-  existingSnap.forEach((doc: any) => {
+  existingSnap.forEach((doc: QueryDocSnapshot) => {
     const name = (doc.data()?.name || '').toLowerCase().trim();
     if (name) existingNames.add(name);
   });
@@ -159,8 +159,9 @@ export async function importProjects(
       });
       existingNames.add(name.toLowerCase());
       imported++;
-    } catch (err: any) {
-      errors.push(`Fila ${rowNum}: Error al guardar "${name}" — ${err?.message || 'Error desconocido'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Error desconocido';
+      errors.push(`Fila ${rowNum}: Error al guardar "${name}" — ${errMsg}`);
     }
   }
 
@@ -171,7 +172,7 @@ export async function importProjects(
 
 export async function importTasks(
   file: File,
-  projects: any[],
+  projects: Project[],
   teamUsers: TeamUser[],
 ): Promise<ImportResult> {
   const errors: string[] = [];
@@ -184,7 +185,7 @@ export async function importTasks(
 
   // Build project lookup by name
   const projectByName = new Map<string, string>();
-  projects.forEach((p: any) => {
+  projects.forEach((p: Project) => {
     const name = (p.data?.name || '').toLowerCase().trim();
     if (name) projectByName.set(name, p.id);
   });
@@ -249,8 +250,9 @@ export async function importTasks(
         updatedAt: ts,
       });
       imported++;
-    } catch (err: any) {
-      errors.push(`Fila ${rowNum}: Error al guardar "${title}" — ${err?.message || 'Error desconocido'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Error desconocido';
+      errors.push(`Fila ${rowNum}: Error al guardar "${title}" — ${errMsg}`);
     }
   }
 
@@ -261,7 +263,7 @@ export async function importTasks(
 
 export async function importExpenses(
   file: File,
-  projects: any[],
+  projects: Project[],
 ): Promise<ImportResult> {
   const errors: string[] = [];
   let imported = 0;
@@ -273,7 +275,7 @@ export async function importExpenses(
 
   // Build project lookup by name
   const projectByName = new Map<string, string>();
-  projects.forEach((p: any) => {
+  projects.forEach((p: Project) => {
     const name = (p.data?.name || '').toLowerCase().trim();
     if (name) projectByName.set(name, p.id);
   });
@@ -313,8 +315,9 @@ export async function importExpenses(
         createdAt: ts,
       });
       imported++;
-    } catch (err: any) {
-      errors.push(`Fila ${rowNum}: Error al guardar "${concept}" — ${err?.message || 'Error desconocido'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Error desconocido';
+      errors.push(`Fila ${rowNum}: Error al guardar "${concept}" — ${errMsg}`);
     }
   }
 

@@ -69,15 +69,15 @@ interface QuotationContextType {
   // Section management
   addSection: () => void;
   removeSection: (idx: number) => void;
-  updateSection: (idx: number, field: string, value: any) => void;
+  updateSection: (idx: number, field: string, value: unknown) => void;
   // Item management
   addItem: (sectionIdx: number) => void;
   removeItem: (sectionIdx: number, itemIdx: number) => void;
-  updateItem: (sectionIdx: number, itemIdx: number, field: string, value: any) => void;
+  updateItem: (sectionIdx: number, itemIdx: number, field: string, value: unknown) => void;
   // Payment management
   addPayment: () => void;
   removePayment: (idx: number) => void;
-  updatePayment: (idx: number, field: string, value: any) => void;
+  updatePayment: (idx: number, field: string, value: unknown) => void;
 }
 
 const QuotationContext = createContext<QuotationContextType | null>(null);
@@ -233,7 +233,7 @@ export default function QuotationProvider({ children }: { children: React.ReactN
     setQuoteSections(prev => prev.filter((_, i) => i !== idx));
   }, [quoteSections.length]);
 
-  const updateSection = useCallback((idx: number, field: string, value: any) => {
+  const updateSection = useCallback((idx: number, field: string, value: unknown) => {
     setQuoteSections(prev => {
       const sections = [...prev];
       sections[idx] = { ...sections[idx], [field]: value };
@@ -264,7 +264,7 @@ export default function QuotationProvider({ children }: { children: React.ReactN
     });
   }, [recalcSection]);
 
-  const updateItem = useCallback((sectionIdx: number, itemIdx: number, field: string, value: any) => {
+  const updateItem = useCallback((sectionIdx: number, itemIdx: number, field: string, value: unknown) => {
     setQuoteSections(prev => {
       const sections = [...prev];
       const sec = { ...sections[sectionIdx] };
@@ -293,7 +293,7 @@ export default function QuotationProvider({ children }: { children: React.ReactN
     setQuotePayments(prev => prev.filter((_, i) => i !== idx));
   }, []);
 
-  const updatePayment = useCallback((idx: number, field: string, value: any) => {
+  const updatePayment = useCallback((idx: number, field: string, value: unknown) => {
     setQuotePayments(prev => {
       const payments = [...prev];
       payments[idx] = { ...payments[idx], [field]: value };

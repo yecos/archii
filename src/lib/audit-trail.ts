@@ -34,7 +34,7 @@ export interface AuditEntry {
     entityId: string;
     entityName: string;
     projectId?: string;
-    changes?: Record<string, { old: any; new: any }>;
+    changes?: Record<string, { old: unknown; new: unknown }>;
     userId: string;
     userName: string;
     timestamp: FirestoreTimestamp | null;
@@ -146,11 +146,11 @@ const TRACKED_FIELDS: Record<AuditEntityType, string[]> = {
 
 export function extractChanges(
   entityType: AuditEntityType,
-  oldData: Record<string, any>,
-  newData: Record<string, any>
-): Record<string, { old: any; new: any }> {
+  oldData: Record<string, unknown>,
+  newData: Record<string, unknown>
+): Record<string, { old: unknown; new: unknown }> {
   const fields = TRACKED_FIELDS[entityType] || [];
-  const changes: Record<string, { old: any; new: any }> = {};
+  const changes: Record<string, { old: unknown; new: unknown }> = {};
 
   for (const field of fields) {
     const oldVal = oldData[field];
@@ -184,7 +184,7 @@ export async function logAudit(
   entityType: AuditEntityType,
   entityId: string,
   entityName: string,
-  changes?: Record<string, { old: any; new: any }>,
+  changes?: Record<string, { old: unknown; new: unknown }>,
   projectId?: string,
   userId?: string,
   userName?: string,
@@ -249,7 +249,7 @@ export async function getAuditLogs(
  * Format a change entry as a human-readable diff string.
  * Example: "Estado: En progreso → Completado"
  */
-export function formatChange(field: string, change: { old: any; new: any }): string {
+export function formatChange(field: string, change: { old: unknown; new: unknown }): string {
   const label = AUDIT_FIELD_LABELS[field] || field;
   return `${label}: ${formatValue(change.old)} → ${formatValue(change.new)}`;
 }
@@ -258,7 +258,7 @@ export function formatChange(field: string, change: { old: any; new: any }): str
  * Format a value for display in the audit log.
  * Handles special cases like empty strings, null, and numbers.
  */
-export function formatValue(val: any): string {
+export function formatValue(val: unknown): string {
   if (val === null || val === undefined || val === '') return '(vacío)';
   if (typeof val === 'number') return val.toLocaleString('es-CO');
   return String(val);

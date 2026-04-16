@@ -7,7 +7,7 @@
 /* ===== INTERFACES ===== */
 
 /** Firebase Timestamp type — loaded via CDN, not npm. Represents Firestore server timestamps. */
-export type FirestoreTimestamp = { seconds: number; nanoseconds: number } | null;
+export type FirestoreTimestamp = { seconds: number; nanoseconds: number; toDate(): Date } | null;
 
 /** Common base fields for Firestore documents */
 export interface FirestoreBase {
@@ -229,8 +229,12 @@ export interface OneDriveFile {
   mimeType: string;
   webUrl: string;
   createdDateTime: string;
+  lastModifiedDateTime?: string;
   '@microsoft.graph.downloadUrl'?: string;
   thumbnailUrl?: string;
+  thumbnailLarge?: string;
+  folder?: { childCount: number };
+  file?: { mimeType: string };
 }
 
 export interface GalleryPhoto {
