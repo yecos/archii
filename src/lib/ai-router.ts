@@ -135,83 +135,110 @@ export interface AIRequestOptions {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OpenAIModel = any;
 
-export async function routeAIRequest(options: AIRequestOptions): Promise<{
-  model: OpenAIModel,
+export interface AIModelResult {
+  model: OpenAIModel;
   provider: string;
   modelName: string;
-}> {
-  const { taskType, tools } = options;
-  const maxTokens = options.maxTokens || 1024;
-  const temperature = options.temperature ?? 0.7;
+}
+
+/**
+ * Returns all available providers in priority order for fallback support.
+ * Used when a provider fails and we need to try the next one.
+ */
+function getAllAvailableModels(options: AIRequestOptions): AIModelResult[] {
+  const { taskType } = options;
   const needsReasoning = ['analysis', 'task_update', 'expense_create'].includes(taskType);
-  const needsTools = !!tools && tools.length > 0;
+  const results: AIModelResult[] = [];
 
-  // Attempt 0: ZAI (always available — internal provider)
+  // Priority 0: ZAI (always available — internal provider)
   const zaiAttempt = getZAIModel();
-  if (zaiAttempt) {
-    console.log(`[AI Router] Using ZAI (${zaiAttempt.modelName})`);
-    return zaiAttempt;
-  }
+  if (zaiAttempt) results.push(zaiAttempt);
 
-  // Attempt 1: Groq (primary — free, high volume)
+  // Priority 1: Groq 8B (primary — free, high volume)
   const groq = getGroqClientInstance();
-  if (groq && !needsReasoning) {
-    const modelName = 'llama-3.1-8b-instant';
-    const stat = initProvider(modelName, 30, 14400);
-
-    if (canUseProvider(stat)) {
-      markUsed(stat);
-      return { model: groq(modelName), provider: 'Groq', modelName };
-    }
-  }
-
-  // Attempt 2: Mistral (quality critical)
-  const mistral = getMistralClientInstance();
-  if (mistral) {
-    const modelName = 'mistral-small-latest';
-    const stat = initProvider(modelName, 50, 5000);
-
-    if (canUseProvider(stat)) {
-      markUsed(stat);
-      return { model: mistral(modelName), provider: 'Mistral', modelName };
-    }
-  }
-
-  // Attempt 3: Groq 70B (reasoning fallback)
   if (groq) {
-    const modelName = needsReasoning ? 'llama-3.1-70b-versatile' : 'llama-3.1-70b-versatile';
-    const stat = initProvider(modelName, 30, 1440);
-
-    if (canUseProvider(stat)) {
-      markUsed(stat);
-      return { model: groq(modelName), provider: 'Groq 70B', modelName };
+    if (!needsReasoning) {
+      const modelName = 'llama-3.1-8b-instant';
+      const stat = initProvider(modelName, 30, 14400);
+      if (canUseProvider(stat)) results.push({ model: groq(modelName), provider: 'Groq', modelName });
     }
 
-    // Try 8B as last Groq attempt
-    const stat8b = initProvider('llama-3.1-8b-instant', 30, 14400);
-    if (canUseProvider(stat8b)) {
-      markUsed(stat8b);
-      return { model: groq('llama-3.1-8b-instant'), provider: 'Groq (fallback)', modelName: 'llama-3.1-8b-instant' };
+    // Priority 2: Mistral (quality critical)
+    const mistral = getMistralClientInstance();
+    if (mistral) {
+      const modelName = 'mistral-small-latest';
+      const stat = initProvider(modelName, 50, 5000);
+      if (canUseProvider(stat)) results.push({ model: mistral(modelName), provider: 'Mistral', modelName });
+    }
+
+    // Priority 3: Groq 70B (reasoning fallback)
+    const modelName70b = 'llama-3.1-70b-versatile';
+    const stat70b = initProvider(modelName70b, 30, 1440);
+    if (canUseProvider(stat70b)) results.push({ model: groq(modelName70b), provider: 'Groq 70B', modelName: modelName70b });
+
+    // Priority 4: Groq 8B fallback
+    if (needsReasoning) {
+      const stat8b = initProvider('llama-3.1-8b-instant', 30, 14400);
+      if (canUseProvider(stat8b)) results.push({ model: groq('llama-3.1-8b-instant'), provider: 'Groq (fallback)', modelName: 'llama-3.1-8b-instant' });
+    }
+  } else {
+    // No Groq — try Mistral directly
+    const mistral = getMistralClientInstance();
+    if (mistral) {
+      const modelName = 'mistral-small-latest';
+      const stat = initProvider(modelName, 50, 5000);
+      if (canUseProvider(stat)) results.push({ model: mistral(modelName), provider: 'Mistral', modelName });
     }
   }
 
-  // Attempt 4: OpenAI-compatible fallback
+  // Priority 5: OpenAI-compatible fallback
   const openai = getOpenAIClientInstance();
   if (openai) {
     const modelName = process.env.AI_MODEL || 'gpt-4o-mini';
     const stat = initProvider(`openai-${modelName}`, 60, 10000);
+    if (canUseProvider(stat)) results.push({ model: openai(modelName), provider: 'OpenAI-compatible', modelName });
+  }
 
-    if (canUseProvider(stat)) {
-      markUsed(stat);
-      return { model: openai(modelName), provider: 'OpenAI-compatible', modelName };
+  return results;
+}
+
+/**
+ * Routes a request to the best available AI provider.
+ * If excludeProviders is set, skips those providers (used for fallback).
+ */
+export async function routeAIRequest(options: AIRequestOptions, excludeProviders?: string[]): Promise<AIModelResult> {
+  const available = getAllAvailableModels(options);
+  const filtered = excludeProviders
+    ? available.filter(r => !excludeProviders.includes(r.provider))
+    : available;
+
+  if (filtered.length === 0 && available.length === 0) {
+    const hasAnyKey = !!process.env.GROQ_API_KEY || !!process.env.MISTRAL_API_KEY || !!process.env.OPENAI_API_KEY;
+    if (!hasAnyKey) {
+      throw new Error('No hay API keys de IA configuradas. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en las variables de entorno (Vercel → Settings → Environment Variables).');
     }
+    throw new Error('Todos los proveedores de IA están en límite de tasa o fueron excluidos. Intenta en unos segundos.');
   }
 
-  const hasAnyKey = !!process.env.GROQ_API_KEY || !!process.env.MISTRAL_API_KEY || !!process.env.OPENAI_API_KEY;
-  if (!hasAnyKey) {
-    throw new Error('No hay API keys de IA configuradas. Agrega GROQ_API_KEY, MISTRAL_API_KEY u OPENAI_API_KEY en las variables de entorno (Vercel → Settings → Environment Variables).');
+  if (filtered.length === 0) {
+    throw new Error('Todos los proveedores de IA disponibles fallaron. Intenta de nuevo.');
   }
-  throw new Error('Todos los proveedores de IA están en límite de tasa. Intenta en unos segundos.');
+
+  // Pick the first available provider
+  const chosen = filtered[0];
+  // Mark the provider as used (only for the first one to avoid double-counting)
+  const stat = providerStats.get(chosen.modelName);
+  if (stat) markUsed(stat);
+
+  console.log(`[AI Router] Using ${chosen.provider} (${chosen.modelName})`);
+  return chosen;
+}
+
+/**
+ * Returns all available models (for manual fallback loops in callers).
+ */
+export function getFallbackProviders(options: AIRequestOptions): AIModelResult[] {
+  return getAllAvailableModels(options);
 }
 
 /* ===== Get Provider Stats (for admin/debug) ===== */

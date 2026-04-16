@@ -62,50 +62,72 @@ interface AISuggestion {
 type DocData = Record<string, any>;
 
 async function callAI(userPrompt: string, userId: string): Promise<AISuggestion[]> {
-  try {
-    // Usar el router multi-proveedor (Groq, Mistral, OpenAI)
-    const { model, provider } = await routeAIRequest({
-      taskType: 'analysis',
-      messages: [{ role: 'user', content: userPrompt }],
-      maxTokens: 1500,
-      temperature: 0.6,
-      userId,
-    });
+  const failedProviders: string[] = [];
+  let lastError: string = '';
+  const MAX_RETRIES = 5;
 
-    console.log(`[AI Suggestions] Usando ${provider}`);
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    let currentProvider = '';
 
-    const { text } = await generateText({
-      model,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-      maxOutputTokens: 1500,
-      temperature: 0.6,
-    });
-
-    // Parsear JSON de la respuesta
     try {
-      const jsonStr = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
-      const parsed = JSON.parse(jsonStr);
-      return parsed.suggestions || parsed || [];
-    } catch {
-      console.warn("[AI Suggestions] No se pudo parsear JSON:", text.substring(0, 200));
-      return [
-        {
-          id: "fallback-1",
-          title: "Revisa tus proyectos",
-          description: "La IA no pudo generar sugerencias específicas. Revisa tus proyectos y tareas manualmente.",
-          actionType: "navigate",
-          actionLabel: "Ir a Proyectos",
-          priority: "media",
-          projectId: null,
-        },
-      ];
+      const { model, provider } = await routeAIRequest({
+        taskType: 'analysis',
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 1500,
+        temperature: 0.6,
+        userId,
+      }, failedProviders);
+
+      currentProvider = provider;
+      console.log(`[AI Suggestions] Attempt ${attempt + 1}: Using ${provider}`);
+
+      const { text } = await generateText({
+        model,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxOutputTokens: 1500,
+        temperature: 0.6,
+      });
+
+      // Parsear JSON de la respuesta
+      try {
+        const jsonStr = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+        const parsed = JSON.parse(jsonStr);
+        return parsed.suggestions || parsed || [];
+      } catch {
+        console.warn("[AI Suggestions] No se pudo parsear JSON:", text.substring(0, 200));
+        return [
+          {
+            id: "fallback-1",
+            title: "Revisa tus proyectos",
+            description: "La IA no pudo generar sugerencias específicas. Revisa tus proyectos y tareas manualmente.",
+            actionType: "navigate",
+            actionLabel: "Ir a Proyectos",
+            priority: "media",
+            projectId: null,
+          },
+        ];
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      lastError = msg;
+      console.warn(`[AI Suggestions] Attempt ${attempt + 1} failed: ${currentProvider} — ${msg.substring(0, 120)}`);
+
+      // Exclude this provider from future attempts
+      if (currentProvider && !failedProviders.includes(currentProvider)) {
+        failedProviders.push(currentProvider);
+        console.log(`[AI Suggestions] Excluding provider: ${currentProvider} (failed: ${failedProviders.length})`);
+      }
+
+      // If no providers left, stop retrying
+      if (msg.includes('proveedores de IA disponibles fallaron') || msg.includes('excluidos')) {
+        break;
+      }
     }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Error desconocido';
-    console.error('[AI Suggestions] Error con proveedor:', msg);
-    throw new Error(`PROVIDER_ERROR: ${msg}`);
   }
+
+  console.error('[AI Suggestions] All providers failed:', lastError);
+  throw new Error(`PROVIDER_ERROR: ${lastError}`);
 }
 
 function buildTasksPrompt(projectData: Record<string, unknown>): string {
