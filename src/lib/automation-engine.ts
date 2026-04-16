@@ -1,3 +1,5 @@
+import { getFirebase } from './firebase-service';
+
 /**
  * automation-engine.ts
  * Rule-based workflow automation engine for Archiflow.
@@ -292,7 +294,7 @@ export async function executeRule(
       if (newPriority && newPriority !== context.task.priority) {
         // Change priority via update
         try {
-          const fb = (window as any).firebase;
+          const fb = getFirebase();
           if (fb?.firestore) {
             await fb.firestore().collection('tasks').doc(context.task.id).update({
               priority: newPriority,
@@ -312,7 +314,7 @@ export async function executeRule(
 
     case 'create_task': {
       try {
-        const fb = (window as any).firebase;
+        const fb = getFirebase();
         if (!fb?.firestore) break;
         const db = fb.firestore();
         const taskData = {
@@ -357,11 +359,11 @@ export async function executeRule(
       // Add a tag to the task via Firestore update
       if (!context.task?.id) break;
       try {
-        const fb = (window as any).firebase;
+        const fb = getFirebase();
         if (fb?.firestore) {
           const tag = action.params.tag || 'auto';
-          const existing = context.task as any;
-          const tags: string[] = (existing as any).tags || [];
+          const existing = context.task as Record<string, unknown>;
+          const tags: string[] = Array.isArray(existing.tags) ? existing.tags as string[] : [];
           if (!tags.includes(tag)) {
             await fb.firestore().collection('tasks').doc(context.task.id).update({
               tags: [...tags, tag],
