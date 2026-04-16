@@ -85,6 +85,9 @@ const OfflineStatusScreen = dynamic(() => import('@/screens/OfflineStatusScreen'
 const ReportGeneratorScreen = dynamic(() => import('@/screens/ReportGeneratorScreen'), { ssr: false });
 const AutomationScreen = dynamic(() => import('@/screens/AutomationScreen'), { ssr: false });
 const QRScannerScreen = dynamic(() => import('@/screens/QRScannerScreen'), { ssr: false });
+const GeolocationScreen = dynamic(() => import('@/screens/GeolocationScreen'), { ssr: false });
+const BackupScreen = dynamic(() => import('@/screens/BackupScreen'), { ssr: false });
+const FormBuilderScreen = dynamic(() => import('@/screens/FormBuilderScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -238,6 +241,9 @@ function AppContent() {
             {displayScreen === 'reportGenerator' && <ErrorBoundary label="Generador de Reportes"><ReportGeneratorScreen /></ErrorBoundary>}
             {displayScreen === 'automations' && <ErrorBoundary label="Flujos Automatizados"><AutomationScreen /></ErrorBoundary>}
             {displayScreen === 'qrScanner' && <ErrorBoundary label="Escáner QR"><QRScannerScreen /></ErrorBoundary>}
+            {displayScreen === 'formBuilder' && <ErrorBoundary label="Generador de Formularios"><FormBuilderScreen /></ErrorBoundary>}
+            {displayScreen === 'geolocation' && <ErrorBoundary label="Geolocalización GPS"><GeolocationScreen /></ErrorBoundary>}
+            {displayScreen === 'backup' && <ErrorBoundary label="Copia de Seguridad"><BackupScreen /></ErrorBoundary>}
           </div>
         </main>
       </div>

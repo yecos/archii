@@ -1054,6 +1054,9 @@ export const NAV_ITEMS = [
   { id: 'offlineStatus', icon: '📡', label: 'Estado Offline' },
   { id: 'automations', icon: '⚡', label: 'Automatizaciones' },
   { id: 'qrScanner', icon: '📷', label: 'Escáner QR' },
+  { id: 'formBuilder', icon: '📝', label: 'Generador Formularios' },
+  { id: 'geolocation', icon: '🗺️', label: 'Geolocalización GPS' },
+  { id: 'backup', icon: '💾', label: 'Copia de Seguridad' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1091,6 +1094,9 @@ export const SCREEN_TITLES: Record<string, string> = {
   offlineStatus: 'Estado Offline',
   automations: 'Flujos Automatizados',
   qrScanner: 'Escáner QR',
+  formBuilder: 'Generador de Formularios',
+  geolocation: 'Geolocalización GPS',
+  backup: 'Copia de Seguridad',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1165,6 +1171,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'inventory', label: 'Inventario', icon: '📦' },
       { id: 'suppliers', label: 'Proveedores', icon: '🏪' },
       { id: 'companies', label: 'Empresas', icon: '🏢' },
+      { id: 'geolocation', label: 'Geolocalización GPS', icon: '🗺️' },
     ],
   },
   {
@@ -1191,6 +1198,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'templates', label: 'Templates', icon: '📐' },
       { id: 'automations', label: 'Automatizaciones', icon: '⚡' },
       { id: 'qrScanner', label: 'Escáner QR', icon: '📷' },
+      { id: 'formBuilder', label: 'Generador Formularios', icon: '📝' },
     ],
   },
   {
@@ -1202,6 +1210,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'settings', label: 'Configuración', icon: '🎨' },
       { id: 'admin', label: 'Admin', icon: '⚙️' },
       { id: 'offlineStatus', label: 'Estado Offline', icon: '📡' },
+      { id: 'backup', label: 'Copia de Seguridad', icon: '💾' },
     ],
   },
 ];

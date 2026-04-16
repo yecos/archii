@@ -25,6 +25,8 @@ import React from 'react';
  *                           NotifPreferencesProvider (consumes AuthContext)
  *                             NotifProvider (consumes many contexts)
  *                               PresenceProvider (consumes UIContext, AuthContext)
+ *                                 AutomationProvider (consumes UIContext, AuthContext)
+ *                                   GeolocationProvider (consumes UIContext, AuthContext, FirestoreContext)
  */
 
 import UIProvider from './UIContext';
@@ -46,6 +48,7 @@ import { OfflineQueueProvider } from './OfflineQueueContext';
 import PresenceProvider from './PresenceContext';
 import AutomationProvider from './AutomationContext';
 import { I18nProvider } from './I18nContext';
+import GeolocationProvider from './GeolocationContext';
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -67,9 +70,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                                   <OfflineQueueProvider>
                                     <PresenceProvider>
                                       <AutomationProvider>
-                                        <I18nProvider>
-                                          {children}
-                                        </I18nProvider>
+                                        <GeolocationProvider>
+                                          <I18nProvider>
+                                            {children}
+                                          </I18nProvider>
+                                        </GeolocationProvider>
                                       </AutomationProvider>
                                     </PresenceProvider>
                                   </OfflineQueueProvider>

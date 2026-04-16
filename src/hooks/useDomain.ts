@@ -53,3 +53,6 @@ export { usePresenceContext as usePresence } from '@/contexts/PresenceContext';
 
 // i18n domain
 export { useI18n } from '@/contexts/I18nContext';
+
+// Geolocation domain
+export { useGeolocationContext as useGeolocation } from '@/contexts/GeolocationContext';
