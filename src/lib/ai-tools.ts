@@ -173,8 +173,41 @@ export function createAgentTools(userId: string) {
      * NIVEL 1-2: Lectura — Proyectos, Tareas, Gastos
      * ========================================================================== */
 
+    queryProjects: tool({
+      description: 'Busca y lista proyectos del usuario. Úsala para "¿qué proyectos tengo?", "busca el proyecto X", "lista de proyectos". Soporta búsqueda por nombre.',
+      inputSchema: z.object({
+        search: z.string().optional().describe('Buscar por nombre de proyecto (parcial)'),
+        status: z.string().optional().describe('Filtrar por estado (Activo, Completado, Pausado, Cancelado)'),
+      }),
+      execute: async (args) => {
+        try {
+          const { search, status } = args as { search?: string; status?: string };
+          const snap = await db.collection('projects').orderBy('createdAt', 'desc').limit(30).get();
+          let projects = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
+          if (search) {
+            const q = search.toLowerCase();
+            projects = projects.filter((p: Record<string, unknown>) =>
+              (p.name as string)?.toLowerCase().includes(q) || (p.client as string)?.toLowerCase().includes(q)
+            );
+          }
+          if (status) projects = projects.filter((p: Record<string, unknown>) => p.status === status);
+          if (projects.length === 0) return { success: true, count: 0, message: 'No se encontraron proyectos' };
+          const summary = projects.slice(0, 10).map((p: Record<string, unknown>) => {
+            const emoji = p.status === 'Completado' ? '✅' : p.status === 'Pausado' ? '⏸️' : p.status === 'Cancelado' ? '❌' : '🟢';
+            const budget = Number(p.budget) || 0;
+            const budgetStr = budget > 0 ? ` — $${budget.toLocaleString('es-CO')}` : '';
+            return `${emoji} "${p.name}" [ID: ${p.id}] ${p.client ? `(${p.client})` : ''} — ${p.progress || 0}%${budgetStr}`;
+          }).join('\n');
+          return { success: true, count: projects.length, message: `${projects.length} proyecto(s):\n${summary}` };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Error desconocido';
+          return { success: false, message: `Error listando proyectos: ${msg}` };
+        }
+      },
+    }),
+
     queryProject: tool({
-      description: 'Consulta el estado actual de un proyecto. Úsala para responder preguntas sobre el estado de un proyecto.',
+      description: 'Consulta el estado detallado de un proyecto específico (necesitas el ID). Úsala para "¿cómo va el proyecto X?" cuando ya tienes el ID.',
       inputSchema: z.object({ projectId: z.string().describe('ID del proyecto') }),
       execute: async (args) => {
         try {

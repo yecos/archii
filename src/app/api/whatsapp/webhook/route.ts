@@ -5,6 +5,7 @@ import {
   sendWhatsAppMessage,
   sendWhatsAppButtons,
   markAsRead,
+  sendTypingIndicator,
 } from "@/lib/whatsapp-service";
 import {
   getWelcomeMessage,
@@ -83,6 +84,9 @@ export async function POST(request: NextRequest) {
     // Marcar como leido
     markAsRead(message.messageId).catch(() => {});
 
+    // Enviar typing indicator mientras procesa
+    sendTypingIndicator(message.from).catch(() => {});
+
     // Enviar respuesta de manera segura con fallback
     await safeReply(message);
 
@@ -145,6 +149,8 @@ async function handleGroupMessage(message: WhatsAppMessage) {
 
     // Use AI Agent for group messages
     const replyTo = message.groupId || message.from;
+    // Send typing indicator for group messages too
+    sendTypingIndicator(replyTo).catch(() => {});
     try {
       const aiText = await aiReply(cleanMessage, linkData, db, {
         isGroup: true,

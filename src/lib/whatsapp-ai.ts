@@ -7,11 +7,11 @@
  * Soporta:
  *   - Mensajes directos (DM) — conversación 1:1 con historial
  *   - Grupos de WhatsApp — responde solo cuando se menciona "Archiflow"
+ *   - Contexto automático — carga proyectos del usuario para respuestas personalizadas
+ *   - Typing indicator — muestra "escribiendo..." mientras procesa
  *
  * Flujo:
- *   WhatsApp → webhook → aiReply() → AI Agent (generateText + tools) → WhatsApp
- *
- * Historial: Se guardan los últimos mensajes en Firestore para contexto conversacional.
+ *   WhatsApp → webhook → sendTypingIndicator → aiReply() → AI Agent → WhatsApp
  */
 
 import { generateText, stepCountIs } from 'ai';
@@ -26,42 +26,67 @@ const MAX_HISTORY_MESSAGES = 10;
 const MAX_WHATSAPP_CHARS = 4090;
 const WHATSAPP_HISTORY_COLLECTION = 'whatsappHistory';
 
-/* ===== WhatsApp-specific System Prompt ===== */
-const WHATSAPP_SYSTEM_PROMPT = `Eres ArchiFlow AI, el asistente inteligente de ArchiFlow — una plataforma de gestión de proyectos de construcción y arquitectura. El usuario te está hablando por WhatsApp.
+/* ===== WhatsApp System Prompt — Super enhanced ===== */
+const WHATSAPP_SYSTEM_PROMPT = `Eres *ArchiFlow AI*, el asistente inteligente de ArchiFlow — la plataforma de gestión de proyectos de construcción y arquitectura. El usuario te habla por WhatsApp.
 
-Tienes acceso a herramientas que te permiten:
-- Consultar proyectos, tareas, gastos, presupuestos, inventario, facturas, cotizaciones y reuniones
-- Crear nuevas tareas, gastos, facturas, cotizaciones y reuniones
-- Actualizar el estado de tareas
-- Generar reportes de proyectos
+CAPACIDADES — Puedes hacer TODO esto directamente:
+
+📊 CONSULTAS (pregunta lo que quieras):
+• "¿Cómo va el proyecto X?" — Estado, progreso, tareas, presupuesto
+• "¿Qué tareas tengo pendientes?" — Lista filtrada
+• "Resumen de gastos del proyecto X" — Desglose por categoría
+• "¿Cuánto presupuesto queda?" — Presupuesto vs gastado
+• "¿Qué hay en inventario?" — Stock de materiales
+• "¿Qué facturas están pendientes?" — Estado de facturación
+• "¿Hay cotizaciones por aprobar?" — Pipeline comercial
+• "Tareas que vencen esta semana" — Fechas próximas
+
+✏️ CREAR COSAS (pide lo que necesites):
+• "Crea una tarea 'Revisar planos' en el proyecto X, prioridad alta"
+• "Registra un gasto de $500.000 en materiales para proyecto X"
+• "Programa una reunión mañana a las 10am con el cliente"
+• "Genera una cotización para el proyecto X"
+• "Crea una factura para el proyecto X"
+
+📋 GESTIÓN:
+• "Avanza la tarea X a 'En progreso'"
+• "¿Qué debo reordenar del inventario?"
+• "Estima el costo de remodelar una cocina de 15m²"
 
 Reglas IMPORTANTES:
 1. SIEMPRE respondes en español.
-2. Formato: usa emojis, negritas con *asteriscos* y texto simple. NO uses markdown complejo, ni listas numeradas con guiones, ni tablas.
-3. Sé conciso — WhatsApp tiene límite de 4096 caracteres. Prefiere respuestas cortas y directas.
-4. Cuando crees o modifiques algo, confirma con un resumen corto de lo que hiciste.
-5. Usa formato de moneda colombiana (COP $XX.XXX) cuando menciones montos.
-6. Si el usuario pregunta algo general (saludos, chiste, clima), responde naturalmente SIN usar herramientas.
-7. Para datos que necesites buscar, usa SIEMPRE las herramientas. NUNCA inventes datos.
-8. Si una herramienta falla, explica el error de forma simple y sugiere una alternativa.
-9. Cuando listes información, usa emojis como bullets: 📌, ✅, 🔴, 🟢, 📊, 💰, etc.
-10. Sé proactivo: si el usuario pregunta "cómo va X", consulta los datos reales y da un resumen.`;
+2. Formato: emojis, negritas con *asteriscos*, texto simple. SIN markdown complejo, tablas, ni código.
+3. Sé conciso — WhatsApp tiene límite de 4096 chars. Máximo 3-4 líneas por punto.
+4. Al crear algo, confirma con un resumen corto.
+5. Moneda colombiana: COP $XX.XXX.
+6. Si preguntan algo general (saludos, chiste), responde naturalmente SIN herramientas.
+7. Para datos reales, USA SIEMPRE las herramientas. NUNCA inventes datos.
+8. Si una herramienta falla, explica simple y sugiere alternativa.
+9. Usa emojis como bullets: 📌, ✅, 🔴, 🟢, 📊, 💰, 📋, 🔧
+10. Sé PROACTIVO: si preguntan "cómo va X", consulta datos reales y resume.
+11. Si el usuario menciona un proyecto por nombre, búscalo en la lista de PROYECTOS DISPONIBLES que se te proporciona abajo. Usa el ID correcto.`;
 
-/* ===== Group System Prompt ===== */
-const GROUP_SYSTEM_PROMPT = `Eres ArchiFlow AI, el asistente inteligente de ArchiFlow en un grupo de WhatsApp. Alguien te mencionó en el grupo.
-
-REGLAS ESPECIALES PARA GRUPOS:
-1. Responde de forma CONCISA — en grupos las respuestas largas molestan. Máximo 3-4 líneas por punto.
-2. NO uses saludos largos. Ve directo al punto.
-3. Si te preguntan algo privado (ej: "cuánto gané"), sugiere que te escriban por privado.
-4. Identifícate al inicio si la pregunta es ambigua: "ArchiFlow: ..."
-5. Las mismas herramientas de consulta y creación están disponibles.`;
+const GROUP_SYSTEM_PROMPT = `REGLAS PARA GRUPOS:
+1. MÁXIMO 3-4 líneas. En grupo las respuestas largas molestan.
+2. SIN saludos. Ve directo al punto.
+3. Prefijo: "ArchiFlow:" al inicio.
+4. Si preguntan algo privado, sugiere escribir por privado.
+5. Mismas herramientas disponibles.`;
 
 /* ===== Types ===== */
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+}
+
+/** Project summary for context injection */
+interface ProjectSummary {
+  id: string;
+  name: string;
+  status: string;
+  progress: number;
+  budget: number;
 }
 
 /** Options for aiReply */
@@ -74,59 +99,76 @@ export interface AiReplyOptions {
 
 /* ===== History Management ===== */
 
-/** Get a unique history key based on phone and optional group context */
 function getHistoryKey(phone: string, options?: AiReplyOptions): string {
   const cleanPhone = phone.replace('+', '');
   if (options?.isGroup && options?.groupId) {
-    // Separate history per group to keep contexts clean
     return `group_${options.groupId}_${cleanPhone}`;
   }
   return cleanPhone;
 }
 
-/** Load recent conversation history from Firestore */
 async function loadHistory(key: string, db: Firestore): Promise<ChatMessage[]> {
   try {
-    const snap = await db
-      .collection(WHATSAPP_HISTORY_COLLECTION)
-      .doc(key)
-      .get();
-
+    const snap = await db.collection(WHATSAPP_HISTORY_COLLECTION).doc(key).get();
     if (!snap.exists) return [];
-
     const data = snap.data();
-    const history: ChatMessage[] = data?.messages || [];
-
-    return history.slice(-MAX_HISTORY_MESSAGES);
+    return (data?.messages || []).slice(-MAX_HISTORY_MESSAGES);
   } catch (err) {
     console.warn('[WhatsApp AI] Error loading history:', err instanceof Error ? err.message : err);
     return [];
   }
 }
 
-/** Save a message to conversation history in Firestore */
 async function saveToHistory(key: string, role: 'user' | 'assistant', content: string, db: Firestore): Promise<void> {
   try {
     const FV = getAdminFieldValue();
     const msg: ChatMessage = { role, content: content.substring(0, 500), timestamp: Date.now() };
-
     const docRef = db.collection(WHATSAPP_HISTORY_COLLECTION).doc(key);
     const doc = await docRef.get();
-
     if (doc.exists) {
       const existing = doc.data()?.messages || [];
-      const updated = [...existing, msg].slice(-20);
-      await docRef.update({ messages: updated, updatedAt: FV.serverTimestamp() });
+      await docRef.update({ messages: [...existing, msg].slice(-20), updatedAt: FV.serverTimestamp() });
     } else {
-      await docRef.set({
-        messages: [msg],
-        createdAt: FV.serverTimestamp(),
-        updatedAt: FV.serverTimestamp(),
-      });
+      await docRef.set({ messages: [msg], createdAt: FV.serverTimestamp(), updatedAt: FV.serverTimestamp() });
     }
   } catch (err) {
-    // History save failure should not block the reply
     console.warn('[WhatsApp AI] Error saving history:', err instanceof Error ? err.message : err);
+  }
+}
+
+/* ===== Context Loader — Fetch user's projects for smart responses ===== */
+
+async function loadUserProjectContext(userId: string, db: Firestore): Promise<string> {
+  try {
+    // Get all projects where user is a team member
+    const projectsSnap = await db.collection('projects').orderBy('createdAt', 'desc').limit(20).get();
+    const projects: ProjectSummary[] = projectsSnap.docs
+      .map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || 'Sin nombre',
+          status: data.status || 'Activo',
+          progress: Number(data.progress) || 0,
+          budget: Number(data.budget) || 0,
+        };
+      });
+
+    if (projects.length === 0) return '\n\nNo hay proyectos registrados aún.';
+
+    const projectList = projects
+      .map((p, i) => {
+        const statusEmoji = p.status === 'Completado' ? '✅' : p.status === 'Pausado' ? '⏸️' : p.status === 'Cancelado' ? '❌' : '🟢';
+        const budgetStr = p.budget > 0 ? ` — $${p.budget.toLocaleString('es-CO')}` : '';
+        return `  ${i + 1}. ${statusEmoji} "${p.name}" [ID: ${p.id}]${budgetStr} (${p.progress}%)`;
+      })
+      .join('\n');
+
+    const activeCount = projects.filter(p => p.status !== 'Completado' && p.status !== 'Cancelado').length;
+    return `\n\nPROYECTOS DISPONIBLES DEL USUARIO (${activeCount} activos de ${projects.length} total):\n${projectList}\n\nREGLA: Cuando el usuario mencione un proyecto por nombre, usa el ID correspondiente de esta lista.`;
+  } catch (err) {
+    console.warn('[WhatsApp AI] Error loading project context:', err instanceof Error ? err.message : err);
+    return '';
   }
 }
 
@@ -134,29 +176,20 @@ async function saveToHistory(key: string, role: 'user' | 'assistant', content: s
 function formatForWhatsApp(text: string): string {
   let formatted = text;
 
-  // Remove markdown headers (# ## ###)
+  // Remove markdown headers
   formatted = formatted.replace(/^#{1,3}\s+/gm, '');
-
-  // Remove code blocks (```...```)
-  formatted = formatted.replace(/```[\s\S]*?```/g, (match) => {
-    return match.replace(/```\w*\n?/g, '').trim();
-  });
-
+  // Remove code blocks but keep content
+  formatted = formatted.replace(/```[\s\S]*?```/g, (match) => match.replace(/```\w*\n?/g, '').trim());
   // Remove inline code
   formatted = formatted.replace(/`([^`]+)`/g, '$1');
-
-  // Remove bold markdown but keep the text (WhatsApp uses * for bold)
+  // Keep bold as WhatsApp bold (*text*)
   formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '*$1*');
-
-  // Remove italic markdown but keep the text
+  // Clean italic
   formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '*$1*');
-
   // Remove strikethrough
   formatted = formatted.replace(/~~([^~]+)~~/g, '$1');
-
   // Remove links, keep text
   formatted = formatted.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-
   // Clean up extra whitespace
   formatted = formatted.replace(/\n{3,}/g, '\n\n');
   formatted = formatted.trim();
@@ -189,7 +222,7 @@ export async function aiReply(
     // 1. Load conversation history
     const history = await loadHistory(historyKey, db);
 
-    // 2. Build messages array for AI
+    // 2. Build messages array
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       ...history,
       { role: 'user', content: userMessage },
@@ -202,58 +235,60 @@ export async function aiReply(
 
     let systemPrompt = WHATSAPP_SYSTEM_PROMPT;
 
-    // Add user context for personalized responses
+    // Add user context
     if (link.userName) {
-      systemPrompt += `\n\nEl usuario se llama ${link.userName}. Puedes usar su nombre para personalizar las respuestas.`;
+      systemPrompt += `\n\nEl usuario se llama *${link.userName}*.`;
     }
 
     // Add group context
     if (options?.isGroup) {
       systemPrompt += '\n\n' + GROUP_SYSTEM_PROMPT;
       if (options.senderName) {
-        systemPrompt += `\n\nLa persona que te mencionó es ${options.senderName}.`;
+        systemPrompt += `\nLa persona que te mencionó es ${options.senderName}.`;
       }
       if (options.groupName) {
-        systemPrompt += `\nEstás en el grupo "${options.groupName}".`;
+        systemPrompt += `\nGrupo: "${options.groupName}".`;
       }
     }
 
     systemPrompt += `\n\nFecha actual: ${today}`;
 
-    // 4. Get AI model via router
+    // 4. Load user's project context (auto-inject into system prompt)
+    const projectContext = await loadUserProjectContext(userId, db);
+    systemPrompt += projectContext;
+
+    // 5. Get AI model via router
     const { model, provider, modelName } = await routeAIRequest({
       taskType: 'chat',
       messages,
       userId,
     });
-    console.log(`[WhatsApp AI] Using ${provider} (${modelName}) for user ${userId} (${link.userName})${options?.isGroup ? ` in group ${options.groupName}` : ''}`);
+    console.log(`[WhatsApp AI] ${provider} (${modelName}) → ${link.userName}${options?.isGroup ? ` [${options.groupName}]` : ''}`);
 
-    // 5. Create tools with user context
+    // 6. Create tools with user context
     const tools = createAgentTools(userId);
 
-    // 6. Call AI with tools
+    // 7. Call AI with tools
     const result = await generateText({
       model,
       system: systemPrompt,
       messages,
       tools,
       stopWhen: stepCountIs(5),
-      maxOutputTokens: options?.isGroup ? 1000 : 1500,  // Shorter responses in groups
+      maxOutputTokens: options?.isGroup ? 800 : 1500,
       temperature: 0.7,
       onStepFinish({ toolCalls }) {
         if (toolCalls?.length) {
-          console.log(`[WhatsApp AI] Tools used: ${toolCalls.map((tc) => tc.toolName).join(', ')}`);
+          console.log(`[WhatsApp AI] Tools: ${toolCalls.map((tc) => tc.toolName).join(', ')}`);
         }
       },
     });
 
-    // 7. Get the response text
-    let responseText = result.text || 'Lo siento, no pude generar una respuesta. Intenta de nuevo.';
-
     // 8. Format for WhatsApp
+    let responseText = result.text || 'Lo siento, no pude generar una respuesta. Intenta de nuevo.';
     responseText = formatForWhatsApp(responseText);
 
-    // 9. Save both user message and AI response to history (fire-and-forget)
+    // 9. Save to history (fire-and-forget)
     saveToHistory(historyKey, 'user', userMessage, db).catch(() => {});
     saveToHistory(historyKey, 'assistant', responseText, db).catch(() => {});
 
@@ -263,18 +298,15 @@ export async function aiReply(
     const msg = err instanceof Error ? err.message : 'Error desconocido';
     console.error(`[WhatsApp AI] Error: ${msg}`);
 
-    // Save user message to history even on failure
     saveToHistory(historyKey, 'user', userMessage, db).catch(() => {});
 
-    // Check if it's a provider error
     if (msg.includes('PERMISSION_DENIED') || msg.includes('No hay API keys')) {
-      return 'La IA no está disponible en este momento. Los proveedores de IA no responden. Intenta en unos minutos.';
+      return '⚠️ La IA no está disponible en este momento. Los proveedores no responden. Intenta en unos minutos.';
     }
-
     if (msg.includes('límite de tasa') || msg.includes('rate limit')) {
-      return 'Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.';
+      return '⏳ Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.';
     }
 
-    return `Error al procesar tu mensaje. Intenta de nuevo.\n\nSi el problema persiste, escribe *ayuda* para usar los comandos clásicos.`;
+    return `Error al procesar tu mensaje. Intenta de nuevo.\n\nEscribe *menu* para ver las opciones disponibles.`;
   }
 }

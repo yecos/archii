@@ -1028,17 +1028,18 @@ export function verifyLinkCode(email: string, code: string): boolean {
 
 export function getWelcomeMessage(): CommandResult {
   return {
-    text: `Bienvenido a *ArchiFlow Bot v2.0*!\n\nPara usar el bot necesitas vincular tu cuenta de ArchiFlow.\n\n*Paso 1:* Escribe tu email registrado en ArchiFlow.\n\nEjemplo: juan@email.com`,
+    text: `*Bienvenido a ArchiFlow AI!*\n\nTu asistente inteligente de gestion de proyectos, directamente en WhatsApp.\n\nPara empezar, vincula tu cuenta de ArchiFlow escribiendo tu email.\n\nEjemplo: juan@email.com\n\n_Una vez vinculado, podras hablar conmigo en lenguaje natural y te ayudare con:_\n\n*CONSULTAR:* proyectos, tareas, gastos, inventario, facturas, presupuestos\n*CREAR:* tareas, gastos, reuniones, cotizaciones, facturas\n*GESTIONAR:* avanzar tareas, revisar presupuestos, estimar costos`,
     buttons: [{ id: 'link_start', title: 'Vincular cuenta' }],
   };
 }
 
 export function getLinkedSuccess(name: string): CommandResult {
   return {
-    text: `Cuenta vinculada exitosamente!\n\nBienvenido, *${name}*.\n\nEscribe *ayuda* para ver todos los comandos disponibles.`,
+    text: `Cuenta vinculada! Bienvenido, *${name}*\n\nSoy *ArchiFlow AI*, tu asistente de proyectos. Puedes hablarme en lenguaje natural.\n\n*Ejemplos de lo que puedes pedir:*\n\n* *"Como va mi proyecto Casa Blanca?"*\n* *"Que tareas tengo pendientes?"*\n\n* *"Crea una tarea Revisar planos, prioridad alta"*\n* *"Registra un gasto de 500.000 en materiales"*\n\n* *"Resumen de gastos del mes"*\n* *"Que hay en inventario?"*\n\n* *"Programa una reunion manana a las 10am"*\n* *"Estima el costo de remodelar una cocina"*\n\n*Tambien puedes usar comandos rapidos:*\nresumen / tareas / gastos / estado / equipo / ayuda`,
     buttons: [
       { id: 'cmd_tareas', title: 'Mis tareas' },
       { id: 'cmd_proyectos', title: 'Proyectos' },
+      { id: 'cmd_resumen', title: 'Resumen' },
     ],
   };
 }
