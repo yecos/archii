@@ -96,6 +96,7 @@ export interface Task {
     progress?: number;
     order?: number;
     phase?: string;
+    dependencies?: string[];
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
     updatedAt?: FirestoreTimestamp | null;

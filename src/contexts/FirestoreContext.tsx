@@ -102,6 +102,8 @@ interface FirestoreContextType {
   // Gantt helpers (project-detail specific)
   calcGanttDays: (startDate: string, endDate: string) => number;
   calcGanttOffset: (phaseStart: string, timelineStart: string) => number;
+  // Task dependencies
+  updateTaskDependencies: (taskId: string, dependencies: string[]) => Promise<void>;
 }
 
 const FirestoreContext = createContext<FirestoreContextType | null>(null);
@@ -671,6 +673,19 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   // ===== GANTT HELPERS (project-detail specific, re-exported from @/lib/gantt-helpers) =====
 
+  const updateTaskDependencies = useCallback(async (taskId: string, dependencies: string[]) => {
+    try {
+      await getFirebase().firestore().collection('tasks').doc(taskId).update({
+        dependencies,
+        updatedAt: serverTimestamp(),
+      });
+      showToast('Dependencias actualizadas');
+    } catch (err) {
+      console.error('[ArchiFlow] Gantt: update dependencies failed:', err);
+      showToast('Error al actualizar dependencias', 'error');
+    }
+  }, [showToast]);
+
   const value: FirestoreContextType = useMemo(() => ({
     // Collection state
     projects, setProjects, tasks, setTasks, expenses, setExpenses,
@@ -692,6 +707,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     projectExpenses, projectTasks, projectBudget, projectSpent,
     // Gantt (project-detail specific, re-exported from @/lib/gantt-helpers)
     calcGanttDays: _gantt.calcGanttDays, calcGanttOffset: _gantt.calcGanttOffset,
+    updateTaskDependencies,
   }), [
     // Collection state
     projects, tasks, expenses, suppliers, companies, workPhases, projectFiles, approvals, allApprovals,
@@ -704,6 +720,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     // Computed values
     currentProject, pendingCount, pendingApprovals, activeTasks, completedTasks, overdueTasks, urgentTasks,
     projectExpenses, projectTasks, projectBudget, projectSpent,
+    updateTaskDependencies,
   ]);
 
   return <FirestoreContext.Provider value={value}>{children}</FirestoreContext.Provider>;
