@@ -26,7 +26,7 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
 
 /* ===== PROJECTS ===== */
 
-export function saveProject(data: ProjectFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveProject(data: ProjectFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar proyecto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -51,6 +51,7 @@ export function saveProject(data: ProjectFormData, editingId: string | null, sho
     } else {
       projData.createdAt = ts;
       projData.createdBy = authUser?.uid;
+      projData.tenantId = tenantId;
       const ref = await db.collection('projects').add(projData);
       // Init default phases
       const batch = db.batch();
@@ -83,7 +84,7 @@ export async function deleteProject(projectId: string, showToast: ToastFn) {
 
 /* ===== TASKS ===== */
 
-export function saveTask(data: TaskFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveTask(data: TaskFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar tarea', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -108,6 +109,7 @@ export function saveTask(data: TaskFormData, editingId: string | null, showToast
         dueDate: data.taskDue || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Tarea creada');
     }
@@ -153,7 +155,7 @@ export async function sendMessage(chatProjectId: string, msgData: ChatMessageFor
 
 /* ===== EXPENSES ===== */
 
-export function saveExpense(data: ExpenseFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveExpense(data: ExpenseFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar gasto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -176,6 +178,7 @@ export function saveExpense(data: ExpenseFormData, editingId: string | null, sho
         date: data.expDate || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Gasto registrado');
     }
@@ -192,7 +195,7 @@ export async function deleteExpense(expenseId: string, showToast: ToastFn) {
 
 /* ===== SUPPLIERS ===== */
 
-export function saveSupplier(data: SupplierFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveSupplier(data: SupplierFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar proveedor', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -221,6 +224,7 @@ export function saveSupplier(data: SupplierFormData, editingId: string | null, s
         rating: Number(data.supRating) || 0,
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Proveedor registrado');
     }
@@ -237,7 +241,7 @@ export async function deleteSupplier(supplierId: string, showToast: ToastFn) {
 
 /* ===== COMPANIES ===== */
 
-export function saveCompany(data: CompanyFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveCompany(data: CompanyFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar empresa', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -262,6 +266,7 @@ export function saveCompany(data: CompanyFormData, editingId: string | null, sho
         legalName: data.compLegal || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Empresa registrada');
     }
@@ -388,7 +393,7 @@ export async function deleteApproval(projectId: string, approvalId: string, show
 
 /* ===== MEETINGS ===== */
 
-export function saveMeeting(data: MeetingFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveMeeting(data: MeetingFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar reunión', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -418,6 +423,7 @@ export function saveMeeting(data: MeetingFormData, editingId: string | null, sho
         createdBy: authUser?.displayName || authUser?.email || 'Usuario',
         createdAt: ts,
         createdByUid: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Reunión programada');
     }
@@ -434,7 +440,7 @@ export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
 
 /* ===== GALLERY ===== */
 
-export async function saveGalleryPhoto(data: GalleryPhotoFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export async function saveGalleryPhoto(data: GalleryPhotoFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar foto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -445,6 +451,7 @@ export async function saveGalleryPhoto(data: GalleryPhotoFormData, showToast: To
       imageData: data.photoImage,
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId,
     });
     showToast('✅ Foto subida');
   }, showToast);
@@ -460,7 +467,7 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
 
 /* ===== INVENTORY ===== */
 
-export function saveInvProduct(data: InvProductFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvProduct(data: InvProductFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar producto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -493,6 +500,7 @@ export function saveInvProduct(data: InvProductFormData, editingId: string | nul
         warehouseStock: {},
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('✅ Producto registrado');
     }
@@ -507,7 +515,7 @@ export async function deleteInvProduct(productId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn) {
+export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn, tenantId: string) {
   return fbAction('guardar categoría', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -524,6 +532,7 @@ export function saveInvCategory(data: Record<string, any>, editingId: string | n
         color: data.catColor || '#10b981',
         description: data.catDesc || '',
         createdAt: ts,
+        tenantId,
       });
       showToast('✅ Categoría creada');
     }
@@ -538,7 +547,7 @@ export async function deleteInvCategory(catId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvMovement(data: InvMovementFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvMovement(data: InvMovementFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('registrar movimiento', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -552,6 +561,7 @@ export function saveInvMovement(data: InvMovementFormData, showToast: ToastFn, a
       warehouse: data.movWarehouse || 'Almacén Principal',
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId,
     });
     showToast('✅ Movimiento registrado');
   }, showToast);
@@ -565,7 +575,7 @@ export async function deleteInvMovement(movId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvTransfer(data: InvTransferFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvTransfer(data: InvTransferFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('registrar transferencia', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -580,6 +590,7 @@ export function saveInvTransfer(data: InvTransferFormData, showToast: ToastFn, a
       notes: data.transNotes || '',
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId,
     });
     showToast('✅ Transferencia creada');
   }, showToast);
@@ -625,7 +636,7 @@ export async function updateUserCompany(userId: string, companyId: string, showT
 
 /* ===== TIME ENTRIES ===== */
 
-export function saveTimeEntry(data: TimeEntryFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveTimeEntry(data: TimeEntryFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar registro de tiempo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -649,6 +660,7 @@ export function saveTimeEntry(data: TimeEntryFormData, editingId: string | null,
       showToast('Registro actualizado');
     } else {
       entryData.createdAt = ts;
+      entryData.tenantId = tenantId;
       await db.collection('timeEntries').add(entryData);
       showToast('✅ Tiempo registrado');
     }
@@ -665,7 +677,7 @@ export async function deleteTimeEntry(entryId: string, showToast: ToastFn) {
 
 /* ===== INVOICES ===== */
 
-export function saveInvoice(data: InvoiceFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveInvoice(data: InvoiceFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar factura', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -693,6 +705,7 @@ export function saveInvoice(data: InvoiceFormData, editingId: string | null, sho
     } else {
       invoiceData.createdAt = ts;
       invoiceData.createdBy = authUser?.uid;
+      invoiceData.tenantId = tenantId;
       await db.collection('invoices').add(invoiceData);
       showToast('✅ Factura creada');
     }
@@ -719,7 +732,7 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
 
 /* ===== QUOTATIONS ===== */
 
-export function saveQuotation(data: QuotationFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveQuotation(data: QuotationFormData, editingId: string | null, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar cotización', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -792,6 +805,7 @@ export function saveQuotation(data: QuotationFormData, editingId: string | null,
     } else {
       quoteData.createdAt = ts;
       quoteData.createdBy = authUser?.uid;
+      quoteData.tenantId = tenantId;
       await db.collection('quotations').add(quoteData);
       showToast('✅ Cotización creada');
     }
@@ -806,7 +820,7 @@ export async function updateQuotationStatus(quotationId: string, status: string,
   }, showToast);
 }
 
-export async function duplicateQuotation(quotationId: string, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export async function duplicateQuotation(quotationId: string, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('duplicar cotización', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -821,6 +835,7 @@ export async function duplicateQuotation(quotationId: string, showToast: ToastFn
       createdAt: ts,
       createdBy: authUser?.uid,
       updatedAt: ts,
+      tenantId,
     });
     showToast('✅ Cotización duplicada');
   }, showToast);
@@ -836,7 +851,7 @@ export async function deleteQuotation(quotationId: string, showToast: ToastFn) {
 
 /* ===== COMMENTS ===== */
 
-export function saveComment(data: CommentFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null) {
+export function saveComment(data: CommentFormData, showToast: ToastFn, authUser: FirebaseUserInfo | null, tenantId: string) {
   return fbAction('guardar comentario', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -850,6 +865,7 @@ export function saveComment(data: CommentFormData, showToast: ToastFn, authUser:
       mentions: data.mentions || [],
       parentId: data.parentId || null,
       createdAt: ts,
+      tenantId,
     });
   });
 }

@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '@/hooks/useDomain';
 import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3, Layout, ArrowRight } from 'lucide-react';
 import {
@@ -22,6 +23,7 @@ const emptyPhase = (): TemplatePhase => ({
 export default function TemplatesScreen() {
   const ui = useUI();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [customTemplates, setCustomTemplates] = useState<UnifiedTemplate[]>([]);
@@ -37,14 +39,15 @@ export default function TemplatesScreen() {
 
   // Load custom templates from Firestore
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projectTemplates').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('projectTemplates').where('tenantId', '==', tenantId).onSnapshot((snap: QuerySnapshot) => {
       const docs = snapToDocs(snap);
       const parsed = docs.map((d) => firestoreDocToTemplate(d));
       setCustomTemplates(parsed);
     }, (err: Error) => console.error('[ArchiFlow] Templates: listen error:', err));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const allTemplates = useMemo(() => {
     return [...BUILT_IN_TEMPLATES, ...customTemplates];
@@ -112,6 +115,7 @@ export default function TemplatesScreen() {
       } else {
         (data as Record<string, unknown>).createdAt = ts;
         (data as Record<string, unknown>).createdBy = auth.authUser?.uid || '';
+        (data as Record<string, unknown>).tenantId = tenantId;
         await db.collection('projectTemplates').add(data);
         showToast('✅ Plantilla creada');
       }

@@ -7,6 +7,7 @@ import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import { fmtCOP } from '@/lib/helpers';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3, Clock, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, XCircle, FileText, ArrowUpRight, ArrowDownRight, RotateCcw } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { FirestoreTimestamp, ChangeOrderStatus, ChangeOrderCategory } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -90,6 +91,7 @@ export default function ChangeOrdersScreen() {
   const ui = useUI();
   const { projects } = useFirestore();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [cos, setCos] = useState<ChangeOrderEntry[]>([]);
@@ -111,12 +113,13 @@ export default function ChangeOrdersScreen() {
 
   // Load Change Orders
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').onSnapshot((snap) => {
+    const unsub = db.collection('changeOrders').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap) => {
       setCos(snapToDocs(snap) as ChangeOrderEntry[]);
     }, (err: unknown) => console.error('[ArchiFlow] CO: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     if (filterStatus === 'all') return cos;
@@ -203,6 +206,7 @@ export default function ChangeOrdersScreen() {
         coData.implementedAt = null;
         coData.createdAt = ts;
         coData.createdBy = auth.authUser?.uid || '';
+        coData.tenantId = tenantId;
         await db.collection('changeOrders').add(coData);
         showToast('Cambio registrado');
       }

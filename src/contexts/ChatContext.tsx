@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, QuerySnapshot, QueryDocSnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import { fmtSize } from '@/lib/helpers';
 import type { ChatMessage } from '@/lib/types';
 
@@ -179,6 +180,7 @@ const ChatContext = createContext<ChatContextType | null>(null);
 export default function ChatProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -227,7 +229,8 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     const db = getFirebase().firestore();
     let unsub: () => void;
     if (chatProjectId === '__general__') {
-      unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+      if (!tenantId) return;
+      unsub = db.collection('generalMessages').where('tenantId', '==', tenantId).orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); showToast('Error al cargar mensajes. Intenta de nuevo.', 'error'); });
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
@@ -242,7 +245,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); showToast('Error al cargar mensajes del proyecto.', 'error'); });
     }
     return () => { unsub(); setMessages([]); };
-  }, [ready, chatProjectId, chatDmUser, authUser]);
+  }, [ready, chatProjectId, chatDmUser, authUser, tenantId]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -263,7 +266,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
       if (chatReplyingTo) { msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid }; }
-      if (chatProjectId === '__general__') { await db.collection('generalMessages').add(msgData); }
+      if (chatProjectId === '__general__') { await db.collection('generalMessages').add({ ...msgData, tenantId }); }
       else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
         const ids = [authUser.uid, chatDmUser].sort();
         const dmId = `dm_${ids[0]}_${ids[1]}`;

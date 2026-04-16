@@ -5,6 +5,7 @@ import { useAuthContext } from './AuthContext';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { TimeEntry, TimeSession } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
+import { useTenantId } from '@/hooks/useTenantId';
 
 /* ===== TIME TRACKING CONTEXT ===== */
 interface TimeTrackingContextType {
@@ -30,6 +31,7 @@ const TimeTrackingContext = createContext<TimeTrackingContextType | null>(null);
 export default function TimeTrackingProvider({ children }: { children: React.ReactNode }) {
   const { forms, closeModal, editingId, showToast } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
@@ -45,13 +47,13 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
 
   // Load time entries
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('timeEntries').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: QuerySnapshot) => {
       setTimeEntries(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Time tracker: live timer update
   useEffect(() => {
@@ -76,6 +78,7 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
 
   const stopTimeTracking = async () => {
     if (!timeSession.isRunning || !timeSession.startTime) return;
+    if (!tenantId) return;
     const endTime = new Date();
     const startTime = new Date(timeSession.startTime);
     const durationMin = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
@@ -83,7 +86,7 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
     const dateStr = startTime.toISOString().split('T')[0];
     const startStr = startTime.toTimeString().substring(0, 5);
     const endStr = endTime.toTimeString().substring(0, 5);
-    await fbActions.saveTimeEntry({ teProject: timeSession.projectId, tePhase: timeSession.phaseName, teDescription: timeSession.description, teStartTime: startStr, teEndTime: endStr, teDuration: durationMin, teBillable: true, teRate: Number(forms.teRate) || 50000, teDate: dateStr }, null, showToast, authUser);
+    await fbActions.saveTimeEntry({ teProject: timeSession.projectId, tePhase: timeSession.phaseName, teDescription: timeSession.description, teStartTime: startStr, teEndTime: endStr, teDuration: durationMin, teBillable: true, teRate: Number(forms.teRate) || 50000, teDate: dateStr }, null, showToast, authUser, tenantId);
     setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
     setTimeTimerMs(0);
   };
@@ -92,7 +95,8 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
     const dur = Number(forms.teManualDuration) || 0;
     if (dur < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
     if (!forms.teProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    fbActions.saveTimeEntry({ teProject: forms.teProject, tePhase: forms.tePhase || '', teDescription: forms.teDescription || '', teStartTime: forms.teStartTime || '08:00', teEndTime: forms.teEndTime || '17:00', teDuration: dur, teBillable: forms.teBillable !== false, teRate: Number(forms.teRate) || 50000, teDate: forms.teDate || new Date().toISOString().split('T')[0] }, editingId, showToast, authUser);
+    if (!tenantId) return;
+    fbActions.saveTimeEntry({ teProject: forms.teProject, tePhase: forms.tePhase || '', teDescription: forms.teDescription || '', teStartTime: forms.teStartTime || '08:00', teEndTime: forms.teEndTime || '17:00', teDuration: dur, teBillable: forms.teBillable !== false, teRate: Number(forms.teRate) || 50000, teDate: forms.teDate || new Date().toISOString().split('T')[0] }, editingId, showToast, authUser, tenantId);
     closeModal('timeEntry');
   };
 

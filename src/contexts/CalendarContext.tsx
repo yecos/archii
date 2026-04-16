@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { expandMeetingForMonth } from '@/lib/recurrence';
 import type { Meeting } from '@/lib/types';
@@ -30,6 +31,7 @@ const CalendarContext = createContext<CalendarContextType | null>(null);
 export default function CalendarProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms, openModal, closeModal, editingId, setEditingId } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== CALENDAR UI STATE =====
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -44,13 +46,13 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
 
   // Load meetings
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('meetings').where('tenantId', '==', tenantId).orderBy('date', 'asc').onSnapshot((snap: QuerySnapshot) => {
       setMeetings(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // ===== COMPUTED: Expanded meetings for current month =====
   const expandedMeetings = useMemo(() => {
@@ -90,7 +92,7 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
         data.recurrenceEnd = recurrenceEnd;
       }
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
-      else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
+      else { await db.collection('meetings').add({ ...data, tenantId }); showToast('Reunión creada'); }
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurrence: 'none', meetRecurrenceEnd: '' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };

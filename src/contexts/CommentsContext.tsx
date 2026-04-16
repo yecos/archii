@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot, uploadToStorage } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { Comment, DailyLog } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -38,6 +39,7 @@ const CommentsContext = createContext<CommentsContextType | null>(null);
 export default function CommentsProvider({ children }: { children: React.ReactNode }) {
   const { showToast, selectedProjectId } = useUIContext();
   const { ready, authUser, teamUsers } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [comments, setComments] = useState<Comment[]>([]);
@@ -60,13 +62,13 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
 
   // Load comments
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('comments').where('tenantId', '==', tenantId).orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: QuerySnapshot) => {
       setComments(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load daily logs
   useEffect(() => {
@@ -141,7 +143,8 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
       const mentionedUser = teamUsers.find(u => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
       if (mentionedUser) mentions.push(mentionedUser.id);
     }
-    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser);
+    if (!tenantId) return;
+    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser, tenantId);
     setCommentText('');
     setReplyingTo(null);
   };

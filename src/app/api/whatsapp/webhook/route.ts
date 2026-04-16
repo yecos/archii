@@ -15,6 +15,7 @@ import {
 import { aiReply } from "@/lib/whatsapp-ai";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { getTenantIdForUser } from "@/lib/tenant-server";
 import type { WhatsAppLinkedUser } from "@/lib/types";
 import type { WhatsAppMessage } from "@/lib/whatsapp-service";
 import type { Firestore } from "firebase-admin/firestore";
@@ -137,6 +138,16 @@ async function handleGroupMessage(message: WhatsAppMessage) {
 
     const linkData = { id: linkSnap.docs[0].id, ...linkSnap.docs[0].data() } as WhatsAppLinkedUser;
 
+    // Multi-tenant: verify linked user has a tenant
+    const tenantId = await getTenantIdForUser(linkData.userId);
+    if (!tenantId) {
+      const replyTo = message.groupId || message.from;
+      await sendWhatsAppMessage(replyTo,
+        `Hola ${message.name}! Tu cuenta no esta configurada en una organizacion. Contacta al administrador.`
+      );
+      return;
+    }
+
     // Strip the bot mention from the message for cleaner AI processing
     let cleanMessage = message.body;
     for (const mention of BOT_MENTIONS) {
@@ -200,13 +211,19 @@ async function safeReply(message: WhatsAppMessage) {
     } else {
       const linkData = { id: linkSnap.docs[0].id, ...linkSnap.docs[0].data() } as WhatsAppLinkedUser;
 
-      // Use AI Agent for natural conversation — fallback to classic commands on failure
-      try {
-        const aiText = await aiReply(message.body, linkData, db);
-        reply = { text: aiText };
-      } catch (aiErr) {
-        console.warn('[WhatsApp] AI failed, falling back to commands:', aiErr instanceof Error ? aiErr.message : aiErr);
-        reply = await processCommand(message.body, linkData, db);
+      // Multi-tenant: verify linked user has a tenant
+      const tenantId = await getTenantIdForUser(linkData.userId);
+      if (!tenantId) {
+        reply = { text: 'Tu cuenta no esta configurada en una organizacion. Contacta al administrador.' };
+      } else {
+        // Use AI Agent for natural conversation — fallback to classic commands on failure
+        try {
+          const aiText = await aiReply(message.body, linkData, db);
+          reply = { text: aiText };
+        } catch (aiErr) {
+          console.warn('[WhatsApp] AI failed, falling back to commands:', aiErr instanceof Error ? aiErr.message : aiErr);
+          reply = await processCommand(message.body, linkData, db);
+        }
       }
     }
 

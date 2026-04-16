@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 import { routeAIRequest } from "@/lib/ai-router";
+import { getTenantIdForUser } from "@/lib/tenant-server";
 
 /**
  * POST /api/ai-predictions
@@ -351,9 +352,15 @@ export async function POST(request: NextRequest) {
     const db = getAdminDb();
     const uid = user.uid;
 
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(uid);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    }
+
     // Fetch project data
     const projectSnap = await db.collection("projects").doc(projectId).get();
-    if (!projectSnap.exists) {
+    if (!projectSnap.exists || (projectSnap.data() as Record<string, unknown>).tenantId !== tenantId) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 
@@ -361,9 +368,9 @@ export async function POST(request: NextRequest) {
 
     // Fetch related data in parallel
     const [tasksSnap, expensesSnap, changeOrdersSnap] = await Promise.all([
-      db.collection("tasks").where("projectId", "==", projectId).limit(100).get(),
-      db.collection("expenses").where("projectId", "==", projectId).limit(100).get(),
-      db.collection("changeOrders").where("projectId", "==", projectId).limit(50).get(),
+      db.collection("tasks").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(100).get(),
+      db.collection("expenses").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(100).get(),
+      db.collection("changeOrders").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(50).get(),
     ]);
 
     const tasks: DocData[] = snapDocs(tasksSnap);

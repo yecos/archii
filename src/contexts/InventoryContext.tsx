@@ -6,6 +6,7 @@ import { getFirebase, serverTimestamp, snapToDocs, QuerySnapshot, type Transacti
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
 import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
+import { useTenantId } from '@/hooks/useTenantId';
 
 /* ===== INVENTORY CONTEXT ===== */
 interface InventoryContextType {
@@ -65,6 +66,7 @@ const InventoryContext = createContext<InventoryContextType | null>(null);
 export default function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms, openModal, closeModal, editingId, setEditingId } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [invProducts, setInvProducts] = useState<InvProduct[]>([]);
@@ -84,43 +86,43 @@ export default function InventoryProvider({ children }: { children: React.ReactN
 
   // Load inventory products
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('invProducts').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setInvProducts(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load inventory categories
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('invCategories').where('tenantId', '==', tenantId).orderBy('name', 'asc').onSnapshot((snap: QuerySnapshot) => {
       setInvCategories(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load inventory movements
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('invMovements').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvMovements(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load inventory transfers
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('invTransfers').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvTransfers(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // ===== HELPER FUNCTIONS =====
 
@@ -168,7 +170,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: number) => s + (Number(v) || 0), 0);
       const data = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser?.uid };
       if (editingId) { await db.collection('invProducts').doc(editingId).update(data); showToast('Producto actualizado'); }
-      else { await db.collection('invProducts').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
+      else { await db.collection('invProducts').add({ ...data, createdAt: ts, createdBy: authUser?.uid, tenantId }); showToast('Producto creado'); }
       closeModal('invProduct'); setEditingId(null);
       const resetForms: Record<string, string> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
@@ -200,7 +202,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         await db.collection('invCategories').doc(editingId).update({ name, color, description, updatedAt: ts });
         showToast('Categoría actualizada');
       } else {
-        await db.collection('invCategories').add({ name, color, description, createdAt: ts });
+        await db.collection('invCategories').add({ name, color, description, createdAt: ts, tenantId });
         showToast('Categoría creada');
       }
       closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
@@ -232,7 +234,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         INV_WAREHOUSES.forEach(w => { if (ws[w] === undefined) ws[w] = 0; });
         ws[warehouse] = type === 'Entrada' ? (ws[warehouse] || 0) + qty : Math.max(0, (ws[warehouse] || 0) - qty);
         const newTotal = Object.values(ws).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0);
-        transaction.set(db.collection('invMovements').doc(), { ...movementData, createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
+        transaction.set(db.collection('invMovements').doc(), { ...movementData, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), tenantId });
         transaction.update(productRef, { stock: newTotal, warehouseStock: ws, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() });
       });
 
@@ -312,7 +314,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
         transaction.set(db.collection('invTransfers').doc(), {
           productId, productName: productData.name || '', fromWarehouse: from, toWarehouse: to,
           quantity: qty, status: 'Completada', date: transferDate, notes: transferNotes,
-          createdAt: fbTs, createdBy: authUser?.uid, completedAt: fbTs
+          createdAt: fbTs, createdBy: authUser?.uid, completedAt: fbTs, tenantId
         });
       });
 

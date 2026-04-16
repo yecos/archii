@@ -8,6 +8,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import SignatureModal from '@/components/modals/SignatureModal';
 import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
 import { Plus, Trash2, CheckCircle, XCircle, Clock, MinusCircle, Pencil, PenTool } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -120,6 +121,7 @@ export default function InspectionsScreen() {
   const ui = useUI();
   const { projects } = useFirestore();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -142,12 +144,13 @@ export default function InspectionsScreen() {
 
   // Load
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('inspections').orderBy('date', 'desc').onSnapshot((snap) => {
+    const unsub = db.collection('inspections').where('tenantId', '==', tenantId).orderBy('date', 'desc').onSnapshot((snap) => {
       setInspections(snapToDocs(snap) as Inspection[]);
     }, (err: unknown) => console.error('[ArchiFlow] Inspections: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     let list = inspections;
@@ -240,6 +243,7 @@ export default function InspectionsScreen() {
       } else {
         await db.collection('inspections').add({
           ...inspData,
+          tenantId,
           status: 'Pendiente',
           createdAt: ts,
           createdBy: auth.authUser?.uid || '',

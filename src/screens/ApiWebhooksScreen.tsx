@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, useFirestore, useUI } from '@/hooks/useDomain';
 import { getFirebase, serverTimestamp, snapToDocs, type QuerySnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import { confirm } from '@/hooks/useConfirmDialog';
 import {
   Key, Globe, Send, Shield, Clock, CheckCircle, XCircle,
@@ -60,6 +61,7 @@ const WEBHOOK_EVENTS = [
 
 export default function ApiWebhooksScreen() {
   const { authUser, isAdmin } = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = useUI();
   const [tab, setTab] = useState<'keys' | 'webhooks' | 'docs'>('keys');
   const [apiKeys, setApiKeys] = useState<ApiKeyDoc[]>([]);
@@ -80,11 +82,12 @@ export default function ApiWebhooksScreen() {
 
   // Load data
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !tenantId) return;
     const db = getFirebase().firestore();
 
     const unsub1 = db.collection('apiKeys')
       .where('createdBy', '==', authUser.uid)
+      .where('tenantId', '==', tenantId)
       .orderBy('createdAt', 'desc').onSnapshot(
         (snap: QuerySnapshot) => { setApiKeys(snapToDocs(snap) as ApiKeyDoc[]); setLoading(false); },
         (err: unknown) => { console.error('[ArchiFlow] Error loading API keys:', err); setLoading(false); }
@@ -92,13 +95,14 @@ export default function ApiWebhooksScreen() {
 
     const unsub2 = db.collection('webhooks')
       .where('createdBy', '==', authUser.uid)
+      .where('tenantId', '==', tenantId)
       .orderBy('createdAt', 'desc').onSnapshot(
         (snap: QuerySnapshot) => { setWebhooks(snapToDocs(snap) as WebhookDoc[]); },
         (err: unknown) => { console.error('[ArchiFlow] Error loading webhooks:', err); }
       );
 
     return () => { unsub1(); unsub2(); };
-  }, [authUser]);
+  }, [authUser, tenantId]);
 
   // Generate random API key
   const generateApiKey = useCallback(() => {
@@ -134,6 +138,7 @@ export default function ApiWebhooksScreen() {
         name: keyName.trim(),
         keyHash,
         keyPrefix,
+        tenantId,
         lastUsed: null,
         requestCount: 0,
         isActive: true,
@@ -172,6 +177,7 @@ export default function ApiWebhooksScreen() {
         name: whName.trim(),
         url: whUrl.trim(),
         secret,
+        tenantId,
         events: whEvents,
         isActive: true,
         lastDeliveryAt: null,

@@ -5,6 +5,7 @@ import { useAuthContext } from './AuthContext';
 import { getFirebase, getStorage, serverTimestamp, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { GalleryPhoto, OneDriveFile } from '@/lib/types';
 import { confirm } from '@/hooks/useConfirmDialog';
+import { useTenantId } from '@/hooks/useTenantId';
 
 /* ===== GALLERY CONTEXT ===== */
 interface GalleryContextType {
@@ -89,6 +90,7 @@ async function compressImage(file: File): Promise<Blob> {
 export default function GalleryProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms, openModal, closeModal, editingId, setEditingId } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
@@ -104,13 +106,13 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
 
   // Load gallery photos
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('galleryPhotos').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setGalleryPhotos(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // ===== CRUD FUNCTIONS =====
 
@@ -186,7 +188,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
                   await db.collection('galleryPhotos').doc(editingId).update(data);
                   showToast('Foto actualizada');
                 } else {
-                  await db.collection('galleryPhotos').add(data);
+                  await db.collection('galleryPhotos').add({ ...data, tenantId });
                   showToast('Foto agregada a galería');
                 }
 
@@ -212,7 +214,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
           createdBy: authUser?.uid,
         };
         if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
-        else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
+        else { await db.collection('galleryPhotos').add({ ...data, tenantId }); showToast('Foto agregada a galería'); }
       }
 
       closeModal('gallery');

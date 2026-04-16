@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { useInvoice } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs } from '@/lib/firebase-service';
 import { FileText, Building2, DollarSign, HardHat, Calendar, Download, Loader2, ChevronDown, Filter, Sparkles, Image, PenTool, BarChart3 } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { Project, FieldNote, Inspection, DailyLog, Company } from '@/lib/types';
 import {
   generateProjectReport,
@@ -55,6 +56,7 @@ export default function ReportGeneratorScreen() {
   const { showToast } = useUI();
   const { projects, tasks, expenses } = useFirestore();
   const { teamUsers } = useAuth();
+  const tenantId = useTenantId();
   const { invoices } = useInvoice();
 
   const [reportType, setReportType] = useState<ReportType>('project');
@@ -73,18 +75,18 @@ export default function ReportGeneratorScreen() {
   // Load field data
   useEffect(() => {
     const fb = getFirebase();
-    if (!fb) return;
+    if (!fb || !tenantId) return;
     const db = fb.firestore();
 
-    const unsub1 = db.collection('fieldNotes').orderBy('date', 'desc').limit(100).onSnapshot(
+    const unsub1 = db.collection('fieldNotes').where('tenantId', '==', tenantId).orderBy('date', 'desc').limit(100).onSnapshot(
       (snap) => setFieldNotes(snapToDocs(snap) as FieldNote[]),
       (err) => console.error('[ReportGen] fieldNotes error:', err),
     );
-    const unsub2 = db.collection('inspections').orderBy('date', 'desc').limit(100).onSnapshot(
+    const unsub2 = db.collection('inspections').where('tenantId', '==', tenantId).orderBy('date', 'desc').limit(100).onSnapshot(
       (snap) => setInspections(snapToDocs(snap) as Inspection[]),
       (err) => console.error('[ReportGen] inspections error:', err),
     );
-    const unsub3 = db.collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot(
+    const unsub3 = db.collection('dailyLogs').where('tenantId', '==', tenantId).orderBy('date', 'desc').limit(100).onSnapshot(
       (snap) => setDailyLogs(snapToDocs(snap) as DailyLog[]),
       (err) => console.error('[ReportGen] dailyLogs error:', err),
     );
@@ -94,16 +96,16 @@ export default function ReportGeneratorScreen() {
       unsub2();
       unsub3();
     };
-  }, []);
+  }, [tenantId]);
 
   // Company data (first company)
   const [company, setCompany] = useState<Company | undefined>();
 
   useEffect(() => {
     const fb = getFirebase();
-    if (!fb) return;
+    if (!fb || !tenantId) return;
     const db = fb.firestore();
-    const unsub = db.collection('companies').limit(1).onSnapshot(
+    const unsub = db.collection('companies').where('tenantId', '==', tenantId).limit(1).onSnapshot(
       (snap) => {
         const docs = snapToDocs(snap) as Company[];
         if (docs.length > 0) setCompany(docs[0]);
@@ -111,7 +113,7 @@ export default function ReportGeneratorScreen() {
       () => {},
     );
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const selectedProjectData = useMemo(
     () => projects.find((p) => p.id === selectedProject) || null,

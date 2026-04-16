@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
@@ -63,10 +64,17 @@ export async function GET(request: NextRequest) {
         const { getAdminDb } = await import('@/lib/firebase-admin');
         const db = getAdminDb();
 
+        // Multi-tenant: derive tenantId from the project
+        const projectDoc = await db.collection('projects').doc(projectId).get();
+        const projectTenantId = projectDoc.exists
+          ? (projectDoc.data() as Record<string, unknown>).tenantId as string | null
+          : null;
+
         // Get all drive item IDs for this project from Firestore
         const snapshot = await db
           .collection('onedrive_files')
           .where('projectId', '==', projectId)
+          .where('tenantId', '==', projectTenantId)
           .select('driveItemId')
           .get();
 

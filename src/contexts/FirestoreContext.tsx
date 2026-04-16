@@ -11,6 +11,7 @@ import { fmtCOP, fmtDate, fmtSize } from '@/lib/helpers';
 import { useUIStore } from '@/stores/ui-store';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 
+import { useTenantId } from '@/hooks/useTenantId';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { logAudit, extractChanges } from '@/lib/audit-trail';
 import type { AuditEntityType } from '@/lib/audit-trail';
@@ -112,6 +113,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const { showToast, forms, setForms, openModal, closeModal, editingId, setEditingId, selectedProjectId, setSelectedProjectId, setScreen } = useUIContext();
   const { ready, authUser } = useAuthContext();
   const { msConnected, msAccessToken, ensureProjectFolder } = useOneDriveContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [projects, setProjects] = useState<Project[]>([]);
@@ -128,47 +130,47 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   // Load projects
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('projects').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setProjects(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando projects:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load tasks
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('tasks').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setTasks(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando tasks:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load expenses
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('expenses').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setExpenses(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando expenses:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load suppliers + companies
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
     const unsubs: (() => void)[] = [];
-    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    unsubs.push(db.collection('suppliers').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setSuppliers(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando suppliers:', err); }));
-    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    unsubs.push(db.collection('companies').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setCompanies(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando companies:', err); }));
     return () => unsubs.forEach(u => u());
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // Load work phases
   useEffect(() => {
@@ -202,13 +204,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
 
   // Load ALL approvals (top-level listener for admin/dashboard)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collectionGroup('approvals').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collectionGroup('approvals').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setAllApprovals(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando allApprovals:', err); });
     return () => { unsub(); setAllApprovals([]); };
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // AI project context
   const currentProject = useMemo(() => projects.find((p: Project) => p.id === selectedProjectId), [projects, selectedProjectId]);
@@ -265,7 +267,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         }
       }
       else {
-        const ref = await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
+        const ref = await db.collection('projects').add({ ...data, tenantId, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
         showToast('Proyecto creado');
         // Audit: create
         logAudit('create', 'project' as AuditEntityType, ref.id, name, undefined, ref.id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
@@ -286,7 +288,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
                 // Create tasks with phase association, marked as template-sourced
                 flatTasks.forEach(({ phase, task, order }) => {
                   batch.set(db.collection('tasks').doc(), {
-                    projectId: ref.id, title: task, status: 'Borrador', priority: 'Media',
+                    projectId: ref.id, tenantId, title: task, status: 'Borrador', priority: 'Media',
                     assigneeId: '', dueDate: '', description: '', progress: 0, phase: phase || '',
                     createdAt: ts, updatedAt: ts, createdBy: authUser?.uid, order,
                     fromTemplate: true,
@@ -296,7 +298,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
                 if (tpl.phasesData?.length) {
                   tpl.phasesData.forEach((phaseData, idx: number) => {
                     batch.set(db.collection('workPhases').doc(), {
-                      projectId: ref.id, name: phaseData.name, status: 'Pendiente', order: idx,
+                      projectId: ref.id, tenantId, name: phaseData.name, status: 'Pendiente', order: idx,
                       startDate: '', endDate: '', description: '',
                       createdAt: ts, updatedAt: ts,
                     });
@@ -304,7 +306,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
                 } else if (tpl.phases?.length) {
                   tpl.phases.forEach((phaseName: string, idx: number) => {
                     batch.set(db.collection('workPhases').doc(), {
-                      projectId: ref.id, name: phaseName, status: 'Pendiente', order: idx,
+                      projectId: ref.id, tenantId, name: phaseName, status: 'Pendiente', order: idx,
                       startDate: '', endDate: '', description: '',
                       createdAt: ts, updatedAt: ts,
                     });
@@ -322,7 +324,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projTemplate: '' }));
     } catch (err) { console.error('[ArchiFlow] Firestore: save project failed:', err); showToast('Error al guardar', 'error'); }
-  }, [editingId, forms, authUser, projects, msConnected, msAccessToken, showToast, closeModal, setForms]);
+  }, [editingId, forms, authUser, projects, msConnected, msAccessToken, showToast, closeModal, setForms, tenantId]);
 
   const deleteProject = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
     const existing = projects.find((p: Project) => p.id === id);
@@ -343,7 +345,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       const ref = await db.collection('projects').add({
         name: newName, status: 'Concepto', client: src.client || '', location: src.location || '',
         budget: 0, description: src.description || '', startDate: '', endDate: '',
-        companyId: src.companyId || '', progress: 0,
+        companyId: src.companyId || '', progress: 0, tenantId,
         createdAt: ts, createdBy: authUser?.uid, updatedAt: ts, updatedBy: authUser?.uid,
       });
       // Copy tasks (without completion data)
@@ -352,14 +354,14 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         const batch = db.batch();
         srcTasks.forEach((t: Task) => {
           const { createdAt: _ca, updatedAt: _ua, ...taskData } = t.data;
-          batch.set(db.collection('tasks').doc(), { ...taskData, projectId: ref.id, status: 'Pendiente', progress: 0, completedAt: null, createdAt: ts, updatedAt: ts });
+          batch.set(db.collection('tasks').doc(), { ...taskData, projectId: ref.id, tenantId, status: 'Pendiente', progress: 0, completedAt: null, createdAt: ts, updatedAt: ts });
         });
         await batch.commit();
       }
       showToast(`Proyecto duplicado: ${newName}`);
       logAudit('create', 'project' as AuditEntityType, ref.id, newName, undefined, ref.id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
     } catch (err: unknown) { console.error('[ArchiFlow]', err); showToast('Error al duplicar', 'error'); }
-  }, [projects, tasks, authUser, showToast]);
+  }, [projects, tasks, authUser, showToast, tenantId]);
 
   const openEditProject = useCallback((p: Project) => {
     setEditingId(p.id);
@@ -394,7 +396,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         }
       }
       else {
-        const ref = await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
+        const ref = await db.collection('tasks').add({ ...data, tenantId, createdAt: ts, createdBy: authUser?.uid });
         showToast('Tarea creada');
         // Audit: create
         logAudit('create', 'task' as AuditEntityType, ref.id, title, undefined, data.projectId || undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
@@ -406,7 +408,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       }
       closeModal('task'); setEditingId(null); setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  }, [editingId, forms, authUser, projects, tasks, showToast, closeModal, setEditingId, setForms]);
+  }, [editingId, forms, authUser, projects, tasks, showToast, closeModal, setEditingId, setForms, tenantId]);
 
   const openEditTask = useCallback((t: Task) => {
     setEditingId(t.id);
@@ -466,7 +468,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const amount = Number(forms.expAmount) || 0;
     const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: serverTimestamp(), createdBy: authUser?.uid };
     try {
-      const ref = await db.collection('expenses').add(data);
+      const ref = await db.collection('expenses').add({ ...data, tenantId });
       showToast('Gasto registrado');
       // Audit: create (expenses are only created, not updated in this flow)
       logAudit('create', 'expense' as AuditEntityType, ref.id, concept, undefined, data.projectId || undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
@@ -477,7 +479,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(err => console.warn('[ArchiFlow] Firestore: WhatsApp expenseCreated notification failed:', err));
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  }, [forms, authUser, projects, showToast, closeModal, setForms]);
+  }, [forms, authUser, projects, showToast, closeModal, setForms, tenantId]);
 
   const deleteExpense = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar gasto', description: '¿Eliminar gasto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
     const existing = expenses.find(e => e.id === id);
@@ -504,13 +506,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         }
       }
       else {
-        const ref = await db.collection('suppliers').add(data); showToast('Proveedor creado');
+        const ref = await db.collection('suppliers').add({ ...data, tenantId }); showToast('Proveedor creado');
         // Audit: create
         logAudit('create', 'supplier' as AuditEntityType, ref.id, name, undefined, undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
       }
       closeModal('supplier'); setForms(p => ({ ...p, supName: '', supCategory: '', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
-  }, [editingId, forms, showToast, closeModal, setForms, suppliers, authUser]);
+  }, [editingId, forms, showToast, closeModal, setForms, suppliers, authUser, tenantId]);
 
   const deleteSupplier = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proveedor', description: '¿Eliminar proveedor?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
     const existing = suppliers.find(s => s.id === id);
@@ -537,13 +539,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         }
       }
       else {
-        const ref = await db.collection('companies').add(data); showToast('Empresa creada');
+        const ref = await db.collection('companies').add({ ...data, tenantId }); showToast('Empresa creada');
         // Audit: create
         logAudit('create', 'company' as AuditEntityType, ref.id, name, undefined, undefined, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
       }
       closeModal('company'); setEditingId(null);
     } catch (err) { console.error('[ArchiFlow] Firestore: save company failed:', err); showToast('Error al guardar', 'error'); }
-  }, [editingId, forms, showToast, closeModal, setEditingId, companies, authUser]);
+  }, [editingId, forms, showToast, closeModal, setEditingId, companies, authUser, tenantId]);
 
   // --- Files ---
   const uploadFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+
+/** Business collections that require tenant filtering */
+const TENANT_SCOPED_COLLECTIONS = ['onedrive_files', 'onedrive_folders'];
 
 /**
  * Extract the MS access token from the Authorization header.
@@ -60,6 +64,13 @@ export async function GET(request: NextRequest) {
     if (projectId) {
       try {
         const db = getAdminDb();
+
+        // Multi-tenant: derive tenantId from the project
+        const projectDoc = await db.collection('projects').doc(projectId).get();
+        const projectTenantId = projectDoc.exists
+          ? (projectDoc.data() as Record<string, unknown>).tenantId as string | null
+          : null;
+
         const batch = db.batch();
         let ops = 0;
 
@@ -71,6 +82,7 @@ export async function GET(request: NextRequest) {
             .doc(`${projectId}_${item.id}`);
           batch.set(docRef, {
             projectId,
+            tenantId: projectTenantId,
             driveItemId: item.id,
             name: item.name,
             mimeType: item.file?.mimeType || item.folder ? 'folder' : 'unknown',
@@ -253,8 +265,16 @@ export async function POST(request: NextRequest) {
       const item = uploadResult as Record<string, unknown>;
       try {
         const db = getAdminDb();
+
+        // Multi-tenant: derive tenantId from the project
+        const projectDoc = await db.collection('projects').doc(projectId).get();
+        const projectTenantId = projectDoc.exists
+          ? (projectDoc.data() as Record<string, unknown>).tenantId as string | null
+          : null;
+
         await db.collection('onedrive_files').doc(`${projectId}_${item.id}`).set({
           projectId,
+          tenantId: projectTenantId,
           driveItemId: item.id,
           name: filename,
           mimeType: file.type || 'application/octet-stream',

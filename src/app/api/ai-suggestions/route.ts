@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 import { routeAIRequest } from "@/lib/ai-router";
+import { getTenantIdForUser } from "@/lib/tenant-server";
 
 /**
  * POST /api/ai-suggestions
@@ -220,15 +221,21 @@ export async function POST(request: NextRequest) {
     const db = getAdminDb();
     const uid = user.uid;
 
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(uid);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    }
+
     // Fetch relevant data based on type
     let prompt = "";
 
     if (type === "overview") {
       // Fetch all projects, tasks, and expenses for overview
       const [projectsSnap, tasksSnap, expensesSnap] = await Promise.all([
-        db.collection("projects").where("createdBy", "==", uid).limit(10).get(),
-        db.collection("tasks").limit(50).get(),
-        db.collection("expenses").limit(50).get(),
+        db.collection("projects").where("createdBy", "==", uid).where("tenantId", "==", tenantId).limit(10).get(),
+        db.collection("tasks").where("tenantId", "==", tenantId).limit(50).get(),
+        db.collection("expenses").where("tenantId", "==", tenantId).limit(50).get(),
       ]);
 
       const projects: DocData[] = snapDocs(projectsSnap);
@@ -253,10 +260,10 @@ export async function POST(request: NextRequest) {
       // Fetch specific project data for task suggestions
       const [projectSnap, tasksSnap] = await Promise.all([
         db.collection("projects").doc(projectId).get(),
-        db.collection("tasks").where("projectId", "==", projectId).limit(30).get(),
+        db.collection("tasks").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(30).get(),
       ]);
 
-      if (!projectSnap.exists) {
+      if (!projectSnap.exists || (projectSnap.data() as Record<string, unknown>).tenantId !== tenantId) {
         return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
       }
 
@@ -274,10 +281,10 @@ export async function POST(request: NextRequest) {
       // Fetch project budget data
       const [projectSnap, expensesSnap] = await Promise.all([
         db.collection("projects").doc(projectId).get(),
-        db.collection("expenses").where("projectId", "==", projectId).limit(50).get(),
+        db.collection("expenses").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(50).get(),
       ]);
 
-      if (!projectSnap.exists) {
+      if (!projectSnap.exists || (projectSnap.data() as Record<string, unknown>).tenantId !== tenantId) {
         return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
       }
 
@@ -303,10 +310,10 @@ export async function POST(request: NextRequest) {
       // Fetch expenses for analysis
       const [projectSnap, expensesSnap] = await Promise.all([
         db.collection("projects").doc(projectId).get(),
-        db.collection("expenses").where("projectId", "==", projectId).limit(50).get(),
+        db.collection("expenses").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(50).get(),
       ]);
 
-      if (!projectSnap.exists) {
+      if (!projectSnap.exists || (projectSnap.data() as Record<string, unknown>).tenantId !== tenantId) {
         return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
       }
 
@@ -336,10 +343,10 @@ export async function POST(request: NextRequest) {
       // Fetch schedule data for project
       const [projectSnap, tasksSnap] = await Promise.all([
         db.collection("projects").doc(projectId).get(),
-        db.collection("tasks").where("projectId", "==", projectId).limit(50).get(),
+        db.collection("tasks").where("projectId", "==", projectId).where("tenantId", "==", tenantId).limit(50).get(),
       ]);
 
-      if (!projectSnap.exists) {
+      if (!projectSnap.exists || (projectSnap.data() as Record<string, unknown>).tenantId !== tenantId) {
         return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
       }
 
@@ -384,7 +391,7 @@ export async function POST(request: NextRequest) {
         prompt = `${type === "tasks" ? "Genera sugerencias de tareas" : type === "budget" ? "Genera sugerencias de presupuesto" : type === "expenses" ? "Genera sugerencias de gastos" : type === "schedule" ? "Genera sugerencias de cronograma" : "Genera sugerencias"} basándote en el siguiente contexto:\n\n${context}`;
       } else {
         // Fallback to overview
-        const projectsSnap = await db.collection("projects").where("createdBy", "==", uid).limit(5).get();
+        const projectsSnap = await db.collection("projects").where("createdBy", "==", uid).where("tenantId", "==", tenantId).limit(5).get();
         const projects: DocData[] = snapDocs(projectsSnap);
         prompt = buildOverviewPrompt({
           projects,

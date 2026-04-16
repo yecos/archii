@@ -26,10 +26,14 @@ let _initError: string | null = null;
 let _credProjectId: string | null = null;  // project_id from credentials JSON
 let _appProjectId: string | null = null;   // project_id used by the app
 
-const APP_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026';
+const APP_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+if (!APP_PROJECT_ID) {
+  console.warn('[ArchiFlow Admin] NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set. Admin SDK may not work correctly.');
+}
 
 export function getAdminProjectId(): string {
-  return APP_PROJECT_ID;
+  return APP_PROJECT_ID || '';
 }
 
 /**
@@ -45,7 +49,7 @@ export function getAdminInitStatus(): {
   return {
     method: _initMethod,
     error: _initError,
-    projectId: _appProjectId || APP_PROJECT_ID,
+    projectId: _appProjectId || APP_PROJECT_ID || '',
     credProjectId: _credProjectId,
     mismatch: !!(_credProjectId && _credProjectId !== APP_PROJECT_ID),
   };
@@ -125,9 +129,9 @@ export function getAdminApp(): App {
   if (getApps().length > 0) {
     _adminApp = getApp();
   } else {
-    _appProjectId = APP_PROJECT_ID;
+    _appProjectId = APP_PROJECT_ID || null;
     _adminApp = initializeApp({
-      projectId: APP_PROJECT_ID,
+      projectId: APP_PROJECT_ID || '',
       credential: getAdminConfig(),
     });
   }

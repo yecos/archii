@@ -6,7 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 import type { ImportResult, ImportSummary, ImportConflictStrategy } from '@/lib/backup-service';
+
+/** Collections excluded from tenant filtering (system collections) */
+const EXCLUDED_COLLECTIONS = ['users', 'tenants', 'whatsappLinks', 'presence', 'directMessages', 'whatsappHistory', '_health_check'];
 
 /** Maximum number of documents to restore per collection to prevent abuse */
 const MAX_DOCS_PER_COLLECTION = 5000;
@@ -22,6 +26,12 @@ const MAX_TOTAL_DOCS = 50000;
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
+
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(user.uid);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    }
 
     const body = await request.json();
     const { backupData, conflictStrategy = 'skip' } = body as {
@@ -103,6 +113,10 @@ export async function POST(request: NextRequest) {
                 } else {
                   // Clean data: remove server timestamp sentinels that can't be re-sent
                   const cleanData = cleanFirestoreData(doc.data);
+                  // Inject tenantId for business collections
+                  if (!EXCLUDED_COLLECTIONS.includes(col.collection)) {
+                    cleanData.tenantId = tenantId;
+                  }
                   batch.set(docRef, cleanData);
                   summary.created++;
                 }
@@ -110,12 +124,20 @@ export async function POST(request: NextRequest) {
               }
               case 'replace': {
                 const cleanData = cleanFirestoreData(doc.data);
+                // Inject tenantId for business collections
+                if (!EXCLUDED_COLLECTIONS.includes(col.collection)) {
+                  cleanData.tenantId = tenantId;
+                }
                 batch.set(docRef, cleanData, { merge: true });
                 summary.replaced++;
                 break;
               }
               case 'merge': {
                 const cleanData = cleanFirestoreData(doc.data);
+                // Inject tenantId for business collections
+                if (!EXCLUDED_COLLECTIONS.includes(col.collection)) {
+                  cleanData.tenantId = tenantId;
+                }
                 batch.set(docRef, cleanData, { merge: true });
                 summary.replaced++;
                 break;

@@ -4,6 +4,7 @@ import "./globals.css";
 import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { firebaseConfig } from "@/lib/firebase-config";
 
 export const metadata: Metadata = {
   title: {
@@ -94,19 +95,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
-              var cfg = {
-                    apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
-  authDomain: "archiflow-prod-2026.firebaseapp.com",
-  projectId: "archiflow-prod-2026",
-  storageBucket: "archiflow-prod-2026.firebasestorage.app",
-  messagingSenderId: "1090724963650",
-  appId: "1:1090724963650:web:28468b10aef5e89c0f54db",
-              };
-              firebase.initializeApp(cfg);
+              firebase.initializeApp(${JSON.stringify(firebaseConfig)});
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }
             window.__AF_FB = true;
-            console.log('[ArchiFlow] Firebase ready:', firebase.apps[0]?.options?.projectId);
           } catch(err) {
             console.error('[ArchiFlow] Firebase init failed:', err);
             window.__AF_FB = false;

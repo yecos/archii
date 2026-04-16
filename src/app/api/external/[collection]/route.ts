@@ -6,6 +6,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebase } from '@/lib/firebase-service';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 100;
@@ -56,6 +57,18 @@ export async function GET(
     }
 
     const keyDoc = keyDocs.docs[0];
+    const keyData = keyDoc.data();
+
+    // Multi-tenant: get tenantId from the API key owner
+    const keyUserId = (keyData as Record<string, unknown>).userId as string | undefined;
+    if (!keyUserId) {
+      return NextResponse.json({ error: 'API key has no associated user' }, { status: 401 });
+    }
+    const tenantId = await getTenantIdForUser(keyUserId);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    }
+
     await keyDoc.ref.update({
       lastUsed: getFirebase().firestore.FieldValue.serverTimestamp(),
       requestCount: getFirebase().firestore.FieldValue.increment(1),
@@ -63,9 +76,9 @@ export async function GET(
 
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
-    const snapshot = await db.collection(collection).orderBy('createdAt', 'desc').limit(limit).get();
+    const snapshot = await db.collection(collection).where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(limit).get();
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const totalSnap = await db.collection(collection).get();
+    const totalSnap = await db.collection(collection).where('tenantId', '==', tenantId).get();
     const total = totalSnap.size;
 
     return NextResponse.json({ collection, data, total, limit });

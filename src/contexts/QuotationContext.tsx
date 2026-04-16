@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 import { useUIContext } from './UIContext';
 import { useAuthContext } from './AuthContext';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { Quotation, QuotationSection, QuotationItem, QuotationPayment } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -85,6 +86,7 @@ const QuotationContext = createContext<QuotationContextType | null>(null);
 export default function QuotationProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, setForms, editingId, setEditingId } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -100,13 +102,13 @@ export default function QuotationProvider({ children }: { children: React.ReactN
   // ===== EFFECTS =====
 
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('quotations').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('quotations').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setQuotations(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando quotations:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // ===== RECALCULATE SECTION =====
   const recalcSection = useCallback((sec: QuotationSection): QuotationSection => {
@@ -186,6 +188,7 @@ export default function QuotationProvider({ children }: { children: React.ReactN
 
   const saveQuotation = useCallback(() => {
     if (!forms.qClientName) { showToast('Ingresa el nombre del cliente', 'error'); return; }
+    if (!tenantId) { showToast('Tenant no disponible', 'error'); return; }
     fbActions.saveQuotation({
       projId: forms.qProjId,
       number: forms.qNumber || '',
@@ -204,17 +207,18 @@ export default function QuotationProvider({ children }: { children: React.ReactN
       bankAccount: forms.qBankAccount || '',
       bankAccountType: forms.qBankAccountType || '',
       bankHolder: forms.qBankHolder || '',
-    }, editingId, showToast, authUser);
+    }, editingId, showToast, authUser, tenantId);
     setQuotationTab('list');
-  }, [forms, quoteSections, quotePayments, editingId, showToast, authUser]);
+  }, [forms, quoteSections, quotePayments, editingId, showToast, authUser, tenantId]);
 
   const handleUpdateStatus = useCallback((id: string, status: string) => {
     fbActions.updateQuotationStatus(id, status, showToast);
   }, [showToast]);
 
   const handleDuplicate = useCallback((id: string) => {
-    fbActions.duplicateQuotation(id, showToast, authUser);
-  }, [showToast, authUser]);
+    if (!tenantId) return;
+    fbActions.duplicateQuotation(id, showToast, authUser, tenantId);
+  }, [showToast, authUser, tenantId]);
 
   const handleDelete = useCallback((id: string) => {
     fbActions.deleteQuotation(id, showToast);

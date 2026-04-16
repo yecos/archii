@@ -5,6 +5,7 @@ import { useAuthContext } from './AuthContext';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { Invoice, InvoiceItem } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
+import { useTenantId } from '@/hooks/useTenantId';
 
 /* ===== INVOICE CONTEXT ===== */
 interface InvoiceContextType {
@@ -28,6 +29,7 @@ const InvoiceContext = createContext<InvoiceContextType | null>(null);
 export default function InvoiceProvider({ children }: { children: React.ReactNode }) {
   const { showToast, forms, editingId, setEditingId, setForms } = useUIContext();
   const { ready, authUser } = useAuthContext();
+  const tenantId = useTenantId();
 
   // ===== COLLECTION STATE =====
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -41,13 +43,13 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
 
   // Load invoices
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('invoices').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvoices(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, tenantId]);
 
   // ===== CRUD FUNCTIONS =====
 
@@ -68,10 +70,11 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
 
   const saveInvoice = () => {
     if (!forms.invProject) { showToast('Selecciona un proyecto', 'error'); return; }
+    if (!tenantId) { showToast('Tenant no disponible', 'error'); return; }
     const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
     const tax = Number(forms.invTax) || 19;
     const total = subtotal + (subtotal * tax / 100);
-    fbActions.saveInvoice({ invProject: forms.invProject, invNumber: forms.invNumber || '', invStatus: forms.invStatus || 'Borrador', invItems: invoiceItems, invSubtotal: subtotal, invTax: tax, invTotal: total, invNotes: forms.invNotes || '', invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0], invDueDate: forms.invDueDate || '' }, editingId, showToast, authUser);
+    fbActions.saveInvoice({ invProject: forms.invProject, invNumber: forms.invNumber || '', invStatus: forms.invStatus || 'Borrador', invItems: invoiceItems, invSubtotal: subtotal, invTax: tax, invTotal: total, invNotes: forms.invNotes || '', invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0], invDueDate: forms.invDueDate || '' }, editingId, showToast, authUser, tenantId);
     setInvoiceTab('list');
   };
 

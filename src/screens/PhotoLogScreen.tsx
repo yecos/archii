@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useDomain';
 import { getFirebase, snapToDocs, uploadToStorage } from '@/lib/firebase-service';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Camera, Trash2, Pencil } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -32,6 +33,7 @@ export default function PhotoLogScreen() {
   const ui = useUI();
   const { projects } = useFirestore();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [entries, setEntries] = useState<PhotoLogEntry[]>([]);
@@ -53,12 +55,13 @@ export default function PhotoLogScreen() {
 
   // Load entries
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('photoLog').orderBy('date', 'desc').onSnapshot((snap) => {
+    const unsub = db.collection('photoLog').where('tenantId', '==', tenantId).orderBy('date', 'desc').onSnapshot((snap) => {
       setEntries(snapToDocs(snap) as PhotoLogEntry[]);
     }, (err: unknown) => console.error('[ArchiFlow] PhotoLog: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     let list = entries;
@@ -171,6 +174,7 @@ export default function PhotoLogScreen() {
       } else {
         await fb.firestore().collection('photoLog').add({
           ...entryData,
+          tenantId,
           date: new Date().toISOString().split('T')[0],
           createdAt: ts,
           createdBy: auth.authUser?.uid || '',

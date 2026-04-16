@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
 import { requireAuth } from "@/lib/api-auth";
+import { getTenantIdForUser } from "@/lib/tenant-server";
 
 /**
  * POST /api/whatsapp/notify
@@ -24,14 +25,17 @@ export async function POST(request: NextRequest) {
 
     // Authentication required for ALL requests (broadcast AND single-user)
     // Previously single-user notify skipped auth — security fix: BUG-20260416-001
-    await requireAuth(request);
+    const authUser = await requireAuth(request);
+
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(authUser.uid);
 
     // Dinámicamente importar firebase-admin (solo server-side)
     const { getAdminDb } = await import("@/lib/firebase-admin");
     const db = getAdminDb();
 
     if (broadcast) {
-      // Enviar a todos los vinculados
+      // Enviar a todos los vinculados del mismo tenant
       const snap = await db
         .collection("whatsappLinks")
         .where("active", "==", true)
@@ -40,6 +44,11 @@ export async function POST(request: NextRequest) {
       let sent = 0;
       for (const doc of snap.docs) {
         const link = doc.data();
+        // Multi-tenant: only send to users in the same tenant
+        if (tenantId) {
+          const linkTenantId = await getTenantIdForUser(link.userId);
+          if (linkTenantId !== tenantId) continue;
+        }
         const result = await sendWhatsAppMessage(link.whatsappPhone, message);
         if (result.success) sent++;
       }
@@ -49,6 +58,14 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "userId requerido" }, { status: 400 });
+    }
+
+    // Multi-tenant: verify target user is in the same tenant
+    if (tenantId) {
+      const targetTenantId = await getTenantIdForUser(userId);
+      if (targetTenantId !== tenantId) {
+        return NextResponse.json({ ok: false, error: 'User not in same tenant' }, { status: 403 });
+      }
     }
 
     // Buscar WhatsApp vinculado al userId

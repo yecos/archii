@@ -7,6 +7,7 @@ import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import { fmtCOP } from '@/lib/helpers';
 import EmptyState from '@/components/ui/EmptyState';
 import { Plus, Trash2, Edit3 } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -66,6 +67,7 @@ export default function PurchaseOrdersScreen() {
   const ui = useUI();
   const { projects, suppliers } = useFirestore();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
@@ -84,12 +86,13 @@ export default function PurchaseOrdersScreen() {
 
   // Load POs
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('purchaseOrders').orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
+    const unsub = db.collection('purchaseOrders').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setPos(snapToDocs(snap) as PurchaseOrder[]);
     }, (err: Error) => console.error('[ArchiFlow] PO: listen error:', err));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     if (filterStatus === 'all') return pos;
@@ -168,6 +171,7 @@ export default function PurchaseOrdersScreen() {
         poData.issueDate = new Date().toISOString().split('T')[0];
         poData.createdAt = ts;
         poData.createdBy = auth.authUser?.uid || '';
+        poData.tenantId = tenantId;
         await db.collection('purchaseOrders').add(poData);
         showToast('✅ Orden de compra creada');
       }

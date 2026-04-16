@@ -10,6 +10,7 @@ import SignatureModal from '@/components/modals/SignatureModal';
 import SignatureDisplay, { type SignatureRecord } from '@/components/ui/SignatureDisplay';
 import AnnotatePhotoModal from '@/components/modals/AnnotatePhotoModal';
 import { Plus, ChevronDown, ChevronUp, Users, Clock, AlertTriangle, Trash2, Pencil, PenTool, Edit3, CloudSun } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { FirestoreTimestamp } from '@/lib/types';
 
 /* ===== LOCAL TYPES ===== */
@@ -52,6 +53,7 @@ export default function FieldNotesScreen() {
   const ui = useUI();
   const { projects } = useFirestore();
   const auth = useAuth();
+  const tenantId = useTenantId();
   const { showToast } = ui;
 
   const [notes, setNotes] = useState<FieldNote[]>([]);
@@ -77,12 +79,13 @@ export default function FieldNotesScreen() {
 
   // Load notes
   useEffect(() => {
+    if (!tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('fieldNotes').orderBy('date', 'desc').onSnapshot((snap) => {
+    const unsub = db.collection('fieldNotes').where('tenantId', '==', tenantId).orderBy('date', 'desc').onSnapshot((snap) => {
       setNotes(snapToDocs(snap) as FieldNote[]);
     }, (err: unknown) => console.error('[ArchiFlow] FieldNotes: listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   const filtered = useMemo(() => {
     let list = notes;
@@ -193,6 +196,7 @@ export default function FieldNotesScreen() {
       } else {
         await db.collection('fieldNotes').add({
           ...noteData,
+          tenantId,
           commitmentFulfilled: new Array(commitments.length).fill(false),
           createdAt: ts,
           createdBy: auth.authUser?.uid || '',

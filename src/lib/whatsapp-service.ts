@@ -128,11 +128,6 @@ export function verifyWebhook(mode: string, token: string, challenge: string): {
     return { verified: true, body: challenge };
   }
 
-  // Fallback: if no config or token mismatch, accept common defaults for initial setup
-  if (mode === 'subscribe' && (token === 'archiflow2026' || token === 'archiflow' || token === 'archiflow_test')) {
-    return { verified: true, body: challenge };
-  }
-
   return { verified: false };
 }
 

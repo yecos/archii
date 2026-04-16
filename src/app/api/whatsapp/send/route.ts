@@ -3,6 +3,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { getTenantIdForUser } from "@/lib/tenant-server";
 
 /**
  * POST /api/whatsapp/send
@@ -12,6 +13,9 @@ export async function POST(request: NextRequest) {
   try {
     // Admin-only: broadcast and direct send require admin privileges
     const authResponse = await requireAdmin(request);
+
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(authResponse.uid);
 
     // Rate limit: 5 sends per minute
     const rateLimit = checkRateLimit(request, { maxRequests: 5, windowSeconds: 60 });
@@ -70,6 +74,11 @@ export async function POST(request: NextRequest) {
 
       for (const doc of snap.docs) {
         const link = doc.data();
+        // Multi-tenant: only send to users in the same tenant
+        if (tenantId) {
+          const linkTenantId = await getTenantIdForUser(link.userId);
+          if (linkTenantId !== tenantId) continue;
+        }
         const result = await sendWhatsAppMessage(link.whatsappPhone, message);
         if (result.success) sentCount++;
         else { errorCount++; errors.push(`${link.userName}: ${result.error || "Error"}`); }

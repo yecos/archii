@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -50,12 +51,20 @@ export async function GET(
 
     const db = getAdminDb();
 
+    // Multi-tenant: derive tenantId from the project
+    const projectDoc = await db.collection('projects').doc(projectId).get();
+    if (!projectDoc.exists) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    const tenantId = (projectDoc.data() as Record<string, unknown>).tenantId as string | null;
+
     // ── Step 1: Try Firestore cache ──────────────────────────────────
     if (!forceRefresh) {
       try {
         const snapshot = await db
           .collection('onedrive_files')
           .where('projectId', '==', projectId)
+          .where('tenantId', '==', tenantId)
           .get();
 
         const photos: Record<string, unknown>[] = [];
@@ -122,6 +131,7 @@ export async function GET(
       const folderSnapshot = await db
         .collection('onedrive_folders')
         .where('projectId', '==', projectId)
+        .where('tenantId', '==', tenantId)
         .where('folderType', '==', 'fotos')
         .limit(1)
         .get();
@@ -156,6 +166,7 @@ export async function GET(
         const rootFolderSnapshot = await db
           .collection('onedrive_folders')
           .where('projectId', '==', projectId)
+          .where('tenantId', '==', tenantId)
           .where('folderType', '==', 'planos')
           .limit(1)
           .get();
@@ -222,6 +233,7 @@ export async function GET(
             .doc(`${projectId}_${photo.id}`);
           batch.set(docRef, {
             projectId,
+            tenantId,
             driveItemId: photo.id,
             name: photo.name,
             mimeType: photo.mimeType,

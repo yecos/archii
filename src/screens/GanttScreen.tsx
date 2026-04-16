@@ -35,6 +35,7 @@ import {
   ChevronDown,
   Unlink,
 } from 'lucide-react';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { Task } from '@/lib/types';
 
 /* ===== CONSTANTS ===== */
@@ -54,6 +55,7 @@ interface DragState {
 
 export default function GanttScreen() {
   const ui = useUI();
+  const tenantId = useTenantId();
   const { projects } = useFirestore();
   const timelineRef = useRef<HTMLDivElement>(null);
   const miniTimelineRef = useRef<HTMLDivElement>(null);
@@ -78,13 +80,14 @@ export default function GanttScreen() {
 
   // Load tasks from Firestore
   useEffect(() => {
+    if (!tenantId) return;
     const fb = getFirebase();
     const db = fb.firestore();
-    const unsub = db.collection('tasks').orderBy('dueDate', 'asc').onSnapshot((snap) => {
+    const unsub = db.collection('tasks').where('tenantId', '==', tenantId).orderBy('dueDate', 'asc').onSnapshot((snap) => {
       setTasks(snapToDocs(snap) as Task[]);
     }, (err: unknown) => console.error('[ArchiFlow] Gantt: task listen error:', err instanceof Error ? err.message : String(err)));
     return () => unsub();
-  }, []);
+  }, [tenantId]);
 
   // Persist zoom
   useEffect(() => {

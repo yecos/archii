@@ -8,12 +8,14 @@ import {
   countTemplateTasks, countTemplatePhases, mergeTemplates,
   type UnifiedTemplate,
 } from '@/lib/templates';
+import { useTenantId } from '@/hooks/useTenantId';
 import { getFirebase, snapToDocs, QuerySnapshot } from '@/lib/firebase-service';
 import type { Company } from '@/lib/types';
 
 export default function ProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
   const fs = useFirestore();
+  const tenantId = useTenantId();
   const { forms, setForms, editingId, closeModal } = ui;
   const { saveProject, companies } = fs;
 
@@ -22,9 +24,9 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
 
   // Load custom templates
   useEffect(() => {
-    if (!open || editingId) return;
+    if (!open || editingId || !tenantId) return;
     const db = getFirebase().firestore();
-    const unsub = db.collection('projectTemplates').onSnapshot(
+    const unsub = db.collection('projectTemplates').where('tenantId', '==', tenantId).onSnapshot(
       (snap: QuerySnapshot) => {
         const docs = snapToDocs(snap);
         const parsed = docs.map((d: { id: string; data: Record<string, unknown> }) => ({
@@ -42,7 +44,7 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
       (err: Error) => console.warn('[ArchiFlow] ProjectModal: templates listen error:', err)
     );
     return () => unsub();
-  }, [open, editingId]);
+  }, [open, editingId, tenantId]);
 
   const allTemplates = useMemo(
     () => editingId ? [] : mergeTemplates(customTemplates),

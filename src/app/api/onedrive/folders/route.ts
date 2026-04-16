@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
@@ -200,6 +201,13 @@ export async function POST(request: NextRequest) {
     // ── Step 4: Sync folder metadata to Firestore ────────────────────
     try {
       const db = getAdminDb();
+
+      // Multi-tenant: derive tenantId from the project
+      const projectDoc = await db.collection('projects').doc(projectId).get();
+      const projectTenantId = projectDoc.exists
+        ? (projectDoc.data() as Record<string, unknown>).tenantId as string | null
+        : null;
+
       const batch = db.batch();
 
       // Save project root folder
@@ -208,6 +216,7 @@ export async function POST(request: NextRequest) {
         .doc(`${projectId}_root`);
       batch.set(rootFolderDoc, {
         projectId,
+        tenantId: projectTenantId,
         folderName: projectName,
         driveItemId: projectFolderId,
         parentFolderId: archiflowId,
@@ -223,6 +232,7 @@ export async function POST(request: NextRequest) {
             .doc(`${projectId}_${type}`);
           batch.set(docRef, {
             projectId,
+            tenantId: projectTenantId,
             folderName: type,
             driveItemId,
             parentFolderId: projectFolderId,

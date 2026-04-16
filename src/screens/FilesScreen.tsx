@@ -4,6 +4,7 @@ import { XCircle } from 'lucide-react';
 import { useUI, useAuth, useFirestore, useOneDrive, useGallery } from '@/hooks/useDomain';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import { fmtSize } from '@/lib/helpers';
+import { useTenantId } from '@/hooks/useTenantId';
 import { getFirebase, QuerySnapshot, QueryDocSnapshot } from '@/lib/firebase-service';
 import type { Project, OneDriveFile, GalleryPhoto } from '@/lib/types';
 import {
@@ -23,6 +24,7 @@ export default function FilesScreen() {
   const fs = useFirestore();
   const od = useOneDrive();
   const gal = useGallery();
+  const tenantId = useTenantId();
 
   const { navigateTo, setForms, setSelectedProjectId, showToast } = ui;
   const { projects } = fs;
@@ -43,10 +45,10 @@ export default function FilesScreen() {
 
   /* ---- Load ALL project files via collectionGroup ---- */
   useEffect(() => {
-    if (!auth.ready || !auth.authUser) { setLoadingFiles(false); return; }
+    if (!auth.ready || !auth.authUser || !tenantId) { setLoadingFiles(false); return; }
     setLoadingFiles(true);
     const db = getFirebase().firestore();
-    const unsub = db.collectionGroup('files').orderBy('createdAt', 'desc').onSnapshot(
+    const unsub = db.collectionGroup('files').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot(
       (snap: QuerySnapshot) => {
         const files: UnifiedFile[] = [];
         snap.forEach((doc: QueryDocSnapshot) => {
@@ -77,7 +79,7 @@ export default function FilesScreen() {
       }
     );
     return () => unsub();
-  }, [auth.ready, auth.authUser, projects]);
+  }, [auth.ready, auth.authUser, projects, tenantId]);
 
   /* ---- Build OneDrive files (currently loaded in OD context) ---- */
   const odFiles: UnifiedFile[] = useMemo(() => {

@@ -11,19 +11,20 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { routeAIRequest } from '@/lib/ai-router';
 import { createAgentTools, AGENT_SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 import { NextRequest } from 'next/server';
 
 /**
  * Build rich project context by fetching live data from Firestore.
  * This gives the AI up-to-date info about tasks, budget, and progress.
  */
-async function buildRichProjectContext(projectId: string, userId: string): Promise<string> {
+async function buildRichProjectContext(projectId: string, userId: string, tenantId: string): Promise<string> {
   try {
     const db = getAdminDb();
 
     // Fetch project doc
     const projectDoc = await db.collection('projects').doc(projectId).get();
-    if (!projectDoc.exists) return '';
+    if (!projectDoc.exists || (projectDoc.data() as Record<string, unknown>).tenantId !== tenantId) return '';
 
     const p = projectDoc.data();
     const projectInfo = [
@@ -41,6 +42,7 @@ async function buildRichProjectContext(projectId: string, userId: string): Promi
     // Quick task summary
     const tasksSnap = await db.collection('tasks')
       .where('projectId', '==', projectId)
+      .where('tenantId', '==', tenantId)
       .limit(20)
       .get();
 
@@ -98,9 +100,15 @@ export async function POST(request: NextRequest) {
 
     let sysPrompt = AGENT_SYSTEM_PROMPT;
 
+    // Multi-tenant: get tenantId for data isolation
+    const tenantId = await getTenantIdForUser(user.uid);
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: 'Tenant not found' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Build context: use projectId to fetch live data, or fall back to client-provided context
     if (projectId) {
-      const richContext = await buildRichProjectContext(projectId, user.uid);
+      const richContext = await buildRichProjectContext(projectId, user.uid, tenantId);
       if (richContext) {
         sysPrompt += `\n\nCONTEXTO DEL PROYECTO ACTUAL (datos en tiempo real):\n${richContext}`;
       } else if (clientContext) {

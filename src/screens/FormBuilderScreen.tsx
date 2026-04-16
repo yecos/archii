@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useFirestore, useUI } from '@/hooks/useDomain';
 import { getFirebase, serverTimestamp, snapToDocs, type QuerySnapshot } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import { confirm } from '@/hooks/useConfirmDialog';
 import {
   FileText, Plus, Trash2, Pencil, CheckSquare, Camera, Star,
@@ -182,6 +183,7 @@ function FieldEditor({ field, onUpdate, onRemove, index }: {
 
 export default function FormBuilderScreen() {
   const { authUser, getUserName, teamUsers } = useAuth();
+  const tenantId = useTenantId();
   const { projects } = useFirestore();
   const { showToast } = useUI();
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
@@ -206,21 +208,21 @@ export default function FormBuilderScreen() {
 
   // Load data
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !tenantId) return;
     const db = getFirebase().firestore();
 
-    const unsub1 = db.collection('formTemplates').orderBy('createdAt', 'desc').onSnapshot(
+    const unsub1 = db.collection('formTemplates').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot(
       (snap: QuerySnapshot) => { setTemplates(snapToDocs(snap) as FormTemplate[]); setLoading(false); },
       (err: unknown) => { console.error('[ArchiFlow] Error loading form templates:', err); setLoading(false); }
     );
 
-    const unsub2 = db.collection('formInstances').orderBy('createdAt', 'desc').limit(50).onSnapshot(
+    const unsub2 = db.collection('formInstances').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(50).onSnapshot(
       (snap: QuerySnapshot) => { setInstances(snapToDocs(snap) as FormInstance[]); },
       (err: unknown) => { console.error('[ArchiFlow] Error loading form instances:', err); }
     );
 
     return () => { unsub1(); unsub2(); };
-  }, [authUser]);
+  }, [authUser, tenantId]);
 
   // Template CRUD
   const resetTemplateForm = useCallback(() => {
@@ -257,7 +259,7 @@ export default function FormBuilderScreen() {
         await db.collection('formTemplates').doc(editingTemplate.id).update(data);
         showToast('Plantilla actualizada');
       } else {
-        await db.collection('formTemplates').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
+        await db.collection('formTemplates').add({ ...data, tenantId, createdAt: ts, createdBy: authUser?.uid });
         showToast('Plantilla creada');
       }
       resetTemplateForm();
@@ -310,6 +312,7 @@ export default function FormBuilderScreen() {
         completedAt: ts,
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId,
       });
       showToast('Formulario guardado');
       setFillingTemplate(null);

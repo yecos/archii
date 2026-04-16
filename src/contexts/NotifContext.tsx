@@ -11,6 +11,7 @@ import { checkBudgetAlerts, formatBudgetAlertMessage } from '@/lib/budget-alerts
 import { useNotifPreferencesContext } from './NotifPreferencesContext';
 import { useUIStore } from '@/stores/ui-store';
 import { getFirebase } from '@/lib/firebase-service';
+import { useTenantId } from '@/hooks/useTenantId';
 import type { NotifEventType, NotifEntry, ChangeOrder, ChatMessage, Meeting, Approval, InvMovement, InvTransfer, Project, Expense, Task } from '@/lib/types';
 
 interface NotifData {
@@ -75,6 +76,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
   const { meetings } = useCalendarContext();
   const { invMovements, invTransfers, invProducts } = useInventoryContext();
   const { isEventEnabled } = useNotifPreferencesContext();
+  const tenantId = useTenantId();
 
   // State
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
@@ -109,16 +111,16 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
 
   // Load changeOrders from Firestore client-side
   useEffect(() => {
-    if (!authUser?.uid || !persistenceReady) return;
+    if (!authUser?.uid || !persistenceReady || !tenantId) return;
     const fb = getFirebase();
     if (!fb?.firestore) return;
     const db = fb.firestore();
-    const unsub = db.collection('changeOrders').orderBy('createdAt', 'desc').limit(50)
+    const unsub = db.collection('changeOrders').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(50)
       .onSnapshot((snap) => {
         setChangeOrders(snap.docs.map((d) => ({ id: d.id, data: d.data() } as unknown as ChangeOrder)));
       }, () => {});
     return () => unsub();
-  }, [authUser, persistenceReady]);
+  }, [authUser, persistenceReady, tenantId]);
 
   // ===== FIRESTORE PERSISTENCE =====
 
