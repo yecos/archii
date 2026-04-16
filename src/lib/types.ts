@@ -1047,6 +1047,7 @@ export const NAV_ITEMS = [
   { id: 'admin', icon: '⚙️', label: 'Admin' },
   { id: 'settings', icon: '🎨', label: 'Configuración' },
   { id: 'changeOrders', icon: '🔄', label: 'Control de Cambios' },
+  { id: 'profitability', icon: '💎', label: 'Rentabilidad' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -1078,6 +1079,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   inspections: 'Inspecciones',
   templates: 'Templates de Proyecto',
   changeOrders: 'Control de Cambios',
+  profitability: 'Dashboard de Rentabilidad',
 };
 
 /* ===== NAVIGATION GROUPS (collapsible sidebar) ===== */
@@ -1172,6 +1174,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'files', label: 'Archivos', icon: '📂' },
       { id: 'gallery', label: 'Galería', icon: '🖼️' },
       { id: 'reports', label: 'Reportes', icon: '📈' },
+      { id: 'profitability', label: 'Rentabilidad', icon: '💎' },
       { id: 'templates', label: 'Templates', icon: '📐' },
     ],
   },
