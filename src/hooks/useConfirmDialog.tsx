@@ -38,10 +38,9 @@ export function confirm(opts?: string | ConfirmOptions): Promise<boolean> {
   } else {
     optionsRef = { ...optionsRef, ...opts }
   }
-  // Force re-render by toggling the key
-  forceUpdate++
   return new Promise<boolean>((resolve) => {
     resolveRef = resolve
+    emitChange()
   })
 }
 
@@ -70,12 +69,14 @@ export function useConfirmDialog() {
     if (!open) {
       resolveRef?.(false)
       resolveRef = null
+      emitChange()
     }
   }, [])
 
   const handleConfirm = useCallback(() => {
     resolveRef?.(true)
     resolveRef = null
+    emitChange()
   }, [])
 
   return { subscribe, getSnapshot, handleOpenChange, handleConfirm }

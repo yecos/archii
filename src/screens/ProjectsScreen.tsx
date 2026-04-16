@@ -435,7 +435,7 @@ export default function ProjectsScreen() {
                         className="text-[11px] px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20"
                         onClick={e => { e.stopPropagation(); deleteProject(p.id); }}
                       >
-                        <X size={12} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
 

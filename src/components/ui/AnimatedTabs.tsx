@@ -27,7 +27,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
       const containerRect = container.getBoundingClientRect();
       const btnRect = btn.getBoundingClientRect();
       setPillStyle({
-        left: btnRect.left - containerRect.left,
+        left: btnRect.left - containerRect.left + container.scrollLeft,
         width: btnRect.width,
       });
     }
@@ -35,7 +35,13 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
 
   useEffect(() => {
     updatePill();
-  }, [updatePill]);
+    // Auto-scroll active tab into view on mobile
+    const btn = btnRefs.current.get(activeTab);
+    const container = containerRef.current;
+    if (btn && container) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [updatePill, activeTab]);
 
   // Re-measure on resize
   useEffect(() => {
@@ -49,7 +55,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative flex gap-1 skeuo-well p-1 ${className}`}>
+    <div ref={containerRef} className={`relative flex gap-1 skeuo-well p-1 overflow-x-auto scrollbar-none ${className}`}>
       {/* Sliding pill indicator */}
       <div
         className="absolute top-1 h-[calc(100%-8px)] card-elevated rounded-lg transition-all duration-200 ease-out pointer-events-none z-0"
@@ -64,7 +70,7 @@ export function AnimatedTabs({ tabs, activeTab, onTabChange, className = '' }: A
           key={tab.id}
           ref={setBtnRef(tab.id)}
           onClick={() => onTabChange(tab.id)}
-          className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-lg transition-colors duration-200 cursor-pointer border-none bg-transparent ${
+          className={`tab-btn relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-lg transition-colors duration-200 cursor-pointer border-none bg-transparent whitespace-nowrap flex-shrink-0 ${
             activeTab === tab.id
               ? 'text-[var(--foreground)] font-medium'
               : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'

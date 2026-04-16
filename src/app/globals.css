@@ -277,8 +277,12 @@
 }
 .card-elevated:hover {
   box-shadow: var(--skeuo-shadow-raised-lg);
-  transform: translateY(-1px);
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-elevated:hover {
+    transform: translateY(-1px);
+  }
 }
 
 /* Inset — element is recessed into the surface */
@@ -506,14 +510,14 @@ input[type="file"] { display: none; }
 
 /* Better touch targets on mobile (44px minimum per Apple HIG) */
 @media (max-width: 768px) {
-  button, a, [role="button"] {
+  button:not(.tab-btn), a:not(.tab-btn), [role="button"]:not(.tab-btn) {
     min-height: 44px;
     min-width: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
-  button[class*="text-"], button[class*="px-"] {
+  button[class*="text-"]:not(.tab-btn), button[class*="px-"]:not(.tab-btn) {
     min-height: 36px;
     min-width: 36px;
   }

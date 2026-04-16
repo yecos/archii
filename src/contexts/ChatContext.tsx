@@ -143,7 +143,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
 
   // Emoji, Reply, Reactions, Typing, Menu
-  const [showEmojiPicker, setShowEmojiPicker2] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [chatReplyingTo, setChatReplyingTo] = useState<ChatMessage | null>(null);
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -160,17 +160,17 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     if (chatProjectId === '__general__') {
       unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); });
+      }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); showToast('Error al cargar mensajes. Intenta de nuevo.', 'error'); });
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
       unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, (err) => { console.error('[ArchiFlow] Chat: directMessages snapshot failed:', err); });
+      }, (err) => { console.error('[ArchiFlow] Chat: directMessages snapshot failed:', err); showToast('Error al cargar mensajes directos.', 'error'); });
     } else {
       unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => ({ id: d.id, ...d.data() } as ChatMessage)));
-      }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); });
+      }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); showToast('Error al cargar mensajes del proyecto.', 'error'); });
     }
     return () => { unsub(); setMessages([]); };
   }, [ready, chatProjectId, chatDmUser, authUser]);
@@ -279,17 +279,30 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const sendVoiceNote = async () => {
+  const sendVoiceNote = async (): Promise<void> => {
     if (!audioPreviewBlobRef.current) return;
     showToast('Enviando nota de voz...');
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      await sendMessage('', base64, audioPreviewDuration);
-      setAudioPreviewUrl(null); setAudioPreviewDuration(0);
-      audioPreviewBlobRef.current = null;
-    };
-    reader.readAsDataURL(audioPreviewBlobRef.current);
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = reader.result as string;
+          await sendMessage('', base64, audioPreviewDuration);
+          setAudioPreviewUrl(null); setAudioPreviewDuration(0);
+          audioPreviewBlobRef.current = null;
+          resolve();
+        } catch (err) {
+          console.error('[ArchiFlow] Chat: send voice note failed:', err);
+          showToast('Error al enviar nota de voz', 'error');
+          reject(err);
+        }
+      };
+      reader.onerror = () => {
+        showToast('Error al leer nota de voz', 'error');
+        reject(new Error('FileReader error'));
+      };
+      reader.readAsDataURL(audioPreviewBlobRef.current!);
+    });
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -315,7 +328,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
   };
 
   const sendAll = async () => {
-    setShowEmojiPicker2(false);
+    setShowEmojiPicker(false);
     if (audioPreviewBlobRef.current) { await sendVoiceNote(); return; }
     if (pendingFiles.length > 0) { await sendPendingFiles(); }
     if (forms.chatInput?.trim()) { await sendMessage(); }
@@ -435,7 +448,7 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     pendingFiles, setPendingFiles, chatDropActive, setChatDropActive,
     mediaRecRef, audioChunksRef, audioStreamRef, analyserRef, recTimerRef, recAnimRef, fileInputRef, audioPreviewBlobRef, playingAudioRef,
     playingAudio, setPlayingAudio, audioProgress, setAudioProgress, audioCurrentTime, setAudioCurrentTime,
-    showEmojiPicker, setShowEmojiPicker: setShowEmojiPicker2,
+    showEmojiPicker, setShowEmojiPicker,
     chatReplyingTo, setChatReplyingTo,
     messageReactions, setMessageReactions,
     typingUsers, setTypingUsers,

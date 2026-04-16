@@ -116,8 +116,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     auth.getRedirectResult().then((result) => {
       const cred = result?.credential;
       if (cred) {
-        // Handle Microsoft redirect tokens
-        if (cred.accessToken) {
+        // Only store as Microsoft tokens if the provider is Microsoft
+        const providerId = cred.providerId || (result as unknown as { additionalUserInfo?: { providerId?: string } }).additionalUserInfo?.providerId || '';
+        if (providerId === 'microsoft.com' && cred.accessToken) {
+          // Handle Microsoft redirect tokens
           if (msAuthCallbackRef.current) {
             msAuthCallbackRef.current(cred.accessToken, cred.refreshToken || null);
           }
@@ -226,9 +228,23 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const doGoogleLogin = useCallback(async () => {
     try {
       const fb = getFirebase();
-      const provider = new fb.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await fb.auth().signInWithRedirect(provider);
+      const authInstance = fb.auth();
+      // Primary: popup flow (same pattern as doMicrosoftLogin)
+      try {
+        const provider = new fb.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await authInstance.signInWithPopup(provider);
+      } catch (popupErr: unknown) {
+        const popErr = popupErr as { code?: string };
+        if (popErr.code === 'auth/popup-blocked') {
+          // Fallback: redirect flow
+          const redirectProvider = new fb.auth.GoogleAuthProvider();
+          redirectProvider.setCustomParameters({ prompt: 'select_account' });
+          await authInstance.signInWithRedirect(redirectProvider);
+          return;
+        }
+        throw popupErr;
+      }
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       console.error('[ArchiFlow Auth] Google login error:', err.code, err.message, e);
@@ -242,18 +258,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
         'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
       };
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/unauthorized-domain') {
-        try {
-          const fb2 = getFirebase();
-          const provider2 = new fb2.auth.GoogleAuthProvider();
-          provider2.setCustomParameters({ prompt: 'select_account' });
-          await fb2.auth().signInWithRedirect(provider2);
-          return;
-        } catch (redirectErr: unknown) {
-          const redErr = redirectErr as { code?: string; message?: string };
-          console.error('[ArchiFlow Auth] Google redirect also failed:', redErr.code, redErr.message);
-        }
-      }
       showToast(msgs[err.code || ''] || `Error con Google: ${err.code || err.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
     }
   }, [showToast]);
@@ -264,10 +268,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const authInstance = fb.auth();
 
       // First try with minimal scopes (User.Read only) to avoid consent screen issues
-      let result: { credential?: { accessToken?: string; refreshToken?: string } | null; user?: FirebaseUserInfo };
+      let result: { credential?: { accessToken?: string; refreshToken?: string; providerId?: string } | null; user?: FirebaseUserInfo; additionalUserInfo?: { providerId?: string } };
       try {
         const provider = new fb.auth.OAuthProvider('microsoft.com');
         provider.addScope('User.Read');
+        provider.addScope('Files.ReadWrite.All');
+        provider.addScope('offline_access');
         provider.setCustomParameters({ prompt: 'select_account' });
         result = await authInstance.signInWithPopup(provider);
       } catch (popupErr: unknown) {
@@ -276,6 +282,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           // Fallback to redirect flow
           const redirectProvider = new fb.auth.OAuthProvider('microsoft.com');
           redirectProvider.addScope('User.Read');
+          redirectProvider.addScope('Files.ReadWrite.All');
+          redirectProvider.addScope('offline_access');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);
           return;

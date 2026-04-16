@@ -50,7 +50,7 @@ export default function AdminScreen() {
               { id: 'approvals', label: `Aprobaciones${allApprovals.filter(a => a.data.status === 'Pendiente').length > 0 ? ` (${allApprovals.filter(a => a.data.status === 'Pendiente').length})` : ''}` },
               { id: 'permissions', label: 'Permisos' },
               { id: 'team', label: 'Equipo' },
-              { id: 'audit', label: 'Registro de Cambios' },
+              { id: 'audit', label: 'Cambios' },
             ]}
             activeTab={adminTab}
             onTabChange={(id) => setAdminTab(id)}
@@ -84,11 +84,11 @@ export default function AdminScreen() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Colaboradores</div><div className="text-2xl font-bold mt-1">{teamWithTasks.length}</div></div>
-                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Tareas Activas</div><div className="text-2xl font-bold text-blue-400 mt-1">{totalActive}</div></div>
-                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Con Traslapes</div><div className="text-2xl font-bold text-red-400 mt-1">{membersWithOverlaps.length}</div></div>
-                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Proyectos</div><div className="text-2xl font-bold text-amber-400 mt-1">{uniqueProjs.length}</div></div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Colaboradores</div><div className="text-xl sm:text-2xl font-bold mt-1">{teamWithTasks.length}</div></div>
+                <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Tareas Activas</div><div className="text-xl sm:text-2xl font-bold text-blue-400 mt-1">{totalActive}</div></div>
+                <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Con Traslapes</div><div className="text-xl sm:text-2xl font-bold text-red-400 mt-1">{membersWithOverlaps.length}</div></div>
+                <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Proyectos</div><div className="text-xl sm:text-2xl font-bold text-amber-400 mt-1">{uniqueProjs.length}</div></div>
               </div>
 
               {/* Legend */}
@@ -206,11 +206,11 @@ export default function AdminScreen() {
           {/* ===== DASHBOARD TAB ===== */}
           {adminTab === 'dashboard' && (<div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2"><TrendingUp size={18} className="text-[var(--af-accent)]" />Dashboard Admin</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Total Tareas</div><div className="text-2xl font-bold mt-1">{tasks.length}</div></div>
-              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">En Progreso</div><div className="text-2xl font-bold text-blue-400 mt-1">{tasks.filter(t => t.data.status === 'En progreso').length}</div></div>
-              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Completadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks.length}</div></div>
-              <div className="card-elevated rounded-xl p-4"><div className="text-xs text-[var(--muted-foreground)]">Vencidas</div><div className="text-2xl font-bold text-red-400 mt-1">{overdueTasks.length}</div></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-xs text-[var(--muted-foreground)]">Total Tareas</div><div className="text-xl sm:text-2xl font-bold mt-1">{tasks.length}</div></div>
+              <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-xs text-[var(--muted-foreground)]">En Progreso</div><div className="text-xl sm:text-2xl font-bold text-blue-400 mt-1">{tasks.filter(t => t.data.status === 'En progreso').length}</div></div>
+              <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-xs text-[var(--muted-foreground)]">Completadas</div><div className="text-xl sm:text-2xl font-bold text-emerald-400 mt-1">{completedTasks.length}</div></div>
+              <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-xs text-[var(--muted-foreground)]">Vencidas</div><div className="text-xl sm:text-2xl font-bold text-red-400 mt-1">{overdueTasks.length}</div></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Upcoming */}
@@ -291,11 +291,11 @@ export default function AdminScreen() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="card-elevated rounded-xl p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Total</div><div className="text-2xl font-bold mt-1">{allApprovals.length}</div></div>
-                <div className="bg-amber-500/5 rounded-xl p-4 border border-amber-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Pendientes</div><div className="text-2xl font-bold text-amber-400 mt-1">{pending.length}</div></div>
-                <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Aprobadas</div><div className="text-2xl font-bold text-emerald-400 mt-1">{approved.length}</div></div>
-                <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Rechazadas</div><div className="text-2xl font-bold text-red-400 mt-1">{rejected.length}</div></div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="card-elevated rounded-xl p-3 sm:p-4"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Total</div><div className="text-xl sm:text-2xl font-bold mt-1">{allApprovals.length}</div></div>
+                <div className="bg-amber-500/5 rounded-xl p-3 sm:p-4 border border-amber-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Pendientes</div><div className="text-xl sm:text-2xl font-bold text-amber-400 mt-1">{pending.length}</div></div>
+                <div className="bg-emerald-500/5 rounded-xl p-3 sm:p-4 border border-emerald-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Aprobadas</div><div className="text-xl sm:text-2xl font-bold text-emerald-400 mt-1">{approved.length}</div></div>
+                <div className="bg-red-500/5 rounded-xl p-3 sm:p-4 border border-red-500/20"><div className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide font-semibold">Rechazadas</div><div className="text-xl sm:text-2xl font-bold text-red-400 mt-1">{rejected.length}</div></div>
               </div>
 
               {/* Filter Tabs */}
