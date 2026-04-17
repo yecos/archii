@@ -177,10 +177,10 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
                 type="button"
                 onClick={addSubtask}
                 disabled={!newSubtaskText.trim()}
-                className={`skeuo-btn w-8 h-8 flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg border-none transition-all ${
                   newSubtaskText.trim()
-                    ? 'bg-[var(--af-accent)] text-[var(--primary-foreground)] hover:bg-[var(--af-accent2)]'
-                    : 'text-[var(--af-text3)] cursor-not-allowed'
+                    ? 'bg-[var(--af-accent)] text-white hover:bg-[var(--af-accent2)] cursor-pointer'
+                    : 'bg-transparent text-[var(--af-text3)] cursor-not-allowed'
                 }`}
               >
                 <Plus size={15} />
