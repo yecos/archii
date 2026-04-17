@@ -77,6 +77,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
         <link rel="apple-touch-icon" sizes="120x120" href="/icon-128.png" />
+        {/* Fix Google avatar URLs — prevent referrer blocking on background-image */}
+        <meta name="referrer" content="no-referrer-when-downgrade" />
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
