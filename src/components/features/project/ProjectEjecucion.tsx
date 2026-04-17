@@ -11,6 +11,7 @@ import {
   X,
   HardHat,
   Layers,
+  CheckSquare,
 } from 'lucide-react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { fmtDate, prioColor, taskStColor } from '@/lib/helpers';
