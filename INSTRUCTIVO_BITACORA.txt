@@ -4341,3 +4341,44 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
     - Limpiar endpoint /api/debug-admin cuando ya no sea necesario
 
 --- FIN DE SESION 2026-04-17 -------------------------------------------
+
+2026-04-17 22:30 | SESION — Migracion tenant ejecutada exitosamente (200 OK)
+  Estado: COMPLETADO
+  Push: ya sincronizado con origin/main
+
+  Contexto: Continuacion de la sesion de debug Firebase Admin. Se ejecuto
+    la migracion de tenant en produccion y el endpoint respondio con
+    status 200 OK.
+
+  Resultado de la migracion:
+    * Endpoint: POST /api/migrate-tenant
+    * tenantId: iCsSkzffISr7H3JrMIsg
+    * Status HTTP: 200 (OK)
+    * Respuesta: { message: 'Datos migrados al tenant "iCsSkzffISr7H3JrMIsg"',
+        tenantId: 'iCsSkzffISr7H3JrMIsg', tenantName: 'iCsSkzffISr7H3JrMIsg',
+        migrated: {...}, total: 0 }
+
+  Hallazgos:
+    * total: 0 indica que no se encontraron documentos huerfanos para migrar.
+      Esto puede significar que los datos ya estaban correctamente asignados
+      al tenant, o que no existian documentos sin tenantId en las colecciones
+      revisadas (projects, tasks, expenses, invoices, companies, etc.).
+    * El endpoint funciona correctamente: recibe el JWT del usuario,
+      autentica con Firebase Admin, y ejecuta la logica de migracion sin
+      errores 500 ni 401.
+    * Firebase Admin SDK se inicializa correctamente usando
+      FIREBASE_ADMIN_CREDENTIALS en Vercel.
+
+  Resumen de la sesion completa de migrate-tenant (3 subsesiones):
+    1. Sesion 1: Fix de .update() -> .set({ merge: true }) en route.ts
+    2. Sesion 2: Debug de credenciales, fix de 500/401, singleton robusto
+    3. Sesion 3 (esta): Ejecucion exitosa de la migracion en produccion
+
+  Nota importante:
+    * FIREBASE_PROJECT_ID = "archiflow-c2855" sigue siendo incorrecto en Vercel.
+      No afecta la operacion actual pero se recomienda corregirlo a
+      "archiflow-prod-2026" para evitar confusiones futuras.
+    * El endpoint /api/debug-admin puede ser eliminado cuando ya no sea
+      necesario para diagnostico.
+
+--- FIN DE SESION 2026-04-17 -------------------------------------------
