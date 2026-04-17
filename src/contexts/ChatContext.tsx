@@ -91,6 +91,12 @@ function sanitizeMessage(raw: Record<string, unknown>): Record<string, unknown> 
     }
     msg.reactions = cleanReactions;
   }
+  // Sanitize readBy array
+  if (msg.readBy != null && Array.isArray(msg.readBy)) {
+    msg.readBy = msg.readBy.filter((v: unknown) => typeof v === 'string');
+  } else if (msg.readBy == null) {
+    msg.readBy = [];
+  }
   return msg;
 }
 interface ChatContextType {
@@ -155,6 +161,7 @@ interface ChatContextType {
 
   // Functions
   sendMessage: (textOverride?: string, audioData?: string, audioDur?: number, fileData?: FileAttachment) => Promise<void>;
+  markMessagesAsRead: () => Promise<void>;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<Blob | null>;
   cancelRecording: () => void;
@@ -266,6 +273,8 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
       if (chatReplyingTo) { msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid }; }
+      // Sender has read their own message
+      msgData.readBy = [authUser?.uid];
       if (chatProjectId === '__general__') { await db.collection('generalMessages').add({ ...msgData, tenantId }); }
       else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
         const ids = [authUser.uid, chatDmUser].sort();
@@ -277,6 +286,29 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
       setForms(p => ({ ...p, chatInput: '' }));
       setChatReplyingTo(null);
     } catch (err) { console.error('[ArchiFlow] Chat: send message failed:', err); showToast('Error al enviar', 'error'); }
+  };
+
+  // Mark messages as read by current user (for DM read receipts)
+  const markMessagesAsRead = async () => {
+    if (!authUser || !chatProjectId) return;
+    // Only mark DM messages as read
+    if (chatProjectId !== '__dm__' || !chatDmUser) return;
+    try {
+      const db = getFirebase().firestore();
+      const ids = [authUser.uid, chatDmUser].sort();
+      const dmId = `dm_${ids[0]}_${ids[1]}`;
+      const colRef = db.collection('directMessages').doc(dmId).collection('messages');
+      // Find messages NOT from me and NOT already containing my UID in readBy
+      const unreadMsgs = messages.filter(
+        m => m.uid !== authUser.uid && !(m.readBy || []).includes(authUser.uid)
+      );
+      if (unreadMsgs.length === 0) return;
+      const batch = db.batch();
+      for (const msg of unreadMsgs) {
+        batch.update(colRef.doc(msg.id), { readBy: [...(msg.readBy || []), authUser.uid] });
+      }
+      await batch.commit();
+    } catch (err) { console.error('[ArchiFlow] Chat: markMessagesAsRead failed:', err); }
   };
 
   const startRecording = async () => {
@@ -526,12 +558,12 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     typingUsers, setTypingUsers,
     chatMenuMsg, setChatMenuMsg,
     chatMsgSearch, setChatMsgSearch,
-    sendMessage, startRecording, stopRecording, cancelRecording,
+    sendMessage, markMessagesAsRead, startRecording, stopRecording, cancelRecording,
     handleMicButton, sendVoiceNote, handleFileSelect, removePendingFile,
     sendPendingFiles, sendAll, toggleReaction, deleteMessage, copyMessageText,
     toggleAudioPlay,
     fmtRecTime, fileIcon, fmtFileSize,
-  }), [messages, chatProjectId, chatDmUser, isRecording, isSavingTask, recDuration, recVolume, audioPreviewUrl, audioPreviewDuration, pendingFiles, chatDropActive, playingAudio, audioProgress, audioCurrentTime, showEmojiPicker, chatReplyingTo, messageReactions, typingUsers, chatMenuMsg, chatMsgSearch, sendMessage, startRecording, stopRecording, cancelRecording, handleMicButton, sendVoiceNote, handleFileSelect, removePendingFile, sendPendingFiles, sendAll, toggleReaction, deleteMessage, copyMessageText, toggleAudioPlay]);
+  }), [messages, chatProjectId, chatDmUser, isRecording, isSavingTask, recDuration, recVolume, audioPreviewUrl, audioPreviewDuration, pendingFiles, chatDropActive, playingAudio, audioProgress, audioCurrentTime, showEmojiPicker, chatReplyingTo, messageReactions, typingUsers, chatMenuMsg, chatMsgSearch, sendMessage, markMessagesAsRead, startRecording, stopRecording, cancelRecording, handleMicButton, sendVoiceNote, handleFileSelect, removePendingFile, sendPendingFiles, sendAll, toggleReaction, deleteMessage, copyMessageText, toggleAudioPlay]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }

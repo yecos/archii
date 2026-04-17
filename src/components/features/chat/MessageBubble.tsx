@@ -27,6 +27,8 @@ interface MessageBubbleProps {
   onCopyMessageText: (text: string) => void;
   onToggleReaction: (msgId: string, emoji: string) => void;
   onSetLightboxImg: (img: { src: string; name?: string; size?: number } | null) => void;
+  isDmChat?: boolean;
+  dmRecipientId?: string | null;
 }
 
 export default function MessageBubble({
@@ -50,6 +52,8 @@ export default function MessageBubble({
   onCopyMessageText,
   onToggleReaction,
   onSetLightboxImg,
+  isDmChat,
+  dmRecipientId,
 }: MessageBubbleProps) {
   const isMe = m.uid === authUserUid;
   const ts = m.createdAt
@@ -73,6 +77,53 @@ export default function MessageBubble({
   // Presence
   const { onlineUsers } = usePresence();
   const isSenderOnline = useMemo(() => onlineUsers.some(u => u.id === m.uid), [onlineUsers, m.uid]);
+
+  // Read receipt status for own messages in DMs
+  const isRead = useMemo(() => {
+    if (!isMe || !isDmChat || !dmRecipientId) return false;
+    return (m.readBy || []).includes(dmRecipientId);
+  }, [isMe, isDmChat, dmRecipientId, m.readBy]);
+
+  const isDelivered = useMemo(() => {
+    if (!isMe || !isDmChat || !dmRecipientId) return false;
+    // Delivered if recipient is online or has been online (we assume they got the message)
+    return onlineUsers.some(u => u.id === dmRecipientId) || isRead;
+  }, [isMe, isDmChat, dmRecipientId, onlineUsers, isRead]);
+
+  // Checkmark component
+  const ReadCheck = useMemo(() => {
+    if (!isMe || !isDmChat) return null;
+    if (isRead) {
+      // Double check blue (read)
+      return (
+        <span className="inline-flex items-center ml-1.5 flex-shrink-0" title="Leído">
+          <svg width="16" height="10" viewBox="0 0 16 10" fill="none" className="text-sky-400">
+            <path d="M1 5.5L3.5 8L7 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 5.5L8.5 8L12 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      );
+    }
+    if (isDelivered) {
+      // Double check gray (delivered)
+      return (
+        <span className="inline-flex items-center ml-1.5 flex-shrink-0" title="Entregado">
+          <svg width="16" height="10" viewBox="0 0 16 10" fill="none" className="text-[var(--muted-foreground)]">
+            <path d="M1 5.5L3.5 8L7 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 5.5L8.5 8L12 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      );
+    }
+    // Single check gray (sent)
+    return (
+      <span className="inline-flex items-center ml-1.5 flex-shrink-0" title="Enviado">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-[var(--muted-foreground)]">
+          <path d="M1 5.5L3.5 8L7 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </span>
+    );
+  }, [isMe, isDmChat, isRead, isDelivered]);
 
   return (
     <div
@@ -103,8 +154,9 @@ export default function MessageBubble({
       {/* Timestamp for own messages */}
       {!isSameSender && isMe && (
         <div className="flex items-center gap-2 mb-1 mr-1">
-          <span className="text-[10px] text-[var(--af-text3)]">{ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
           <span className="text-[11px] font-semibold text-[var(--foreground)]">Tú</span>
+          {ReadCheck}
+          <span className="text-[10px] text-[var(--af-text3)]">{ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       )}
 
@@ -227,6 +279,14 @@ export default function MessageBubble({
           </div>
         )}
       </div>
+
+      {/* Checkmark below bubble for same-sender own messages in DMs */}
+      {isSameSender && isMe && ReadCheck && (
+        <div className="flex items-center justify-end mt-0.5 mr-1">
+          <span className="text-[10px] text-[var(--af-text3)]">{ts.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+          {ReadCheck}
+        </div>
+      )}
 
       {/* Reactions row */}
       {(hasReactions) && (

@@ -8,6 +8,7 @@ import type { ChatMessage, FirestoreTimestamp } from '@/lib/types';
 import { formatDateLabel, EMOJI_CATEGORIES, QUICK_REACTIONS, searchEmojis } from '@/components/features/chat/chat-helpers';
 import ChatSidebar from '@/components/features/chat/ChatSidebar';
 import MessageList from '@/components/features/chat/MessageList';
+import { usePresence } from '@/hooks/useDomain';
 
 export default function ChatScreen() {
   const { forms, setForms, showToast, chatMobileShow, setChatMobileShow } = useUI();
@@ -26,7 +27,9 @@ export default function ChatScreen() {
     chatMenuMsg, setChatMenuMsg,
     chatMsgSearch, setChatMsgSearch,
     deleteMessage, copyMessageText,
+    markMessagesAsRead,
   } = useChat();
+  const { onlineUsers } = usePresence();
 
   const [emojiSearch, setEmojiSearch] = useState('');
   const [activeEmojiCat, setActiveEmojiCat] = useState('Frecuentes');
@@ -102,9 +105,24 @@ export default function ChatScreen() {
     return groups;
   }, [filteredMessages]);
 
+  // Mark messages as read when viewing DM
+  useEffect(() => {
+    if (chatProjectId === '__dm__' && chatDmUser && messages.length > 0) {
+      // Slight delay to let messages load first
+      const timer = setTimeout(() => markMessagesAsRead(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [chatProjectId, chatDmUser, messages.length]);
+
   // Conversation title/subtitle
-  const convTitle = chatProjectId === '__general__' ? '💬 Chat General' : chatProjectId === '__dm__' ? (() => { const u = teamUsers.find(x => x.id === chatDmUser); return (u?.data.name || u?.data.email || 'Chat directo'); })() : projects.find(p => p.id === chatProjectId)?.data.name || 'Selecciona un proyecto';
-  const convSubtitle = chatProjectId === '__general__' ? 'Canal de todo el equipo' : chatProjectId === '__dm__' ? (() => { const u = teamUsers.find(x => x.id === chatDmUser); return u?.data.role || 'Colaborador'; })() : chatProjectId ? 'Canal del equipo' : '';
+  const isDmChat = chatProjectId === '__dm__';
+  const dmUserData = isDmChat ? teamUsers.find(x => x.id === chatDmUser) : null;
+  const isDmUserOnline = isDmChat ? onlineUsers.some(u => u.id === chatDmUser) : false;
+  const convTitle = chatProjectId === '__general__' ? '💬 Chat General' : chatProjectId === '__dm__' ? (dmUserData?.data.name || dmUserData?.data.email || 'Chat directo') : projects.find(p => p.id === chatProjectId)?.data.name || 'Selecciona un proyecto';
+  const convSubtitle = chatProjectId === '__general__' ? (() => {
+    const onlineCount = onlineUsers.length;
+    return `${onlineCount} en línea`;
+  })() : chatProjectId === '__dm__' ? (isDmUserOnline ? 'En línea' : (dmUserData?.data.role || 'Colaborador')) : chatProjectId ? 'Canal del equipo' : '';
 
   // Sidebar handler
   const handleSelectGeneral = () => {
@@ -205,6 +223,9 @@ export default function ChatScreen() {
         fileInputRef={fileInputRef}
         handleMicButton={handleMicButton}
         sendAll={sendAll}
+        isDmChat={isDmChat}
+        dmRecipientId={chatDmUser}
+        dmUserOnline={isDmUserOnline}
       />
     </div>
   );

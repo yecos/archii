@@ -74,6 +74,9 @@ interface MessageListProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
   handleMicButton: () => void;
   sendAll: () => void;
+  isDmChat?: boolean;
+  dmRecipientId?: string | null;
+  dmUserOnline?: boolean;
 }
 
 export default function MessageList(props: MessageListProps) {
@@ -93,6 +96,7 @@ export default function MessageList(props: MessageListProps) {
     recentEmojis, filteredEmojis, insertEmoji,
     chatReplyingTo, setChatReplyingTo, formsChatInput, setForms,
     fileInputRef, handleMicButton, sendAll,
+    isDmChat, dmRecipientId, dmUserOnline,
   } = props;
 
   return (
@@ -104,7 +108,12 @@ export default function MessageList(props: MessageListProps) {
         </button>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold truncate text-[var(--foreground)]">{convTitle}</div>
-          <div className="text-[11px] text-[var(--muted-foreground)]">{convSubtitle}</div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)]">
+            {dmUserOnline && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
+            )}
+            {convSubtitle}
+          </div>
         </div>
         {/* Message search */}
         <div className="relative w-8 h-8 flex items-center justify-center">
@@ -211,6 +220,8 @@ export default function MessageList(props: MessageListProps) {
                 onCopyMessageText={onCopyMessageText}
                 onToggleReaction={onToggleReaction}
                 onSetLightboxImg={setLightboxImg}
+                isDmChat={isDmChat}
+                dmRecipientId={dmRecipientId}
               />
             ))}
           </React.Fragment>

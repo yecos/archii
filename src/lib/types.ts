@@ -399,6 +399,8 @@ export interface ChatMessage {
   audioDuration?: number;
   replyTo?: { id: string; text: string; userName: string; uid: string } | string;
   reactions?: Record<string, string[]>;
+  readBy?: string[];
+  recipientId?: string;
   createdAt: FirestoreTimestamp | null;
 }
 
