@@ -143,11 +143,40 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
         <ThemeProvider>
-        {/* Register Service Worker */}
+        {/* Register Service Worker — auto-reload on update */}
         <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js').catch(function() {});
+              navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                // Check for SW updates on every page load
+                reg.update();
+                // Auto-reload when new SW activates
+                reg.addEventListener('updatefound', function() {
+                  var newWorker = reg.installing;
+                  newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'activated') {
+                      // New SW activated — clear old caches and reload
+                      caches.keys().then(function(names) {
+                        return Promise.all(names.filter(function(n) {
+                          return !n.includes('v6');
+                        }).map(function(n) { return caches.delete(n); }));
+                      }).then(function() {
+                        console.log('[ArchiFlow] Service Worker updated, reloading...');
+                        window.location.reload();
+                      });
+                    }
+                  });
+                });
+                // Also listen for SW_UPDATED message (from activate event)
+                navigator.serviceWorker.addEventListener('message', function(event) {
+                  if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('[ArchiFlow] SW update message received, reloading...');
+                    window.location.reload();
+                  }
+                });
+                // Check for updates every 10 minutes
+                setInterval(function() { reg.update(); }, 10 * 60 * 1000);
+              }).catch(function() {});
             });
           }
         ` }} />
