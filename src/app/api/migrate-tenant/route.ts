@@ -57,7 +57,14 @@ export async function POST(request: NextRequest) {
     const user = await requireAdmin(request);
     const db = getAdminDb();
 
-    // 1. Check if user already has tenants
+    // Parse optional body (can pass { tenantId: "..." } to assign to existing tenant)
+    let targetTenantId: string | null = null;
+    try {
+      const body = await request.json();
+      targetTenantId = body.tenantId || null;
+    } catch { /* no body — will auto-detect */ }
+
+    // 1. Check user and existing tenants
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (!userDoc.exists) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
@@ -66,58 +73,78 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data() as Record<string, unknown>;
     const existingTenants = userData.tenants as Array<{ tenantId: string }> | undefined;
 
-    if (existingTenants && existingTenants.length > 0) {
-      // User already has tenants — just migrate orphaned data
-      const tenantId = existingTenants[0].tenantId;
-      const result = await migrateOrphanedData(db, tenantId);
-      return NextResponse.json({
-        message: 'Migración completada (usuario ya tenía tenant)',
-        tenantId,
-        ...result,
+    let tenantId: string;
+
+    // Priority: explicit tenantId param > first existing tenant > create new
+    if (targetTenantId) {
+      // Validate that the tenant exists
+      const tenantDoc = await db.collection('tenants').doc(targetTenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+      }
+      tenantId = targetTenantId;
+      // Ensure user is a member of this tenant
+      if (existingTenants && !existingTenants.some(t => t.tenantId === targetTenantId)) {
+        await db.collection('users').doc(user.uid).update({
+          tenants: adminFirestore.FieldValue.arrayUnion({
+            tenantId,
+            role: 'Admin',
+            joinedAt: new Date(),
+          }),
+        });
+      }
+    } else if (existingTenants && existingTenants.length > 0) {
+      // No explicit tenantId — use first existing tenant
+      tenantId = existingTenants[0].tenantId;
+    } else {
+      // No tenants at all — create a default one
+      const joinCode = generateJoinCode();
+      const tenantRef = await db.collection('tenants').add({
+        name: `${userData.name || userData.email || 'Mi'} Organización`,
+        domain: '',
+        logo: '',
+        plan: 'pro',
+        settings: { primaryColor: '', secondaryColor: '', customLogo: '' },
+        limits: { maxProjects: 20, maxUsers: 25, maxStorage: 10240 },
+        stats: { userCount: 1, projectCount: 0, storageUsed: 0 },
+        joinCode,
+        createdBy: user.uid,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      tenantId = tenantRef.id;
+
+      // Add tenant to user's memberships
+      await db.collection('users').doc(user.uid).update({
+        tenants: [{
+          tenantId,
+          role: 'Admin',
+          joinedAt: new Date(),
+        }],
+        tenantId: adminFirestore.FieldValue?.delete?.() || null,
       });
     }
 
-    // 2. Create a default tenant
-    const joinCode = generateJoinCode();
-    const tenantRef = await db.collection('tenants').add({
-      name: `${userData.name || userData.email || 'Mi'} Organización`,
-      domain: '',
-      logo: '',
-      plan: 'pro',
-      settings: { primaryColor: '', secondaryColor: '', customLogo: '' },
-      limits: { maxProjects: 20, maxUsers: 25, maxStorage: 10240 },
-      stats: { userCount: 1, projectCount: 0, storageUsed: 0 },
-      joinCode,
-      createdBy: user.uid,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    const tenantId = tenantRef.id;
-
-    // 3. Add tenant to user's memberships
-    await db.collection('users').doc(user.uid).update({
-      tenants: [{
-        tenantId,
-        role: 'Admin',
-        joinedAt: new Date(),
-      }],
-      tenantId: adminFirestore.FieldValue?.delete?.() || null, // Remove legacy field if it exists
-    });
-
-    // 4. Migrate all existing data to the new tenant
+    // 2. Migrate all existing orphaned data to the target tenant
     const result = await migrateOrphanedData(db, tenantId);
 
-    // 5. Count projects for tenant stats
+    // 3. Update project count in tenant stats
     const projectCount = result.migrated['projects'] || 0;
     await db.collection('tenants').doc(tenantId).update({
-      'stats.projectCount': projectCount,
+      'stats.projectCount': adminFirestore.FieldValue.increment(projectCount),
     });
 
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    const tenantName = tenantDoc.exists
+      ? ((tenantDoc.data() as Record<string, unknown>).name as string || tenantId)
+      : tenantId;
+
     return NextResponse.json({
-      message: 'Tenant creado y datos migrados exitosamente',
+      message: targetTenantId
+        ? `Datos migrados al tenant "${tenantName}"`
+        : `Tenant "${tenantName}" ${existingTenants?.length ? 'ya existía' : 'creado'} y datos migrados`,
       tenantId,
-      tenantName: `${userData.name || userData.email || 'Mi'} Organización`,
-      joinCode,
+      tenantName,
       ...result,
     });
   } catch (error: unknown) {
