@@ -4382,3 +4382,29 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
       necesario para diagnostico.
 
 --- FIN DE SESION 2026-04-17 -------------------------------------------
+
+2026-04-17 23:00 | FIX — BUG-20260417-006: Cannot read properties of undefined (reading 'icon') en Multitenant
+  Estado: [RESUELTO]
+  Commit: e58ce34
+  Severidad: ALTA
+
+  Causa: El componente PlanBadge recibe currentTenant.data.plan, pero si el
+    documento del tenant en Firestore no tiene el campo 'plan' (tenant creado
+    antes de que existiera ese campo), plan es undefined. Entonces
+    TENANT_PLAN_LIMITS[undefined] devuelve undefined y cfg.icon falla.
+
+  Solucion (defensa en 2 capas):
+    1. PlanBadge ahora acepta plan: TenantPlan | undefined | null y hace
+       fallback a 'free' si el plan no existe en TENANT_PLAN_LIMITS.
+    2. TenantContext normaliza los datos del tenant con defaults en los 3
+       lugares donde se cargan datos de Firestore:
+       - onSnapshot (currentTenant listener)
+       - loadTenants (super-admin tenant list)
+       - refreshCurrentTenant (manual refresh)
+       Defaults: plan='free', limits=getDefaultLimits('free'), stats=getEmptyStats()
+
+  Archivos modificados (2):
+    src/screens/MultiTenantScreen.tsx (+5, -4 lineas)
+    src/contexts/TenantContext.tsx (+45, -5 lineas)
+
+--- FIN DE SESION 2026-04-17 -------------------------------------------
