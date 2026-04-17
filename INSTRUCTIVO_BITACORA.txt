@@ -4272,3 +4272,72 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
     - Verificar que los datos huérfanos se asignan correctamente al tenant
 
 --- FIN DE SESION 2026-04-17 -------------------------------------------
+
+2026-04-17 22:00 | SESION — Debug Firebase Admin credentials + singleton robusto
+  Estado: COMPLETADO
+  Commit: c529b22
+  Push: exitoso a origin/main
+
+  Contexto: Continuacion de la sesion de migrate-tenant. El endpoint /api/migrate-tenant
+    fallaba con errores de autenticacion (401/500) en Vercel. Se hizo una sesion
+    extensa de debugging para identificar la causa raiz.
+
+  Tarea 1 — Diagnostico de credenciales Firebase Admin (CRITICA):
+    * Secuencia de errores encontrados:
+      1. 500: require('firebase-admin/firestore') falla en Vercel ESM
+         -> Fix: reemplazado con getAdminFieldValue() helper
+      2. 401: Extension requests.js interceptando fetch en el navegador
+         -> Fix: usar XMLHttpRequest en vez de fetch
+      3. 401: authenticateRequest ocultando error real
+         -> Fix: agregado debug logging en api-auth.ts
+      4. 500: "credential property must implement Credential interface"
+         -> Fix: no pasar credential: undefined en initializeApp()
+      5. 500: "Could not load the default credentials"
+         -> Fix: usuario agrego FIREBASE_ADMIN_CREDENTIALS en Vercel
+
+    * Creado endpoint /api/debug-admin/route.ts para diagnostico:
+      - Verifica todas las env vars de Firebase
+      - Parsea FIREBASE_ADMIN_CREDENTIALS JSON
+      - Intenta fresh init del Admin SDK
+      - Tuvo multiples errores de build (null check, imports, deleteApp)
+
+    * Resultado del diagnostico (exitoso):
+      - FIREBASE_ADMIN_CREDENTIALS: SET (2397 chars), JSON valido
+      - project_id en credenciales: archiflow-prod-2026 (CORRECTO)
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID: archiflow-prod-2026 (CORRECTO)
+      - FIREBASE_PROJECT_ID: archiflow-c2855 (INCORRECTO - no se usa en Admin)
+      - Fresh init: EXITOSO
+
+  Tarea 2 — Mejora del singleton Firebase Admin (fix: commit c529b22):
+    * Problema identificado: En Vercel, las serverless functions pueden ser
+      "warm" (reutilizadas entre requests). Si la primera request se hizo antes
+      de agregar FIREBASE_ADMIN_CREDENTIALS, el singleton cacheaba una
+      inicializacion fallida (sin credenciales). La logica de re-init solo
+      verificaba _initMethod === 'none', pero si habia caido en ADC o si la
+      app se creo sin credenciales, no se reinicializaba.
+    * Solucion:
+      - Re-init automatico cuando FIREBASE_ADMIN_CREDENTIALS esta disponible
+        pero el metodo anterior no era FIREBASE_ADMIN_CREDENTIALS
+      - Re-init cuando hay errores de inicializacion (_initError !== null)
+      - Best-effort deleteApp() antes de re-inicializar
+      - App nombrada 'archiflow-admin' para evitar conflictos con apps stale
+      - Manejo robusto de app/duplicate-app en warm functions
+      - Import de deleteApp agregado a firebase-admin/app
+
+  Archivos modificados (2):
+    src/lib/firebase-admin.ts (+54, -18)
+    src/app/api/debug-admin/route.ts (CREADO - endpoint diagnostico)
+    src/lib/api-auth.ts (debug logging - sesion anterior)
+    src/app/api/migrate-tenant/route.ts (require fix - sesion anterior)
+
+  Nota: La variable FIREBASE_PROJECT_ID = "archiflow-c2855" en Vercel es
+    INCORRECTA pero NO afecta firebase-admin.ts porque este usa
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID = "archiflow-prod-2026" (correcto).
+    Se recomienda al usuario corregirla para evitar confusiones futuras.
+
+  Pendiente:
+    - Ejecutar la migracion en produccion despues de deploy del fix c529b22
+    - Corregir FIREBASE_PROJECT_ID en Vercel a "archiflow-prod-2026"
+    - Limpiar endpoint /api/debug-admin cuando ya no sea necesario
+
+--- FIN DE SESION 2026-04-17 -------------------------------------------
