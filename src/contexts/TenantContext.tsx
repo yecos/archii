@@ -285,7 +285,7 @@ export default function TenantProvider({ children }: { children: React.ReactNode
     showToast('Organización cambiada exitosamente');
   }, [isSuperAdmin, selectTenant, showToast]);
 
-  // ===== Join tenant by code =====
+  // ===== Join tenant by code (atomic — prevents duplicates) =====
   const joinTenantByCode = useCallback(async (code: string) => {
     if (!authUser) return;
     code = code.trim().toUpperCase();
@@ -296,8 +296,10 @@ export default function TenantProvider({ children }: { children: React.ReactNode
 
     try {
       const fb = getFirebase();
+      const db = fb.firestore();
+
       // Look up tenant by joinCode
-      const snap = await fb.firestore()
+      const snap = await db
         .collection('tenants')
         .where('joinCode', '==', code)
         .limit(1)
@@ -310,13 +312,7 @@ export default function TenantProvider({ children }: { children: React.ReactNode
 
       const tenantId = snap.docs[0].id;
 
-      // Check if user is already a member
-      if (userMemberships.some(m => m.tenantId === tenantId)) {
-        showToast('Ya eres miembro de esta organización', 'warning');
-        return;
-      }
-
-      // Check tenant plan limits
+      // Check tenant plan limits BEFORE transaction
       const tenantData = snap.docs[0].data();
       const limits = tenantData.limits as { maxUsers: number } | undefined;
       const stats = tenantData.stats as { userCount: number } | undefined;
@@ -325,28 +321,53 @@ export default function TenantProvider({ children }: { children: React.ReactNode
         return;
       }
 
-      // Add membership to user doc
-      const newMembership: TenantMembership = {
-        tenantId,
-        role: 'Miembro',
-        joinedAt: serverTimestamp(),
-      };
+      // === ATOMIC: Use transaction to prevent duplicate memberships ===
+      // arrayUnion with serverTimestamp() creates unique objects each call,
+      // so it doesn't detect duplicates. A transaction reads, deduplicates, and writes.
+      const userRef = db.collection('users').doc(authUser.uid);
+      const tenantRef = db.collection('tenants').doc(tenantId);
 
-      await fb.firestore()
-        .collection('users')
-        .doc(authUser.uid)
-        .update({
-          tenants: fb.firestore.FieldValue.arrayUnion(newMembership),
+      await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) throw new Error('Usuario no encontrado');
+
+        const userData = userDoc.data() as Record<string, unknown>;
+        let memberships: Array<{ tenantId: string; role?: string; joinedAt?: unknown }> =
+          (userData.tenants as Array<{ tenantId: string }>) || [];
+
+        // Deduplicate: keep only one entry per tenantId (by first occurrence)
+        const seen = new Set<string>();
+        const deduped = memberships.filter(m => {
+          if (seen.has(m.tenantId)) return false;
+          seen.add(m.tenantId);
+          return true;
         });
 
-      // Increment tenant user count
-      await fb.firestore()
-        .collection('tenants')
-        .doc(tenantId)
-        .update({
+        // Check if already a member (after dedup)
+        if (deduped.some(m => m.tenantId === tenantId)) {
+          // Already a member — just write deduped if it changed
+          if (deduped.length < memberships.length) {
+            transaction.update(userRef, { tenants: deduped });
+          }
+          return; // Don't throw — just skip the join
+        }
+
+        // Add new membership (use Date.now() instead of serverTimestamp to keep it deterministic)
+        deduped.push({
+          tenantId,
+          role: 'Miembro',
+          joinedAt: new Date(),
+        });
+
+        // Write deduplicated array
+        transaction.update(userRef, { tenants: deduped });
+
+        // Increment tenant user count
+        transaction.update(tenantRef, {
           'stats.userCount': fb.firestore.FieldValue.increment(1),
-          updatedAt: serverTimestamp(),
+          updatedAt: new Date(),
         });
+      });
 
       showToast('Te has unido a la organización exitosamente');
       setCurrentTenantId(tenantId);
@@ -355,7 +376,7 @@ export default function TenantProvider({ children }: { children: React.ReactNode
       console.error('[Tenant] Join by code failed:', err);
       showToast('Error al unirse a la organización', 'error');
     }
-  }, [authUser, userMemberships, showToast]);
+  }, [authUser, showToast]);
 
   // ===== Leave tenant =====
   const leaveTenant = useCallback(async (tenantId: string) => {

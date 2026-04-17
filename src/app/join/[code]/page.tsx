@@ -25,12 +25,14 @@ function JoinPageContent() {
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const joinAttemptedRef = useRef(false);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   // Auto-join when authenticated and code is valid
   const handleJoin = useCallback(async () => {
-    if (!code || code.length !== 6 || joining || joined) return;
+    if (!code || code.length !== 6 || joining || joined || joinAttemptedRef.current) return;
+    joinAttemptedRef.current = true;
     setJoining(true);
     setError(null);
     try {
@@ -55,9 +57,9 @@ function JoinPageContent() {
     }
   }, [code, joining, joined, joinTenantByCode, router]);
 
-  // Auto-trigger join once auth is resolved
+  // Auto-trigger join once auth is resolved (guarded by ref to prevent double-fire)
   useEffect(() => {
-    if (authUser && !authLoading && code.length === 6 && !joining && !joined) {
+    if (authUser && !authLoading && code.length === 6 && !joining && !joined && !joinAttemptedRef.current) {
       handleJoin();
     }
   }, [authUser, authLoading, code, joining, joined, handleJoin]);
