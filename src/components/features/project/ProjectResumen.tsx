@@ -38,15 +38,17 @@ function progressColor(pct: number): string {
 export default function ProjectResumen({ project, projectTasks, approvals, workPhases, selectedProjectId, setForms, openModal }: ProjectResumenProps) {
   const pendingTasks = projectTasks.filter(t => t.data.status !== 'Completado');
 
-  const phaseProgress = useMemo(() => {
-    if (workPhases.length === 0) return 0;
-    const total = workPhases.reduce((sum, ph) => sum + phaseStatusValue(ph.data.status || 'Pendiente'), 0);
-    return Math.round(total / workPhases.length);
-  }, [workPhases]);
+  const activePhases = useMemo(() => workPhases.filter(ph => ph.data.status && ph.data.status !== 'Pendiente'), [workPhases]);
+  const pendingPhasesCount = useMemo(() => workPhases.filter(ph => !ph.data.status || ph.data.status === 'Pendiente').length, [workPhases]);
 
-  const completedPhases = useMemo(() => workPhases.filter(ph => ph.data.status === 'Completada').length, [workPhases]);
-  const inProgressPhases = useMemo(() => workPhases.filter(ph => ph.data.status === 'En progreso').length, [workPhases]);
-  const pendingPhasesCount = useMemo(() => workPhases.filter(ph => ph.data.status === 'Pendiente' || !ph.data.status).length, [workPhases]);
+  const phaseProgress = useMemo(() => {
+    if (activePhases.length === 0) return 0;
+    const total = activePhases.reduce((sum, ph) => sum + phaseStatusValue(ph.data.status), 0);
+    return Math.round(total / activePhases.length);
+  }, [activePhases]);
+
+  const completedPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'Completada').length, [activePhases]);
+  const inProgressPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'En progreso').length, [activePhases]);
 
   // SVG circular progress ring
   const ringRadius = 40;
@@ -94,26 +96,31 @@ export default function ProjectResumen({ project, projectTasks, approvals, workP
             </div>
           </div>
         </div>
-        {/* Per-phase progress bars */}
-        {workPhases.length > 0 && (
+        {/* Per-phase progress bars — only active phases */}
+        {activePhases.length > 0 && (
           <div className="mt-4 space-y-2">
-            {workPhases.map((ph, i) => {
-              const pct = phaseStatusValue(ph.data.status || 'Pendiente');
+            {activePhases.map((ph) => {
+              const pct = phaseStatusValue(ph.data.status);
               return (
                 <div key={ph.id} className="flex items-center gap-2.5">
                   <span className="text-[11px] text-[var(--muted-foreground)] w-24 truncate text-right" title={ph.data.name}>{ph.data.name}</span>
                   <div className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`}
+                      className={`h-full rounded-full transition-all duration-500 ${ph.data.status === 'Completada' ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`}
                       style={{ width: pct + '%' }}
                     />
                   </div>
-                  <span className={`text-[10px] font-medium w-8 text-right ${pct === 100 ? 'text-emerald-400' : pct === 50 ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`}>
+                  <span className={`text-[10px] font-medium w-8 text-right ${pct === 100 ? 'text-emerald-400' : 'text-[var(--af-accent)]'}`}>
                     {pct}%
                   </span>
                 </div>
               );
             })}
+          </div>
+        )}
+        {activePhases.length === 0 && workPhases.length > 0 && (
+          <div className="mt-4 text-center py-3 text-[var(--af-text3)] text-xs rounded-lg bg-[var(--af-bg4)]">
+            {pendingPhasesCount} fase{pendingPhasesCount !== 1 ? 's' : ''} pendiente{pendingPhasesCount !== 1 ? 's' : ''} — activa al menos una para ver el avance
           </div>
         )}
         {workPhases.length === 0 && (

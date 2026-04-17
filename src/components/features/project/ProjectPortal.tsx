@@ -34,15 +34,17 @@ function progressColor(pct: number): string {
 export default function ProjectPortal({ project, workPhases, projectFiles, approvals, setForms, openModal, updateApproval, deleteApproval, updatePhaseStatus }: ProjectPortalProps) {
   const imageFiles = projectFiles.filter(f => f.data.type?.startsWith('image/'));
 
-  const phaseProgress = useMemo(() => {
-    if (workPhases.length === 0) return 0;
-    const total = workPhases.reduce((sum, ph) => sum + phaseStatusValue(ph.data.status || 'Pendiente'), 0);
-    return Math.round(total / workPhases.length);
-  }, [workPhases]);
+  const activePhases = useMemo(() => workPhases.filter(ph => ph.data.status && ph.data.status !== 'Pendiente'), [workPhases]);
+  const pendingPhasesCount = useMemo(() => workPhases.filter(ph => !ph.data.status || ph.data.status === 'Pendiente').length, [workPhases]);
 
-  const completedPhases = useMemo(() => workPhases.filter(ph => ph.data.status === 'Completada').length, [workPhases]);
-  const inProgressPhases = useMemo(() => workPhases.filter(ph => ph.data.status === 'En progreso').length, [workPhases]);
-  const pendingPhasesCount = useMemo(() => workPhases.filter(ph => ph.data.status === 'Pendiente' || !ph.data.status).length, [workPhases]);
+  const phaseProgress = useMemo(() => {
+    if (activePhases.length === 0) return 0;
+    const total = activePhases.reduce((sum, ph) => sum + phaseStatusValue(ph.data.status), 0);
+    return Math.round(total / activePhases.length);
+  }, [activePhases]);
+
+  const completedPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'Completada').length, [activePhases]);
+  const inProgressPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'En progreso').length, [activePhases]);
 
   // SVG ring values
   const ringRadius = 36;
@@ -85,18 +87,18 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-semibold mb-2">Avance por fases</div>
               <div className="space-y-1.5">
-                {workPhases.map(ph => {
-                  const pct = phaseStatusValue(ph.data.status || 'Pendiente');
+                {activePhases.map(ph => {
+                  const pct = phaseStatusValue(ph.data.status);
                   return (
                     <div key={ph.id} className="flex items-center gap-2">
                       <span className="text-[11px] text-[var(--muted-foreground)] w-20 truncate text-right" title={ph.data.name}>{ph.data.name}</span>
                       <div className="flex-1 h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`}
+                          className={`h-full rounded-full transition-all duration-500 ${ph.data.status === 'Completada' ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`}
                           style={{ width: pct + '%' }}
                         />
                       </div>
-                      <span className={`text-[9px] font-medium w-6 text-right ${pct === 100 ? 'text-emerald-400' : pct === 50 ? 'text-[var(--af-accent)]' : 'text-[var(--af-text3)]'}`}>
+                      <span className={`text-[9px] font-medium w-6 text-right ${pct === 100 ? 'text-emerald-400' : 'text-[var(--af-accent)]'}`}>
                         {pct}%
                       </span>
                     </div>
