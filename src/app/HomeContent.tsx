@@ -9,6 +9,7 @@ import { useFirestoreContext } from '@/contexts/FirestoreContext';
 import { useGalleryContext } from '@/contexts/GalleryContext';
 import { useInventoryContext } from '@/contexts/InventoryContext';
 import { useNotifContext } from '@/contexts/NotifContext';
+import { useTenantContext } from '@/contexts/TenantContext';
 import AppProvider from '@/contexts/AppContext';
 
 import { Bell, X } from 'lucide-react';
@@ -143,6 +144,7 @@ const FormBuilderScreen = dynamic(() => import('@/screens/FormBuilderScreen'), {
 const MultiTenantScreen = dynamic(() => import('@/screens/MultiTenantScreen'), { ssr: false });
 const TimeLapseScreen = dynamic(() => import('@/screens/TimeLapseScreen'), { ssr: false });
 const ApiWebhooksScreen = dynamic(() => import('@/screens/ApiWebhooksScreen'), { ssr: false });
+const TenantSelectionScreen = dynamic(() => import('@/screens/TenantSelectionScreen'), { ssr: false });
 
 function AppContent() {
   const { screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, closeModal, forms, setForms, modals, showToast } = useUIContext();
@@ -175,8 +177,9 @@ function AppContent() {
   const aiAgentOpen = useUIStore((s) => s.aiAgentOpen);
   const setAIAgentOpen = useUIStore((s) => s.setAIAgentOpen);
   const setCommandOpen = useUIStore((s) => s.setCommandOpen);
+  const { needsTenantSelection, isResolvingTenant } = useTenantContext();
 
-  if (!ready || loading) return <LoadingScreen />;
+  if (!ready || loading || isResolvingTenant) return <LoadingScreen />;
   if (!authUser) return (
     <AuthScreen
       forms={forms}
@@ -189,6 +192,9 @@ function AppContent() {
       showToast={showToast}
     />
   );
+
+  // Post-login: show tenant selection if user has no tenant selected
+  if (needsTenantSelection) return <TenantSelectionScreen />;
 
   return (
     <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>

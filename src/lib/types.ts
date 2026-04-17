@@ -688,10 +688,18 @@ export interface Tenant {
     settings: TenantSettings;
     limits: TenantLimits;
     stats: TenantStats;
+    joinCode?: string;
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
     updatedAt?: FirestoreTimestamp | null;
   };
+}
+
+/** User's membership within a single tenant */
+export interface TenantMembership {
+  tenantId: string;
+  role: string;
+  joinedAt: unknown;
 }
 
 /** Plan limits configuration */

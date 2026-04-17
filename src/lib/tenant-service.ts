@@ -95,7 +95,33 @@ export async function fetchTenantByDomain(domain: string): Promise<Tenant | null
 }
 
 /**
- * Create a new tenant with plan-based limits.
+ * Generate a 6-char alphanumeric join code.
+ */
+export function generateJoinCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/**
+ * Look up a tenant by its join code.
+ */
+export async function fetchTenantByJoinCode(code: string): Promise<Tenant | null> {
+  const db = getDb();
+  const snap: QuerySnapshot = await db.collection(TENANTS_COLLECTION)
+    .where('joinCode', '==', code.trim().toUpperCase())
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, data: doc.data() as Tenant['data'] };
+}
+
+/**
+ * Create a new tenant with plan-based limits and auto-generated join code.
  */
 export async function createTenant(
   name: string,
@@ -118,6 +144,7 @@ export async function createTenant(
       maxStorage: planConfig.maxStorage,
     },
     stats: { userCount: 0, projectCount: 0, storageUsed: 0 },
+    joinCode: generateJoinCode(),
     createdBy,
   };
   const ref = await db.collection(TENANTS_COLLECTION).add({
