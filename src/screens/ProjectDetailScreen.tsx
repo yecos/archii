@@ -158,6 +158,7 @@ export default function ProjectDetailScreen() {
           setForms={ui.setForms}
           openModal={ui.openModal}
           gal={gal}
+          workPhases={fs.workPhases}
         />
       )}
 

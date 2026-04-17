@@ -1,8 +1,10 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { fmtSize } from '@/lib/helpers';
+import { getFirebase } from '@/lib/firebase-service';
 import type { OneDriveFile, ProjectFile } from '@/lib/types';
+import ProjectFileManager from './ProjectFileManager';
 
 interface OdBreadcrumb {
   id: string;
@@ -72,11 +74,72 @@ interface ProjectArchivosProps {
     setLightboxPhoto: (photo: OneDriveFile) => void;
     setLightboxIndex: (index: number) => void;
   };
+  workPhases?: Array<{ id: string; data: { name: string } }>;
 }
 
-export default function ProjectArchivos({ projectName, msConnected, doMicrosoftLogin, od, projectFiles, selectedProjectId, uploadFile, deleteFile, setForms, openModal, gal }: ProjectArchivosProps) {
+export default function ProjectArchivos({ projectName, msConnected, doMicrosoftLogin, od, projectFiles, selectedProjectId, uploadFile, deleteFile, setForms, openModal, gal, workPhases }: ProjectArchivosProps) {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [showFileManager, setShowFileManager] = useState(false);
+
+  // Get Firebase auth token for AI API calls
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const user = getFirebase().auth().currentUser;
+        if (user) {
+          const token = await user.getIdToken();
+          setAuthToken(token);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchToken();
+    // Refresh token every 50 minutes
+    const interval = setInterval(fetchToken, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Convert workPhases to the format expected by ProjectFileManager
+  const phaseOptions = (workPhases || []).map(wp => ({
+    id: wp.id,
+    name: wp.data.name,
+    processes: [] as { id: string; name: string }[],
+  }));
+
   return (
     <div>
+      {/* AI File Manager */}
+      {authToken && selectedProjectId && (
+        <div className="mb-5">
+          {!showFileManager ? (
+            <button
+              onClick={() => setShowFileManager(true)}
+              className="w-full rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 p-4 text-left cursor-pointer hover:from-emerald-500/10 hover:to-teal-500/10 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-emerald-400">Asistente IA de Archivos</div>
+                  <div className="text-[11px] text-[var(--muted-foreground)]">Sube archivos y la IA los clasifica, renombra y organiza automaticamente</div>
+                </div>
+                <svg className="w-5 h-5 text-emerald-400/60 group-hover:text-emerald-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </button>
+          ) : (
+            <div className="card-elevated p-4 border border-emerald-500/20">
+              <ProjectFileManager
+                projectId={selectedProjectId}
+                projectName={projectName}
+                phases={phaseOptions}
+                authToken={authToken}
+                msAccessToken={od.msAccessToken}
+                oneDriveFolderId={od.odProjectFolder}
+              />
+            </div>
+          )}
+        </div>
+      )}
       {/* OneDrive Section */}
       {!msConnected ? (
         <div className="mb-4 bg-[#0078d4]/10 border border-[#0078d4]/20 rounded-xl p-6 text-center">
