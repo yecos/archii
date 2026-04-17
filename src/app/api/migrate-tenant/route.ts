@@ -8,10 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
-import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const adminFirestore = require('firebase-admin/firestore');
+import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
 
 /** All Firestore collections that are tenant-scoped */
 const TENANT_COLLECTIONS = [
@@ -56,6 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireAdmin(request);
     const db = getAdminDb();
+    const FieldValue = getAdminFieldValue();
 
     // Parse optional body (can pass { tenantId: "..." } to assign to existing tenant)
     let targetTenantId: string | null = null;
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest) {
       // Ensure user is a member of this tenant
       if (existingTenants && !existingTenants.some(t => t.tenantId === targetTenantId)) {
         await db.collection('users').doc(user.uid).set({
-          tenants: adminFirestore.FieldValue.arrayUnion({
+          tenants: FieldValue.arrayUnion({
             tenantId,
             role: 'Admin',
             joinedAt: new Date(),
@@ -121,7 +119,7 @@ export async function POST(request: NextRequest) {
           role: 'Admin',
           joinedAt: new Date(),
         }],
-        tenantId: adminFirestore.FieldValue?.delete?.() || null,
+        tenantId: FieldValue.delete(),
       }, { merge: true });
     }
 
@@ -130,9 +128,11 @@ export async function POST(request: NextRequest) {
 
     // 3. Update project count in tenant stats
     const projectCount = result.migrated['projects'] || 0;
-    await db.collection('tenants').doc(tenantId).set({
-      'stats.projectCount': adminFirestore.FieldValue.increment(projectCount),
-    }, { merge: true });
+    if (projectCount > 0) {
+      await db.collection('tenants').doc(tenantId).set({
+        'stats.projectCount': FieldValue.increment(projectCount),
+      }, { merge: true });
+    }
 
     const tenantDoc = await db.collection('tenants').doc(tenantId).get();
     const tenantName = tenantDoc.exists
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error: unknown) {
-    if (error instanceof NextResponse) throw error;
+    if (error instanceof NextResponse) return error;
     console.error('[Migrate] Error:', error);
     return NextResponse.json(
       { error: 'Error en la migración', details: String(error) },
@@ -167,22 +167,8 @@ async function migrateOrphanedData(
 
   for (const collection of TENANT_COLLECTIONS) {
     try {
-      // Find all docs in this collection that DON'T have a tenantId
-      const snap = await db.collection(collection)
-        .where('tenantId', '==', '') // won't match anything
-        .get();
-
-      // Since empty string filter may not work as expected across all indexes,
-      // use a different approach: fetch a batch and check individually
-      // We'll use a simpler approach: query without tenantId filter for small collections
-      // and use the not-equal filter approach
-    } catch (queryErr) {
-      // Index not available — skip this approach
-    }
-
-    try {
-      // Alternative: fetch all and filter in memory (for migration only)
-      // This is a one-time operation, so it's acceptable
+      // Fetch all docs in this collection and filter in memory
+      // This is a one-time migration, so it's acceptable
       const snap = await db.collection(collection).limit(500).get();
 
       if (snap.empty) {
