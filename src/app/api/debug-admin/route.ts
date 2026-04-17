@@ -45,7 +45,8 @@ export async function GET() {
   let adminSuccess = false;
   try {
     if (credRaw && credProjectId && credClientEmail && credHasPrivateKey) {
-      const { initializeApp, cert, getApps, getAuth } = await import('firebase-admin/app');
+      const { initializeApp, cert, getApps } = await import('firebase-admin/app');
+      const { getAuth } = await import('firebase-admin/auth');
       const { getFirestore } = await import('firebase-admin/firestore');
 
       // Delete existing apps to force fresh init
