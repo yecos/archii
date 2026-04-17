@@ -6,17 +6,26 @@ export async function GET() {
   // 1. Check FIREBASE_ADMIN_CREDENTIALS
   const credRaw = process.env.FIREBASE_ADMIN_CREDENTIALS;
   results.credExists = !!credRaw;
-  results.credLength = credRaw?.length || 0;
+  results.credLength = credRaw ? credRaw.length : 0;
   results.credFirstChars = credRaw ? credRaw.substring(0, 100) : 'NOT SET';
 
   // 2. Try to parse it
-  let parsed: Record<string, unknown> | null = null;
+  let credProjectId: string | null = null;
+  let credClientEmail: string | null = null;
+  let credHasPrivateKey = false;
+
   try {
-    parsed = JSON.parse(credRaw || '') as Record<string, unknown>;
+    const parsed = JSON.parse(credRaw || '') as Record<string, unknown>;
     results.credParseable = true;
-    results.credProjectId = parsed!.project_id;
-    results.credClientEmail = parsed!.client_email;
-    results.credHasPrivateKey = !!(parsed!.private_key && String(parsed!.private_key).includes('BEGIN PRIVATE KEY'));
+    credProjectId = String(parsed.project_id || '');
+    credClientEmail = String(parsed.client_email || '');
+    credHasPrivateKey = !!(
+      parsed.private_key &&
+      String(parsed.private_key).includes('BEGIN PRIVATE KEY')
+    );
+    results.credProjectId = credProjectId;
+    results.credClientEmail = credClientEmail;
+    results.credHasPrivateKey = credHasPrivateKey;
   } catch (e: unknown) {
     results.credParseable = false;
     results.credParseError = e instanceof Error ? e.message : String(e);
@@ -33,35 +42,38 @@ export async function GET() {
   };
 
   // 4. Try to initialize Firebase Admin from scratch
-  let adminError: string | null = null;
   let adminSuccess = false;
   try {
-    // Dynamic import to avoid cache
-    const { initializeApp, cert, getApps, getApp, getAuth } = await import('firebase-admin/app');
-    const { getFirestore } = await import('firebase-admin/firestore');
+    if (credRaw && credProjectId && credClientEmail && credHasPrivateKey) {
+      const { initializeApp, cert, getApps, getAuth } = await import('firebase-admin/app');
+      const { getFirestore } = await import('firebase-admin/firestore');
 
-    // Delete existing apps to force fresh init
-    const existingApps = getApps();
-    for (const app of existingApps) {
-      try { await app.delete(); } catch { /* ignore */ }
-    }
+      // Delete existing apps to force fresh init
+      const existingApps = getApps();
+      for (const app of existingApps) {
+        try { await app.delete(); } catch { /* ignore */ }
+      }
 
-    if (parsed) {
+      const parsed = JSON.parse(credRaw) as Record<string, unknown>;
       const app = initializeApp({
-        credential: cert(parsed),
-        projectId: parsed.project_id as string,
+        credential: cert(parsed as Parameters<typeof cert>[0]),
+        projectId: credProjectId,
       });
       const auth = getAuth(app);
-      // Try to verify a dummy operation
       const db = getFirestore(app);
       adminSuccess = true;
       results.adminInitMethod = 'FIREBASE_ADMIN_CREDENTIALS (fresh)';
     } else {
-      results.adminInitMethod = 'NO CREDENTIALS AVAILABLE';
+      results.adminInitMethod = 'CREDENTIALS INCOMPLETE';
+      results.why = {
+        hasRaw: !!credRaw,
+        hasProjectId: !!credProjectId,
+        hasClientEmail: !!credClientEmail,
+        hasPrivateKey: credHasPrivateKey,
+      };
     }
   } catch (e: unknown) {
-    adminError = e instanceof Error ? e.message : String(e);
-    results.adminInitError = adminError;
+    results.adminInitError = e instanceof Error ? e.message : String(e);
   }
 
   results.adminSuccess = adminSuccess;
