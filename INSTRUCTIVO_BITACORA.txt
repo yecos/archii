@@ -4408,3 +4408,122 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
     src/contexts/TenantContext.tsx (+45, -5 lineas)
 
 --- FIN DE SESION 2026-04-17 -------------------------------------------
+
+2026-04-18 | SESION — Fases, procesos, avance del proyecto y vinculacion tareas-fases
+  Estado: COMPLETADO
+  Commits: 9026a35, 1bea315, f9ff0e5, 92f38f1, 89347b6, 632725f, d61366f, 8a017b3, a5d10a3
+  Alcance: [MEDIANO]
+
+  Contexto: Sesion enfocada en mejorar la gestion de fases y procesos del
+    proyecto, calcular avance porcentual automatico, corregir bugs de UI,
+    y vincular tareas con las fases del proyecto (workPhases).
+
+  Tarea 1 — Reordenamiento de tabs en detalle de proyecto (feat: 9026a35)
+    * Cambiado el orden de las pestanas de: Resumen, Diseno, Presupuesto,
+      Archivos, Ejecucion, Portal a: Resumen, Diseno, Ejecucion, Archivos,
+      Presupuesto, Portal.
+    * Motivo: Ejecucion es mas relevante que Archivos y Presupuesto en el
+      flujo diario de obra.
+    * Archivo: src/screens/ProjectDetailScreen.tsx
+
+  Tarea 2 — BUG: Fases no se mostraban al hacer Desplegar (fix: 1bea315)
+    * Causa: PhaseContext escuchaba la coleccion `projects` con onSnapshot
+      pero hacia un .get() de una sola vez para la subcoleccion `phases`.
+      Cuando se escribian fases, el listener de projects nunca se
+      disparaba para refrescar los datos de fases.
+    * Solucion: Creados listeners onSnapshot dedicados para la subcoleccion
+      `phases` de cada proyecto. Ahora las fases se actualizan en tiempo
+      real cuando se agregan o modifican.
+    * Archivo: src/contexts/PhaseContext.tsx (reescrito)
+
+  Tarea 3 — BUG: Tab Ejecucion en blanco (fix: f9ff0e5)
+    * Causa: `workView` iniciaba como `undefined` (desde `forms` inicializado
+      como `{}`). Ninguna condicion de sub-vista coincidia, por lo que no se
+      renderizaba nada.
+    * Solucion: Agregado un fallback `activeView` que por defecto es
+      `'procesos'` y un useEffect para auto-asignar `workView` a
+      `'procesos'` en el primer render.
+    * Archivo: src/components/features/project/ProjectEjecucion.tsx
+
+  Tarea 4 — BUG: Boton "+" invisible al editar tareas (fix: 92f38f1, 89347b6)
+    * Causa 1: El boton "+" usaba `text-[var(--primary-foreground)]` que
+      resultaba blanco en modo claro (invisible sobre fondo blanco).
+    * Solucion 1: Cambiado a `text-white` fijo.
+    * Causa 2: Al escribir texto, el boton cambiaba de estilo (condicional).
+    * Solucion 2: Eliminados los estilos condicionales. El boton siempre se
+      ve igual, solo cambia la opacidad (35% cuando esta vacio, 100%
+      cuando hay contenido).
+    * Archivo: src/components/features/project/ProjectTareas.tsx
+
+  Tarea 5 — Estado de fases en Portal + Unificacion de estilos de popups (feat: 632725f)
+    * Agregado dropdown de estado de fases (Pendiente/En progreso/Completada)
+      en la pestana Portal del proyecto.
+    * Reemplazados todos los `window.prompt` y `window.confirm` en
+      ProcessTree con componentes inline skeuo-styled (InlinePrompt,
+      dialogo de confirmacion).
+    * Refactorizados AnnotatePhotoModal y SignatureModal de overlays
+      manuales (`fixed inset-0 z-[200]`) a CenterModal para consistencia.
+    * Archivos:
+      - src/components/features/project/ProjectPortal.tsx (reescrito)
+      - src/components/features/project/ProcessTree.tsx (modificado)
+      - src/components/features/project/AnnotatePhotoModal.tsx (refactor)
+      - src/components/features/project/SignatureModal.tsx (refactor)
+
+  Tarea 6 — Avance del proyecto calculado desde fases (feat: d61366f)
+    * Agregada tarjeta de "Avance del proyecto" en la pestana Resumen con:
+      - Anillo circular SVG animado mostrando porcentaje total
+      - Contadores de fases completadas, en progreso y pendientes
+      - Barras de progreso individuales por cada fase activa
+    * Agregado calculo automatico de avance en el Portal:
+      - Anillo circular + desglose visual por fase
+      - Se calcula: Pendiente=0%, En progreso=50%, Completada=100%
+      - Colores dinamicos: amber (<40%), dorado (40-80%), verde (>80%)
+    * Archivos:
+      - src/components/features/project/ProjectResumen.tsx (modificado)
+      - src/components/features/project/ProjectPortal.tsx (modificado)
+      - src/screens/ProjectDetailScreen.tsx (+workPhases prop)
+
+  Tarea 7 — Avance solo cuenta fases activas (fix: 8a017b3)
+    * Problema: El porcentaje de avance contaba TODAS las fases incluyendo
+      las pendientes, diluyendo el porcentaje real.
+    * Solucion: Filtrado para que solo se muestren y cuenten las fases
+      activas (En progreso + Completada). Las fases Pendientes no
+      aparecen en las barras ni en el calculo del porcentaje.
+      Si no hay fases activas, se muestra mensaje informativo.
+    * Archivos:
+      - src/components/features/project/ProjectResumen.tsx
+      - src/components/features/project/ProjectPortal.tsx
+
+  Tarea 8 — Vinculacion tareas con fases del proyecto (feat: a5d10a3)
+    * Agregado dropdown "Fase del proyecto" en el formulario de tareas
+      (TaskModal). Solo se muestra cuando se selecciona un proyecto que
+      tiene fases configuradas. Muestra el nombre de la fase y su estado.
+    * Corregido BUG critico en saveTask: los campos workPhaseId, processId
+      y phaseId NO se persistian en Firestore a pesar de que se establecian
+      en el formulario. Ahora se guardan correctamente.
+    * Corregido BUG en openEditTask: no se restauraban los campos
+      workPhaseId, processId y phaseId al editar una tarea existente.
+    * Portal mejorado: fases ahora son expandibles (clic para desplegar)
+      mostrando las tareas vinculadas con checkbox para marcar como
+      completadas. Badge con conteo de tareas por fase. Seccion de
+      "Tareas sin fase asignada" al final.
+    * Archivos:
+      - src/contexts/FirestoreContext.tsx (saveTask + openEditTask)
+      - src/components/modals/TaskModal.tsx (+dropdown fase)
+      - src/components/features/project/ProjectPortal.tsx (tareas por fase)
+      - src/screens/ProjectDetailScreen.tsx (+props getUserName, toggleTask)
+
+  Archivos modificados en esta sesion (9):
+    src/screens/ProjectDetailScreen.tsx
+    src/contexts/PhaseContext.tsx (reescrito)
+    src/contexts/FirestoreContext.tsx (+workPhaseId/processId/phaseId)
+    src/components/features/project/ProjectResumen.tsx (tarjeta avance)
+    src/components/features/project/ProjectPortal.tsx (avance + tareas)
+    src/components/features/project/ProjectEjecucion.tsx (fix workView)
+    src/components/features/project/ProjectTareas.tsx (fix boton)
+    src/components/features/project/ProcessTree.tsx (inline prompts)
+    src/components/features/project/AnnotatePhotoModal.tsx (CenterModal)
+    src/components/features/project/SignatureModal.tsx (CenterModal)
+    src/components/modals/TaskModal.tsx (+dropdown fase)
+
+--- FIN DE SESION 2026-04-18 -------------------------------------------
