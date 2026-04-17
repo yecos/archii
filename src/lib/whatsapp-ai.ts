@@ -18,6 +18,7 @@ import { generateText, stepCountIs } from 'ai';
 import { routeAIRequest } from '@/lib/ai-router';
 import { createAgentTools } from '@/lib/ai-tools';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
+import { getTenantIdForUser } from '@/lib/tenant-server';
 import type { WhatsAppLinkedUser } from '@/lib/types';
 import type { Firestore } from 'firebase-admin/firestore';
 
@@ -265,8 +266,9 @@ export async function aiReply(
     });
     console.log(`[WhatsApp AI] ${provider} (${modelName}) → ${link.userName}${options?.isGroup ? ` [${options.groupName}]` : ''}`);
 
-    // 6. Create tools with user context
-    const tools = createAgentTools(userId);
+    // 6. Create tools with user context + tenant isolation
+    const tenantId = await getTenantIdForUser(userId);
+    const tools = createAgentTools(userId, tenantId || '');
 
     // 7. Call AI with tools
     const result = await generateText({

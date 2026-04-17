@@ -11,7 +11,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { routeAIRequest } from '@/lib/ai-router';
 import { createAgentTools, AGENT_SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
-import { getTenantIdForUser } from '@/lib/tenant-server';
+import { getTenantIdForUser, resolveTenantId } from '@/lib/tenant-server';
 import { NextRequest } from 'next/server';
 
 /**
@@ -88,10 +88,12 @@ export async function POST(request: NextRequest) {
       messages,
       projectContext: clientContext,
       projectId,
+      tenantId: clientTenantId,
     } = body as {
       messages: Array<{ role: string; content: string; images?: string[] }>;
       projectContext?: string;
       projectId?: string;
+      tenantId?: string;
     };
 
     if (!messages?.length) {
@@ -100,10 +102,10 @@ export async function POST(request: NextRequest) {
 
     let sysPrompt = AGENT_SYSTEM_PROMPT;
 
-    // Multi-tenant: get tenantId for data isolation
-    const tenantId = await getTenantIdForUser(user.uid);
+    // Multi-tenant: resolve tenantId (prefer client-sent active tenant, fallback to first)
+    const { tenantId, error: tenantError } = await resolveTenantId(user.uid, clientTenantId);
     if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'Tenant not found' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: tenantError || 'Tenant not found' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Build context: use projectId to fetch live data, or fall back to client-provided context
@@ -132,8 +134,8 @@ export async function POST(request: NextRequest) {
     });
     console.log(`[ArchiFlow Agent] ${provider} (${modelName}) user=${user.uid} project=${projectId || 'none'} images=${hasImages}`);
 
-    // Tools consolidadas con userId inyectado
-    const tools = createAgentTools(user.uid);
+    // Tools consolidadas con userId y tenantId inyectados para aislamiento de datos
+    const tools = createAgentTools(user.uid, tenantId);
 
     // Convert messages for AI SDK — support multi-content with images
     const aiMessages = messages.map(m => {

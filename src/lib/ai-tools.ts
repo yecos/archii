@@ -30,8 +30,8 @@ function FV(): ReturnType<typeof getAdminFieldValue> {
 /** Admin SDK document spread type — preserves dynamic fields with proper typing. */
 type AdminDoc = Record<string, unknown> & { id: string };
 
-/* ===== Factory: crea todas las tools con userId inyectado ===== */
-export function createAgentTools(userId: string) {
+/* ===== Factory: crea todas las tools con userId y tenantId inyectado ===== */
+export function createAgentTools(userId: string, tenantId: string) {
   const db = getAdminDb();
 
   return {
@@ -63,7 +63,7 @@ export function createAgentTools(userId: string) {
             assignees: assigneeId ? [assigneeId] : [],
             phase: phase || '',
             createdAt: fv.serverTimestamp(), createdBy: userId,
-            updatedAt: fv.serverTimestamp(), projectId,
+            updatedAt: fv.serverTimestamp(), projectId, tenantId,
           });
           return { success: true, id: ref.id, action: 'created', message: `Tarea "${title}" creada` };
         } catch (err: unknown) {
@@ -111,7 +111,7 @@ export function createAgentTools(userId: string) {
             concept, amount, category: category || 'Otro',
             date: date || new Date().toISOString().split('T')[0],
             supplier: supplier || '',
-            createdAt: FV().serverTimestamp(), createdBy: userId, projectId,
+            createdAt: FV().serverTimestamp(), createdBy: userId, projectId, tenantId,
           });
           return { success: true, message: `Gasto $${amount.toLocaleString('es-CO')} registrado` };
         } catch (err: unknown) {
@@ -182,7 +182,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { search, status } = args as { search?: string; status?: string };
-          const snap = await db.collection('projects').orderBy('createdAt', 'desc').limit(30).get();
+          const snap = await db.collection('projects').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(30).get();
           let projects = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (search) {
             const q = search.toLowerCase();
@@ -215,6 +215,8 @@ export function createAgentTools(userId: string) {
           const doc = await db.collection('projects').doc(projectId).get();
           if (!doc.exists) return { success: false, message: 'Proyecto no encontrado' };
           const p = doc.data();
+          // Verify tenant ownership
+          if ((p?.tenantId as string) !== tenantId) return { success: false, message: 'Proyecto no encontrado en tu organización' };
           const ts = await db.collection('tasks').where('projectId', '==', projectId).get();
           const tasks = ts.docs.map(d => d.data());
           const pending = tasks.filter((t: Record<string, unknown>) => t.status === 'Pendiente').length;
@@ -247,9 +249,9 @@ export function createAgentTools(userId: string) {
         try {
           const { projectId, userId, status } = args as { projectId?: string; userId?: string; status?: string };
           let snap;
-          if (projectId) snap = await db.collection('tasks').where('projectId', '==', projectId).limit(15).get();
-          else if (userId) snap = await db.collection('tasks').where('assignees', 'array-contains', userId).limit(15).get();
-          else snap = await db.collection('tasks').orderBy('createdAt', 'desc').limit(15).get();
+          if (projectId) snap = await db.collection('tasks').where('projectId', '==', projectId).where('tenantId', '==', tenantId).limit(15).get();
+          else if (userId) snap = await db.collection('tasks').where('assignees', 'array-contains', userId).where('tenantId', '==', tenantId).limit(15).get();
+          else snap = await db.collection('tasks').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(15).get();
           let tasks = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (status) tasks = tasks.filter((t: Record<string, unknown>) => t.status === status);
           if (tasks.length === 0) return { success: true, tasks: [], message: 'No se encontraron tareas' };
@@ -273,7 +275,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { projectId, days } = args as { projectId?: string; days?: number };
-          const snap = await db.collection('tasks').orderBy('dueDate', 'asc').limit(50).get();
+          const snap = await db.collection('tasks').where('tenantId', '==', tenantId).orderBy('dueDate', 'asc').limit(50).get();
           const now = new Date().toISOString().split('T')[0];
           const future = new Date(Date.now() + (days || 7) * 86400000).toISOString().split('T')[0];
           let tasks = (snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[])
@@ -371,7 +373,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { search, warehouse, lowStock } = args as { search?: string; warehouse?: string; lowStock?: boolean };
-          const snap = await db.collection('invProducts').orderBy('createdAt', 'desc').limit(50).get();
+          const snap = await db.collection('invProducts').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(50).get();
           let products = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
 
           // Filter by search
@@ -429,7 +431,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { warehouse } = args as { warehouse?: string };
-          const snap = await db.collection('invProducts').orderBy('createdAt', 'desc').limit(100).get();
+          const snap = await db.collection('invProducts').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).get();
           const products = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
 
           const alerts: string[] = [];
@@ -520,7 +522,7 @@ export function createAgentTools(userId: string) {
             status: 'Borrador', items: invoiceItems,
             subtotal, tax, total,
             notes: notes || '', issueDate: today, dueDate: dueDate || '',
-            createdAt: FV().serverTimestamp(), createdBy: userId,
+            createdAt: FV().serverTimestamp(), createdBy: userId, tenantId,
           });
 
           return {
@@ -544,7 +546,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { projectId, status } = args as { projectId?: string; status?: string };
-          const snap = await db.collection('invoices').orderBy('createdAt', 'desc').limit(30).get();
+          const snap = await db.collection('invoices').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(30).get();
           let invoices = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (projectId) invoices = invoices.filter((inv: Record<string, unknown>) => inv.projectId === projectId);
           if (status) invoices = invoices.filter((inv: Record<string, unknown>) => inv.status === status);
@@ -689,7 +691,7 @@ export function createAgentTools(userId: string) {
             validUntil, notes: notes || '', internalNotes: '',
             terms: 'La cotización tiene vigencia de 30 días. Precios sujetos a disponibilidad.',
             bankName: '', bankAccount: '', bankAccountType: '', bankHolder: '',
-            createdAt: FV().serverTimestamp(), createdBy: userId,
+            createdAt: FV().serverTimestamp(), createdBy: userId, tenantId,
           });
 
           const secSummary = quotationSections.map(s =>
@@ -717,7 +719,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { projectId, status } = args as { projectId?: string; status?: string };
-          const snap = await db.collection('quotations').orderBy('createdAt', 'desc').limit(20).get();
+          const snap = await db.collection('quotations').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(20).get();
           let quotations = snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[];
           if (projectId) quotations = quotations.filter((q: Record<string, unknown>) => q.projectId === projectId);
           if (status) quotations = quotations.filter((q: Record<string, unknown>) => q.status === status);
@@ -771,7 +773,7 @@ export function createAgentTools(userId: string) {
             attendees: attendees || [],
             createdBy: userId,
             createdAt: FV().serverTimestamp(),
-            recurrence: 'none',
+            recurrence: 'none', tenantId,
           });
           const durationStr = duration ? `${duration} min` : '60 min';
           return {
@@ -794,7 +796,7 @@ export function createAgentTools(userId: string) {
       execute: async (args) => {
         try {
           const { projectId, days } = args as { projectId?: string; days?: number };
-          const snap = await db.collection('meetings').orderBy('date', 'asc').limit(30).get();
+          const snap = await db.collection('meetings').where('tenantId', '==', tenantId).orderBy('date', 'asc').limit(30).get();
           const now = new Date().toISOString().split('T')[0];
           const future = new Date(Date.now() + (days || 7) * 86400000).toISOString().split('T')[0];
           let meetings = (snap.docs.map(d => ({ id: d.id, ...d.data() })) as AdminDoc[])
@@ -835,6 +837,8 @@ export function createAgentTools(userId: string) {
           const doc = await db.collection('projects').doc(projectId).get();
           if (!doc.exists) return { success: false, message: 'Proyecto no encontrado' };
           const p = doc.data();
+          // Verify tenant ownership
+          if ((p?.tenantId as string) !== tenantId) return { success: false, message: 'Proyecto no encontrado en tu organización' };
 
           // Tasks
           const ts = await db.collection('tasks').where('projectId', '==', projectId).get();

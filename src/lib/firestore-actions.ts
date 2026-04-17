@@ -133,7 +133,7 @@ export async function deleteTask(taskId: string, showToast: ToastFn) {
 
 /* ===== CHAT MESSAGES ===== */
 
-export async function sendMessage(chatProjectId: string, msgData: ChatMessageFormData, authUser: FirebaseUserInfo | null, showToast: ToastFn) {
+export async function sendMessage(chatProjectId: string, msgData: ChatMessageFormData, authUser: FirebaseUserInfo | null, showToast: ToastFn, tenantId?: string) {
   return fbAction('enviar mensaje', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -144,6 +144,7 @@ export async function sendMessage(chatProjectId: string, msgData: ChatMessageFor
       userName: authUser?.displayName || authUser?.email || 'Usuario',
       userPhoto: authUser?.photoURL || '',
       createdAt: ts,
+      tenantId: tenantId || '',
     };
     if (chatProjectId === '__general__') {
       await db.collection('generalMessages').add(msg);

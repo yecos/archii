@@ -359,18 +359,24 @@ export default function GeolocationProvider({ children }: { children: React.Reac
     }
   }, []);
 
-  // Subscribe to team member locations
+  // Subscribe to team member locations — filtered by current tenant only
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || teamUsers.length === 0) return;
 
     try {
       const db = getDb();
+      // Build a set of user IDs that belong to the current tenant
+      const teamUids = new Set(teamUsers.map(u => u.id));
+
       const unsub = db.collection('users').onSnapshot((snap) => {
         const locations: TeamMemberLocation[] = [];
         snap.docs.forEach(doc => {
+          // Only show locations of users in the current tenant
+          if (!teamUids.has(doc.id) || doc.id === authUser.uid) return;
+
           const d = doc.data() as Record<string, unknown>;
           const lastLoc = d.lastLocation as Record<string, unknown> | undefined;
-          if (lastLoc && doc.id !== authUser.uid) {
+          if (lastLoc) {
             let ts = 0;
             if (lastLoc.timestamp) {
               if (typeof lastLoc.timestamp === 'object' && lastLoc.timestamp !== null && 'seconds' in lastLoc.timestamp) {
@@ -398,7 +404,7 @@ export default function GeolocationProvider({ children }: { children: React.Reac
     } catch {
       // ignore
     }
-  }, [authUser?.uid]);
+  }, [authUser?.uid, teamUsers]);
 
   // Auto-start tracking when trackingEnabled and user is authenticated
   useEffect(() => {

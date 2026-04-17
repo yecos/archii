@@ -188,6 +188,7 @@ export async function logAudit(
   projectId?: string,
   userId?: string,
   userName?: string,
+  tenantId?: string,
 ): Promise<void> {
   try {
     const db = getDb();
@@ -198,6 +199,7 @@ export async function logAudit(
       entityId,
       entityName,
       projectId: projectId || null,
+      tenantId: tenantId || null,
       changes: changes && Object.keys(changes).length > 0 ? changes : null,
       userId: userId || 'unknown',
       userName: userName || 'Desconocido',
@@ -216,11 +218,16 @@ export async function logAudit(
  * Returns the most recent entries first (ordered by timestamp desc).
  */
 export async function getAuditLogs(
-  filters?: AuditFilters
+  filters?: AuditFilters & { tenantId?: string }
 ): Promise<AuditEntry[]> {
   try {
     const db = getDb();
-    let query = db.collection('audit_trail').orderBy('timestamp', 'desc');
+    let query: any = db.collection('audit_trail').orderBy('timestamp', 'desc');
+
+    // Apply tenant isolation filter
+    if (filters?.tenantId) {
+      query = query.where('tenantId', '==', filters.tenantId);
+    }
 
     // Apply filters
     if (filters?.entityType && filters.entityType !== 'all') {

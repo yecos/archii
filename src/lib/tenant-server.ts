@@ -56,3 +56,52 @@ export async function getUserTenantIds(userId: string): Promise<string[]> {
     return [];
   }
 }
+
+/**
+ * Resolve the active tenant ID for an API request.
+ * Priority:
+ *  1. Explicit tenantId from request body (client sends its active tenant)
+ *  2. First tenant from user's membership list
+ *
+ * Validates that the user actually belongs to the requested tenant.
+ */
+export async function resolveTenantId(
+  userId: string,
+  explicitTenantId?: string
+): Promise<{ tenantId: string | null; error?: string }> {
+  try {
+    const db = getAdminDb();
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      return { tenantId: null, error: 'Usuario no encontrado' };
+    }
+
+    const data = userDoc.data() as Record<string, unknown>;
+    const tenants = data.tenants as Array<{ tenantId: string }> | undefined;
+    const userTenantIds = Array.isArray(tenants) ? tenants.map(t => t.tenantId) : [];
+
+    // Also check legacy format
+    const legacyId = (data.tenantId as string) || null;
+    if (legacyId && !userTenantIds.includes(legacyId)) {
+      userTenantIds.push(legacyId);
+    }
+
+    // If explicit tenantId provided, validate it belongs to the user
+    if (explicitTenantId) {
+      if (!userTenantIds.includes(explicitTenantId)) {
+        return { tenantId: null, error: 'No tienes acceso a esta organización' };
+      }
+      return { tenantId: explicitTenantId };
+    }
+
+    // Fallback: first tenant
+    if (userTenantIds.length > 0) {
+      return { tenantId: userTenantIds[0] };
+    }
+
+    return { tenantId: null, error: 'Usuario no pertenece a ninguna organización' };
+  } catch (err) {
+    console.error('[Tenant] Failed to resolve tenantId:', err);
+    return { tenantId: null, error: 'Error interno resolviendo organización' };
+  }
+}
