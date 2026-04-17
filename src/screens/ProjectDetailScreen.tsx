@@ -112,6 +112,7 @@ export default function ProjectDetailScreen() {
           project={fs.currentProject}
           projectTasks={fs.projectTasks}
           approvals={fs.approvals}
+          workPhases={fs.workPhases}
           selectedProjectId={ui.selectedProjectId}
           setForms={ui.setForms}
           openModal={ui.openModal}
