@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { fmtCOP, statusColor } from '@/lib/helpers';
+import { fmtCOP, statusColor, taskStColor } from '@/lib/helpers';
 
 interface WorkPhase {
   id: string;
@@ -10,6 +10,7 @@ interface WorkPhase {
 interface ProjectPortalProps {
   project: { data: Record<string, any> };
   workPhases: WorkPhase[];
+  projectTasks: Array<{ id: string; data: Record<string, any> }>;
   projectFiles: Array<{ id: string; data: Record<string, any> }>;
   approvals: Array<{ id: string; data: Record<string, any> }>;
   setForms: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
@@ -17,6 +18,8 @@ interface ProjectPortalProps {
   updateApproval: (approvalId: string, status: string) => void;
   deleteApproval: (approvalId: string) => void;
   updatePhaseStatus: (phaseId: string, status: string) => void;
+  getUserName: (uid: string) => string;
+  toggleTask: (taskId: string, status: string) => void;
 }
 
 function phaseStatusValue(status: string): number {
@@ -31,8 +34,9 @@ function progressColor(pct: number): string {
   return '#f59e0b';
 }
 
-export default function ProjectPortal({ project, workPhases, projectFiles, approvals, setForms, openModal, updateApproval, deleteApproval, updatePhaseStatus }: ProjectPortalProps) {
+export default function ProjectPortal({ project, workPhases, projectTasks, projectFiles, approvals, setForms, openModal, updateApproval, deleteApproval, updatePhaseStatus, getUserName, toggleTask }: ProjectPortalProps) {
   const imageFiles = projectFiles.filter(f => f.data.type?.startsWith('image/'));
+  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
 
   const activePhases = useMemo(() => workPhases.filter(ph => ph.data.status && ph.data.status !== 'Pendiente'), [workPhases]);
   const pendingPhasesCount = useMemo(() => workPhases.filter(ph => !ph.data.status || ph.data.status === 'Pendiente').length, [workPhases]);
@@ -45,6 +49,22 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
 
   const completedPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'Completada').length, [activePhases]);
   const inProgressPhases = useMemo(() => activePhases.filter(ph => ph.data.status === 'En progreso').length, [activePhases]);
+
+  // Tasks grouped by workPhaseId
+  const tasksByPhase = useMemo(() => {
+    const map: Record<string, Array<{ id: string; data: Record<string, any> }>> = {};
+    for (const t of projectTasks) {
+      const phaseId = t.data.workPhaseId;
+      if (phaseId) {
+        if (!map[phaseId]) map[phaseId] = [];
+        map[phaseId].push(t);
+      }
+    }
+    return map;
+  }, [projectTasks]);
+
+  // Tasks without a phase
+  const unlinkedTasks = useMemo(() => projectTasks.filter(t => !t.data.workPhaseId && t.data.status !== 'Completado'), [projectTasks]);
 
   // SVG ring values
   const ringRadius = 36;
@@ -89,6 +109,7 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
               <div className="space-y-1.5">
                 {activePhases.map(ph => {
                   const pct = phaseStatusValue(ph.data.status);
+                  const phaseTasks = tasksByPhase[ph.id] || [];
                   return (
                     <div key={ph.id} className="flex items-center gap-2">
                       <span className="text-[11px] text-[var(--muted-foreground)] w-20 truncate text-right" title={ph.data.name}>{ph.data.name}</span>
@@ -101,6 +122,9 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
                       <span className={`text-[9px] font-medium w-6 text-right ${pct === 100 ? 'text-emerald-400' : 'text-[var(--af-accent)]'}`}>
                         {pct}%
                       </span>
+                      {phaseTasks.length > 0 && (
+                        <span className="text-[9px] text-[var(--af-text3)] ml-0.5">{phaseTasks.length}</span>
+                      )}
                     </div>
                   );
                 })}
@@ -114,7 +138,7 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
           </div>
         )}
       </div>
-      {/* Work phases for client — with editable status */}
+      {/* Work phases with tasks */}
       {workPhases.length > 0 && (<div className="card-elevated p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[15px] font-semibold">Fases del proyecto</div>
@@ -124,23 +148,87 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
             <span className="text-[var(--af-text3)]">{pendingPhasesCount} pendiente{pendingPhasesCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        <div className="space-y-2">
-          {workPhases.map(ph => (
-            <div key={ph.id} className="flex items-center gap-3 py-1.5 group">
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-colors ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
-              <span className="text-sm flex-1">{ph.data.name}</span>
-              <select
-                className="skeuo-input rounded-lg px-2 py-1 text-[11px] cursor-pointer w-auto opacity-60 group-hover:opacity-100 transition-opacity"
-                value={ph.data.status}
-                onChange={(e) => updatePhaseStatus(ph.id, e.target.value)}
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="En progreso">En progreso</option>
-                <option value="Completada">Completada</option>
-              </select>
-            </div>
-          ))}
+        <div className="space-y-1">
+          {workPhases.map(ph => {
+            const phaseTasks = tasksByPhase[ph.id] || [];
+            const completedTasks = phaseTasks.filter(t => t.data.status === 'Completado').length;
+            const isExpanded = expandedPhase === ph.id;
+            return (
+              <div key={ph.id}>
+                {/* Phase row — clickable to expand */}
+                <div
+                  className="flex items-center gap-3 py-2 px-1 rounded-lg cursor-pointer hover:bg-[var(--af-bg4)]/50 transition-colors group"
+                  onClick={() => setExpandedPhase(isExpanded ? null : ph.id)}
+                >
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-colors ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+                  <span className="text-sm flex-1">{ph.data.name}</span>
+                  {phaseTasks.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)] mr-1">
+                      {completedTasks}/{phaseTasks.length}
+                    </span>
+                  )}
+                  <select
+                    className="skeuo-input rounded-lg px-2 py-1 text-[11px] cursor-pointer w-auto opacity-60 group-hover:opacity-100 transition-opacity"
+                    value={ph.data.status}
+                    onClick={e => e.stopPropagation()}
+                    onChange={(e) => updatePhaseStatus(ph.id, e.target.value)}
+                  >
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En progreso">En progreso</option>
+                    <option value="Completada">Completada</option>
+                  </select>
+                </div>
+                {/* Expanded: show tasks for this phase */}
+                {isExpanded && phaseTasks.length > 0 && (
+                  <div className="ml-6 mt-1 mb-1 space-y-1 border-l-2 border-[var(--border)] pl-3">
+                    {phaseTasks.map(t => {
+                      const isCompleted = t.data.status === 'Completado';
+                      return (
+                        <div key={t.id} className="flex items-center gap-2.5 py-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleTask(t.id, t.data.status)}
+                            className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center cursor-pointer border transition-all bg-transparent ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--input)] hover:border-[var(--af-accent)]'}`}
+                          >
+                            {isCompleted && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                          </button>
+                          <span className={`text-[12px] flex-1 ${isCompleted ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</span>
+                          {t.data.priority && (
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.data.priority === 'Alta' || t.data.priority === 'Urgente' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                          )}
+                          {t.data.assigneeId && (
+                            <span className="text-[9px] text-[var(--af-text3)]">{getUserName(t.data.assigneeId)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {isExpanded && phaseTasks.length === 0 && (
+                  <div className="ml-6 mt-1 mb-1 text-[11px] text-[var(--af-text3)] border-l-2 border-[var(--border)] pl-3 py-1">
+                    Sin tareas en esta fase
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+        {/* Unlinked tasks */}
+        {unlinkedTasks.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-[var(--border)]">
+            <div className="text-[11px] text-[var(--af-text3)] mb-1.5">Tareas sin fase asignada</div>
+            <div className="space-y-1">
+              {unlinkedTasks.slice(0, 5).map(t => (
+                <div key={t.id} className="flex items-center gap-2 text-[12px] text-[var(--muted-foreground)]">
+                  <span className="truncate flex-1">{t.data.title}</span>
+                </div>
+              ))}
+              {unlinkedTasks.length > 5 && (
+                <div className="text-[10px] text-[var(--af-text3)]">+{unlinkedTasks.length - 5} más</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>)}
       {/* Files gallery */}
       {imageFiles.length > 0 && (<div className="card-elevated p-5 mb-4">

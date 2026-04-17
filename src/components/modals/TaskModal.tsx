@@ -188,7 +188,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Proyecto">
           <FormSelect
             value={ui.forms.taskProject || ''}
-            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskProject: e.target.value }))}
+            onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskProject: e.target.value, taskWorkPhaseId: '' }))}
           >
             <option value="">— Sin proyecto —</option>
             {fs.projects.map((p: Project) => (
@@ -196,6 +196,23 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             ))}
           </FormSelect>
         </FormField>
+
+        {/* Fase del proyecto — only when a project is selected and has workPhases */}
+        {ui.forms.taskProject && fs.workPhases.length > 0 && (
+          <FormField label="Fase del proyecto">
+            <FormSelect
+              value={ui.forms.taskWorkPhaseId || ''}
+              onChange={(e) => ui.setForms((p: Record<string, any>) => ({ ...p, taskWorkPhaseId: e.target.value }))}
+            >
+              <option value="">— Sin fase —</option>
+              {fs.workPhases.map((ph: { id: string; data: { name: string; status: string } }) => (
+                <option key={ph.id} value={ph.id}>
+                  {ph.data.name}{ph.data.status ? ` (${ph.data.status})` : ''}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+        )}
 
         {/* Responsables multiples */}
         <FormField label="Responsables">

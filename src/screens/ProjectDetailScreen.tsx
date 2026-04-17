@@ -186,6 +186,7 @@ export default function ProjectDetailScreen() {
         <ProjectPortal
           project={fs.currentProject}
           workPhases={fs.workPhases}
+          projectTasks={fs.projectTasks}
           projectFiles={fs.projectFiles}
           approvals={fs.approvals}
           setForms={ui.setForms}
@@ -193,6 +194,8 @@ export default function ProjectDetailScreen() {
           updateApproval={fs.updateApproval}
           deleteApproval={fs.deleteApproval}
           updatePhaseStatus={fs.updatePhaseStatus}
+          getUserName={auth.getUserName}
+          toggleTask={fs.toggleTask}
         />
       )}
     </div>
