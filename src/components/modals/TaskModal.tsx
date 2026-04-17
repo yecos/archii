@@ -177,11 +177,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
                 type="button"
                 onClick={addSubtask}
                 disabled={!newSubtaskText.trim()}
-                className={`w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg border-none transition-all ${
-                  newSubtaskText.trim()
-                    ? 'bg-[var(--af-accent)] text-white hover:bg-[var(--af-accent2)] cursor-pointer'
-                    : 'bg-transparent text-[var(--af-text3)] cursor-not-allowed'
-                }`}
+                className="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg border-none bg-[var(--af-accent)] text-white hover:bg-[var(--af-accent2)] cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed"
               >
                 <Plus size={15} />
               </button>
