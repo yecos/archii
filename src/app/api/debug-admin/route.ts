@@ -45,22 +45,15 @@ export async function GET() {
   let adminSuccess = false;
   try {
     if (credRaw && credProjectId && credClientEmail && credHasPrivateKey) {
-      const { initializeApp, cert, getApps } = await import('firebase-admin/app');
-      const { getAuth } = await import('firebase-admin/auth');
+      const { initializeApp, cert } = await import('firebase-admin/app');
       const { getFirestore } = await import('firebase-admin/firestore');
-
-      // Delete existing apps to force fresh init
-      const existingApps = getApps();
-      for (const app of existingApps) {
-        try { await app.delete(); } catch { /* ignore */ }
-      }
 
       const parsed = JSON.parse(credRaw) as Record<string, unknown>;
       const app = initializeApp({
         credential: cert(parsed as Parameters<typeof cert>[0]),
         projectId: credProjectId,
-      });
-      const auth = getAuth(app);
+      }, 'debug-admin-' + Date.now());
+      // Verify connection works
       const db = getFirestore(app);
       adminSuccess = true;
       results.adminInitMethod = 'FIREBASE_ADMIN_CREDENTIALS (fresh)';
