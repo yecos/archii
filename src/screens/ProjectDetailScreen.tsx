@@ -191,6 +191,7 @@ export default function ProjectDetailScreen() {
           openModal={ui.openModal}
           updateApproval={fs.updateApproval}
           deleteApproval={fs.deleteApproval}
+          updatePhaseStatus={fs.updatePhaseStatus}
         />
       )}
     </div>

@@ -1,18 +1,25 @@
 'use client';
+import { useState } from 'react';
 import { fmtCOP, statusColor } from '@/lib/helpers';
+
+interface WorkPhase {
+  id: string;
+  data: Record<string, any>;
+}
 
 interface ProjectPortalProps {
   project: { data: Record<string, any> };
-  workPhases: Array<{ id: string; data: Record<string, any> }>;
+  workPhases: WorkPhase[];
   projectFiles: Array<{ id: string; data: Record<string, any> }>;
   approvals: Array<{ id: string; data: Record<string, any> }>;
   setForms: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
   openModal: (modal: string) => void;
   updateApproval: (approvalId: string, status: string) => void;
   deleteApproval: (approvalId: string) => void;
+  updatePhaseStatus: (phaseId: string, status: string) => void;
 }
 
-export default function ProjectPortal({ project, workPhases, projectFiles, approvals, setForms, openModal, updateApproval, deleteApproval }: ProjectPortalProps) {
+export default function ProjectPortal({ project, workPhases, projectFiles, approvals, setForms, openModal, updateApproval, deleteApproval, updatePhaseStatus }: ProjectPortalProps) {
   const imageFiles = projectFiles.filter(f => f.data.type?.startsWith('image/'));
 
   return (
@@ -28,15 +35,23 @@ export default function ProjectPortal({ project, workPhases, projectFiles, appro
         <div className="flex items-center gap-3 mb-2"><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(project.data.status)}`}>{project.data.status}</span><span className="text-sm font-medium">{project.data.progress || 0}% completado</span></div>
         <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: (project.data.progress || 0) + '%' }} /></div>
       </div>
-      {/* Work phases for client */}
+      {/* Work phases for client — with editable status */}
       {workPhases.length > 0 && (<div className="card-elevated p-5 mb-4">
         <div className="text-[15px] font-semibold mb-3">Fases del proyecto</div>
         <div className="space-y-2">
           {workPhases.map(ph => (
-            <div key={ph.id} className="flex items-center gap-3 py-1.5">
-              <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
+            <div key={ph.id} className="flex items-center gap-3 py-1.5 group">
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-colors ${ph.data.status === 'Completada' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
               <span className="text-sm flex-1">{ph.data.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completada' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
+              <select
+                className="skeuo-input rounded-lg px-2 py-1 text-[11px] cursor-pointer w-auto opacity-60 group-hover:opacity-100 transition-opacity"
+                value={ph.data.status}
+                onChange={(e) => updatePhaseStatus(ph.id, e.target.value)}
+              >
+                <option value="Pendiente">Pendiente</option>
+                <option value="En progreso">En progreso</option>
+                <option value="Completada">Completada</option>
+              </select>
             </div>
           ))}
         </div>
