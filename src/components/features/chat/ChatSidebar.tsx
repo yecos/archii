@@ -85,7 +85,7 @@ export default function ChatSidebar({
                       className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold"
                       style={{ background: u.data.photoURL ? undefined : getAvatarHSL(u.id), color: '#fff' }}
                     >
-                      {u.data.photoURL ? <img src={u.data.photoURL} alt={u.data.name || "Avatar"} className="w-full h-full rounded-full object-cover" loading="lazy" /> : (u.data.name || u.data.email || '?')[0].toUpperCase()}
+                      {u.data.photoURL ? <img src={u.data.photoURL} alt={u.data.name || "Avatar"} className="w-full h-full rounded-full object-cover" loading="lazy" referrerPolicy="no-referrer" /> : (u.data.name || u.data.email || '?')[0].toUpperCase()}
                     </div>
                     {onlineIds.has(u.id) ? (
                       <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[var(--card)]" title="En línea" />
