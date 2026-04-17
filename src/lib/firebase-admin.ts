@@ -16,7 +16,7 @@
  *   4. Application Default Credentials (ADC) — automático en Google Cloud
  */
 
-import { initializeApp, cert, getApps, getApp, type App } from 'firebase-admin/app';
+import { initializeApp, cert, deleteApp, getApps, getApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore, type FieldValue } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
@@ -124,33 +124,69 @@ function getAdminConfig() {
 let _adminApp: ReturnType<typeof initializeApp> | null = null;
 let _adminDb: ReturnType<typeof getFirestore> | null = null;
 
+const ADMIN_APP_NAME = 'archiflow-admin';
+
 export function getAdminApp(): App {
-  // If singleton was initialized without credentials, re-initialize
-  if (_adminApp && _initMethod === 'none') {
-    console.log('[ArchiFlow Admin] Re-initializing: previous init had no credentials');
+  // Determine if we need to re-initialize the singleton.
+  // This handles warm Vercel functions where the env vars changed
+  // (e.g. FIREBASE_ADMIN_CREDENTIALS was added after initial deploy).
+  const needsReinit = _adminApp && (
+    _initMethod === 'none' ||
+    _initError !== null ||
+    (process.env.FIREBASE_ADMIN_CREDENTIALS && _initMethod !== 'FIREBASE_ADMIN_CREDENTIALS')
+  );
+
+  if (needsReinit) {
+    const reason = _initMethod === 'none' ? 'no_credentials' :
+                   _initError ? `init_error: ${_initError}` : 'better_credentials_available';
+    console.log(`[ArchiFlow Admin] Re-initializing (${reason}): previous method was "${_initMethod}"`);
+
+    // Best-effort: try to delete the old Firebase app so we can create a fresh one
+    if (_adminApp) {
+      try { deleteApp(_adminApp); } catch { /* ignore — may not be deletable */ }
+    }
+
     _adminApp = null;
     _adminDb = null;
     _initMethod = 'none';
     _initError = null;
+    _credProjectId = null;
   }
 
   if (_adminApp) return _adminApp;
 
-  // Check for existing apps — but skip if they were initialized without credentials
-  const existingApps = getApps();
-  if (existingApps.length > 0 && _initMethod !== 'none') {
-    _adminApp = existingApps[0];
-  } else {
-    _appProjectId = APP_PROJECT_ID || null;
-    const credential = getAdminConfig();
-    const config: { projectId: string; credential?: ReturnType<typeof cert> } = {
-      projectId: APP_PROJECT_ID || '',
-    };
-    // Only pass credential if we got a valid one — undefined causes init error
-    if (credential) {
-      config.credential = credential;
+  _appProjectId = APP_PROJECT_ID || null;
+  const credential = getAdminConfig();
+  const config: { projectId: string; credential?: ReturnType<typeof cert> } = {
+    projectId: APP_PROJECT_ID || '',
+  };
+  // Only pass credential if we got a valid one — undefined causes init error
+  if (credential) {
+    config.credential = credential;
+  }
+
+  // Use a named app to avoid conflicts with stale default apps from getApps()
+  try {
+    _adminApp = initializeApp(config, ADMIN_APP_NAME);
+    console.log(`[ArchiFlow Admin] Created new named app "${ADMIN_APP_NAME}" with method: ${_initMethod}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    if (errMsg.includes('app/duplicate-app') || errMsg.includes('already exists')) {
+      // App already exists (warm function) — reuse it
+      _adminApp = getApp(ADMIN_APP_NAME);
+      console.log(`[ArchiFlow Admin] Reusing existing named app "${ADMIN_APP_NAME}" (method: ${_initMethod})`);
+    } else {
+      // Unexpected error — try creating unnamed app as fallback
+      console.error(`[ArchiFlow Admin] Failed to create named app: ${errMsg}`);
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        _adminApp = existingApps[0];
+        console.warn('[ArchiFlow Admin] Falling back to existing default app');
+      } else {
+        _adminApp = initializeApp(config);
+        console.log('[ArchiFlow Admin] Created unnamed fallback app');
+      }
     }
-    _adminApp = initializeApp(config);
   }
   return _adminApp;
 }
