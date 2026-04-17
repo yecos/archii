@@ -23,8 +23,11 @@ const TENANT_COLLECTIONS = [
   'quotations',
   'meetings',
   'comments',
-  'chat',
-  'gallery',
+  'generalMessages',
+  'galleryPhotos',
+  'dailyLogs',
+  'projectTemplates',
+  'directMessages',
   'invProducts',
   'invCategories',
   'invMovements',
@@ -80,9 +83,11 @@ export async function POST(request: NextRequest) {
 
     // Parse optional body (can pass { tenantId: "..." } to assign to existing tenant)
     let targetTenantId: string | null = null;
+    let force = false;
     try {
       const body = await request.json();
       targetTenantId = body.tenantId || null;
+      force = body.force === true;
     } catch { /* no body — will auto-detect */ }
 
     // 1. Check user and existing tenants
@@ -147,9 +152,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Migrate all existing orphaned data to the target tenant
-    const result = await migrateOrphanedData(db, tenantId);
+    const result = await migrateOrphanedData(db, tenantId, force);
 
-    // 3. Update project count in tenant stats
+    // 3. Migrate project subcollections (tasks, comments, expenses)
+    const subResult = await migrateProjectSubcollections(db, tenantId, force);
+
+    // 4. Update project count in tenant stats
     const projectCount = result.migrated['projects'] || 0;
     if (projectCount > 0) {
       await db.collection('tenants').doc(tenantId).set({
@@ -169,6 +177,8 @@ export async function POST(request: NextRequest) {
       tenantId,
       tenantName,
       ...result,
+      forceUsed: force,
+      projectSubcollections: subResult,
     });
   } catch (error: unknown) {
     console.error('[Migrate] Error:', error);
@@ -182,24 +192,46 @@ export async function POST(request: NextRequest) {
 async function migrateOrphanedData(
   db: FirebaseFirestore.Firestore,
   tenantId: string,
-): Promise<{ migrated: Record<string, number>; total: number; errors: string[] }> {
+  force: boolean = false,
+): Promise<{ migrated: Record<string, number>; total: number; errors: string[]; forceUsed: boolean }> {
   const migrated: Record<string, number> = {};
   let total = 0;
   const errors: string[] = [];
 
   for (const collection of TENANT_COLLECTIONS) {
     try {
-      const snap = await db.collection(collection).limit(500).get();
+      // Paginate through the entire collection using cursors
+      let allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+      let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+      const PAGE_SIZE = 500;
+      let hasMore = true;
 
-      if (snap.empty) {
+      while (hasMore) {
+        let query = db.collection(collection).orderBy('__name__').limit(PAGE_SIZE);
+        if (lastDoc) {
+          query = query.startAfter(lastDoc);
+        }
+        const pageSnap = await query.get();
+        if (pageSnap.empty) {
+          hasMore = false;
+        } else {
+          allDocs = allDocs.concat(pageSnap.docs);
+          lastDoc = pageSnap.docs[pageSnap.docs.length - 1];
+          if (pageSnap.docs.length < PAGE_SIZE) hasMore = false;
+        }
+      }
+
+      if (allDocs.length === 0) {
         migrated[collection] = 0;
         continue;
       }
 
-      const docsToUpdate = snap.docs.filter(doc => {
-        const data = doc.data() as Record<string, unknown>;
-        return !data.tenantId;
-      });
+      const docsToUpdate = force
+        ? allDocs
+        : allDocs.filter(doc => {
+            const data = doc.data() as Record<string, unknown>;
+            return !data.tenantId;
+          });
 
       if (docsToUpdate.length === 0) {
         migrated[collection] = 0;
@@ -233,6 +265,102 @@ async function migrateOrphanedData(
       errors.push(msg);
       console.error(`[Migrate] Error migrating ${collection}:`, err);
     }
+  }
+
+  return { migrated, total, errors, forceUsed: force };
+}
+
+async function migrateProjectSubcollections(
+  db: FirebaseFirestore.Firestore,
+  tenantId: string,
+  force: boolean = false,
+): Promise<{ migrated: Record<string, Record<string, number>>; total: number; errors: string[] }> {
+  const migrated: Record<string, Record<string, number>> = {};
+  let total = 0;
+  const errors: string[] = [];
+  const SUBCOLLECTIONS = ['tasks', 'comments', 'expenses'] as const;
+
+  try {
+    // Get all projects belonging to the tenant
+    const projectsSnap = await db.collection('projects').where('tenantId', '==', tenantId).get();
+
+    if (projectsSnap.empty) {
+      return { migrated, total, errors };
+    }
+
+    for (const projectDoc of projectsSnap.docs) {
+      const projectId = projectDoc.id;
+
+      for (const sub of SUBCOLLECTIONS) {
+        try {
+          const subRef = db.collection('projects').doc(projectId).collection(sub);
+
+          // Paginate through subcollection using cursors
+          let allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+          let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+          const PAGE_SIZE = 500;
+          let hasMore = true;
+
+          while (hasMore) {
+            let query = subRef.orderBy('__name__').limit(PAGE_SIZE);
+            if (lastDoc) {
+              query = query.startAfter(lastDoc);
+            }
+            const pageSnap = await query.get();
+            if (pageSnap.empty) {
+              hasMore = false;
+            } else {
+              allDocs = allDocs.concat(pageSnap.docs);
+              lastDoc = pageSnap.docs[pageSnap.docs.length - 1];
+              if (pageSnap.docs.length < PAGE_SIZE) hasMore = false;
+            }
+          }
+
+          if (allDocs.length === 0) continue;
+
+          const docsToUpdate = force
+            ? allDocs
+            : allDocs.filter(doc => {
+                const data = doc.data() as Record<string, unknown>;
+                return !data.tenantId;
+              });
+
+          if (docsToUpdate.length === 0) continue;
+
+          const BATCH_SIZE = 400;
+          let processed = 0;
+
+          for (let i = 0; i < docsToUpdate.length; i += BATCH_SIZE) {
+            const batch = db.batch();
+            const chunk = docsToUpdate.slice(i, i + BATCH_SIZE);
+
+            for (const doc of chunk) {
+              batch.set(doc.ref, { tenantId }, { merge: true });
+              processed++;
+            }
+
+            try {
+              await batch.commit();
+            } catch (batchErr) {
+              errors.push(`${projectId}/${sub}: batch at ${i} failed`);
+              console.error(`[Migrate] ${projectId}/${sub} batch error:`, batchErr);
+            }
+          }
+
+          if (!migrated[projectId]) migrated[projectId] = {};
+          migrated[projectId][sub] = processed;
+          total += processed;
+        } catch (err) {
+          const msg = `${projectId}/${sub}: ${String(err)}`;
+          errors.push(msg);
+          console.error(`[Migrate] Error migrating ${projectId}/${sub}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    const msg = `projects query: ${String(err)}`;
+    errors.push(msg);
+    console.error('[Migrate] Error querying projects for subcollection migration:', err);
   }
 
   return { migrated, total, errors };
