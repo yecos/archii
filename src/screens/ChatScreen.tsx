@@ -117,7 +117,7 @@ export default function ChatScreen() {
   // Conversation title/subtitle
   const isDmChat = chatProjectId === '__dm__';
   const dmUserData = isDmChat ? teamUsers.find(x => x.id === chatDmUser) : null;
-  const isDmUserOnline = isDmChat ? onlineUsers.some(u => u.id === chatDmUser) : false;
+  const isDmUserOnline = isDmChat ? onlineUsers.some(u => u.data.userId === chatDmUser) : false;
   const convTitle = chatProjectId === '__general__' ? '💬 Chat General' : chatProjectId === '__dm__' ? (dmUserData?.data.name || dmUserData?.data.email || 'Chat directo') : projects.find(p => p.id === chatProjectId)?.data.name || 'Selecciona un proyecto';
   const convSubtitle = chatProjectId === '__general__' ? (() => {
     const onlineCount = onlineUsers.length;

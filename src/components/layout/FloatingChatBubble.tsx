@@ -511,7 +511,7 @@ export default React.memo(function FloatingChatBubble() {
               </div>
             ) : (
               messages.slice(-MAX_PREVIEW_MSGS).map((msg) => (
-                <MiniMsg key={msg.id} msg={msg} isOwn={msg.uid === authUser?.uid} isSenderOnline={onlineUsers.some(u => u.id === msg.uid)} />
+                <MiniMsg key={msg.id} msg={msg} isOwn={msg.uid === authUser?.uid} isSenderOnline={onlineUsers.some(u => u.data.userId === msg.uid)} />
               ))
             )}
             <div ref={msgsEndRef} />

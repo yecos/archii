@@ -18,6 +18,7 @@ export interface PresenceData {
   userId: string;
   userName: string;
   userPhoto: string;
+  tenantId: string;
   currentScreen: string;
   currentProjectId: string | null;
   lastSeen: unknown; // Firestore server timestamp sentinel
@@ -35,15 +36,17 @@ export class PresenceService {
   private userId: string;
   private userName: string;
   private userPhoto: string;
+  private tenantId: string;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private unsubSnapshot: (() => void) | null = null;
   private _currentScreen = 'dashboard';
   private _currentProjectId: string | null = null;
 
-  constructor(userId: string, userName: string, userPhoto: string) {
+  constructor(userId: string, userName: string, userPhoto: string, tenantId: string) {
     this.userId = userId;
     this.userName = userName;
     this.userPhoto = userPhoto;
+    this.tenantId = tenantId;
   }
 
   /* --- Public API --- */
@@ -56,8 +59,15 @@ export class PresenceService {
     this._currentScreen = screen;
     this._currentProjectId = projectId;
 
+    if (!this.tenantId) {
+      console.warn('[ArchiFlow] Presence init skipped: no tenantId');
+      return;
+    }
+
     const db = getFirebase().firestore();
-    const ref = db.collection(PRESENCE_COLLECTION).doc(this.userId);
+    // Use tenantId + userId as doc ID for multi-tenant isolation
+    const docId = `${this.tenantId}_${this.userId}`;
+    const ref = db.collection(PRESENCE_COLLECTION).doc(docId);
 
     // Register onDisconnect cleanup — runs when client disconnects gracefully or ungracefully
     // Compat SDK DocumentReference lacks onDisconnect in npm types
@@ -65,6 +75,7 @@ export class PresenceService {
       userId: this.userId,
       userName: this.userName,
       userPhoto: this.userPhoto,
+      tenantId: this.tenantId,
       currentScreen: '',
       currentProjectId: null,
       lastSeen: serverTimestamp(),
@@ -78,6 +89,7 @@ export class PresenceService {
       userId: this.userId,
       userName: this.userName,
       userPhoto: this.userPhoto,
+      tenantId: this.tenantId,
       currentScreen: screen,
       currentProjectId: projectId,
       lastSeen: serverTimestamp(),
@@ -95,9 +107,12 @@ export class PresenceService {
     this._currentScreen = screen;
     this._currentProjectId = projectId;
 
+    if (!this.tenantId) return;
+
     try {
       const db = getFirebase().firestore();
-      await db.collection(PRESENCE_COLLECTION).doc(this.userId).update({
+      const docId = `${this.tenantId}_${this.userId}`;
+      await db.collection(PRESENCE_COLLECTION).doc(docId).update({
         currentScreen: screen,
         currentProjectId: projectId,
         lastSeen: serverTimestamp(),
@@ -112,9 +127,11 @@ export class PresenceService {
   private startHeartbeat(): void {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(async () => {
+      if (!this.tenantId) return;
       try {
         const db = getFirebase().firestore();
-        await db.collection(PRESENCE_COLLECTION).doc(this.userId).update({
+        const docId = `${this.tenantId}_${this.userId}`;
+        await db.collection(PRESENCE_COLLECTION).doc(docId).update({
           lastSeen: serverTimestamp(),
           online: true,
           currentScreen: this._currentScreen,
@@ -143,7 +160,10 @@ export class PresenceService {
     // Remove presence document
     try {
       const db = getFirebase().firestore();
-      await db.collection(PRESENCE_COLLECTION).doc(this.userId).delete();
+      if (this.tenantId) {
+        const docId = `${this.tenantId}_${this.userId}`;
+        await db.collection(PRESENCE_COLLECTION).doc(docId).delete();
+      }
     } catch (err) {
       console.warn('[ArchiFlow] Presence disconnect cleanup failed:', err);
     }
@@ -161,14 +181,20 @@ export interface OnlineUserDoc {
 
 /**
  * Subscribe to all online users in the `presence` collection.
+ * Filters by tenantId for multi-tenant isolation.
  * Calls `callback` with an array of online user documents on every change.
  * Returns an unsubscribe function.
  */
-export function subscribeToOnlineUsers(callback: (users: OnlineUserDoc[]) => void): () => void {
+export function subscribeToOnlineUsers(tenantId: string, callback: (users: OnlineUserDoc[]) => void): () => void {
+  if (!tenantId) {
+    console.warn('[ArchiFlow] subscribeToOnlineUsers skipped: no tenantId');
+    return () => {};
+  }
   try {
     const db = getFirebase().firestore();
-    // Only query users that are actually online
+    // Only query users that are actually online AND in the same tenant
     return db.collection(PRESENCE_COLLECTION)
+      .where('tenantId', '==', tenantId)
       .where('online', '==', true)
       .onSnapshot((snap: unknown) => {
         const querySnap = snap as { docs?: Array<{ id: string; data: () => PresenceData }> };

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useAuthContext } from './AuthContext';
 import { useUIContext } from './UIContext';
+import { useTenantId } from '@/hooks/useTenantId';
 import {
   PresenceService,
   subscribeToOnlineUsers,
@@ -28,6 +29,7 @@ const PresenceContext = createContext<PresenceContextType | null>(null);
 export default function PresenceProvider({ children }: { children: React.ReactNode }) {
   const { authUser, teamUsers } = useAuthContext();
   const { screen, selectedProjectId } = useUIContext();
+  const tenantId = useTenantId();
 
   // State
   const [onlineUsers, setOnlineUsers] = useState<OnlineUserDoc[]>([]);
@@ -54,8 +56,8 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
 
   // Initialize presence when authenticated
   useEffect(() => {
-    if (!authUser) {
-      // Clean up if user logs out
+    if (!authUser || !tenantId) {
+      // Clean up if user logs out or tenant not loaded
       if (serviceRef.current) {
         serviceRef.current.disconnect();
         serviceRef.current = null;
@@ -64,7 +66,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
       return;
     }
 
-    const service = new PresenceService(authUser.uid, currentUserName, currentUserPhoto);
+    const service = new PresenceService(authUser.uid, currentUserName, currentUserPhoto, tenantId);
     serviceRef.current = service;
 
     // Initialize presence
@@ -72,8 +74,8 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
       console.warn('[ArchiFlow] Presence init error:', err);
     });
 
-    // Subscribe to online users
-    const unsubUsers = subscribeToOnlineUsers((users) => {
+    // Subscribe to online users filtered by tenant
+    const unsubUsers = subscribeToOnlineUsers(tenantId, (users) => {
       setOnlineUsers(users);
     });
 
@@ -82,7 +84,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
       serviceRef.current = null;
       unsubUsers();
     };
-  }, [authUser?.uid]); // Only re-create when auth user ID changes
+  }, [authUser?.uid, tenantId]); // Re-create when auth user ID or tenant changes
 
   // Update presence when screen/project changes
   useEffect(() => {
@@ -96,14 +98,14 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
   // Computed values
   const userPresence = useMemo<PresenceData | null>(() => {
     if (!authUser) return null;
-    const me = onlineUsers.find(u => u.id === authUser.uid);
+    const me = onlineUsers.find(u => u.data.userId === authUser.uid);
     return me?.data || null;
   }, [onlineUsers, authUser]);
 
   const usersOnSameScreen = useMemo(() => {
     if (!authUser) return [];
     return onlineUsers.filter(u =>
-      u.id !== authUser.uid &&
+      u.data.userId !== authUser.uid &&
       u.data.currentScreen === screen &&
       u.data.online
     );
@@ -112,7 +114,7 @@ export default function PresenceProvider({ children }: { children: React.ReactNo
   const usersOnSameProject = useMemo(() => {
     if (!authUser || !selectedProjectId) return [];
     return onlineUsers.filter(u =>
-      u.id !== authUser.uid &&
+      u.data.userId !== authUser.uid &&
       u.data.currentProjectId === selectedProjectId &&
       u.data.online
     );

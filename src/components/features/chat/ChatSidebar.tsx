@@ -34,7 +34,7 @@ export default function ChatSidebar({
   const { onlineUsers } = usePresence();
 
   // Build a Set of online user IDs for O(1) lookups
-  const onlineIds = new Set(onlineUsers.map(u => u.id));
+  const onlineIds = new Set(onlineUsers.map(u => u.data.userId));
 
   return (
     <div className={`${chatMobileShow ? 'hidden md:flex' : 'flex'} flex-col flex-1 md:w-[280px] md:flex-shrink-0 border-r border-[var(--border)] overflow-hidden bg-[var(--card)] md:bg-transparent md:border-r-0 md:border-l md:border-l-[var(--skeuo-edge-light)]`}>

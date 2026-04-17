@@ -76,7 +76,7 @@ export default function MessageBubble({
 
   // Presence
   const { onlineUsers } = usePresence();
-  const isSenderOnline = useMemo(() => onlineUsers.some(u => u.id === m.uid), [onlineUsers, m.uid]);
+  const isSenderOnline = useMemo(() => onlineUsers.some(u => u.data.userId === m.uid), [onlineUsers, m.uid]);
 
   // Read receipt status for own messages in DMs
   const isRead = useMemo(() => {
@@ -85,10 +85,11 @@ export default function MessageBubble({
   }, [isMe, isDmChat, dmRecipientId, m.readBy]);
 
   const isDelivered = useMemo(() => {
-    if (!isMe || !isDmChat || !dmRecipientId) return false;
-    // Delivered if recipient is online or has been online (we assume they got the message)
-    return onlineUsers.some(u => u.id === dmRecipientId) || isRead;
-  }, [isMe, isDmChat, dmRecipientId, onlineUsers, isRead]);
+    // Delivered if message has been persisted to Firestore (has an id)
+    // and is in a DM conversation
+    if (!isMe || !isDmChat || !m.id) return false;
+    return true;
+  }, [isMe, isDmChat, m.id]);
 
   // Checkmark component
   const ReadCheck = useMemo(() => {
@@ -115,9 +116,9 @@ export default function MessageBubble({
         </span>
       );
     }
-    // Single check gray (sent)
+    // Single check gray (sending)
     return (
-      <span className="inline-flex items-center ml-1.5 flex-shrink-0" title="Enviado">
+      <span className="inline-flex items-center ml-1.5 flex-shrink-0" title="Enviando...">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-[var(--muted-foreground)]">
           <path d="M1 5.5L3.5 8L7 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
