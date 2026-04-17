@@ -4,7 +4,7 @@ import { useAuthContext } from './AuthContext';
 import { useUIContext } from './UIContext';
 import { getFirebase, serverTimestamp, snapToDocs, type QuerySnapshot } from '@/lib/firebase-service';
 import { detectTenantFromDomain, fetchTenantByDomain, getDefaultLimits, getEmptyStats } from '@/lib/tenant-service';
-import type { Tenant, TenantPlan, TenantMembership, TeamUser } from '@/lib/types';
+import type { Tenant, TenantPlan, TenantMembership, TeamUser, FirestoreTimestamp } from '@/lib/types';
 import { ADMIN_EMAILS } from '@/lib/types';
 
 /* ===== TENANT CONTEXT ===== */
@@ -179,8 +179,8 @@ export default function TenantProvider({ children }: { children: React.ReactNode
             limits: (rawData.limits as Tenant['data']['limits']) || getDefaultLimits('free'),
             stats: (rawData.stats as Tenant['data']['stats']) || getEmptyStats(),
             joinCode: (rawData.joinCode as string) || '',
-            createdAt: rawData.createdAt || serverTimestamp(),
-            updatedAt: rawData.updatedAt || serverTimestamp(),
+            createdAt: (rawData.createdAt as FirestoreTimestamp) || null,
+            updatedAt: (rawData.updatedAt as FirestoreTimestamp) || null,
           };
           setCurrentTenant({ id: snap.id, data: tenantData });
         } else {
@@ -214,8 +214,8 @@ export default function TenantProvider({ children }: { children: React.ReactNode
               limits: (t.data as Record<string, unknown>).limits || getDefaultLimits('free'),
               stats: (t.data as Record<string, unknown>).stats || getEmptyStats(),
               joinCode: (t.data as Record<string, unknown>).joinCode || '',
-              createdAt: (t.data as Record<string, unknown>).createdAt || serverTimestamp(),
-              updatedAt: (t.data as Record<string, unknown>).updatedAt || serverTimestamp(),
+              createdAt: ((t.data as Record<string, unknown>).createdAt as FirestoreTimestamp) || null,
+              updatedAt: ((t.data as Record<string, unknown>).updatedAt as FirestoreTimestamp) || null,
             } as Tenant['data'],
           }));
           setTenants(docs);
@@ -448,8 +448,8 @@ export default function TenantProvider({ children }: { children: React.ReactNode
           limits: (rawData.limits as Tenant['data']['limits']) || getDefaultLimits('free'),
           stats: (rawData.stats as Tenant['data']['stats']) || getEmptyStats(),
           joinCode: (rawData.joinCode as string) || '',
-          createdAt: rawData.createdAt || serverTimestamp(),
-          updatedAt: rawData.updatedAt || serverTimestamp(),
+          createdAt: (rawData.createdAt as FirestoreTimestamp) || null,
+          updatedAt: (rawData.updatedAt as FirestoreTimestamp) || null,
         } as Tenant['data'] });
       }
     } catch (err) {
