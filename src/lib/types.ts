@@ -96,6 +96,8 @@ export interface Task {
     progress?: number;
     order?: number;
     phase?: string;
+    processId?: string;  // links task to a ProcessNode id
+    phaseId?: string;    // links task to a ProjectPhase id (diseño/ejecución)
     dependencies?: string[];
     createdAt: FirestoreTimestamp | null;
     createdBy?: string;
@@ -185,6 +187,27 @@ export interface WorkPhase {
     startDate: string;
     endDate: string;
     projectId?: string;
+    createdAt: FirestoreTimestamp | null;
+    updatedAt?: FirestoreTimestamp | null;
+  };
+}
+
+/* ===== Phase & Process System ===== */
+/** Recursive tree node for processes within a phase */
+export interface ProcessNode {
+  id: string;
+  name: string;
+  children: ProcessNode[];
+}
+
+/** A top-level phase (Diseño, Ejecución, or custom) */
+export interface ProjectPhase {
+  id: string;
+  data: {
+    name: string;          // "Diseño", "Ejecución", or custom
+    type: 'diseño' | 'ejecución' | 'custom';
+    order: number;
+    processes: ProcessNode[];
     createdAt: FirestoreTimestamp | null;
     updatedAt?: FirestoreTimestamp | null;
   };

@@ -8,10 +8,10 @@ import { useComments } from '@/hooks/useDomain';
 import { usePresence } from '@/hooks/useDomain';
 import { fmtCOP, statusColor } from '@/lib/helpers';
 import ProjectResumen from '@/components/features/project/ProjectResumen';
-import ProjectTareas from '@/components/features/project/ProjectTareas';
+import ProjectDiseno from '@/components/features/project/ProjectDiseno';
 import ProjectPresupuesto from '@/components/features/project/ProjectPresupuesto';
 import ProjectArchivos from '@/components/features/project/ProjectArchivos';
-import ProjectObra from '@/components/features/project/ProjectObra';
+import ProjectEjecucion from '@/components/features/project/ProjectEjecucion';
 import ProjectPortal from '@/components/features/project/ProjectPortal';
 import { AnimatedTabs } from '@/components/ui/AnimatedTabs';
 import { PresenceViewingNow } from '@/components/ui/PresenceIndicator';
@@ -29,7 +29,7 @@ export default function ProjectDetailScreen() {
   if (!fs.currentProject) return null;
 
   const project = fs.currentProject;
-  const tabs = ['Resumen', 'Tareas', 'Presupuesto', 'Archivos', 'Obra', 'Portal'] as const;
+  const tabs = ['Resumen', 'Diseño', 'Presupuesto', 'Archivos', 'Ejecución', 'Portal'] as const;
   const { detailTab, workView } = ui.forms;
 
   return (
@@ -118,8 +118,9 @@ export default function ProjectDetailScreen() {
         />
       )}
 
-      {detailTab === 'Tareas' && (
-        <ProjectTareas
+      {detailTab === 'Diseño' && (
+        <ProjectDiseno
+          project={fs.currentProject}
           projectTasks={fs.projectTasks}
           selectedProjectId={ui.selectedProjectId}
           getUserName={auth.getUserName}
@@ -159,8 +160,15 @@ export default function ProjectDetailScreen() {
         />
       )}
 
-      {detailTab === 'Obra' && (
-        <ProjectObra
+      {detailTab === 'Ejecución' && (
+        <ProjectEjecucion
+          project={fs.currentProject}
+          projectTasks={fs.projectTasks}
+          selectedProjectId={ui.selectedProjectId}
+          getUserName={auth.getUserName}
+          toggleTask={fs.toggleTask}
+          openEditTask={fs.openEditTask}
+          deleteTask={fs.deleteTask}
           workView={workView}
           workPhases={fs.workPhases}
           cmt={cmt}
@@ -169,6 +177,7 @@ export default function ProjectDetailScreen() {
           calcGanttDays={fs.calcGanttDays}
           calcGanttOffset={fs.calcGanttOffset}
           setForms={ui.setForms}
+          openModal={ui.openModal}
         />
       )}
 
