@@ -85,13 +85,13 @@ export async function POST(request: NextRequest) {
       tenantId = targetTenantId;
       // Ensure user is a member of this tenant
       if (existingTenants && !existingTenants.some(t => t.tenantId === targetTenantId)) {
-        await db.collection('users').doc(user.uid).update({
+        await db.collection('users').doc(user.uid).set({
           tenants: adminFirestore.FieldValue.arrayUnion({
             tenantId,
             role: 'Admin',
             joinedAt: new Date(),
           }),
-        });
+        }, { merge: true });
       }
     } else if (existingTenants && existingTenants.length > 0) {
       // No explicit tenantId — use first existing tenant
@@ -115,14 +115,14 @@ export async function POST(request: NextRequest) {
       tenantId = tenantRef.id;
 
       // Add tenant to user's memberships
-      await db.collection('users').doc(user.uid).update({
+      await db.collection('users').doc(user.uid).set({
         tenants: [{
           tenantId,
           role: 'Admin',
           joinedAt: new Date(),
         }],
         tenantId: adminFirestore.FieldValue?.delete?.() || null,
-      });
+      }, { merge: true });
     }
 
     // 2. Migrate all existing orphaned data to the target tenant
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
 
     // 3. Update project count in tenant stats
     const projectCount = result.migrated['projects'] || 0;
-    await db.collection('tenants').doc(tenantId).update({
+    await db.collection('tenants').doc(tenantId).set({
       'stats.projectCount': adminFirestore.FieldValue.increment(projectCount),
-    });
+    }, { merge: true });
 
     const tenantDoc = await db.collection('tenants').doc(tenantId).get();
     const tenantName = tenantDoc.exists
@@ -210,7 +210,7 @@ async function migrateOrphanedData(
         const chunk = docsToUpdate.slice(i, i + BATCH_SIZE);
 
         for (const doc of chunk) {
-          batch.update(doc.ref, { tenantId });
+          batch.set(doc.ref, { tenantId }, { merge: true });
           processed++;
         }
 
