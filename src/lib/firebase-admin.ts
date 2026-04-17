@@ -130,10 +130,15 @@ export function getAdminApp(): App {
     _adminApp = getApp();
   } else {
     _appProjectId = APP_PROJECT_ID || null;
-    _adminApp = initializeApp({
+    const credential = getAdminConfig();
+    const config: { projectId: string; credential?: ReturnType<typeof cert> } = {
       projectId: APP_PROJECT_ID || '',
-      credential: getAdminConfig(),
-    });
+    };
+    // Only pass credential if we got a valid one — undefined causes init error
+    if (credential) {
+      config.credential = credential;
+    }
+    _adminApp = initializeApp(config);
   }
   return _adminApp;
 }
