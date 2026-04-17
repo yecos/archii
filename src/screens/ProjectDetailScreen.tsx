@@ -29,7 +29,7 @@ export default function ProjectDetailScreen() {
   if (!fs.currentProject) return null;
 
   const project = fs.currentProject;
-  const tabs = ['Resumen', 'Diseño', 'Presupuesto', 'Archivos', 'Ejecución', 'Portal'] as const;
+  const tabs = ['Resumen', 'Diseño', 'Ejecución', 'Archivos', 'Presupuesto', 'Portal'] as const;
   const { detailTab, workView } = ui.forms;
 
   return (
