@@ -16,12 +16,13 @@ import {
 } from 'lucide-react';
 
 /* ===== PLAN BADGE ===== */
-function PlanBadge({ plan }: { plan: TenantPlan }) {
-  const cfg = TENANT_PLAN_LIMITS[plan];
+function PlanBadge({ plan }: { plan: TenantPlan | undefined | null }) {
+  const safePlan = plan && TENANT_PLAN_LIMITS[plan] ? plan : 'free';
+  const cfg = TENANT_PLAN_LIMITS[safePlan];
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 ${
-      plan === 'free' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-      plan === 'pro' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
+      safePlan === 'free' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+      safePlan === 'pro' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
       'bg-amber-500/10 text-amber-400 border border-amber-500/30'
     }`}>
       <span>{cfg.icon}</span> {cfg.label}

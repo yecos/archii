@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuthContext } from './AuthContext';
 import { useUIContext } from './UIContext';
 import { getFirebase, serverTimestamp, snapToDocs, type QuerySnapshot } from '@/lib/firebase-service';
-import { detectTenantFromDomain, fetchTenantByDomain } from '@/lib/tenant-service';
+import { detectTenantFromDomain, fetchTenantByDomain, getDefaultLimits, getEmptyStats } from '@/lib/tenant-service';
 import type { Tenant, TenantPlan, TenantMembership, TeamUser } from '@/lib/types';
 import { ADMIN_EMAILS } from '@/lib/types';
 
@@ -168,8 +168,21 @@ export default function TenantProvider({ children }: { children: React.ReactNode
       .doc(currentTenantId)
       .onSnapshot((snap: { exists: boolean; id: string; data: () => unknown }) => {
         if (snap.exists) {
-          const tenant = { id: snap.id, data: snap.data() as Tenant['data'] };
-          setCurrentTenant(tenant);
+          const rawData = snap.data() as Record<string, unknown>;
+          // Ensure required fields have defaults (backward compat with old tenant docs)
+          const tenantData: Tenant['data'] = {
+            name: (rawData.name as string) || 'Sin nombre',
+            domain: (rawData.domain as string) || '',
+            logo: (rawData.logo as string) || '',
+            plan: (rawData.plan as TenantPlan) || 'free',
+            settings: (rawData.settings as Tenant['data']['settings']) || { primaryColor: '', secondaryColor: '', customLogo: '' },
+            limits: (rawData.limits as Tenant['data']['limits']) || getDefaultLimits('free'),
+            stats: (rawData.stats as Tenant['data']['stats']) || getEmptyStats(),
+            joinCode: (rawData.joinCode as string) || '',
+            createdAt: rawData.createdAt || serverTimestamp(),
+            updatedAt: rawData.updatedAt || serverTimestamp(),
+          };
+          setCurrentTenant({ id: snap.id, data: tenantData });
         } else {
           setCurrentTenant(null);
         }
@@ -190,7 +203,21 @@ export default function TenantProvider({ children }: { children: React.ReactNode
         .collection('tenants')
         .orderBy('name', 'asc')
         .onSnapshot((snap: QuerySnapshot) => {
-          const docs = snapToDocs<Tenant['data']>(snap).map(t => ({ id: t.id, data: t.data }));
+          const docs = snapToDocs<Tenant['data']>(snap).map(t => ({
+            id: t.id,
+            data: {
+              name: (t.data as Record<string, unknown>).name || 'Sin nombre',
+              domain: (t.data as Record<string, unknown>).domain || '',
+              logo: (t.data as Record<string, unknown>).logo || '',
+              plan: ((t.data as Record<string, unknown>).plan as TenantPlan) || 'free',
+              settings: (t.data as Record<string, unknown>).settings || { primaryColor: '', secondaryColor: '', customLogo: '' },
+              limits: (t.data as Record<string, unknown>).limits || getDefaultLimits('free'),
+              stats: (t.data as Record<string, unknown>).stats || getEmptyStats(),
+              joinCode: (t.data as Record<string, unknown>).joinCode || '',
+              createdAt: (t.data as Record<string, unknown>).createdAt || serverTimestamp(),
+              updatedAt: (t.data as Record<string, unknown>).updatedAt || serverTimestamp(),
+            } as Tenant['data'],
+          }));
           setTenants(docs);
           setIsLoading(false);
         }, (err: unknown) => {
@@ -411,7 +438,19 @@ export default function TenantProvider({ children }: { children: React.ReactNode
       const fb = getFirebase();
       const snap = await fb.firestore().collection('tenants').doc(currentTenantId).get();
       if (snap.exists) {
-        setCurrentTenant({ id: snap.id, data: snap.data() as Tenant['data'] });
+        const rawData = snap.data() as Record<string, unknown>;
+        setCurrentTenant({ id: snap.id, data: {
+          name: (rawData.name as string) || 'Sin nombre',
+          domain: (rawData.domain as string) || '',
+          logo: (rawData.logo as string) || '',
+          plan: (rawData.plan as TenantPlan) || 'free',
+          settings: (rawData.settings as Tenant['data']['settings']) || { primaryColor: '', secondaryColor: '', customLogo: '' },
+          limits: (rawData.limits as Tenant['data']['limits']) || getDefaultLimits('free'),
+          stats: (rawData.stats as Tenant['data']['stats']) || getEmptyStats(),
+          joinCode: (rawData.joinCode as string) || '',
+          createdAt: rawData.createdAt || serverTimestamp(),
+          updatedAt: rawData.updatedAt || serverTimestamp(),
+        } as Tenant['data'] });
       }
     } catch (err) {
       console.error('[Tenant] Refresh failed:', err);
