@@ -158,7 +158,7 @@ export default function RootLayout({
                       // New SW activated — clear old caches and reload
                       caches.keys().then(function(names) {
                         return Promise.all(names.filter(function(n) {
-                          return !n.includes('v6');
+                          return !n.includes('v7');
                         }).map(function(n) { return caches.delete(n); }));
                       }).then(function() {
                         console.log('[ArchiFlow] Service Worker updated, reloading...');

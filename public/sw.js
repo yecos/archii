@@ -11,7 +11,7 @@
 //   - Clear cache / skip waiting message support
 // ============================================================
 
-const CACHE_NAME = 'archiflow-v6';
+const CACHE_NAME = 'archiflow-v7';
 const SHELL_CACHE = 'archiflow-shell-v6';
 const DATA_CACHE = 'archiflow-data-v6';
 
