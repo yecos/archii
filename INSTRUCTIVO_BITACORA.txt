@@ -4209,3 +4209,66 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
 
   Archivos: 1 nuevo (jspdf-autotable.d.ts), 1 modificado (export-pdf.ts)
   Total: +50 lineas, -31 any eliminados
+
+2026-04-17 20:30 | SESION — Fix migrate-tenant: .set() con merge en vez de .update()
+  Estado: COMPLETADO
+  Commit: 11cc56b
+  Push: exitoso a origin/main (e04f3fe..11cc56b)
+
+  Contexto: El endpoint /api/migrate-tenant usaba .update() en cuatro lugares
+    diferentes. Cuando un documento no existia en Firestore (por ejemplo, un
+    tenant eliminado, un usuario sin membresia, o datos huérfanos sin referencia
+    valida), Firestore lanzaba error NOT_FOUND y toda la migración fallaba.
+    Esto bloqueaba la asignación de datos pre-tenant a un tenant existente.
+
+  Problema identificado (BUG-20260417-008):
+    Severidad: ALTA
+    Archivo: src/app/api/migrate-tenant/route.ts
+    Descripción: Cuatro llamadas a .update() fallaban cuando el documento
+      destino no existia:
+      1. Linea 88: db.collection('users').doc(user.uid).update() — al agregar
+         membresia de tenant existente al usuario
+      2. Linea 118: db.collection('users').doc(user.uid).update() — al crear
+         primer tenant y agregar membresia
+      3. Linea 133: db.collection('tenants').doc(tenantId).update() — al
+         incrementar projectCount en stats del tenant
+      4. Linea 213: batch.update(doc.ref, { tenantId }) — al migrar datos
+         huérfanos (el doc fue leído de una query, pero podria haber sido
+         eliminado entre la lectura y el batch commit)
+
+  Solución aplicada:
+    Cambiar las 4 instancias de .update() por .set() con { merge: true }.
+    La opción merge en Firestore .set() hace lo siguiente:
+    - Si el documento EXISTE: actualiza solo los campos especificados (igual que .update())
+    - Si el documento NO EXISTE: lo crea con los campos especificados
+    Esto hace la operación defensiva contra documentos faltantes.
+
+  Cambios realizados (7 insertions, 7 deletions):
+
+    1. Linea 88: Agregar membresia de tenant existente al usuario
+       ANTES: await db.collection('users').doc(user.uid).update({ tenants: ... });
+       DESPUES: await db.collection('users').doc(user.uid).set({ tenants: ... }, { merge: true });
+
+    2. Linea 118: Crear primer tenant y agregar membresia al usuario
+       ANTES: await db.collection('users').doc(user.uid).update({ tenants: [...], tenantId: ... });
+       DESPUES: await db.collection('users').doc(user.uid).set({ tenants: [...], tenantId: ... }, { merge: true });
+
+    3. Linea 133: Incrementar projectCount en stats del tenant
+       ANTES: await db.collection('tenants').doc(tenantId).update({ 'stats.projectCount': ... });
+       DESPUES: await db.collection('tenants').doc(tenantId).set({ 'stats.projectCount': ... }, { merge: true });
+
+    4. Linea 213: Migrar datos huérfanos asignando tenantId
+       ANTES: batch.update(doc.ref, { tenantId });
+       DESPUES: batch.set(doc.ref, { tenantId }, { merge: true });
+
+  Archivo modificado (1):
+    src/app/api/migrate-tenant/route.ts (+7, -7)
+
+  Verificación: Push exitoso a GitHub. Vercel detectará el push y hará
+    deploy automático. La migración ahora es tolerante a documentos faltantes.
+
+  Pendiente:
+    - Ejecutar la migración en producción (POST /api/migrate-tenant con tenantId)
+    - Verificar que los datos huérfanos se asignan correctamente al tenant
+
+--- FIN DE SESION 2026-04-17 -------------------------------------------
