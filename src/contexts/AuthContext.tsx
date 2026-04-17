@@ -26,6 +26,8 @@ interface AuthContextType {
   loading: boolean;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   teamUsers: TeamUser[];
+  currentTenantIdRef: React.MutableRefObject<string | null>;
+  setTenantFilterKey: React.Dispatch<React.SetStateAction<number>>;
 
   // Functions
   doLogin: () => Promise<void>;
@@ -66,6 +68,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // MS auth callback bridge (OneDriveContext registers here)
   const msAuthCallbackRef = useRef<((token: string, refreshToken: string | null) => void) | null>(null);
+
+  // Shared ref: TenantContext writes currentTenantId here so AuthContext can filter users
+  const currentTenantIdRef = useRef<string | null>(null);
+  // Counter to trigger re-filter when tenant changes (ref alone won't trigger effect)
+  const [tenantFilterKey, setTenantFilterKey] = useState(0);
 
   // ===== EFFECTS =====
 
@@ -204,15 +211,56 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return () => unsubscribe();
   }, [ready, showToast]);
 
-  // Load team
+  // Load team — filtered by current tenant via shared ref
+  // TenantContext writes currentTenantIdRef.current when tenant changes
+  const [allUsers, setAllUsers] = useState<TeamUser[]>([]);
+
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot((snap: QuerySnapshot) => {
-      setTeamUsers(snapToDocs(snap));
+      setAllUsers(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando users:', err); });
     return () => unsub();
   }, [ready, authUser]);
+
+  // Track previous tenant to immediately clear teamUsers during switch (prevents flash of old tenant's users)
+  const prevTenantRef = useRef<string | null>(null);
+
+  // Filter teamUsers by current tenant
+  useEffect(() => {
+    const tid = currentTenantIdRef.current;
+
+    // BUG FIX #1: When no tenant is selected, show EMPTY array instead of ALL users.
+    // Previously, `setTeamUsers(allUsers)` leaked users from ALL tenants.
+    if (!tid) {
+      setTeamUsers([]);
+      return;
+    }
+
+    // BUG FIX #2: When tenant changes, immediately clear to prevent flash of old tenant's users.
+    // The ref update + tenantFilterKey bump happen in a useEffect (TenantContext) which runs AFTER render.
+    // This means there's a render cycle where the old teamUsers are still visible.
+    // Detecting the change here and clearing first ensures isolation.
+    if (prevTenantRef.current !== tid) {
+      setTeamUsers([]); // Immediate clear — prevents race condition flash
+    }
+    prevTenantRef.current = tid;
+
+    const ADMIN_EMAIL_SET = new Set(ADMIN_EMAILS);
+    const filtered = allUsers.filter(u => {
+      const data = u.data as Record<string, unknown>;
+      // New format: tenants array
+      const userTenants = data.tenants as Array<{ tenantId: string }> | undefined;
+      if (Array.isArray(userTenants) && userTenants.some(t => t.tenantId === tid)) return true;
+      // Old format: tenantId field (migration compat)
+      if (data.tenantId === tid) return true;
+      // Super-admins always visible (needed for cross-tenant assignment in admin panel)
+      if (ADMIN_EMAIL_SET.has((data.email as string) || '')) return true;
+      return false;
+    });
+    setTeamUsers(filtered);
+  }, [allUsers, tenantFilterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ===== FUNCTIONS =====
 
@@ -441,6 +489,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     authUser, setAuthUser,
     loading, setLoading,
     teamUsers,
+    currentTenantIdRef,
+    setTenantFilterKey,
     doLogin, doRegister, doGoogleLogin, doMicrosoftLogin, doLogout, doPasswordReset,
     getMyRole, getMyCompanyId, visibleProjects, getUserName,
     updateUserRole, updateUserCompany,

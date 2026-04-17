@@ -49,7 +49,7 @@ function generateJoinCode(): string {
 }
 
 export default function TenantProvider({ children }: { children: React.ReactNode }) {
-  const { authUser, isAdmin, teamUsers } = useAuthContext();
+  const { authUser, isAdmin, teamUsers, currentTenantIdRef, setTenantFilterKey } = useAuthContext();
   const { showToast } = useUIContext();
 
   // State
@@ -63,6 +63,13 @@ export default function TenantProvider({ children }: { children: React.ReactNode
 
   // Super-admin = ADMIN_EMAILS users only
   const isSuperAdmin = authUser ? ADMIN_EMAILS.includes(authUser.email || '') : false;
+
+  // Sync currentTenantId to AuthContext's shared ref so teamUsers gets filtered
+  useEffect(() => {
+    currentTenantIdRef.current = currentTenantId;
+    // Trigger re-filter in AuthContext by bumping the key
+    setTenantFilterKey(k => k + 1);
+  }, [currentTenantId, currentTenantIdRef, setTenantFilterKey]);
 
   // ===== EFFECT: Load user's tenant memberships from user doc =====
   useEffect(() => {
@@ -411,20 +418,26 @@ export default function TenantProvider({ children }: { children: React.ReactNode
 
     try {
       const fb = getFirebase();
+      const db = fb.firestore();
 
-      // Remove membership from user doc
-      const membership = userMemberships.find(m => m.tenantId === tenantId);
-      if (membership) {
-        await fb.firestore()
-          .collection('users')
-          .doc(authUser.uid)
-          .update({
-            tenants: fb.firestore.FieldValue.arrayRemove(membership),
-          });
-      }
+      // BUG FIX #4: Use transaction + filter instead of arrayRemove.
+      // arrayRemove requires the exact same object reference/shape, which can fail silently
+      // if Firestore has different field types (e.g., Timestamp vs Date for joinedAt).
+      // A transaction reads the current array, filters out the target, and writes the result.
+      const userRef = db.collection('users').doc(authUser.uid);
+      await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) throw new Error('Usuario no encontrado');
+        const userData = userDoc.data() as Record<string, unknown>;
+        let memberships: Array<{ tenantId: string; role?: string; joinedAt?: unknown }> =
+          (userData.tenants as Array<{ tenantId: string }>) || [];
+        // Filter out the membership being removed
+        memberships = memberships.filter(m => m.tenantId !== tenantId);
+        transaction.update(userRef, { tenants: memberships });
+      });
 
       // Decrement tenant user count
-      await fb.firestore()
+      await db
         .collection('tenants')
         .doc(tenantId)
         .update({

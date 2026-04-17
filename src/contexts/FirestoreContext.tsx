@@ -269,6 +269,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
       else {
         const ref = await db.collection('projects').add({ ...data, tenantId, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
         showToast('Proyecto creado');
+        // Increment tenant project count
+        if (tenantId) { db.collection('tenants').doc(tenantId).update({ 'stats.projectCount': getFirebase().firestore.FieldValue.increment(1) }).catch(e => console.warn('[ArchiFlow] Failed to increment projectCount:', e)); }
         // Audit: create
         logAudit('create', 'project' as AuditEntityType, ref.id, name, undefined, ref.id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
         if (msConnected && msAccessToken) {
@@ -329,10 +331,13 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
   const deleteProject = useCallback(async (id: string) => { if (!(await confirm({ title: 'Eliminar proyecto', description: '¿Eliminar este proyecto?', confirmText: 'Eliminar', variant: 'destructive' }))) return; try {
     const existing = projects.find((p: Project) => p.id === id);
     const projName = existing?.data?.name || 'Proyecto';
-    await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado');
+    const db = getFirebase().firestore();
+    await db.collection('projects').doc(id).delete(); showToast('Eliminado');
+    // Decrement tenant project count
+    if (tenantId) { getFirebase().firestore().collection('tenants').doc(tenantId).update({ 'stats.projectCount': getFirebase().firestore.FieldValue.increment(-1) }).catch(e => console.warn('[ArchiFlow] Failed to decrement projectCount:', e)); }
     // Audit: delete
     logAudit('delete', 'project' as AuditEntityType, id, projName, undefined, id, authUser?.uid, authUser?.displayName || authUser?.email || 'Usuario');
-  } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }, [confirm, showToast, projects, authUser]);
+  } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }, [confirm, showToast, projects, authUser, tenantId]);
 
   const duplicateProject = useCallback(async (id: string) => {
     const source = projects.find((p: Project) => p.id === id);
@@ -348,6 +353,8 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
         companyId: src.companyId || '', progress: 0, tenantId,
         createdAt: ts, createdBy: authUser?.uid, updatedAt: ts, updatedBy: authUser?.uid,
       });
+      // Increment tenant project count
+      if (tenantId) { getFirebase().firestore().collection('tenants').doc(tenantId).update({ 'stats.projectCount': getFirebase().firestore.FieldValue.increment(1) }).catch(e => console.warn('[ArchiFlow] Failed to increment projectCount:', e)); }
       // Copy tasks (without completion data)
       const srcTasks = tasks.filter((t: Task) => t.data.projectId === id);
       if (srcTasks.length > 0) {

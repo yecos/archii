@@ -122,6 +122,7 @@ export async function fetchTenantByJoinCode(code: string): Promise<Tenant | null
 
 /**
  * Create a new tenant with plan-based limits and auto-generated join code.
+ * Automatically adds the creator as Admin member of the new tenant.
  */
 export async function createTenant(
   name: string,
@@ -143,7 +144,7 @@ export async function createTenant(
       maxUsers: planConfig.maxUsers,
       maxStorage: planConfig.maxStorage,
     },
-    stats: { userCount: 0, projectCount: 0, storageUsed: 0 },
+    stats: { userCount: 1, projectCount: 0, storageUsed: 0 },
     joinCode: generateJoinCode(),
     createdBy,
   };
@@ -152,7 +153,37 @@ export async function createTenant(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  const tenantId = ref.id;
+
+  // BUG FIX #3: Auto-add creator as Admin member of the new tenant.
+  // Previously, the creator had to manually join via code, which was broken UX.
+  try {
+    const userRef = db.collection('users').doc(createdBy);
+    const membership = {
+      tenantId,
+      role: 'Admin',
+      joinedAt: new Date(),
+    };
+    // Use a transaction to safely read current tenants array and append
+    await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (userDoc.exists) {
+        const userData = userDoc.data() as Record<string, unknown>;
+        let memberships: Array<{ tenantId: string; role?: string; joinedAt?: unknown }> =
+          (userData.tenants as Array<{ tenantId: string }>) || [];
+        // Deduplicate: don't add if already a member
+        if (!memberships.some(m => m.tenantId === tenantId)) {
+          memberships.push(membership);
+          transaction.update(userRef, { tenants: memberships });
+        }
+      }
+    });
+  } catch (err) {
+    console.warn('[Tenant] Failed to auto-add creator as member:', err);
+    // Non-fatal: the tenant was created, just the membership addition failed
+  }
+
+  return tenantId;
 }
 
 /**

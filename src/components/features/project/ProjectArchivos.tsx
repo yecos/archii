@@ -1,8 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { confirm } from '@/hooks/useConfirmDialog';
 import { fmtSize } from '@/lib/helpers';
 import { getFirebase } from '@/lib/firebase-service';
+import { usePhaseContext } from '@/contexts/PhaseContext';
+import { getAllProcessNodes } from '@/lib/phase-service';
 import type { OneDriveFile, ProjectFile } from '@/lib/types';
 import ProjectFileManager from './ProjectFileManager';
 
@@ -80,6 +82,7 @@ interface ProjectArchivosProps {
 export default function ProjectArchivos({ projectName, msConnected, doMicrosoftLogin, od, projectFiles, selectedProjectId, uploadFile, deleteFile, setForms, openModal, gal, workPhases }: ProjectArchivosProps) {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [showFileManager, setShowFileManager] = useState(false);
+  const { phases: projectPhases } = usePhaseContext();
 
   // Get Firebase auth token for AI API calls
   useEffect(() => {
@@ -98,12 +101,19 @@ export default function ProjectArchivos({ projectName, msConnected, doMicrosoftL
     return () => clearInterval(interval);
   }, []);
 
-  // Convert workPhases to the format expected by ProjectFileManager
-  const phaseOptions = (workPhases || []).map(wp => ({
-    id: wp.id,
-    name: wp.data.name,
-    processes: [] as { id: string; name: string }[],
-  }));
+  // Convert ProjectPhase[] with nested ProcessNode trees to flat format for AI classifier
+  const phaseOptions = useMemo(() => {
+    if (!selectedProjectId) return [];
+    const currentProjectPhases = projectPhases.filter((p: any) => p._projectId === selectedProjectId);
+    return currentProjectPhases.map(p => ({
+      id: p.id,
+      name: p.data.name,
+      processes: getAllProcessNodes(p.data.processes || []).map(proc => ({
+        id: proc.id,
+        name: proc.name,
+      })),
+    }));
+  }, [selectedProjectId, projectPhases]);
 
   return (
     <div>
