@@ -237,22 +237,22 @@ export default function ChatProvider({ children }: { children: React.ReactNode }
     let unsub: () => void;
     if (chatProjectId === '__general__') {
       if (!tenantId) return;
-      unsub = db.collection('generalMessages').where('tenantId', '==', tenantId).orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+      unsub = db.collection('generalMessages').where('tenantId', '==', tenantId).orderBy('createdAt', 'asc').limitToLast(200).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: generalMessages snapshot failed:', err); showToast('Error al cargar mensajes. Intenta de nuevo.', 'error'); });
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
       const ids = [authUser.uid, chatDmUser].sort();
       const dmId = `dm_${ids[0]}_${ids[1]}`;
-      unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+      unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(200).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: directMessages snapshot failed:', err); showToast('Error al cargar mensajes directos.', 'error'); });
     } else {
-      unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot((snap: QuerySnapshot) => {
+      unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(200).onSnapshot((snap: QuerySnapshot) => {
         setMessages(snap.docs.map((d: QueryDocSnapshot) => sanitizeMessage({ id: d.id, ...d.data() }) as unknown as ChatMessage));
       }, (err) => { console.error('[ArchiFlow] Chat: project messages snapshot failed:', err); showToast('Error al cargar mensajes del proyecto.', 'error'); });
     }
     return () => { unsub(); setMessages([]); };
-  }, [ready, chatProjectId, chatDmUser, authUser, tenantId]);
+  }, [ready, chatProjectId, chatDmUser, authUser?.uid, tenantId]);
 
   // Auto-scroll chat
   useEffect(() => {
