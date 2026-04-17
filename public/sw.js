@@ -11,9 +11,9 @@
 //   - Clear cache / skip waiting message support
 // ============================================================
 
-const CACHE_NAME = 'archiflow-v5';
-const SHELL_CACHE = 'archiflow-shell-v5';
-const DATA_CACHE = 'archiflow-data-v5';
+const CACHE_NAME = 'archiflow-v6';
+const SHELL_CACHE = 'archiflow-shell-v6';
+const DATA_CACHE = 'archiflow-data-v6';
 
 // Core assets to precache on install
 const PRECACHE_URLS = [
@@ -99,7 +99,10 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
     url.hostname.includes('firebaseapp.com') ||
-    url.hostname.includes('google.com')
+    url.hostname.includes('google.com') ||
+    url.hostname.includes('googleusercontent.com') ||
+    url.hostname.includes('graph.facebook.com') ||
+    url.hostname.includes('firebasestorage.app')
   ) {
     return;
   }
