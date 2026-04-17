@@ -145,6 +145,14 @@ export default function ProjectEjecucion({
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  /* ---- Auto-set workView to 'procesos' on mount if not a valid key ---- */
+  const validViews = ['procesos', 'timeline', 'gantt', 'bitacora'];
+  useEffect(() => {
+    if (!validViews.includes(workView)) {
+      setForms((p) => ({ ...p, workView: 'procesos' }));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ---- Derived: ejecución phase ---- */
   const ejecucionPhase = useMemo(
     () => getPhase(project.id, 'ejecución'),
@@ -275,6 +283,9 @@ export default function ProjectEjecucion({
     if (!selectedProcessId) return null;
     return findProcessName(ejecucionProcesses, selectedProcessId);
   }, [selectedProcessId, ejecucionProcesses]);
+
+  /* ---- Active workView (fallback to 'procesos') ---- */
+  const activeView = validViews.includes(workView) ? workView : 'procesos';
 
   /* ---- Sub-view toggle ---- */
   const subViews = [
@@ -1312,7 +1323,7 @@ export default function ProjectEjecucion({
             <button
               key={sv.key}
               className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${
-                workView === sv.key
+                activeView === sv.key
                   ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm'
                   : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
               }`}
@@ -1323,8 +1334,8 @@ export default function ProjectEjecucion({
           ))}
         </div>
         <div className="flex gap-2">
-          {workView !== 'bitacora' &&
-            workView !== 'procesos' &&
+          {activeView !== 'bitacora' &&
+            activeView !== 'procesos' &&
             workPhases.length === 0 && (
               <button
                 className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none"
@@ -1339,7 +1350,7 @@ export default function ProjectEjecucion({
       {/* ================================================================ */}
       {/*  "Procesos" view — two-column layout (same as ProjectDiseno)     */}
       {/* ================================================================ */}
-      {workView === 'procesos' && (
+      {activeView === 'procesos' && (
         <div className="flex flex-col md:flex-row gap-4 min-h-0">
           {/* ---- LEFT PANEL — Process Tree ---- */}
           <aside
@@ -1479,17 +1490,17 @@ export default function ProjectEjecucion({
       {/* ================================================================ */}
       {/*  "Timeline" view — single column, reuses ProjectObra code        */}
       {/* ================================================================ */}
-      {workView === 'timeline' && renderTimeline()}
+      {activeView === 'timeline' && renderTimeline()}
 
       {/* ================================================================ */}
       {/*  "Gantt" view — single column, reuses ProjectObra code           */}
       {/* ================================================================ */}
-      {workView === 'gantt' && renderGantt()}
+      {activeView === 'gantt' && renderGantt()}
 
       {/* ================================================================ */}
       {/*  "Bitácora" view — single column, reuses ProjectObra code        */}
       {/* ================================================================ */}
-      {workView === 'bitacora' && renderBitacora()}
+      {activeView === 'bitacora' && renderBitacora()}
     </div>
   );
 }
