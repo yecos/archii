@@ -146,7 +146,42 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const snap = await ref.get();
           const isAdminEmail = ADMIN_EMAILS.includes(user.email || '');
           if (!snap.exists) {
-            await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
+            // === DUPLICATE PREVENTION: Check for existing user with same email ===
+            // This handles the case where a user registers with email/password first,
+            // then signs in with Google (or vice versa) — Firebase creates a new auth
+            // account (different UID) for the same email.
+            if (user.email) {
+              const existingUsers = await db.collection('users').where('email', '==', user.email).limit(10).get();
+              if (!existingUsers.empty) {
+                // Found duplicate(s) — merge tenant memberships and keep only one doc
+                const existingDoc = existingUsers.docs[0];
+                const existingData = existingDoc.data() as Record<string, unknown>;
+                const existingTenants = (existingData.tenants as Array<{ tenantId: string; role?: string; joinedAt?: unknown }>) || [];
+
+                // Create new doc preserving existing memberships and better data
+                await ref.set({
+                  name: user.displayName || existingData.name || (user.email || '').split('@')[0],
+                  email: user.email,
+                  photoURL: user.photoURL || existingData.photoURL || '',
+                  role: isAdminEmail ? 'Admin' : (existingData.role || 'Miembro'),
+                  tenants: existingTenants,
+                  createdAt: existingData.createdAt || serverTimestamp(),
+                }, { merge: true });
+
+                // Delete old duplicate doc(s)
+                const batch = db.batch();
+                existingUsers.docs.forEach((doc) => {
+                  if (doc.id !== user.uid) batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`[ArchiFlow Auth] Merged ${existingUsers.size} duplicate user doc(s) for ${user.email} into ${user.uid}`);
+              } else {
+                // No duplicates — create fresh user doc
+                await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
+              }
+            } else {
+              await ref.set({ name: user.displayName || 'Usuario', email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: serverTimestamp() });
+            }
           } else {
             // Sync photoURL and displayName from auth provider (Google, Microsoft, etc.)
             const data = snap.data();
@@ -211,8 +246,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     try {
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
+      // NOTE: User doc creation is handled by onAuthStateChanged above (with duplicate detection).
+      // We just ensure the name is synced after updateProfile completes.
       const db = getFirebase().firestore();
-      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: serverTimestamp() });
+      await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: serverTimestamp() }, { merge: true });
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       console.error('[ArchiFlow Auth] Register error:', err.code, err.message, e);

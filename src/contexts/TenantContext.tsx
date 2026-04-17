@@ -239,10 +239,10 @@ export default function TenantProvider({ children }: { children: React.ReactNode
     }
   }, [isSuperAdmin, loadTenants]);
 
-  // ===== Filtered team users for current tenant =====
+  // ===== Filtered team users for current tenant (deduplicated by email) =====
   const tenantTeamUsers = useMemo<TeamUser[]>(() => {
     if (!currentTenantId || !teamUsers.length) return [];
-    return teamUsers.filter(u => {
+    const filtered = teamUsers.filter(u => {
       const data = u.data as Record<string, unknown>;
       // New format: tenants array
       const userTenants = data.tenants as TenantMembership[] | undefined;
@@ -253,6 +253,27 @@ export default function TenantProvider({ children }: { children: React.ReactNode
       if (ADMIN_EMAILS.includes((data.email as string) || '')) return true;
       return false;
     });
+    // === DEDUPLICATE BY EMAIL ===
+    // When the same person signs in with different providers (Google, email, Microsoft),
+    // Firebase creates separate auth accounts (different UIDs). This dedup ensures
+    // only one entry appears per email in the team list.
+    const byEmail = new Map<string, TeamUser>();
+    for (const u of filtered) {
+      const email = ((u.data as Record<string, unknown>).email as string) || '';
+      if (!email) { byEmail.set(u.id, u); continue; } // Keep users without email by ID
+      const existing = byEmail.get(email);
+      if (!existing) {
+        byEmail.set(email, u);
+      } else {
+        // Keep the one with the most tenant memberships (most active/recent account)
+        const existingTenants = ((existing.data as Record<string, unknown>).tenants as TenantMembership[] | undefined) || [];
+        const newTenants = ((u.data as Record<string, unknown>).tenants as TenantMembership[] | undefined) || [];
+        if (newTenants.length > existingTenants.length) {
+          byEmail.set(email, u);
+        }
+      }
+    }
+    return Array.from(byEmail.values());
   }, [currentTenantId, teamUsers]);
 
   // ===== needsTenantSelection: user logged in but no tenant selected =====
