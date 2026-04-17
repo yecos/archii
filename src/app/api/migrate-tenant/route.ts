@@ -7,8 +7,10 @@
  * All collections that use tenantId filtering are migrated.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/api-auth';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
+import { authenticateRequestDebug } from '@/lib/api-auth';
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAIL || "yecos11@gmail.com").split(",").map(e => e.trim().toLowerCase());
 
 /** All Firestore collections that are tenant-scoped */
 const TENANT_COLLECTIONS = [
@@ -51,7 +53,28 @@ function generateJoinCode(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAdmin(request);
+    // Authenticate with detailed error reporting
+    const { user, error: authError } = await authenticateRequestDebug(request);
+
+    if (authError) {
+      return NextResponse.json(
+        { error: `Autenticación fallida: ${authError.reason}`, detail: authError.detail },
+        { status: 401 },
+      );
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
+    // Check admin
+    if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'No autorizado. Solo admins.', email: user.email, allowedAdmins: ADMIN_EMAILS },
+        { status: 403 },
+      );
+    }
+
     const db = getAdminDb();
     const FieldValue = getAdminFieldValue();
 
@@ -65,7 +88,7 @@ export async function POST(request: NextRequest) {
     // 1. Check user and existing tenants
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (!userDoc.exists) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+      return NextResponse.json({ error: 'Usuario no encontrado', uid: user.uid }, { status: 404 });
     }
 
     const userData = userDoc.data() as Record<string, unknown>;
@@ -78,7 +101,7 @@ export async function POST(request: NextRequest) {
       // Validate that the tenant exists
       const tenantDoc = await db.collection('tenants').doc(targetTenantId).get();
       if (!tenantDoc.exists) {
-        return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+        return NextResponse.json({ error: 'Tenant no encontrado', tenantId: targetTenantId }, { status: 404 });
       }
       tenantId = targetTenantId;
       // Ensure user is a member of this tenant
@@ -148,7 +171,6 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error: unknown) {
-    if (error instanceof NextResponse) return error;
     console.error('[Migrate] Error:', error);
     return NextResponse.json(
       { error: 'Error en la migración', details: String(error) },
@@ -167,8 +189,6 @@ async function migrateOrphanedData(
 
   for (const collection of TENANT_COLLECTIONS) {
     try {
-      // Fetch all docs in this collection and filter in memory
-      // This is a one-time migration, so it's acceptable
       const snap = await db.collection(collection).limit(500).get();
 
       if (snap.empty) {
@@ -178,7 +198,6 @@ async function migrateOrphanedData(
 
       const docsToUpdate = snap.docs.filter(doc => {
         const data = doc.data() as Record<string, unknown>;
-        // Update if tenantId is missing, empty, or null
         return !data.tenantId;
       });
 
@@ -187,7 +206,6 @@ async function migrateOrphanedData(
         continue;
       }
 
-      // Batch update (max 500 per batch)
       const BATCH_SIZE = 400;
       let processed = 0;
 
