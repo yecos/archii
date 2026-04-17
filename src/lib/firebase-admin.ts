@@ -125,9 +125,21 @@ let _adminApp: ReturnType<typeof initializeApp> | null = null;
 let _adminDb: ReturnType<typeof getFirestore> | null = null;
 
 export function getAdminApp(): App {
+  // If singleton was initialized without credentials, re-initialize
+  if (_adminApp && _initMethod === 'none') {
+    console.log('[ArchiFlow Admin] Re-initializing: previous init had no credentials');
+    _adminApp = null;
+    _adminDb = null;
+    _initMethod = 'none';
+    _initError = null;
+  }
+
   if (_adminApp) return _adminApp;
-  if (getApps().length > 0) {
-    _adminApp = getApp();
+
+  // Check for existing apps — but skip if they were initialized without credentials
+  const existingApps = getApps();
+  if (existingApps.length > 0 && _initMethod !== 'none') {
+    _adminApp = existingApps[0];
   } else {
     _appProjectId = APP_PROJECT_ID || null;
     const credential = getAdminConfig();
