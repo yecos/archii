@@ -12,11 +12,11 @@ export async function GET() {
   // 2. Try to parse it
   let parsed: Record<string, unknown> | null = null;
   try {
-    parsed = JSON.parse(credRaw || '');
+    parsed = JSON.parse(credRaw || '') as Record<string, unknown>;
     results.credParseable = true;
-    results.credProjectId = parsed.project_id;
-    results.credClientEmail = parsed.client_email;
-    results.credHasPrivateKey = !!(parsed.private_key && parsed.private_key.includes('BEGIN PRIVATE KEY'));
+    results.credProjectId = parsed!.project_id;
+    results.credClientEmail = parsed!.client_email;
+    results.credHasPrivateKey = !!(parsed!.private_key && String(parsed!.private_key).includes('BEGIN PRIVATE KEY'));
   } catch (e: unknown) {
     results.credParseable = false;
     results.credParseError = e instanceof Error ? e.message : String(e);
