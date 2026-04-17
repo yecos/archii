@@ -177,9 +177,12 @@ function AppContent() {
   const aiAgentOpen = useUIStore((s) => s.aiAgentOpen);
   const setAIAgentOpen = useUIStore((s) => s.setAIAgentOpen);
   const setCommandOpen = useUIStore((s) => s.setCommandOpen);
-  const { needsTenantSelection, isResolvingTenant } = useTenantContext();
+  const { needsTenantSelection, isResolvingTenant, switchingTenant, currentTenant: tenant } = useTenantContext();
 
   if (!ready || loading || isResolvingTenant) return <LoadingScreen />;
+
+  // Show loading screen while switching tenants to prevent data flash from old tenant
+  if (switchingTenant) return <LoadingScreen />;
   if (!authUser) return (
     <AuthScreen
       forms={forms}

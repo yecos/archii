@@ -114,6 +114,9 @@ interface UIContextType {
 
   // Misc
   screenTitles: typeof SCREEN_TITLES;
+
+  // Tenant switch — reset all navigational/editing state
+  resetForTenantSwitch: () => void;
 }
 
 const UIContext = createContext<UIContextType | null>(null);
@@ -249,6 +252,18 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
 
   const screenTitles = SCREEN_TITLES;
 
+  // Reset all UI state when switching tenants (called from TenantContext)
+  const resetForTenantSwitch = useCallback(() => {
+    setScreen('dashboard');
+    setSelectedProjectId(null);
+    setSelectedCompanyId(null);
+    setEditingId(null);
+    setModals({});
+    setForms({});
+    setSidebarOpen(false);
+    setChatMobileShow(false);
+  }, []);
+
   const value: UIContextType = useMemo(() => ({
     screen, setScreen,
     selectedProjectId, setSelectedProjectId,
@@ -272,7 +287,8 @@ export default function UIProvider({ children }: { children: React.ReactNode }) 
     forms, setForms,
     showToast,
     screenTitles,
-  }), [screen, selectedProjectId, selectedCompanyId, navigateTo, sidebarOpen, sidebarCollapsed, chatMobileShow, taskViewMode, calView, darkMode, installPrompt, showInstallBanner, isInstalled, showInstallGuide, isStandalone, handleInstall, dismissInstallBanner, modals, editingId, forms, showToast]);
+    resetForTenantSwitch,
+  }), [screen, selectedProjectId, selectedCompanyId, navigateTo, sidebarOpen, sidebarCollapsed, chatMobileShow, taskViewMode, calView, darkMode, installPrompt, showInstallBanner, isInstalled, showInstallGuide, isStandalone, handleInstall, dismissInstallBanner, modals, editingId, forms, showToast, resetForTenantSwitch]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

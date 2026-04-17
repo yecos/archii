@@ -48,7 +48,7 @@ export default function InvoiceProvider({ children }: { children: React.ReactNod
     const unsub = db.collection('invoices').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvoices(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invoices:', err); });
-    return () => unsub();
+    return () => { unsub(); setInvoices([]); };
   }, [ready, authUser, tenantId]);
 
   // ===== CRUD FUNCTIONS =====

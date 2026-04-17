@@ -52,7 +52,7 @@ export default function TimeTrackingProvider({ children }: { children: React.Rea
     const unsub = db.collection('timeEntries').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(200).onSnapshot((snap: QuerySnapshot) => {
       setTimeEntries(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando timeEntries:', err); });
-    return () => unsub();
+    return () => { unsub(); setTimeEntries([]); };
   }, [ready, authUser, tenantId]);
 
   // Time tracker: live timer update

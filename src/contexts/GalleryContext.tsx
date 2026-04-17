@@ -111,7 +111,7 @@ export default function GalleryProvider({ children }: { children: React.ReactNod
     const unsub = db.collection('galleryPhotos').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setGalleryPhotos(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando galleryPhotos:', err); });
-    return () => unsub();
+    return () => { unsub(); setGalleryPhotos([]); };
   }, [ready, authUser, tenantId]);
 
   // ===== CRUD FUNCTIONS =====

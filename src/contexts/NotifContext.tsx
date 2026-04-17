@@ -119,7 +119,7 @@ export default function NotifProvider({ children }: { children: React.ReactNode 
       .onSnapshot((snap) => {
         setChangeOrders(snap.docs.map((d) => ({ id: d.id, data: d.data() } as unknown as ChangeOrder)));
       }, () => {});
-    return () => unsub();
+    return () => { unsub(); setChangeOrders([]); };
   }, [authUser, persistenceReady, tenantId]);
 
   // ===== FIRESTORE PERSISTENCE =====

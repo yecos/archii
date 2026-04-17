@@ -67,7 +67,7 @@ export default function CommentsProvider({ children }: { children: React.ReactNo
     const unsub = db.collection('comments').where('tenantId', '==', tenantId).orderBy('createdAt', 'asc').limit(300).onSnapshot((snap: QuerySnapshot) => {
       setComments(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando comments:', err); });
-    return () => unsub();
+    return () => { unsub(); setComments([]); };
   }, [ready, authUser, tenantId]);
 
   // Load daily logs

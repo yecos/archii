@@ -135,7 +135,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const unsub = db.collection('projects').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setProjects(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando projects:', err); });
-    return () => unsub();
+    return () => { unsub(); setProjects([]); };
   }, [ready, authUser, tenantId]);
 
   // Load tasks
@@ -145,7 +145,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const unsub = db.collection('tasks').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setTasks(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando tasks:', err); });
-    return () => unsub();
+    return () => { unsub(); setTasks([]); };
   }, [ready, authUser, tenantId]);
 
   // Load expenses
@@ -155,7 +155,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     const unsub = db.collection('expenses').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setExpenses(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando expenses:', err); });
-    return () => unsub();
+    return () => { unsub(); setExpenses([]); };
   }, [ready, authUser, tenantId]);
 
   // Load suppliers + companies
@@ -169,7 +169,7 @@ export default function FirestoreProvider({ children }: { children: React.ReactN
     unsubs.push(db.collection('companies').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setCompanies(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando companies:', err); }));
-    return () => unsubs.forEach(u => u());
+    return () => { unsubs.forEach(u => u()); setSuppliers([]); setCompanies([]); };
   }, [ready, authUser, tenantId]);
 
   // Load work phases

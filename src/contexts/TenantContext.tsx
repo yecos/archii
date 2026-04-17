@@ -50,7 +50,7 @@ function generateJoinCode(): string {
 
 export default function TenantProvider({ children }: { children: React.ReactNode }) {
   const { authUser, isAdmin, teamUsers, currentTenantIdRef, setTenantFilterKey } = useAuthContext();
-  const { showToast } = useUIContext();
+  const { showToast, resetForTenantSwitch } = useUIContext();
 
   // State
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
@@ -291,17 +291,24 @@ export default function TenantProvider({ children }: { children: React.ReactNode
   // ===== Select a tenant (user action) =====
   const selectTenant = useCallback(async (tenantId: string) => {
     if (!authUser) return;
+
+    // 1. Immediately show loading state
     setSwitchingTenant(true);
-    try {
-      setCurrentTenantId(tenantId);
-      try { localStorage.setItem('archiflow-tenant-id', tenantId); } catch { /* ignore */ }
-    } catch (err) {
-      console.error('[Tenant] Select failed:', err);
-      showToast('Error al seleccionar organización', 'error');
-    } finally {
+
+    // 2. Clear ALL UI state so no data from the old tenant is visible
+    resetForTenantSwitch();
+
+    // 3. Switch tenant ID (triggers all Firestore listeners to re-subscribe)
+    setCurrentTenantId(tenantId);
+    try { localStorage.setItem('archiflow-tenant-id', tenantId); } catch { /* ignore */ }
+
+    // 4. Keep loading for a brief moment to let Firestore listeners unsubscribe
+    //    and new listeners fire. 600ms covers the typical Firestore round-trip.
+    //    If the first snapshot arrives faster, HomeContent will dismiss the loading screen.
+    setTimeout(() => {
       setSwitchingTenant(false);
-    }
-  }, [authUser, showToast]);
+    }, 600);
+  }, [authUser, resetForTenantSwitch]);
 
   // ===== Switch tenant (super-admin — can switch to any tenant) =====
   const switchTenant = useCallback(async (tenantId: string) => {

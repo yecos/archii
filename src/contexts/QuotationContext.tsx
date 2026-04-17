@@ -107,7 +107,7 @@ export default function QuotationProvider({ children }: { children: React.ReactN
     const unsub = db.collection('quotations').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setQuotations(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando quotations:', err); });
-    return () => unsub();
+    return () => { unsub(); setQuotations([]); };
   }, [ready, authUser, tenantId]);
 
   // ===== RECALCULATE SECTION =====

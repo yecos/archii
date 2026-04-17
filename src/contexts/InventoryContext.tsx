@@ -91,7 +91,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     const unsub = db.collection('invProducts').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').onSnapshot((snap: QuerySnapshot) => {
       setInvProducts(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invProducts:', err); });
-    return () => unsub();
+    return () => { unsub(); setInvProducts([]); };
   }, [ready, authUser, tenantId]);
 
   // Load inventory categories
@@ -101,7 +101,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     const unsub = db.collection('invCategories').where('tenantId', '==', tenantId).orderBy('name', 'asc').onSnapshot((snap: QuerySnapshot) => {
       setInvCategories(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invCategories:', err); });
-    return () => unsub();
+    return () => { unsub(); setInvCategories([]); };
   }, [ready, authUser, tenantId]);
 
   // Load inventory movements
@@ -111,7 +111,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     const unsub = db.collection('invMovements').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvMovements(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invMovements:', err); });
-    return () => unsub();
+    return () => { unsub(); setInvMovements([]); };
   }, [ready, authUser, tenantId]);
 
   // Load inventory transfers
@@ -121,7 +121,7 @@ export default function InventoryProvider({ children }: { children: React.ReactN
     const unsub = db.collection('invTransfers').where('tenantId', '==', tenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot((snap: QuerySnapshot) => {
       setInvTransfers(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando invTransfers:', err); });
-    return () => unsub();
+    return () => { unsub(); setInvTransfers([]); };
   }, [ready, authUser, tenantId]);
 
   // ===== HELPER FUNCTIONS =====

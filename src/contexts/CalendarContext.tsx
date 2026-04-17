@@ -51,7 +51,7 @@ export default function CalendarProvider({ children }: { children: React.ReactNo
     const unsub = db.collection('meetings').where('tenantId', '==', tenantId).orderBy('date', 'asc').onSnapshot((snap: QuerySnapshot) => {
       setMeetings(snapToDocs(snap));
     }, (err: unknown) => { console.error('[ArchiFlow] Error escuchando meetings:', err); });
-    return () => unsub();
+    return () => { unsub(); setMeetings([]); };
   }, [ready, authUser, tenantId]);
 
   // ===== COMPUTED: Expanded meetings for current month =====
