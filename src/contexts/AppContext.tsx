@@ -482,15 +482,26 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Wait for Firebase to be ready (initialized in layout.tsx)
   useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds max
     const iv = setInterval(() => {
+      attempts++;
       try {
         const fb = getFirebase();
         if (fb && fb.apps && fb.apps.length > 0) {
           clearInterval(iv);
           setReady(true);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(iv);
+          console.error('[ArchiFlow] Firebase ready timeout — SDK may not have loaded');
+          setReady(true); // Allow auth screen to show even without Firebase
         }
       } catch (e) {
-        // Firebase not loaded yet, keep waiting
+        if (attempts >= maxAttempts) {
+          clearInterval(iv);
+          console.error('[ArchiFlow] Firebase ready timeout — getFirebase() keeps throwing:', e);
+          setReady(true); // Allow auth screen to show with Firebase error indicator
+        }
       }
     }, 100);
     return () => clearInterval(iv);
@@ -526,26 +537,31 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     });
 
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
-      setAuthUser(user || null);
-      if (user) {
-        const db = fb.firestore();
-        // Save user profile
-        const ref = db.collection('users').doc(user.uid);
-        const snap = await ref.get();
-        const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-        console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
-        if (!snap.exists) {
-          await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
-        } else if (isAdminEmail) {
-          // Force admin role for ADMIN_EMAILS on every login
-          const current = snap.data()?.role;
-          if (current !== 'Admin') {
-            console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
-            await ref.update({ role: 'Admin' });
+      try {
+        setAuthUser(user || null);
+        if (user) {
+          const db = fb.firestore();
+          // Save user profile
+          const ref = db.collection('users').doc(user.uid);
+          const snap = await ref.get();
+          const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
+          if (!snap.exists) {
+            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+          } else if (isAdminEmail) {
+            // Force admin role for ADMIN_EMAILS on every login
+            const current = snap.data()?.role;
+            if (current !== 'Admin') {
+              console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
+              await ref.update({ role: 'Admin' });
           }
         }
       }
       setLoading(false);
+      } catch (authErr: any) {
+        console.error('[ArchiFlow Auth] onAuthStateChanged error:', authErr);
+        setLoading(false);
+      }
     });
     return () => unsubscribe();
   }, [ready]);
