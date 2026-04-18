@@ -71,12 +71,12 @@ export default function RootLayout({
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               firebase.initializeApp({
-                apiKey: "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0",
+                apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
                 authDomain: "archiflow-prod-2026.firebaseapp.com",
                 projectId: "archiflow-prod-2026",
                 storageBucket: "archiflow-prod-2026.firebasestorage.app",
-                messagingSenderId: "247246043394",
-                appId: "1:247246043394:web:408e1365957eea4ee2aa1b"
+                messagingSenderId: "1090724963650",
+                appId: "1:1090724963650:web:28468b10aef5e89c0f54db"
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
             }
