@@ -2,7 +2,7 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, ChevronRight, Home, Bell, LogOut, Check, Timer, Receipt, BarChart3 } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Drawer } from 'vaul';
 
@@ -38,6 +38,7 @@ export default function Sidebar({
     { id: 'tasks', label: 'Tareas', icon: <ClipboardCheck size={18} className="stroke-current" />, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: 'chat', label: 'Chat', icon: <MessageCircle size={18} className="stroke-current" /> },
     { divider: true },
+    { id: 'timeTracking', label: 'Time Tracking', icon: <Timer size={18} className="stroke-current" /> },
     { id: 'budget', label: 'Presupuestos', icon: <DollarSign size={18} className="stroke-current" /> },
     { id: 'files', label: 'Planos y archivos', icon: <FileText size={18} className="stroke-current" /> },
     { id: 'obra', label: 'Seguimiento obra', icon: <Camera size={18} className="stroke-current" /> },
@@ -47,8 +48,10 @@ export default function Sidebar({
     { id: 'admin', label: 'Panel Admin', icon: <Settings size={18} className="stroke-current" /> },
     { id: 'suppliers', label: 'Proveedores', icon: <Store size={18} className="stroke-current" /> },
     { id: 'team', label: 'Equipo', icon: <Users size={18} className="stroke-current" />, badge: teamUsers.length },
+    { id: 'invoices', label: 'Facturas', icon: <Receipt size={18} className="stroke-current" /> },
     { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
     { id: 'portal', label: 'Portal cliente', icon: <Globe size={18} className="stroke-current" /> },
+    { id: 'reports', label: 'Reportes', icon: <BarChart3 size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'companies', label: 'Empresas', icon: <Building2 size={18} className="stroke-current" /> },
     { id: 'install', label: 'Instalar App', icon: <Download size={18} className="stroke-current" /> },
