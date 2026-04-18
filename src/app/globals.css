@@ -431,3 +431,89 @@ html {
 .animate-af-blink {
   animation: af-blink 0.8s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════
+   Phase E: Mobile Performance Optimizations
+   ═══════════════════════════════════════════ */
+
+/* GPU compositor layer promotion for animated/fixed elements */
+.fixed,
+.backdrop-blur-sm,
+.backdrop-blur-md,
+.backdrop-blur-lg,
+[data-radix-popper-content-wrapper],
+[data-vaul-overlay],
+[data-vaul-content],
+[data-state="open"] {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Reduce blur radius on mobile for better GPU performance */
+@media (max-width: 768px) {
+  .backdrop-blur-lg {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+  .backdrop-blur-md {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  /* Simpler single-layer shadows on mobile */
+  .shadow-lg {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  }
+  .shadow-xl {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+  }
+  .shadow-2xl {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
+  }
+
+  /* Reduce skeleton animation CPU usage on mobile */
+  .af-skeleton {
+    animation-duration: 3s !important;
+  }
+}
+
+/* GPU-accelerated transitions for animated elements */
+.animate-fadeIn,
+.animate-slideIn,
+.animate-slideUp,
+.animate-fade-in,
+[data-state="open"],
+[data-state="closed"] {
+  transform: translate3d(0, 0, 0);
+}
+
+/* ─── Reduced Motion Preference ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .af-skeleton {
+    animation: none !important;
+    background: var(--af-bg4) !important;
+  }
+
+  [data-radix-popper-content-wrapper],
+  [data-vaul-overlay],
+  [data-vaul-content] {
+    transition: none !important;
+  }
+
+  .animate-fadeIn,
+  .animate-slideIn,
+  .animate-slideUp {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

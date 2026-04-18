@@ -3,12 +3,20 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonProjects } from '@/components/ui/SkeletonLoaders';
 import { statusColor, fmtCOP } from '@/lib/helpers';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import { Pencil, Trash2 } from 'lucide-react';
 
 export default function ProjectsScreen() {
   const {
     loading, projects, companies, forms, setForms, setEditingId, openModal,
     visibleProjects, openEditProject, deleteProject, openProject, getMyRole,
   } = useApp();
+
+  const handleNewProject = () => {
+    setEditingId(null);
+    openModal('project');
+  };
 
   return (
     <div className="animate-fadeIn">
@@ -20,7 +28,8 @@ export default function ProjectsScreen() {
             return (<button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, projFilter: tab.v }))}>{tab.k} ({count})</button>);
           })}
         </div>
-        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('project'); }}>
+        {/* Desktop-only new project button */}
+        <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={handleNewProject}>
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proyecto
         </button>
       </div>
@@ -47,30 +56,59 @@ export default function ProjectsScreen() {
             {projs.map(p => {
               const d = p.data, prog = d.progress || 0;
               const compName = companies.find(c => c.id === d.companyId)?.data?.name;
-              return (<div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
-                <div className="flex justify-between items-start mb-2.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
-                    {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {compName}</span>}
+              return (
+                <div key={p.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
+                  <div className="flex justify-between items-start mb-2 sm:mb-2.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
+                      {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">🏢 {compName}</span>}
+                    </div>
+                    {/* Desktop edit/delete buttons */}
+                    <div className="hidden md:flex gap-1.5" onClick={e => e.stopPropagation()}>
+                      <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
+                      <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
+                    </div>
+                    {/* Mobile overflow menu */}
+                    <div className="md:hidden" onClick={e => e.stopPropagation()}>
+                      <OverflowMenu
+                        actions={[
+                          {
+                            label: 'Editar proyecto',
+                            icon: <Pencil size={14} />,
+                            onClick: () => openEditProject(p),
+                          },
+                          {
+                            label: 'Eliminar proyecto',
+                            icon: <Trash2 size={14} />,
+                            onClick: () => deleteProject(p.id),
+                            variant: 'danger',
+                            separator: true,
+                          },
+                        ]}
+                        side="left"
+                        align="end"
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
-                    <button className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}>✏️</button>
-                    <button className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={() => deleteProject(p.id)}>🗑</button>
+                  <div className="text-[15px] font-semibold mb-1">{d.name}</div>
+                  <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
+                  <div className="flex gap-4 mb-3">
+                    <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
+                    <div className="hidden sm:block"><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
                   </div>
-                </div>
-                <div className="text-[15px] font-semibold mb-1">{d.name}</div>
-                <div className="text-xs text-[var(--af-text3)] mb-3">{d.location ? '📍 ' + d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
-                <div className="flex gap-4 mb-3">
-                  <div><div className="text-lg font-semibold">{prog}%</div><div className="text-[10px] text-[var(--af-text3)]">Progreso</div></div>
-                  <div><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(d.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
-                </div>
-                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
-              </div>);
+                  <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} /></div>
+                </div>);
             })}
           </div>
         );
       })()}
+
+      {/* Mobile FAB */}
+      <FloatingActionButton
+        onClick={handleNewProject}
+        ariaLabel="Nuevo proyecto"
+      />
     </div>
   );
 }

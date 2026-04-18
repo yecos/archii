@@ -3,8 +3,10 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2 } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -82,6 +84,11 @@ export default function TasksScreen() {
   const dragCounterRef = useRef<Record<string, number>>({});
 
   const taskFilterProject = forms.taskFilterProject || '';
+
+  const handleNewTask = () => {
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] }));
+    openModal('task');
+  };
 
   const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
     setDragTaskId(taskId);
@@ -195,8 +202,8 @@ export default function TasksScreen() {
             {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
           </select>
 
-          {/* Search */}
-          <div className="relative">
+          {/* Search - hidden on very small screens */}
+          <div className="hidden sm:block relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--af-text3)]" />
             <input
               type="text"
@@ -224,9 +231,9 @@ export default function TasksScreen() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Export Excel */}
+          {/* Export Excel - desktop only */}
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
+            className="hidden md:flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
             onClick={() => {
               try {
                 exportTasksExcel(tasks, projects, useApp().teamUsers);
@@ -237,10 +244,10 @@ export default function TasksScreen() {
             <Download size={13} /> Excel
           </button>
 
-          {/* New task */}
+          {/* New task - desktop only */}
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-            onClick={() => { setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}
+            className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
+            onClick={handleNewTask}
           >
             <Plus size={15} /> Nueva tarea
           </button>
@@ -280,7 +287,7 @@ export default function TasksScreen() {
       )}
 
       {/* Stats bar */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)]">
           <span className="font-semibold text-[var(--foreground)]">{taskStats.total}</span> tareas
         </div>
@@ -324,7 +331,7 @@ export default function TasksScreen() {
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
             return (
-              <div key={prio} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
+              <div key={prio} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 mb-4">
                 <div className={`inline-flex items-center gap-1.5 text-xs font-semibold mb-3 px-2.5 py-1 rounded-lg ${prioColorBg}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${prioDot}`} />
                   Prioridad {prio}
@@ -354,12 +361,35 @@ export default function TasksScreen() {
                           <AssigneeAvatars task={t} getUserName={getUserName} />
                         </div>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Status badge - desktop only */}
+                      <span className={`hidden md:flex text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                      {/* Desktop hover actions */}
+                      <div className="hidden md:flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
                         <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
                           <X size={12} />
                         </button>
+                      </div>
+                      {/* Mobile overflow menu - always visible on mobile */}
+                      <div className="md:hidden flex-shrink-0">
+                        <OverflowMenu
+                          actions={[
+                            {
+                              label: 'Editar tarea',
+                              icon: <Pencil size={14} />,
+                              onClick: () => openEditTask(t),
+                            },
+                            {
+                              label: 'Eliminar tarea',
+                              icon: <Trash2 size={14} />,
+                              onClick: () => deleteTask(t.id),
+                              variant: 'danger',
+                              separator: true,
+                            },
+                          ]}
+                          side="left"
+                          align="end"
+                        />
                       </div>
                     </div>
                   );
@@ -491,6 +521,12 @@ export default function TasksScreen() {
           </div>
         )
       )}
+
+      {/* Mobile FAB */}
+      <FloatingActionButton
+        onClick={handleNewTask}
+        ariaLabel="Nueva tarea"
+      />
     </div>
   );
 }
