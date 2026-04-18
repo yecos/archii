@@ -72,9 +72,9 @@ export default function RootLayout({
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               firebase.initializeApp({
                 apiKey: "AIzaSyCFnr_TbEEnYPqBSJRPSn0G3oORHo9Guu0",
-                authDomain: "archiflow-c2855.firebaseapp.com",
-                projectId: "archiflow-c2855",
-                storageBucket: "archiflow-c2855.firebasestorage.app",
+                authDomain: "archiflow-prod-2026.firebaseapp.com",
+                projectId: "archiflow-prod-2026",
+                storageBucket: "archiflow-prod-2026.firebasestorage.app",
                 messagingSenderId: "247246043394",
                 appId: "1:247246043394:web:408e1365957eea4ee2aa1b"
               });
