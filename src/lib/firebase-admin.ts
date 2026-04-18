@@ -61,6 +61,5 @@ export function getAdminAuth() {
  * FieldValue equivalente para server-side
  */
 export function getAdminFieldValue() {
-  const { FieldValue } = require('firebase-admin/firestore');
   return FieldValue;
 }
