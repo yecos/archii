@@ -68,3 +68,32 @@ Stage Summary:
 - La correccion permite que create/join tenant funcionen correctamente
 - Commit: e701bf8, deploy a Vercel en progreso
 
+---
+Task ID: 3
+Agent: Super Z (Main)
+Task: Fix critico turbopack.root + flujo Login→Tenant con roles
+
+Work Log:
+- Descubierto CAUSA RAIZ: turbopack.root en next.config.ts apuntaba a /home/z/my-project
+  Esta ruta absoluta NO EXISTE en Vercel, causando que Turbopack no pueda resolver modulos
+  Resultado: "This page couldn't load" en Vercel (aunque localmente funciona perfecto)
+- Removido bloque turbopack de next.config.ts
+- Generado package-lock.json para builds deterministas en Vercel
+- Implementado flujo de roles: Super Admin (creador) / Miembro (invitado)
+  - /api/tenants create: devuelve role 'Super Admin'
+  - /api/tenants join: devuelve role 'Miembro'
+  - /api/tenants list: calcula rol comparando createdBy con user.uid
+- AppContext: Nuevo estado activeTenantRole, switchTenant() recibe role
+- TenantSelectionScreen: Badge SUPER ADMIN dorado en tenants del creador
+- TenantSelectionScreen: Info visual "Serás Super Admin" al crear espacio
+- TenantSelectionScreen: Info visual "Entrarás como Miembro" al unirse
+- TopBar: Badge ADMIN en dropdown del tenant actual
+- 0 build errors, commit 76903cb, push completado
+
+Stage Summary:
+- FIX CRITICO: turbopack.root removido - esta era la causa del error en Vercel
+- Flujo definido: Login → Tenant Selection → (create=Super Admin / join=Miembro)
+- 1 tenant = auto-select, 0 = crear, varios = selector
+- Roles con badge visual dorado "SUPER ADMIN" en toda la UI
+- Commit: 76903cb, deploy a Vercel en progreso
+
