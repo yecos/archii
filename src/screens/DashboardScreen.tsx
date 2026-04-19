@@ -104,7 +104,10 @@ export default function DashboardScreen() {
       }).reduce((s, inv) => s + (inv.data.total || 0), 0);
       const monthPaid = invoices.filter((inv: any) => {
         if (!inv.data.paidDate) return false;
-        return inv.data.paidDate.startsWith(key);
+        try {
+          const d = inv.data.paidDate?.toDate ? inv.data.paidDate.toDate() : new Date(inv.data.paidDate);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === key;
+        } catch { return false; }
       }).reduce((s, inv) => s + (inv.data.total || 0), 0);
       data.push({ name: monthNames[d.getMonth()], facturado: monthInvoiced, cobrado: monthPaid });
     }
