@@ -23,6 +23,7 @@ export default function ProjectDetailScreen() {
     updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
+    rfis, submittals, punchItems,
   } = useApp();
 
   if (!currentProject) return null;
@@ -53,7 +54,7 @@ export default function ProjectDetailScreen() {
 
             {/* Tabs */}
             <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
-              {['Resumen', 'Tareas', 'Presupuesto', 'Archivos', 'Obra', 'Portal'].map(tab => (
+              {['Resumen', 'Tareas', 'Calidad', 'Presupuesto', 'Archivos', 'Obra', 'Portal'].map(tab => (
                 <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${forms.detailTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab }))}>{tab}</button>
               ))}
             </div>
@@ -108,6 +109,99 @@ export default function ProjectDetailScreen() {
                 </div>
               ))}
             </div>)}
+
+            {/* Tab: Calidad (RFIs, Submittals, Punch) */}
+            {forms.detailTab === 'Calidad' && (() => {
+              const projRFIs = rfis.filter((r: any) => r.data.projectId === selectedProjectId);
+              const projSubs = submittals.filter((s: any) => s.data.projectId === selectedProjectId);
+              const projPunch = punchItems.filter((p: any) => p.data.projectId === selectedProjectId);
+              const punchDone = projPunch.filter((p: any) => p.data.status === 'Completado').length;
+              const punchPct = projPunch.length > 0 ? Math.round((punchDone / projPunch.length) * 100) : 0;
+              return (<div className="space-y-5">
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-blue-500/10 rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-blue-400">{projRFIs.length}</div>
+                    <div className="text-[10px] text-blue-400/70">RFIs</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: any) => r.data.status === 'Abierto').length} abiertos</div>
+                  </div>
+                  <div className="bg-purple-500/10 rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-purple-400">{projSubs.length}</div>
+                    <div className="text-[10px] text-purple-400/70">Submittals</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: any) => s.data.status === 'Aprobado').length} aprobados</div>
+                  </div>
+                  <div className="bg-teal-500/10 rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-teal-400">{punchPct}%</div>
+                    <div className="text-[10px] text-teal-400/70">Punch List</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{punchDone}/{projPunch.length} items</div>
+                  </div>
+                </div>
+
+                {/* RFIs section */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[14px] font-semibold">❓ RFIs del proyecto</div>
+                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 cursor-pointer border border-blue-500/20" onClick={() => { setForms(p => ({ ...p, rfiProject: selectedProjectId, rfiSubject: '', rfiQuestion: '', rfiPriority: 'Media' })); openModal('rfi'); }}>+ Nuevo</button>
+                  </div>
+                  {projRFIs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin RFIs</div> : (
+                    <div className="space-y-2">
+                      {projRFIs.slice(0, 5).map((r: any) => (
+                        <div key={r.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">{r.data.number}</span>
+                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{r.data.subject}</div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${r.data.status === 'Abierto' ? 'bg-blue-500/15 text-blue-400' : r.data.status === 'Respondido' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{r.data.status}</span>
+                        </div>
+                      ))}
+                      {projRFIs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline" onClick={() => { /* navigate to RFIs filtered */ }}>+{projRFIs.length - 5} más...</div>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submittals section */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[14px] font-semibold">📋 Submittals del proyecto</div>
+                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20" onClick={() => { setForms(p => ({ ...p, subProject: selectedProjectId, subTitle: '', subDescription: '', subSpecification: '' })); openModal('submittal'); }}>+ Nuevo</button>
+                  </div>
+                  {projSubs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin submittals</div> : (
+                    <div className="space-y-2">
+                      {projSubs.slice(0, 5).map((s: any) => (
+                        <div key={s.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">{s.data.number}</span>
+                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{s.data.title}</div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${s.data.status === 'Aprobado' ? 'bg-emerald-500/15 text-emerald-400' : s.data.status === 'Rechazado' ? 'bg-red-500/15 text-red-400' : s.data.status === 'En revisión' ? 'bg-amber-500/15 text-amber-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{s.data.status}</span>
+                        </div>
+                      ))}
+                      {projSubs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projSubs.length - 5} más...</div>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Punch List section */}
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[14px] font-semibold">✅ Punch List del proyecto</div>
+                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 cursor-pointer border border-teal-500/20" onClick={() => { setForms(p => ({ ...p, punchProject: selectedProjectId, punchTitle: '', punchLocation: 'Otro', punchPriority: 'Media' })); openModal('punchItem'); }}>+ Nuevo</button>
+                  </div>
+                  <div className="relative h-2 bg-[var(--af-bg3)] rounded-full overflow-hidden mb-3">
+                    <div className="absolute h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all" style={{ width: `${punchPct}%` }} />
+                  </div>
+                  <div className="text-[11px] text-[var(--muted-foreground)] mb-3 text-right">{punchPct}% completado ({punchDone}/{projPunch.length})</div>
+                  {projPunch.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin items de punch list</div> : (
+                    <div className="space-y-2">
+                      {projPunch.slice(0, 5).map((p: any) => (
+                        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${p.data.status === 'Completado' ? 'bg-emerald-500/15 text-emerald-400' : p.data.status === 'En progreso' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>{p.data.status}</span>
+                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{p.data.title}</div>
+                          <span className="text-[10px] text-[var(--af-text3)]">{p.data.location}</span>
+                        </div>
+                      ))}
+                      {projPunch.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projPunch.length - 5} más...</div>}
+                    </div>
+                  )}
+                </div>
+              </div>);
+            })()}
 
             {/* Tab: Presupuesto */}
             {forms.detailTab === 'Presupuesto' && (<div>

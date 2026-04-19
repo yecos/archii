@@ -9,7 +9,7 @@ export default function CalendarScreen() {
     calFilterProject, calMonth, calSelectedDate, calYear, deleteMeeting,
     getUserName, meetings, openEditMeeting, openModal, projects,
     setCalFilterProject, setCalMonth, setCalSelectedDate, setCalYear, setEditingId,
-    setForms, tasks,
+    setForms, tasks, rfis, submittals, punchItems,
   } = useApp();
 
   return (
@@ -21,12 +21,30 @@ export default function CalendarScreen() {
             const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
             const daysInMonth = lastDay.getDate();
             const calTasks = tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado' && (calFilterProject === 'all' || t.data.projectId === calFilterProject));
+            const calRFIs = rfis.filter(r => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && (calFilterProject === 'all' || r.data.projectId === calFilterProject));
+            const calSubmittals = submittals.filter(s => s.data.dueDate && s.data.status !== 'Aprobado' && s.data.status !== 'Rechazado' && (calFilterProject === 'all' || s.data.projectId === calFilterProject));
+            const calPunch = punchItems.filter(p => p.data.dueDate && p.data.status !== 'Completado' && (calFilterProject === 'all' || p.data.projectId === calFilterProject));
             const todayStr = today.toISOString().split('T')[0];
             const getTasksForDay = (day: number) => {
               const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               return calTasks.filter(t => t.data.dueDate === dateStr);
             };
+            const getRFIsForDay = (day: number) => {
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return calRFIs.filter(r => r.data.dueDate === dateStr);
+            };
+            const getSubsForDay = (day: number) => {
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return calSubmittals.filter(s => s.data.dueDate === dateStr);
+            };
+            const getPunchForDay = (day: number) => {
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return calPunch.filter(p => p.data.dueDate === dateStr);
+            };
             const selectedDayTasks = calSelectedDate ? calTasks.filter(t => t.data.dueDate === calSelectedDate) : [];
+            const selectedDayRFIs = calSelectedDate ? calRFIs.filter(r => r.data.dueDate === calSelectedDate) : [];
+            const selectedDaySubs = calSelectedDate ? calSubmittals.filter(s => s.data.dueDate === calSelectedDate) : [];
+            const selectedDayPunch = calSelectedDate ? calPunch.filter(p => p.data.dueDate === calSelectedDate) : [];
             const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear((y: any) => y - 1); } else { setCalMonth((m: any) => m - 1); } setCalSelectedDate(null); };
             const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y: any) => y + 1); } else { setCalMonth((m: any) => m + 1); } setCalSelectedDate(null); };
 
@@ -110,6 +128,9 @@ export default function CalendarScreen() {
                             );
                           })}
                           {dayTasks.length > 3 && <div className="text-[8px] text-[var(--muted-foreground)] pl-1">+{dayTasks.length - 3} más</div>}
+                          {getRFIsForDay(day).slice(0, 2).map(r => <div key={r.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-blue-500/15 text-blue-400" title={`❓ ${r.data.subject}`}>❓ {r.data.number}</div>)}
+                          {getSubsForDay(day).slice(0, 1).map(s => <div key={s.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📋 ${s.data.title}`}>📋 {s.data.number}</div>)}
+                          {getPunchForDay(day).slice(0, 1).map(p => <div key={p.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-teal-500/15 text-teal-400" title={`✅ ${p.data.title}`}>✅ {p.data.title}</div>)}
                           {meetings.filter(m => m.data.date === dateStr).map(m => <div key={m.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📅 ${m.data.title} (${m.data.time})`}>📅 {m.data.time}</div>)}
                         </div>
                       </div>
@@ -153,6 +174,75 @@ export default function CalendarScreen() {
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {/* RFIs del día */}
+                  {selectedDayRFIs.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                      <div className="text-[12px] font-semibold text-blue-400 mb-2">❓ RFIs ({selectedDayRFIs.length})</div>
+                      <div className="space-y-2">
+                        {selectedDayRFIs.map(r => {
+                          const rfiProj = projects.find(p => p.id === r.data.projectId);
+                          const isOverdue = new Date(r.data.dueDate) < todayOnly;
+                          return (
+                            <div key={r.id} className={`border rounded-lg p-3 ${isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-blue-500/20 bg-blue-500/5'}`}>
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="text-[13px] font-medium">{r.data.number}: {r.data.subject}</div>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${r.data.priority === 'Alta' ? 'bg-red-500/15 text-red-400' : r.data.priority === 'Media' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'}`}>{r.data.priority}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
+                                {rfiProj && <span>📁 {rfiProj.data.name}</span>}
+                                <span className="text-blue-400">{r.data.status}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submittals del día */}
+                  {selectedDaySubs.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                      <div className="text-[12px] font-semibold text-purple-400 mb-2">📋 Submittals ({selectedDaySubs.length})</div>
+                      <div className="space-y-2">
+                        {selectedDaySubs.map(s => {
+                          const subProj = projects.find(p => p.id === s.data.projectId);
+                          return (
+                            <div key={s.id} className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5">
+                              <div className="text-[13px] font-medium mb-1">{s.data.number}: {s.data.title}</div>
+                              <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
+                                {subProj && <span>📁 {subProj.data.name}</span>}
+                                <span className="text-purple-400">{s.data.status}</span>
+                                {s.data.specification && <span>📄 {s.data.specification}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Punch items del día */}
+                  {selectedDayPunch.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                      <div className="text-[12px] font-semibold text-teal-400 mb-2">✅ Punch List ({selectedDayPunch.length})</div>
+                      <div className="space-y-2">
+                        {selectedDayPunch.map(p => {
+                          const punchProj = projects.find(pr => pr.id === p.data.projectId);
+                          return (
+                            <div key={p.id} className="border border-teal-500/20 rounded-lg p-3 bg-teal-500/5">
+                              <div className="text-[13px] font-medium mb-1">{p.data.title}</div>
+                              <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">
+                                {punchProj && <span>📁 {punchProj.data.name}</span>}
+                                <span className="text-teal-400">{p.data.status}</span>
+                                <span>{p.data.location}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 

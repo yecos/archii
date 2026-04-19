@@ -298,6 +298,95 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_rfis",
+      description: "Obtener lista de RFIs (Request for Information), opcionalmente filtrados por proyecto o estado.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Filtrar por nombre de proyecto" },
+          project_id: { type: "string", description: "Filtrar por ID de proyecto" },
+          status_filter: {
+            type: "string",
+            description: "Filtrar por estado",
+            enum: ["Abierto", "En revisión", "Respondido", "Cerrado"],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_rfi",
+      description: "Crear un nuevo RFI (Request for Information) en un proyecto.",
+      parameters: {
+        type: "object",
+        properties: {
+          subject: { type: "string", description: "Asunto del RFI" },
+          question: { type: "string", description: "Pregunta o consulta detallada" },
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          priority: {
+            type: "string",
+            description: "Prioridad",
+            enum: ["Alta", "Media", "Baja"],
+          },
+          assignee_name: { type: "string", description: "Nombre de la persona asignada" },
+          due_date: { type: "string", description: "Fecha límite en YYYY-MM-DD" },
+        },
+        required: ["subject", "question"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_submittals",
+      description: "Obtener lista de submittals (entregables), opcionalmente filtrados por proyecto o estado.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Filtrar por nombre de proyecto" },
+          project_id: { type: "string", description: "Filtrar por ID de proyecto" },
+          status_filter: {
+            type: "string",
+            description: "Filtrar por estado",
+            enum: ["Borrador", "En revisión", "Aprobado", "Rechazado", "Devuelto"],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_punch_items",
+      description: "Obtener lista de items de punch list (verificación de obra), opcionalmente filtrados por proyecto o ubicación.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Filtrar por nombre de proyecto" },
+          project_id: { type: "string", description: "Filtrar por ID de proyecto" },
+          status_filter: {
+            type: "string",
+            description: "Filtrar por estado",
+            enum: ["Pendiente", "En progreso", "Completado"],
+          },
+          location: {
+            type: "string",
+            description: "Filtrar por ubicación",
+            enum: ["Fachada", "Interior", "Estructura", "Instalaciones", "Acabados", "Terraza", "Zonas comunes", "Otro"],
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ─── SYSTEM PROMPT ───────────────────────────────────────────────────
@@ -305,8 +394,8 @@ const TOOLS = [
 const SYSTEM_PROMPT = `Eres ArchiFlow AI Agent, un asistente inteligente SUPERIOR especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Puedes REALIZAR ACCIONES directamente en la aplicación.
 
 CAPACIDADES:
-- CREAR y EDITAR tareas, proyectos, gastos, proveedores, reuniones
-- CONSULTAR datos de proyectos, equipo, presupuestos, inventario
+- CREAR y EDITAR tareas, proyectos, gastos, proveedores, reuniones, RFIs
+- CONSULTAR datos de proyectos, equipo, presupuestos, inventario, RFIs, Submittals, Punch List
 - ANALIZAR presupuestos y dar recomendaciones
 - PLANIFICAR cronogramas y fases de obra
 - OPTIMIZAR recursos y dar consejos profesionales
@@ -839,6 +928,86 @@ async function executeToolCall(
         });
 
         return `Tarea "${task.data.title}" actualizada a estado "${args.new_status}" exitosamente.`;
+      }
+
+      case "get_rfis": {
+        const rfiSnap = await db.collection("rfis").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allRFIs = rfiSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        if (args.project_id) {
+          allRFIs = allRFIs.filter((r: any) => r.data.projectId === args.project_id);
+        } else if (args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) allRFIs = allRFIs.filter((r: any) => r.data.projectId === proj.id);
+        }
+        if (args.status_filter) allRFIs = allRFIs.filter((r: any) => r.data.status === args.status_filter);
+        if (allRFIs.length === 0) return "No se encontraron RFIs con esos filtros.";
+        const lines = allRFIs.map((r: any) => `- **${r.data.number}** ${r.data.subject}: ${r.data.status} | Prioridad: ${r.data.priority || "N/A"} | Proyecto: ${r.data.projectId || "N/A"}${r.data.dueDate ? ` | Vence: ${r.data.dueDate}` : ""}`);
+        return `RFIs encontrados (${allRFIs.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_rfi": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+        }
+        let assigneeId: string | undefined;
+        if (args.assignee_name) {
+          const usersSnap = await db.collection("users").limit(50).get();
+          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const lower = args.assignee_name.toLowerCase();
+          const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
+          if (found) assigneeId = found.id;
+        }
+        const countSnap = await db.collection("rfis").where("tenantId", "==", tenantId).get();
+        const number = `RFI-${String(countSnap.size + 1).padStart(3, "0")}`;
+        const docRef = await db.collection("rfis").add({
+          number, subject: args.subject, question: args.question, response: "",
+          projectId: projectId || "", assignedTo: assigneeId || "",
+          priority: args.priority || "Media", status: "Abierto", dueDate: args.due_date || "",
+          tenantId, createdAt: ts, createdBy: userUid,
+        });
+        actions.push({ type: "rfi_created", label: "RFI creado", icon: "❓", details: `${number}: ${args.subject}`, success: true });
+        return `RFI "${number}" creado exitosamente [ID: ${docRef.id}]. Asunto: ${args.subject}, Prioridad: ${args.priority || "Media"}, Proyecto: ${projectId || "Sin asignar"}`;
+      }
+
+      case "get_submittals": {
+        const subSnap = await db.collection("submittals").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allSubs = subSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        if (args.project_id) {
+          allSubs = allSubs.filter((s: any) => s.data.projectId === args.project_id);
+        } else if (args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) allSubs = allSubs.filter((s: any) => s.data.projectId === proj.id);
+        }
+        if (args.status_filter) allSubs = allSubs.filter((s: any) => s.data.status === args.status_filter);
+        if (allSubs.length === 0) return "No se encontraron submittals con esos filtros.";
+        const lines = allSubs.map((s: any) => `- **${s.data.number}** ${s.data.title}: ${s.data.status}${s.data.specification ? ` | Spec: ${s.data.specification}` : ""}${s.data.dueDate ? ` | Vence: ${s.data.dueDate}` : ""}`);
+        return `Submittals encontrados (${allSubs.length}):\n${lines.join("\n")}`;
+      }
+
+      case "get_punch_items": {
+        const punchSnap = await db.collection("punchItems").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allPunch = punchSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        if (args.project_id) {
+          allPunch = allPunch.filter((p: any) => p.data.projectId === args.project_id);
+        } else if (args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) allPunch = allPunch.filter((p: any) => p.data.projectId === proj.id);
+        }
+        if (args.status_filter) allPunch = allPunch.filter((p: any) => p.data.status === args.status_filter);
+        if (args.location) allPunch = allPunch.filter((p: any) => p.data.location === args.location);
+        if (allPunch.length === 0) return "No se encontraron items de punch list con esos filtros.";
+        const lines = allPunch.map((p: any) => `- **${p.data.title}**: ${p.data.status} | ${p.data.priority || "Media"} | ${p.data.location || "Otro"}${p.data.dueDate ? ` | Vence: ${p.data.dueDate}` : ""}`);
+        return `Items de Punch List (${allPunch.length}):\n${lines.join("\n")}`;
       }
 
       default:

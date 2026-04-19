@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -31,6 +31,7 @@ export default function DashboardScreen() {
     loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
     dailyLogs, timeEntries, showToast, visibleProjects, companies,
+    rfis, submittals, punchItems,
   } = useApp();
 
   // Computed data
@@ -140,25 +141,37 @@ export default function DashboardScreen() {
       });
   }, [tasks, teamUsers]);
 
+  // RFIs, Submittals, Punch quick stats
+  const openRFIs = useMemo(() => rfis.filter((r: any) => r.data.status === 'Abierto' || r.data.status === 'En revisión').length, [rfis]);
+  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión').length, [submittals]);
+  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente').length, [punchItems]);
+  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date()).length, [rfis]);
+
   // Recent activity
   const recentActivity = useMemo(() => {
     const items: { id: string; type: string; title: string; subtitle: string; time: any; icon: string; color: string }[] = [];
-    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 5).forEach((t: any) => {
+    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 3).forEach((t: any) => {
       items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Tarea completada · ${projects.find((p: any) => p.id === t.data.projectId)?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
     });
-    expenses.slice(0, 5).forEach((e: any) => {
+    expenses.slice(0, 3).forEach((e: any) => {
       items.push({ id: e.id, type: 'expense', title: e.data.concept, subtitle: `${fmtCOP(Number(e.data.amount))} · ${e.data.category}`, time: e.data.createdAt, icon: '$', color: 'bg-[var(--af-accent)]' });
     });
-    dailyLogs.slice(0, 3).forEach((l: any) => {
-      items.push({ id: l.id, type: 'log', title: `Bitácora ${l.data.date}`, subtitle: `${(l.data.activities || []).length} actividades`, time: l.data.createdAt, icon: '📝', color: 'bg-blue-500' });
+    rfis.filter((r: any) => r.data.status !== 'Cerrado').slice(0, 3).forEach((r: any) => {
+      items.push({ id: r.id, type: 'rfi', title: r.data.subject || r.data.number, subtitle: `RFI ${r.data.status} · ${projects.find((p: any) => p.id === r.data.projectId)?.data?.name || ''}`, time: r.data.createdAt, icon: '?', color: 'bg-blue-500' });
+    });
+    submittals.filter((s: any) => s.data.status === 'En revisión').slice(0, 2).forEach((s: any) => {
+      items.push({ id: s.id, type: 'submittal', title: s.data.title || s.data.number, subtitle: `Submittal en revisión · ${projects.find((p: any) => p.id === s.data.projectId)?.data?.name || ''}`, time: s.data.createdAt, icon: '📋', color: 'bg-purple-500' });
+    });
+    punchItems.filter((p: any) => p.data.status !== 'Completado').slice(0, 2).forEach((p: any) => {
+      items.push({ id: p.id, type: 'punch', title: p.data.title, subtitle: `Punch ${p.data.status} · ${p.data.location || ''}`, time: p.data.createdAt, icon: '✅', color: 'bg-teal-500' });
     });
     items.sort((a, b) => {
       const ta = a.time?.toDate?.() || new Date(a.time) || new Date(0);
       const tb = b.time?.toDate?.() || new Date(b.time) || new Date(0);
       return tb.getTime() - ta.getTime();
     });
-    return items.slice(0, 8);
-  }, [tasks, expenses, dailyLogs, projects]);
+    return items.slice(0, 10);
+  }, [tasks, expenses, dailyLogs, projects, rfis, submittals, punchItems]);
 
   return (
     <div className="animate-fadeIn space-y-5">
@@ -191,7 +204,8 @@ export default function DashboardScreen() {
           { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
           { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
           { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
-          { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
+          { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Submittals', icon: <CircleHelp size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} en revisión` },
+          { val: openPunchItems, lbl: 'Punch List', icon: <ListChecks size={16} />, bg: 'bg-teal-500/10', iconColor: 'text-teal-400', sub: `${punchItems.length} items totales` },
         ].map((m, i) => (
           <div key={i} className={`af-kpi-card p-5 animate-fadeInUp stagger-${i + 1} hover:border-[var(--af-accent)]/30 transition-colors cursor-default`}>
             <div className="flex items-center justify-between mb-3">
@@ -203,6 +217,39 @@ export default function DashboardScreen() {
             <div className="text-[10px] text-[var(--af-text3)] mt-0.5">{m.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* ─── Phase 1 Quick Actions ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-blue-500/30 transition-colors" onClick={() => navigateTo('rfis')}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400"><CircleHelp size={16} /></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold">RFIs</div>
+              <div className="text-[10px] text-[var(--muted-foreground)]">{rfis.length} total · {openRFIs} abiertos{overdueRFIs > 0 ? ` · ${overdueRFIs} vencidos` : ''}</div>
+            </div>
+            {overdueRFIs > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />}
+          </div>
+        </div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-purple-500/30 transition-colors" onClick={() => navigateTo('submittals')}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400"><ClipboardList size={16} /></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold">Submittals</div>
+              <div className="text-[10px] text-[var(--muted-foreground)]">{submittals.length} total · {pendingSubmittals} por revisar</div>
+            </div>
+            {pendingSubmittals > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />}
+          </div>
+        </div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-teal-500/30 transition-colors" onClick={() => navigateTo('punchList')}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400"><ListChecks size={16} /></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold">Punch List</div>
+              <div className="text-[10px] text-[var(--muted-foreground)]">{punchItems.length} items · {openPunchItems} pendientes</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ─── Row 2: Projects + Activity ─── */}
