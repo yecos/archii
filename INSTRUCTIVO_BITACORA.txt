@@ -268,6 +268,15 @@ Si se necesita corregir algo, agregar nota aclaratoria.
     next.config.ts (+4, -2)
     src/contexts/AppContext.tsx (+13, -5)
 
+  Actualizacion posterior — Service Worker cache bust:
+    El usuario reportaba que la consola mostraba "Firebase ready: archiflow-c2855"
+    (proyecto viejo) y CSP bloqueando apis.google.com. Diagnostico: el service
+    worker v4 tenia cacheado el HTML con la config vieja de Firebase.
+    - Bumpeado CACHE_NAME a archiflow-v5 (limpia TODA la cache vieja)
+    - Agregados google.com, live.com, msauth.net, msftauth.net al skip list
+    - Fuerza al navegador a descargar HTML fresco con config archiflow-prod-2026
+    Commit: 90c8818
+
 2026-04-20 | FIX — No se ven las personas en la app (Race Condition en teamUsers)
   Estado: COMPLETADO
   Commit: 8644aac
