@@ -1,20 +1,26 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getInitials, avatarColor } from '@/lib/helpers';
+import ManageMembersModal from '@/components/layout/ManageMembersModal';
 
 export default function TeamScreen() {
   const {
     authUser, teamUsers, companies, tasks, forms, setForms,
     getMyRole, updateUserRole, updateUserCompany,
+    activeTenantId, activeTenantName, activeTenantRole,
   } = useApp();
+
+  const [showManageMembers, setShowManageMembers] = useState(false);
+  const myRole = getMyRole();
+  const canManage = myRole === 'Admin' || myRole === 'Director' || activeTenantRole === 'Super Admin';
 
   return (
     <div className="animate-fadeIn">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         {/* Company filter for team */}
-        {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
+        {(canManage) && companies.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
             <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
               👥 Todo el equipo
@@ -26,7 +32,17 @@ export default function TeamScreen() {
             ))}
           </div>
         )}
-        <div className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</span>
+          {canManage && (
+            <button
+              onClick={() => setShowManageMembers(true)}
+              className="px-3 py-1.5 rounded-full text-[12px] font-medium cursor-pointer transition-all whitespace-nowrap bg-[var(--af-accent)] text-background hover:opacity-90 border-none"
+            >
+              + Gestionar miembros
+            </button>
+          )}
+        </div>
       </div>
       {/* Role Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
@@ -42,12 +58,28 @@ export default function TeamScreen() {
           );
         })}
       </div>
+
+      {/* Empty state */}
+      {teamUsers.length === 0 && (
+        <div className="text-center py-16">
+          <div className="text-4xl mb-3">👥</div>
+          <p className="text-[var(--muted-foreground)] text-sm mb-4">No hay miembros en este tenant</p>
+          {canManage && (
+            <button
+              onClick={() => setShowManageMembers(true)}
+              className="px-6 py-2.5 rounded-xl bg-[var(--af-accent)] text-background text-sm font-medium cursor-pointer hover:opacity-90 border-none transition-all"
+            >
+              Agregar miembros
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Team Members List */}
       <div className="space-y-2">
         {teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).map(user => {
           const role = user.data.role || 'Miembro';
           const isMe = user.id === authUser?.uid;
-          const myRole = getMyRole();
           const canChangeRole = myRole === 'Admin' || myRole === 'Director';
           const canChangeCompany = myRole === 'Admin' || myRole === 'Director';
           const userTasks = tasks.filter(t => t.data.assigneeId === user.id);
@@ -99,6 +131,16 @@ export default function TeamScreen() {
           );
         })}
       </div>
+
+      {/* Manage Members Modal */}
+      {showManageMembers && activeTenantId && (
+        <ManageMembersModal
+          tenantId={activeTenantId}
+          tenantName={activeTenantName || ''}
+          onClose={() => setShowManageMembers(false)}
+          isCreator={activeTenantRole === 'Super Admin'}
+        />
+      )}
     </div>
   );
 }
