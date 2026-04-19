@@ -63,7 +63,7 @@ export const notifyWhatsApp = {
     taskTitle: string,
     newStatus: string
   ) {
-    const emoji = newStatus === 'Completado' ? '✅' : newStatus === 'En progreso' ? '🔄' : newStatus === 'En revisión' ? '👀' : '📌';
+    const emoji = newStatus === 'Completado' ? '✅' : newStatus === 'En progreso' ? '🔄' : newStatus === 'Revision' ? '👀' : '📌';
     await sendToUser(userId,
       `${emoji} *Tarea actualizada*\n\n*${taskTitle}*\nEstado: ${newStatus}`
     );

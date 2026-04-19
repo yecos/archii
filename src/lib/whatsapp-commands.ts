@@ -74,7 +74,7 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
     }
 
     // Filtrar y ordenar en JavaScript
-    const activeStatuses = ['Pendiente', 'En progreso', 'En revisión', 'Por hacer'];
+    const activeStatuses = ['Pendiente', 'En progreso', 'Revision', 'Por hacer'];
     const tasks = snap.docs
       .map((d: any) => ({ id: d.id, ...d.data() }))
       .filter(t => activeStatuses.includes(t.status))
@@ -94,7 +94,7 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
 
     tasks.forEach((t: any, i: number) => {
       const prio = t.priority === 'Alta' ? '🔴' : t.priority === 'Media' ? '🟡' : '🟢';
-      const status = t.status === 'En progreso' ? '🔄' : t.status === 'En revisión' ? '👀' : '⬜';
+      const status = t.status === 'En progreso' ? '🔄' : t.status === 'Revision' ? '👀' : '⬜';
       const due = t.dueDate ? ` — Vence: ${fmtDate(t.dueDate)}` : '';
       text += `${i + 1}. ${prio} ${status} *${t.title}*${due}\n`;
     });
