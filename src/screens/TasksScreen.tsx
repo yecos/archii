@@ -59,21 +59,11 @@ function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUse
 }
 
 export default function TasksScreen() {
-  const app = useApp() as any;
-  const changeTaskStatus = app.changeTaskStatus || (() => {});
-  const deleteTask = app.deleteTask || (() => {});
-  const forms = app.forms || {};
-  const getUserName = app.getUserName || ((uid: string) => uid);
-  const loading = app.loading || false;
-  const openEditTask = app.openEditTask || (() => {});
-  const openModal = app.openModal || (() => {});
-  const projects = app.projects || [];
-  const setForms = app.setForms || (() => {});
-  const tasks = app.tasks || [];
-  const toggleTask = app.toggleTask || (() => {});
-  const timeEntries = app.timeEntries || [];
-  const showToast = app.showToast || (() => {});
-  const teamUsers = app.teamUsers || [];
+  const {
+    changeTaskStatus, deleteTask, forms, getUserName, loading,
+    openEditTask, openModal, projects, setForms, tasks,
+    timeEntries, showToast, teamUsers, toggleTask,
+  } = useApp() as any;
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);

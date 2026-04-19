@@ -5,7 +5,6 @@ import { fmtDate } from '@/lib/helpers';
 import { RFI_STATUS_COLORS, RFI_STATUSES } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
-import { ChevronDown } from 'lucide-react';
 
 const PRIO_COLORS: Record<string, string> = {
   'Alta': 'bg-red-500/10 text-red-400 border-red-500/30',

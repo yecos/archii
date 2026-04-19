@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
@@ -30,6 +30,11 @@ export default function Sidebar({
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
 }: SidebarProps) {
+  const calendarBadge = useMemo(() => {
+    const count = tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length;
+    return count > 0 ? count : undefined;
+  }, [tasks]);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} className="stroke-current" /> },
     { id: 'profile', label: 'Mi Perfil', icon: <User size={18} className="stroke-current" /> },
@@ -52,7 +57,7 @@ export default function Sidebar({
     { id: 'suppliers', label: 'Proveedores', icon: <Store size={18} className="stroke-current" /> },
     { id: 'team', label: 'Equipo', icon: <Users size={18} className="stroke-current" />, badge: teamUsers.length },
     { id: 'invoices', label: 'Facturas', icon: <Receipt size={18} className="stroke-current" /> },
-    { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length > 0 ? tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length : undefined },
+    { id: 'calendar', label: 'Calendario', icon: <Calendar size={18} className="stroke-current" />, badge: calendarBadge },
     { id: 'portal', label: 'Portal cliente', icon: <Globe size={18} className="stroke-current" /> },
     { id: 'reports', label: 'Reportes', icon: <BarChart3 size={18} className="stroke-current" /> },
     { divider: true },

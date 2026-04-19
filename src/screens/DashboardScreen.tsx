@@ -30,7 +30,7 @@ export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
-    dailyLogs, timeEntries, showToast, visibleProjects, companies,
+    timeEntries, showToast, visibleProjects, companies,
     rfis, submittals, punchItems,
   } = useApp();
 
@@ -171,7 +171,7 @@ export default function DashboardScreen() {
       return tb.getTime() - ta.getTime();
     });
     return items.slice(0, 10);
-  }, [tasks, expenses, dailyLogs, projects, rfis, submittals, punchItems]);
+  }, [tasks, expenses, projects, rfis, submittals, punchItems]);
 
   return (
     <div className="animate-fadeIn space-y-5">
@@ -210,7 +210,7 @@ export default function DashboardScreen() {
           <div key={i} className={`af-kpi-card p-5 animate-fadeInUp stagger-${i + 1} hover:border-[var(--af-accent)]/30 transition-colors cursor-default`}>
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
-              {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+              {i === 3 && overdueRFIs > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
             </div>
             <div className="text-xl md:text-2xl font-bold leading-tight">{m.val}</div>
             <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5">{m.lbl}</div>

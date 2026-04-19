@@ -2438,6 +2438,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch { showToast('Error al guardar', 'error'); }
   };
 
+  const deleteCompany = async (id: string) => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error("[ArchiFlow]", err); showToast('Error', 'error'); } };
+
   const fileToBase64 = (file: any): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -3483,6 +3485,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     saveSupplier,
     deleteSupplier,
     saveCompany,
+    deleteCompany,
     uploadFile,
     deleteFile,
     initDefaultPhases,

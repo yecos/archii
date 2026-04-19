@@ -8,7 +8,7 @@ export default function ProfileScreen() {
   const {
     approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
     expenses, initials, meetings, msConnected, myRole,
-    openOneDriveForProject, projects, tasks, teamUsers, userName,
+    navigateTo, openOneDriveForProject, projects, tasks, teamUsers, userName,
   } = useApp();
 
   return (

@@ -289,3 +289,25 @@ Stage Summary:
 - Sistema de temas ahora tiene una sola fuente de verdad
 - Modo claro y oscuro consistentes en toda la app
 - Preparado para agregar futuros temas (midnight, forest, etc.)
+---
+Task ID: 4
+Agent: Super Z (Main)
+Task: Integrar Phase 1 (RFIs, Submittals, Punch List) con el resto de la app
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-phase1-integration-20260420
+
+Work Log:
+- Auditado puntos de integración faltantes (Dashboard, Calendar, Project Detail, AI Agent)
+- DashboardScreen: agregados rfis, submittals, punchItems al useApp() + KPI cards (RFIs+Submittals, Punch List) + Quick Actions row (3 cards clickeables con stats y pulso rojo para vencidos) + Actividad reciente enriquecida (RFIs, Submittals, Punch items)
+- CalendarScreen: agregados rfis, submittals, punchItems al useApp() + calRFIs/calSubmittals/calPunch filtrados + badges en días del calendario (❓ RFIs, 📋 Submittals, ✅ Punch) + detalle del día con secciones de RFIs, Submittals y Punch items
+- ProjectDetailScreen: nuevo tab "Calidad" entre Tareas y Presupuesto con stats (3 cards), listas de RFIs/Submittals/Punch del proyecto con botón +Nuevo para crear directamente, barra de progreso de Punch List
+- AI Agent (ai-agent/route.ts): 4 nuevas tools - get_rfis, create_rfi, get_submittals, get_punch_items con filtros por proyecto/estado/ubicación
+- Build verificado: 0 errores, push completado
+
+Stage Summary:
+- 4 archivos modificados: DashboardScreen.tsx, CalendarScreen.tsx, ProjectDetailScreen.tsx, ai-agent/route.ts
+- Total: +412 lineas, -12 lineas
+- Commit: a7fe673
+- Tag: backup-pre-phase1-integration-20260420
+- Deploy a Vercel en curso

@@ -1,11 +1,10 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getFirebase } from '@/lib/firebase-service';
 
 export default function CompaniesScreen() {
   const {
-    companies, projects, setEditingId, setForms, openModal, showToast,
+    companies, projects, deleteCompany, setEditingId, setForms, openModal, showToast,
   } = useApp();
 
   return (
@@ -30,7 +29,7 @@ export default function CompaniesScreen() {
                 <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setEditingId(c.id); setForms(p => ({ ...p, compName: c.data.name || '', compNit: c.data.nit || '', compAddress: c.data.address || '', compPhone: c.data.phone || '', compEmail: c.data.email || '', compLegal: c.data.legalName || '' })); openModal('company'); }} title="Editar">
                   <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={async () => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(c.id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } }} title="Eliminar">
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" onClick={() => deleteCompany(c.id)} title="Eliminar">
                   <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                 </button>
               </div>
