@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 
 /**
  * POST /api/whatsapp/send
@@ -63,8 +63,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: sentCount > 0, sent: sentCount, errors: errorCount, errorDetails: errors });
-  } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en send:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    const message = error instanceof Error ? error.message : "Error interno";
+    console.error("[ArchiFlow WhatsApp] Error en send:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

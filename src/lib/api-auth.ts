@@ -16,6 +16,19 @@ export interface AuthUser {
 }
 
 /**
+ * Error de autenticación con status code HTTP.
+ * Los callers pueden usar instanceof AuthError para manejar errores.
+ */
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'AuthError';
+    this.status = status;
+  }
+}
+
+/**
  * Authenticate a request by verifying the Firebase ID token from the Authorization header.
  * Returns the decoded user info on success, or null on failure.
  */
@@ -68,7 +81,7 @@ export async function authenticateRequest(
 }
 
 /**
- * Require authentication. Returns the user on success, or throws a 401 response.
+ * Require authentication. Returns the user on success, or throws an AuthError.
  * Usage: const user = await requireAuth(request);
  */
 export async function requireAuth(
@@ -77,10 +90,7 @@ export async function requireAuth(
   const user = await authenticateRequest(request);
 
   if (!user) {
-    throw NextResponse.json(
-      { error: "No autenticado. Se requiere un token válido." },
-      { status: 401 }
-    );
+    throw new AuthError("No autenticado. Se requiere un token válido.", 401);
   }
 
   return user;
@@ -88,7 +98,7 @@ export async function requireAuth(
 
 /**
  * Require authentication AND admin role.
- * Returns the user on success, or throws a 401/403 response.
+ * Returns the user on success, or throws an AuthError.
  * Usage: const user = await requireAdmin(request);
  */
 export async function requireAdmin(
@@ -100,10 +110,7 @@ export async function requireAdmin(
     console.warn(
       `[ArchiFlow Auth] Non-admin access attempt by ${user.email}`
     );
-    throw NextResponse.json(
-      { error: "No autorizado. Se requieren permisos de administrador." },
-      { status: 403 }
-    );
+    throw new AuthError("No autorizado. Se requieren permisos de administrador.", 403);
   }
 
   return user;
