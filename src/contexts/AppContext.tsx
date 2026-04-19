@@ -645,21 +645,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsubscribe();
   }, [ready]);
 
-  // Load team — filtered by active tenant members
+  // ALL users cache (from Firestore) — always up to date via onSnapshot
+  // This is the raw list before tenant filtering
+  const [allUsersCache, setAllUsersCache] = useState<TeamUser[]>([]);
+
+  // Load ALL users from Firestore (runs once when auth is ready)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser) { setAllUsersCache([]); return; }
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
-      const allUsers = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
-      // If we have an active tenant and its members list, filter to only show tenant members
-      if (activeTenantId && activeTenantMembers.length > 0) {
-        setTeamUsers(allUsers.filter((u: any) => activeTenantMembers.includes(u.id)));
-      } else {
-        setTeamUsers(allUsers);
-      }
+      const users = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+      setAllUsersCache(users);
     }, () => {});
     return () => unsub();
-  }, [ready, authUser, activeTenantId, activeTenantMembers]);
+  }, [ready, authUser]);
 
   // Listen to active tenant document for members array
   useEffect(() => {
@@ -675,6 +674,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
+
+  // Derive teamUsers from allUsersCache + activeTenantMembers
+  // This REACTS immediately when members change — no race condition
+  useEffect(() => {
+    if (activeTenantId && activeTenantMembers.length > 0) {
+      setTeamUsers(allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id)));
+    } else {
+      setTeamUsers(allUsersCache);
+    }
+  }, [allUsersCache, activeTenantId, activeTenantMembers]);
 
   // Load projects (tenant-filtered)
   useEffect(() => {
