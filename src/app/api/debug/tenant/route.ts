@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 
 /**
  * GET /api/debug/tenant
  * Temporal — diagnosticar estado de tenants y usuarios.
+ * PROTEGIDO: Solo administradores (requireAdmin).
  * Eliminar después de diagnosticar.
  */
 export async function GET(request: NextRequest) {
   let user: any;
   try {
-    user = await requireAuth(request);
+    user = await requireAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

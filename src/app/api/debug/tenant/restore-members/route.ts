@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
 
 /**
  * POST /api/debug/tenant/restore-members
  * Temporal — restaurar miembros de un tenant.
+ * PROTEGIDO: Solo administradores (requireAdmin).
  * Body: { tenantId: string, emails: string[] }
  * Eliminar después de diagnosticar.
  */
 export async function POST(request: NextRequest) {
   let user: any;
   try {
-    user = await requireAuth(request);
+    user = await requireAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

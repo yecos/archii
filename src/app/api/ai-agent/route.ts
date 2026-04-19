@@ -499,7 +499,7 @@ async function executeToolCall(
         if (args.project_id) {
           filtered = allTasks.filter((t: any) => t.data.projectId === args.project_id);
         } else if (args.project_name) {
-          const projSnap = await db.collection("projects").limit(20).get();
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
           const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
           const proj = findProjectByName(projects, args.project_name);
           if (proj) filtered = allTasks.filter((t: any) => t.data.projectId === proj.id);
@@ -590,7 +590,7 @@ async function executeToolCall(
         if (args.project_id) {
           allExpenses = allExpenses.filter((e: any) => e.data.projectId === args.project_id);
         } else if (args.project_name) {
-          const projSnap = await db.collection("projects").limit(20).get();
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
           const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
           const proj = findProjectByName(projects, args.project_name);
           if (proj) allExpenses = allExpenses.filter((e: any) => e.data.projectId === proj.id);

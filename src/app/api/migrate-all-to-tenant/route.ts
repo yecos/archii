@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminAuth, getAdminFieldValue } from "@/lib/firebase-admin";
 
 /**
@@ -8,20 +8,16 @@ import { getAdminDb, getAdminAuth, getAdminFieldValue } from "@/lib/firebase-adm
  * Migracion de emergencia: agrega TODOS los usuarios de Firebase Auth
  * al tenant especificado (o al unico tenant existente si solo hay uno).
  *
- * Tambien:
- * - Crea documentos users/{uid} para auth users que no tienen uno
- * - Migra documentos huérfanos (sin tenantId) al tenant
- * - Muestra reporte completo de lo que se hizo
+ * PROTEGIDO: Solo administradores (requireAdmin).
+ * TEMPORAL: eliminar despues de la migracion.
  *
  * Body (opcional):
- *   { tenantId?: string }  — Si no se proporciona, usa el unico tenant existente
- *
- * TEMPORAL: eliminar despues de la migracion.
+ *   { tenantId?: string }
  */
 export async function POST(request: NextRequest) {
   let user: any;
   try {
-    user = await requireAuth(request);
+    user = await requireAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
