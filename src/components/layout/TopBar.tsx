@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, ChevronRight, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
 
 export default function TopBar() {
   const {
