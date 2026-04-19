@@ -120,3 +120,21 @@ Stage Summary:
 - Flujo verificado: Login → Tenant Selection → Super Admin/Miembro (ya estaba correcto)
 - Commit: 4374fcd, deploy en vivo en https://archii-theta.vercel.app
 
+---
+Task ID: 1
+Agent: main
+Task: Fix 'useApp must be used within AppProvider' error + add tenant data migration
+
+Work Log:
+- Analyzed root cause: AppProvider was inside HomeContent.tsx which was loaded via dynamic() with ssr:false. In Next.js 16 + React 19, context from dynamically loaded components may not propagate correctly.
+- Created src/app/ClientProviders.tsx — a 'use client' wrapper component
+- Updated layout.tsx to wrap {children} with <ClientProviders>, moving AppProvider to the root layout level
+- Updated HomeContent.tsx to remove AppProvider wrapper (no longer needed, context now global)
+- Updated src/app/api/tenants/route.ts with migrateExistingData() function that migrates unassigned documents across 15 collections
+- Updated TenantSelectionScreen.tsx with migration toggle UI (auto-enabled for first tenant creation)
+
+Stage Summary:
+- Fixed critical loading bug: AppProvider now wraps all children at layout level
+- Added tenant creation with existing data migration
+- Collections handled: projects, tasks, expenses, suppliers, companies, meetings, galleryPhotos, invProducts, invCategories, invMovements, invTransfers, timeEntries, invoices, comments, generalMessages
+- Committed as 67453e5 and pushed to main — Vercel will auto-deploy
