@@ -324,16 +324,46 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      if (tenantData.createdBy !== user.uid) {
-        return NextResponse.json({ error: "Solo el creador puede agregar todos los usuarios" }, { status: 403 });
+      // Allow any member to add all users (not just creator)
+      const isMember = (tenantData.members || []).includes(user.uid) || tenantData.createdBy === user.uid;
+      if (!isMember) {
+        return NextResponse.json({ error: "No eres miembro de este tenant" }, { status: 403 });
       }
 
       const currentMembers: string[] = tenantData.members || [];
 
-      // Get all users
+      // Get all users (from both Firestore users collection and ensure all auth users have docs)
       const usersSnap = await db.collection("users").get();
       const allUids = usersSnap.docs.map(d => d.id);
       const uidsToAdd = allUids.filter(uid => !currentMembers.includes(uid));
+
+      // Also get Firebase Auth users that might not have a users/ doc yet
+      try {
+        const { getAdminAuth } = await import("@/lib/firebase-admin");
+        const adminAuth = getAdminAuth();
+        let pageToken: string | undefined;
+        do {
+          const listResult = await adminAuth.listUsers(1000, pageToken);
+          for (const authUser of listResult.users) {
+            if (!allUids.includes(authUser.uid) && !currentMembers.includes(authUser.uid)) {
+              uidsToAdd.push(authUser.uid);
+              // Create missing users/ document
+              const { getAdminFieldValue } = await import("@/lib/firebase-admin");
+              const fValue = getAdminFieldValue();
+              await db.collection("users").doc(authUser.uid).set({
+                name: authUser.displayName || (authUser.email || '').split('@')[0],
+                email: authUser.email || '',
+                photoURL: authUser.photoURL || '',
+                role: ['yecos11@gmail.com'].includes(authUser.email || '') ? 'Admin' : 'Miembro',
+                createdAt: fValue.serverTimestamp(),
+              });
+            }
+          }
+          pageToken = listResult.pageToken;
+        } while (pageToken);
+      } catch (err: any) {
+        console.warn('[Tenants] listUsers failed, using only Firestore users:', err.message);
+      }
 
       if (uidsToAdd.length > 0) {
         await db.collection("tenants").doc(tenantId).update({
