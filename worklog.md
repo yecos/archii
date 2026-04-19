@@ -45,3 +45,26 @@ Stage Summary:
 - Todos los datos aislados por tenant
 - Commit: c11e952, deploy en progreso a Vercel
 
+---
+Task ID: 2
+Agent: Super Z (Main)
+Task: Diagnosticar y corregir error "This page couldn't load" en Vercel
+
+Work Log:
+- Verificado que el build local compila sin errores (0 TS errors)
+- Probado servidor local con `npm run start` - responde HTTP 200 correctamente
+- Analizado todos los archivos importados por HomeContent.tsx - todos existen
+- Analizado layout.tsx, error.tsx, AppContext, TenantSelectionScreen, TopBar
+- Descubierto bug critico: /api/tenants/route.ts llamaba request.json() 3 veces
+  - Line 45: leer 'action' (primera lectura del body)
+  - Line 71: leer 'name' en create (segunda lectura - FALLA, body ya consumido)
+  - Line 95: leer 'code' en join (tercera lectura - FALLA, body ya consumido)
+- Corregido: ahora se lee el body UNA SOLA VEZ y se destructuran todos los campos
+- Verificado que ningun otro API route tiene el mismo bug
+- Build limpio, push completado (e701bf8)
+
+Stage Summary:
+- Bug corregido: request.json() llamado multiples veces en /api/tenants
+- La correccion permite que create/join tenant funcionen correctamente
+- Commit: e701bf8, deploy a Vercel en progreso
+
