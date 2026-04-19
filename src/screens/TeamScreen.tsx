@@ -56,8 +56,8 @@ export default function TeamScreen() {
           return (
             <div key={user.id} className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all ${isMe ? 'ring-1 ring-[var(--af-accent)]/30' : ''}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold border-2 ${avatarColor(user.id)} flex-shrink-0`} style={user.data.photoURL ? { backgroundImage: `url(${user.data.photoURL})`, backgroundSize: 'cover' } : {}}>
-                  {user.data.photoURL ? '' : getInitials(user.data.name)}
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold border-2 ${user.data.photoURL ? '' : avatarColor(user.id)} flex-shrink-0 overflow-hidden`}>
+                  {user.data.photoURL ? <img src={user.data.photoURL} alt="" className="w-full h-full object-cover" /> : getInitials(user.data.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

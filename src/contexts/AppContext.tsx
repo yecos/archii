@@ -616,14 +616,24 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
           if (!snap.exists) {
             await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
-          } else if (isAdminEmail) {
-            // Force admin role for ADMIN_EMAILS on every login
-            const current = snap.data()?.role;
-            if (current !== 'Admin') {
-              console.log('[ArchiFlow] Promoting', user.email, 'from', current, 'to Admin');
-              await ref.update({ role: 'Admin' });
+          } else {
+            // Existing user: sync photoURL and name from auth provider on every login
+            const updates: Record<string, any> = {};
+            const existing = snap.data() || {};
+            if ((user.photoURL || '') !== (existing.photoURL || '')) {
+              updates.photoURL = user.photoURL || '';
+            }
+            if ((user.displayName || '') && (user.displayName || '') !== (existing.name || '')) {
+              updates.name = user.displayName;
+            }
+            if (isAdminEmail && existing.role !== 'Admin') {
+              updates.role = 'Admin';
+              console.log('[ArchiFlow] Promoting', user.email, 'from', existing.role, 'to Admin');
+            }
+            if (Object.keys(updates).length > 0) {
+              await ref.update(updates);
+            }
           }
-        }
       }
       setLoading(false);
       } catch (authErr: any) {

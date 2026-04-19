@@ -129,11 +129,8 @@ export default function Sidebar({
 
           {/* User profile at bottom */}
           <div className="border-t border-[var(--border)] mt-4 pt-3 flex items-center gap-3 px-1" onClick={() => handleNavClick('profile')}>
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${avatarColor(authUser?.uid)}`}
-              style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}
-            >
-              {authUser?.photoURL ? '' : initials}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>
+              {authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[14px] font-medium truncate">{userName}</div>
@@ -172,7 +169,7 @@ export default function Sidebar({
           ))}
         </div>
         <div className="border-t border-[var(--border)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${avatarColor(authUser?.uid)} ${authUser?.photoURL ? '' : ''}`} style={authUser?.photoURL ? { backgroundImage: `url(${authUser.photoURL})`, backgroundSize: 'cover' } : {}}>{authUser?.photoURL ? '' : initials}</div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>{authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}</div>
           <div className={`flex-1 min-w-0 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{ROLE_ICONS[displayRole] || '👤'} {displayRole}</div></div>
         </div>
       </aside>
