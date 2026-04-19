@@ -24,10 +24,11 @@ const nextConfig: NextConfig = {
             value: [
               // default-src: fuentes permitidas por defecto
               "default-src 'self';",
-              // script-src: scripts del SDK Firebase, Google Maps, y UUID CDN
+              // script-src: scripts del SDK Firebase, Google Identity Services, Google Maps, y UUID CDN
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "  https://www.gstatic.com",
               "  https://*.googleapis.com",
+              "  https://apis.google.com",
               "  https://cdn.jsdelivr.net;",
               // style-src: fuentes de Google y estilos inline de Firebase
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
@@ -35,10 +36,11 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com;",
               // img-src: imágenes de perfiles, storage, y favicons
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://*.graph.facebook.com https://*.googleapis.com;",
-              // connect-src: endpoints de Firebase Auth, Firestore, Google, Microsoft OAuth
+              // connect-src: endpoints de Firebase Auth, Firestore, Google Identity Services, Microsoft OAuth
               "connect-src 'self'",
               "  https://*.firebaseio.com",
               "  https://*.googleapis.com",
+              "  https://apis.google.com",
               "  https://www.gstatic.com",
               "  https://securetoken.googleapis.com",
               "  https://identitytoolkit.googleapis.com",

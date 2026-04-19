@@ -1321,6 +1321,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       console.log('[ArchiFlow Auth] Attempting Google login...');
       const fb = getFirebase();
+      const projectId = fb.apps?.[0]?.options?.projectId || 'unknown';
+      console.log('[ArchiFlow Auth] Firebase project:', projectId);
       // IMPORTANT: GoogleAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
       const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -1332,15 +1334,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
-        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains.',
+        'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains. Agrega archii-theta.vercel.app',
         'auth/invalid-credential': 'Credenciales de Google inválidas.',
         'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Microsoft o Email). Intenta con ese método.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
-        'auth/internal-error': 'Error interno de Firebase. Verifica que Google esté habilitado en Firebase Console > Authentication > Sign-in method.',
+        'auth/internal-error': 'Error interno de Firebase. Google puede no estar habilitado como proveedor. Ve a Firebase Console > Authentication > Sign-in method > Google > Habilitar.',
+        'auth/invalid-api-key': 'API Key inválida. Verifica la configuración de Firebase.',
       };
-      // If popup fails, try redirect as fallback (better for mobile)
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
-        console.log('[ArchiFlow Auth] Popup failed, trying redirect fallback for Google...');
+      // If popup fails with internal-error, popup-blocked or unauthorized-domain, try redirect as fallback
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain' || e.code === 'auth/internal-error') {
+        console.log('[ArchiFlow Auth] Popup failed (' + e.code + '), trying redirect fallback for Google...');
         try {
           const fb2 = getFirebase();
           const provider2 = new fb2.auth.GoogleAuthProvider();
