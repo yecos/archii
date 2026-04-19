@@ -39,6 +39,107 @@ async function ensureUniqueCode(db: any): Promise<string> {
   return code;
 }
 
+/**
+ * Migrate existing unassigned data to a new tenant.
+ * Updates all documents in the collections that either:
+ * - Don't have a 'tenantId' field
+ * - Have 'tenantId' set to null or empty string
+ *
+ * Each collection may use different field names for the user reference:
+ * - Most use 'createdBy'
+ * - Comments and messages use 'userId'
+ *
+ * This is used when creating a new tenant and the user wants to
+ * assign their existing data to the new tenant for isolation.
+ */
+async function migrateExistingData(
+  db: any,
+  tenantId: string,
+  userId: string
+): Promise<Record<string, number>> {
+  // Mapping: collection name -> possible user reference field names
+  const collectionConfig: Record<string, string[]> = {
+    'projects': ['createdBy'],
+    'tasks': ['createdBy'],
+    'expenses': ['createdBy'],
+    'suppliers': ['createdBy'],
+    'companies': ['createdBy'],
+    'meetings': ['createdBy'],
+    'galleryPhotos': ['createdBy'],
+    'invProducts': ['createdBy'],
+    'invCategories': ['createdBy'],
+    'invMovements': ['createdBy'],
+    'invTransfers': ['createdBy'],
+    'timeEntries': ['createdBy'],
+    'invoices': ['createdBy', 'userId'],
+    'comments': ['userId'],
+    'generalMessages': ['userId', 'senderId'],
+  };
+
+  const counts: Record<string, number> = {};
+  let totalMigrated = 0;
+
+  for (const [collectionName, userFields] of Object.entries(collectionConfig)) {
+    try {
+      let migrated = 0;
+      let batch = db.batch();
+      let batchCount = 0;
+
+      // Try each user field until we find documents
+      for (const userField of userFields) {
+        try {
+          const snap = await db.collection(collectionName)
+            .where(userField, '==', userId)
+            .limit(500)
+            .get();
+
+          for (const doc of snap.docs) {
+            const data = doc.data();
+            const currentTenantId = data.tenantId;
+            // Only migrate if not already assigned to a tenant
+            if (!currentTenantId || currentTenantId === '' || currentTenantId === null) {
+              batch.update(doc.ref, { tenantId });
+              batchCount++;
+              migrated++;
+
+              if (batchCount >= 450) {
+                await batch.commit();
+                batch = db.batch();
+                batchCount = 0;
+              }
+            }
+          }
+
+          // If we found documents with this field, no need to try other fields
+          if (!snap.empty) break;
+        } catch (queryErr: any) {
+          // If the field doesn't exist in the collection, the query will fail
+          // Skip to the next user field
+          console.warn(`[Tenants] Query on ${collectionName}.${userField} failed:`, queryErr.message);
+          continue;
+        }
+      }
+
+      // Commit remaining
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
+      if (migrated > 0) {
+        counts[collectionName] = migrated;
+        totalMigrated += migrated;
+        console.log(`[Tenants] Migrated ${migrated} documents from ${collectionName} to tenant ${tenantId}`);
+      }
+    } catch (err) {
+      console.error(`[Tenants] Error migrating ${collectionName}:`, err);
+      counts[collectionName] = -1; // Error marker
+    }
+  }
+
+  console.log(`[Tenants] Total migrated: ${totalMigrated} documents to tenant ${tenantId}`);
+  return counts;
+}
+
 export async function POST(request: NextRequest) {
   // Auth check first (reads Authorization header, not body)
   let user: any;
@@ -94,6 +195,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "El nombre debe tener al menos 2 caracteres" }, { status: 400 });
       }
 
+      const migrateExisting = body.migrateExisting === true;
       const tenantCode = await ensureUniqueCode(db);
       const tenantRef = await db.collection("tenants").add({
         name: name.trim(),
@@ -105,11 +207,19 @@ export async function POST(request: NextRequest) {
 
       console.log(`[Tenants] Created tenant "${name.trim()}" (${tenantCode}) by ${user.email} — Super Admin`);
 
+      // Migrate existing unassigned data to this new tenant
+      let migratedCounts: Record<string, number> | null = null;
+      if (migrateExisting) {
+        migratedCounts = await migrateExistingData(db, tenantRef.id, user.uid);
+        console.log(`[Tenants] Migration complete for tenant ${tenantRef.id}:`, migratedCounts);
+      }
+
       return NextResponse.json({
         tenantId: tenantRef.id,
         name: name.trim(),
         code: tenantCode,
         role: 'Super Admin', // Creator is always Super Admin
+        migratedCounts,
       });
     }
 

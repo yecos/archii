@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import AppProvider, { useApp } from '@/contexts/AppContext';
+import { useApp } from '@/contexts/AppContext';
 import { Toaster } from 'sonner';
 import { Bell, X } from 'lucide-react';
 
@@ -285,12 +285,8 @@ function AppContent() {
   );
 }
 
-/* ─── Entry point — page.tsx handles lazy loading via dynamic() ─── */
+/* ─── Entry point — AppProvider is now in layout.tsx via ClientProviders ─── */
 
 export default function Home() {
-  return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
-  );
+  return <AppContent />;
 }

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getAuthHeaders } from '@/lib/firebase-service';
-import { Building2, Plus, ArrowRight, Users, Copy, Check, Sparkles, Crown, UserCheck, Shield } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Users, Copy, Check, Sparkles, Crown, UserCheck, Shield, Database, AlertTriangle } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -26,6 +26,15 @@ export default function TenantSelectionScreen() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [migrateExisting, setMigrateExisting] = useState(false); // Default: off, set to true when tenants exist
+  const [migratedCounts, setMigratedCounts] = useState<Record<string, number> | null>(null);
+
+  // Auto-enable migration if this is the first tenant (user has existing unassigned data)
+  useEffect(() => {
+    if (tenants.length === 0) {
+      setMigrateExisting(true);
+    }
+  }, [tenants.length]);
 
   // Load user's tenants
   const loadTenants = useCallback(async () => {
@@ -66,19 +75,26 @@ export default function TenantSelectionScreen() {
       return;
     }
     setCreating(true);
+    setMigratedCounts(null);
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/tenants', {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', name }),
+        body: JSON.stringify({ action: 'create', name, migrateExisting }),
       });
       const data = await res.json();
       if (data.error) {
         showToast(data.error, 'error');
         return;
       }
-      showToast(`Espacio "${data.name}" creado — Eres Super Admin`);
+      if (data.migratedCounts) {
+        setMigratedCounts(data.migratedCounts);
+        const total = Object.values(data.migratedCounts).reduce((sum: number, v: any) => sum + (v > 0 ? v : 0), 0);
+        showToast(`Espacio "${data.name}" creado con ${total} datos migrados`);
+      } else {
+        showToast(`Espacio "${data.name}" creado — Eres Super Admin`);
+      }
       switchTenant(data.tenantId, data.name, data.role || 'Super Admin');
     } catch (err) {
       console.error('[TenantSelection] Create error:', err);
@@ -264,6 +280,28 @@ export default function TenantSelectionScreen() {
                 <div className="text-[11px] text-[var(--muted-foreground)]">Tendrás control total del espacio. Comparte el código para invitar miembros.</div>
               </div>
             </div>
+
+            {/* Migrate existing data toggle */}
+            <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => setMigrateExisting(!migrateExisting)}
+                  className={`w-full flex items-start gap-3 px-3.5 py-3 rounded-lg border transition-all text-left cursor-pointer ${migrateExisting ? 'bg-[var(--af-accent)]/10 border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}
+                >
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${migrateExisting ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--muted-foreground)]'}`}>
+                    {migrateExisting && <Check size={12} className="stroke-background" strokeWidth={3} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Database size={14} className={`flex-shrink-0 ${migrateExisting ? 'stroke-[var(--af-accent)]' : 'stroke-[var(--muted-foreground)]'}`} />
+                      <span className="text-xs font-semibold">Migrar datos existentes</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--muted-foreground)] mt-1 leading-relaxed">
+                      Asigna tus proyectos, tareas, gastos y demas datos actuales a este nuevo espacio para mantenerlos aislados.
+                    </p>
+                  </div>
+                </button>
+              </div>
 
             <div className="mb-4">
               <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre del espacio</label>

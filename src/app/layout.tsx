@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import ClientProviders from "./ClientProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -115,7 +116,9 @@ export default function RootLayout({
             });
           }
         ` }} />
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );
