@@ -2356,19 +2356,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const type = forms.invMovType || 'Entrada';
-      const data = { productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid };
-      await db.collection('invMovements').add(data);
-      // Update warehouseStock map
-      const product = invProducts.find(p => p.id === productId);
-      if (product) {
-        const ws = buildWarehouseStock(product);
+      // Use transaction to prevent race condition on stock update
+      const productDocRef = db.collection('invProducts').doc(productId);
+      await db.runTransaction(async (transaction: any) => {
+        const productDoc = await transaction.get(productDocRef);
+        if (!productDoc.exists) throw new Error('Producto no encontrado');
+        const ws = buildWarehouseStock({ id: productId, data: productDoc.data() });
         ws[warehouse] = type === 'Entrada' ? (ws[warehouse] || 0) + qty : Math.max(0, (ws[warehouse] || 0) - qty);
         const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-        await db.collection('invProducts').doc(productId).update({ stock: newTotal, warehouseStock: ws, updatedAt: ts });
-      }
+        transaction.update(productDocRef, { stock: newTotal, warehouseStock: ws, updatedAt: ts });
+      });
+      // Record the movement after successful stock update
+      await db.collection('invMovements').add({ productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid });
       showToast(`${type === 'Entrada' ? 'Entrada' : 'Salida'} registrada en ${warehouse}: ${qty} uds`);
       closeModal('invMovement'); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' }));
-    } catch { showToast('Error al registrar movimiento', 'error'); }
+    } catch (err: any) { showToast(err.message || 'Error al registrar movimiento', 'error'); }
   };
 
   const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -2382,16 +2384,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      // Use transaction to prevent race condition on stock update
+      const productDocRef = db.collection('invProducts').doc(productId);
+      await db.runTransaction(async (transaction: any) => {
+        const productDoc = await transaction.get(productDocRef);
+        if (!productDoc.exists) throw new Error('Producto no encontrado');
+        const ws = buildWarehouseStock({ id: productId, data: productDoc.data() });
+        const fromStock = ws[from] || 0;
+        if (qty > fromStock) throw new Error(`Stock insuficiente en ${from}. Disponible: ${fromStock}`);
+        ws[from] = Math.max(0, fromStock - qty);
+        ws[to] = (ws[to] || 0) + qty;
+        const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
+        transaction.update(productDocRef, { stock: newTotal, warehouseStock: ws, updatedAt: ts });
+      });
+      // Save transfer record after successful stock update
       const product = invProducts.find(p => p.id === productId);
-      const ws = product ? buildWarehouseStock(product) : {};
-      const fromStock = ws[from] || 0;
-      if (qty > fromStock) { showToast(`Stock insuficiente en ${from}. Disponible: ${fromStock}`, 'error'); return; }
-      // Execute transfer: update warehouseStock
-      ws[from] = Math.max(0, fromStock - qty);
-      ws[to] = (ws[to] || 0) + qty;
-      const newTotal = Object.values(ws).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-      await db.collection('invProducts').doc(productId).update({ stock: newTotal, warehouseStock: ws, updatedAt: ts });
-      // Save transfer record
       await db.collection('invTransfers').add({
         productId, productName: product?.data.name || '', fromWarehouse: from, toWarehouse: to, quantity: qty,
         status: 'Completada', date: forms.invTrDate || new Date().toISOString().split('T')[0],
@@ -2399,7 +2406,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       });
       showToast(`Transferencia completada: ${qty} uds de ${from} → ${to}`);
       closeModal('invTransfer'); setForms(p => ({ ...p, invTrProduct: '', invTrFrom: '', invTrTo: '', invTrQty: '', invTrDate: '', invTrNotes: '' }));
-    } catch { showToast('Error en transferencia', 'error'); }
+    } catch (err: any) { showToast(err.message || 'Error en transferencia', 'error'); }
   };
 
   const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
