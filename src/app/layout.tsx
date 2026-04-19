@@ -96,6 +96,17 @@ export default function RootLayout({
             else document.documentElement.classList.remove('dark');
           } catch(e) { document.documentElement.classList.add('dark'); }
         ` }} />
+
+        {/* Global error handler — catch and log client-side errors */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.onerror = function(msg, url, line, col, err) {
+            console.error('[ArchiFlow Global Error]', msg, url, line, col, err);
+            return false;
+          };
+          window.addEventListener('unhandledrejection', function(e) {
+            console.error('[ArchiFlow Unhandled Promise]', e.reason);
+          });
+        ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
         {/* Register Service Worker */}

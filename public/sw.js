@@ -1,4 +1,4 @@
-const CACHE_NAME = 'archiflow-v3';
+const CACHE_NAME = 'archiflow-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
