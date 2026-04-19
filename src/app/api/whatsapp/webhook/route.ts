@@ -142,7 +142,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
 
   // Parece un email (contiene @) → vincular directamente
   if (msg.includes("@")) {
-    const email = msg.replace(/[^a-zA-Z0-9@._-]/g, "").toLowerCase();
+    const email = msg.replace(/[^a-zA-Z0-9@._+\-]/g, "").toLowerCase();
 
     // Verificar que el email existe en Firestore
     const userSnap = await db
