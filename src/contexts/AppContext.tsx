@@ -655,8 +655,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
       const users = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+      console.log('[ArchiFlow Team] allUsersCache loaded:', users.length, 'users — UIDs:', users.map((u: any) => u.id));
       setAllUsersCache(users);
-    }, () => {});
+    }, (err: any) => {
+      console.error('[ArchiFlow Team] ERROR loading users collection:', err.code, err.message);
+      // If permission denied, try fetching just the current user as fallback
+      if (err.code === 'permission-denied') {
+        console.warn('[ArchiFlow Team] Permission denied on users collection — checking Firestore rules');
+        // Fallback: at least show the current user
+        db.collection('users').doc(authUser.uid).get().then(doc => {
+          if (doc.exists) {
+            setAllUsersCache([{ id: doc.id, data: doc.data() }]);
+          }
+        }).catch(() => {});
+      }
+    });
     return () => unsub();
   }, [ready, authUser]);
 
@@ -664,23 +677,33 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
     const db = getFirebase().firestore();
+    console.log('[ArchiFlow Team] Listening to tenant members:', activeTenantId);
     const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
       if (snap.exists) {
         const data = snap.data();
-        setActiveTenantMembers(data?.members || []);
+        const members = data?.members || [];
+        console.log('[ArchiFlow Team] Tenant members loaded:', members.length, '— UIDs:', members);
+        setActiveTenantMembers(members);
       } else {
+        console.warn('[ArchiFlow Team] Tenant document does NOT exist:', activeTenantId);
         setActiveTenantMembers([]);
       }
-    }, () => {});
+    }, (err: any) => {
+      console.error('[ArchiFlow Team] ERROR loading tenant document:', err.code, err.message);
+    });
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
   // Derive teamUsers from allUsersCache + activeTenantMembers
   // This REACTS immediately when members change — no race condition
   useEffect(() => {
+    console.log('[ArchiFlow Team] Deriving teamUsers — allUsers:', allUsersCache.length, 'members:', activeTenantMembers.length, 'tenantId:', activeTenantId);
     if (activeTenantId && activeTenantMembers.length > 0) {
-      setTeamUsers(allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id)));
+      const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
+      console.log('[ArchiFlow Team] Filtered teamUsers:', filtered.length);
+      setTeamUsers(filtered);
     } else {
+      console.log('[ArchiFlow Team] No tenant filter — showing all', allUsersCache.length, 'users');
       setTeamUsers(allUsersCache);
     }
   }, [allUsersCache, activeTenantId, activeTenantMembers]);
