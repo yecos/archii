@@ -260,8 +260,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Chat search within conversation
   const [chatMsgSearch, setChatMsgSearch] = useState('');
 
-  // Theme state
-  const [darkMode, setDarkMode] = useState(true);
+  // Theme state — derived from ui-store (single source of truth)
+  const darkMode = useUIStore(s => s.theme === 'dark');
+  const toggleTheme = useUIStore(s => s.toggleTheme);
 
   // PWA Install state
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -308,15 +309,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [showTenantSelector, setShowTenantSelector] = useState(false);
   const [activeTenantMembers, setActiveTenantMembers] = useState<string[]>([]); // UIDs of tenant members
 
-  // Init theme + restore tenant selection
+  // Restore tenant selection from localStorage (will be validated against server after auth)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('archiflow-theme');
-      const isDark = saved ? saved === 'dark' : true;
-      setDarkMode(isDark);
-      document.documentElement.classList.toggle('dark', isDark);
-    } catch (err) { console.error("[ArchiFlow]", err); }
-    // Restore tenant from localStorage (will be validated against server after auth)
     try {
       const savedTenantId = localStorage.getItem('archiflow-active-tenant');
       const savedTenantName = localStorage.getItem('archiflow-active-tenant-name');
@@ -383,14 +377,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const dismissInstallBanner = () => {
     setShowInstallBanner(false);
     localStorage.setItem('archiflow-install-dismissed', String(Date.now()));
-  };
-
-  const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('archiflow-theme', next ? 'dark' : 'light');
-    showToast(next ? 'Modo nocturno activado' : 'Modo diurno activado');
   };
 
   // Toast helper (usa Sonner por debajo)

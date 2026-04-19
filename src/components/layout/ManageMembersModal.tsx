@@ -157,18 +157,18 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div>
-            <h2 className="text-lg font-bold text-white">Gestionar Miembros</h2>
-            <p className="text-sm text-gray-400">{tenantName}</p>
+            <h2 className="text-lg font-bold text-[var(--foreground)]">Gestionar Miembros</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">{tenantName}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl p-1">✕</button>
+          <button onClick={onClose} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-xl p-1 cursor-pointer">✕</button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-[var(--border)]">
           {[
             { key: 'members' as const, label: `Miembros (${members.length})` },
             { key: 'add' as const, label: `Agregar (${availableUsers.length})` },
@@ -177,8 +177,8 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                tab === t.key ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'
+              className={`flex-1 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                tab === t.key ? 'text-[var(--af-accent)] border-b-2 border-[var(--af-accent)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
               }`}
             >
               {t.label}
@@ -190,28 +190,28 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : tab === 'members' ? (
             <div className="space-y-2">
               {members.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">No hay miembros en este tenant</p>
+                <p className="text-[var(--muted-foreground)] text-center py-8">No hay miembros en este tenant</p>
               ) : (
                 members.map((m: any) => (
-                  <div key={m.uid} className="flex items-center gap-3 p-3 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                  <div key={m.uid} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--border)]">
                     {m.photoURL ? (
                       <img src={m.photoURL} alt={m.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[var(--af-accent)] flex items-center justify-center text-[var(--primary-foreground)] text-sm font-bold flex-shrink-0">
                         {getInitials(m.name)}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-medium truncate">{m.name}</p>
-                      <p className="text-gray-400 text-xs truncate">{m.email}</p>
+                      <p className="text-[var(--foreground)] text-sm font-medium truncate">{m.name}</p>
+                      <p className="text-[var(--muted-foreground)] text-xs truncate">{m.email}</p>
                     </div>
                     {m.isCreator && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex-shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--af-accent)]/15 text-[var(--af-accent)] border border-[var(--af-accent)]/30 flex-shrink-0">
                         ADMIN
                       </span>
                     )}
@@ -219,7 +219,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                       <button
                         onClick={() => handleRemoveMember(m.uid, m.name)}
                         disabled={actionLoading}
-                        className="text-gray-500 hover:text-red-400 text-sm p-1 flex-shrink-0 transition-colors"
+                        className="text-[var(--af-text3)] hover:text-red-400 text-sm p-1 flex-shrink-0 transition-colors cursor-pointer"
                         title="Eliminar del tenant"
                       >
                         ✕
@@ -232,7 +232,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                 <button
                   onClick={handleAddAllUsers}
                   disabled={actionLoading}
-                  className="w-full mt-3 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  className="w-full mt-3 py-3 rounded-xl bg-[var(--af-accent)] hover:opacity-90 text-[var(--primary-foreground)] text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer border-none"
                 >
                   {actionLoading ? 'Agregando...' : `Agregar todos los usuarios (${availableUsers.length})`}
                 </button>
@@ -243,8 +243,8 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
               {/* Add by selecting from available users */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-300">Usuarios disponibles</label>
-                  <button onClick={selectAllVisible} className="text-xs text-blue-400 hover:text-blue-300">
+                  <label className="text-sm font-medium text-[var(--foreground)]">Usuarios disponibles</label>
+                  <button onClick={selectAllVisible} className="text-xs text-[var(--af-accent)] hover:opacity-80 cursor-pointer">
                     Seleccionar todos los visibles
                   </button>
                 </div>
@@ -253,28 +253,28 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                   placeholder="Buscar por nombre o email..."
                   value={searchAvailable}
                   onChange={e => setSearchAvailable(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 mb-2"
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--af-bg3)] border border-[var(--input)] text-[var(--foreground)] text-sm placeholder-[var(--af-text3)] focus:outline-none focus:border-[var(--af-accent)] mb-2"
                 />
                 <div className="max-h-40 overflow-y-auto space-y-1">
                   {filteredAvailable.length === 0 ? (
-                    <p className="text-gray-500 text-sm text-center py-4">No hay usuarios disponibles</p>
+                    <p className="text-[var(--af-text3)] text-sm text-center py-4">No hay usuarios disponibles</p>
                   ) : (
                     filteredAvailable.map(u => (
                       <label
                         key={u.uid}
                         className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedUsers.has(u.uid) ? 'bg-blue-600/20 border border-blue-500/50' : 'bg-gray-800/50 border border-transparent hover:bg-gray-800'
+                          selectedUsers.has(u.uid) ? 'bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/40' : 'bg-[var(--af-bg3)] border border-transparent hover:bg-[var(--af-bg4)]'
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={selectedUsers.has(u.uid)}
                           onChange={() => toggleSelect(u.uid)}
-                          className="rounded border-gray-500"
+                          className="rounded border-[var(--input)]"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm truncate">{u.name}</p>
-                          <p className="text-gray-400 text-xs truncate">{u.email}</p>
+                          <p className="text-[var(--foreground)] text-sm truncate">{u.name}</p>
+                          <p className="text-[var(--muted-foreground)] text-xs truncate">{u.email}</p>
                         </div>
                       </label>
                     ))
@@ -284,7 +284,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                   <button
                     onClick={handleAddSelected}
                     disabled={actionLoading}
-                    className="w-full mt-2 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    className="w-full mt-2 py-2.5 rounded-lg bg-[var(--af-accent)] hover:opacity-90 text-[var(--primary-foreground)] text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer border-none"
                   >
                     {actionLoading ? 'Agregando...' : `Agregar ${selectedUsers.size} seleccionado(s)`}
                   </button>
@@ -293,25 +293,25 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
 
               {/* Divider */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-700" />
-                <span className="text-xs text-gray-500">o agregar por email</span>
-                <div className="flex-1 h-px bg-gray-700" />
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-xs text-[var(--af-text3)]">o agregar por email</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
               </div>
 
               {/* Add by email */}
               <div>
-                <label className="text-sm font-medium text-gray-300 block mb-1">Emails (separados por coma)</label>
+                <label className="text-sm font-medium text-[var(--foreground)] block mb-1">Emails (separados por coma)</label>
                 <input
                   type="text"
                   placeholder="correo@ejemplo.com, otro@ejemplo.com"
                   value={emailInput}
                   onChange={e => setEmailInput(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--af-bg3)] border border-[var(--input)] text-[var(--foreground)] text-sm placeholder-[var(--af-text3)] focus:outline-none focus:border-[var(--af-accent)]"
                 />
                 <button
                   onClick={handleAddByEmail}
                   disabled={actionLoading || !emailInput.trim()}
-                  className="w-full mt-2 py-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  className="w-full mt-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer border-none"
                 >
                   {actionLoading ? 'Agregando...' : 'Agregar por email'}
                 </button>
@@ -320,23 +320,23 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
           ) : (
             /* Code tab */
             <div className="text-center py-6">
-              <p className="text-gray-400 text-sm mb-4">Comparte este codigo para que otros se unan al tenant:</p>
+              <p className="text-[var(--muted-foreground)] text-sm mb-4">Comparte este codigo para que otros se unan al tenant:</p>
               <div className="flex items-center justify-center gap-3">
-                <div className="px-6 py-4 rounded-xl bg-gray-800 border border-gray-600">
-                  <span className="text-3xl font-bold text-white tracking-[0.3em]">{tenantCode}</span>
+                <div className="px-6 py-4 rounded-xl bg-[var(--af-bg3)] border border-[var(--border)]">
+                  <span className="text-3xl font-bold text-[var(--foreground)] tracking-[0.3em]">{tenantCode}</span>
                 </div>
                 <button
                   onClick={copyCode}
-                  className="p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                  className="p-3 rounded-xl bg-[var(--af-accent)] hover:opacity-90 text-[var(--primary-foreground)] transition-colors cursor-pointer border-none"
                   title="Copiar codigo"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry={2} />
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                   </svg>
                 </button>
               </div>
-              <p className="text-gray-500 text-xs mt-4">Los nuevos miembros entraran como Miembro</p>
+              <p className="text-[var(--af-text3)] text-xs mt-4">Los nuevos miembros entraran como Miembro</p>
             </div>
           )}
         </div>
@@ -345,8 +345,8 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
         {toast && (
           <div className={`mx-4 mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
             toast.type === 'error' ? 'bg-red-600/90 text-white' :
-            toast.type === 'warning' ? 'bg-yellow-600/90 text-white' :
-            'bg-green-600/90 text-white'
+            toast.type === 'warning' ? 'bg-amber-600/90 text-white' :
+            'bg-emerald-600/90 text-white'
           }`}>
             {toast.msg}
           </div>
