@@ -265,3 +265,27 @@ Stage Summary:
 - Cada usuario puede conectar su propio OneDrive personal desde Perfil
 - Tokens del tenant almacenados seguros en Firestore (server-side)
 - Deploy a Vercel en curso
+---
+Task ID: 1
+Agent: Main Agent
+Task: Unificar sistema de temas y corregir inconsistencias claro/oscuro
+
+Work Log:
+- Audit completo del sistema de temas (ui-store + AppContext + globals.css + componentes)
+- Identificado bug: dos fuentes de verdad para tema (AppContext darkMode + ui-store theme) con dual-writes
+- Identificado bug: .af-skeleton usaba [data-theme=dark] en vez de .dark
+- Identificado bug: .af-glass/.af-glass-strong hardcodeados a dark mode
+- Identificado bug: sonner toast border hardcoded rgba(255,255,255,0.1)
+- Identificado bug: select arrow color hardcoded gray-500 sin dark variant
+- Identificado: ManageMembersModal completamente hardcodeado a dark mode (bg-gray-900, text-white, etc.)
+- Unificado fuente de verdad a ui-store (Zustand), AppContext ahora consume derivado
+- Fix globals.css: glassmorphism adaptativo, skeleton selector, sonner border, select arrow
+- ManageMembersModal reescrito con CSS variables (var(--card), var(--foreground), etc.)
+- Creado src/lib/theme-registry.ts: sistema extensible para futuros temas
+- Actualizado ui-store con initTheme(), applyThemeCSS(), soporte para THEME_REGISTRY
+
+Stage Summary:
+- Compilación exitosa, push completado (e6611c0)
+- Sistema de temas ahora tiene una sola fuente de verdad
+- Modo claro y oscuro consistentes en toda la app
+- Preparado para agregar futuros temas (midnight, forest, etc.)
