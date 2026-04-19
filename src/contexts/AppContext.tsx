@@ -261,7 +261,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [chatMsgSearch, setChatMsgSearch] = useState('');
 
   // Theme state — derived from ui-store (single source of truth)
-  const darkMode = useUIStore(s => s.theme === 'dark');
+  const themeId = useUIStore(s => s.theme);
+  const themes = useUIStore(s => s.themes);
+  const currentThemeDef = themes.find(t => t.id === themeId);
+  const darkMode = currentThemeDef?.isDark ?? (themeId === 'dark');
   const toggleTheme = useUIStore(s => s.toggleTheme);
 
   // PWA Install state

@@ -2,8 +2,9 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users, Shield } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users, Shield, Palette } from 'lucide-react';
 import ManageMembersModal from './ManageMembersModal';
+import ThemePanel from './ThemePanel';
 import { ADMIN_EMAILS } from '@/lib/types';
 
 export default function TopBar() {
@@ -17,6 +18,7 @@ export default function TopBar() {
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
   const [showManageMembers, setShowManageMembers] = React.useState(false);
+  const [showThemePanel, setShowThemePanel] = React.useState(false);
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -28,6 +30,7 @@ export default function TopBar() {
   };
 
   return (
+    <>
     <header className="h-[60px] af-glass border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
       <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex hover:scale-105 active:scale-95" onClick={() => setSidebarOpen(true)}>
         <Menu size={18} className="stroke-[var(--muted-foreground)]" />
@@ -136,6 +139,10 @@ export default function TopBar() {
             <Moon size={18} className="stroke-[var(--muted-foreground)]" />
           )}
         </button>
+        {/* Theme panel */}
+        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={() => setShowThemePanel(true)} title="Temas y colores">
+          <Palette size={18} className="stroke-[var(--muted-foreground)]" />
+        </button>
         {screen === 'projects' && (
           <button className="hidden sm:flex items-center gap-1.5 af-btn-primary text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); openModal('project'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
@@ -157,5 +164,7 @@ export default function TopBar() {
         <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>{authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}</div>
       </div>
     </header>
+    {showThemePanel && <ThemePanel onClose={() => setShowThemePanel(false)} />}
+    </>
   );
 }

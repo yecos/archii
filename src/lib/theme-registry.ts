@@ -3,8 +3,9 @@
  * 
  * Sistema extensible de temas. Para agregar un nuevo tema:
  * 1. Agregar una entrada en THEME_REGISTRY con su id y CSS variables
- * 2. Las variables CSS se inyectan automáticamente en <html> como atributo data-theme
+ * 2. Las variables CSS se inyectan automáticamente en <html> via setProperty
  * 3. El store (ui-store) maneja la persistencia y el toggle
+ * 4. El panel de temas (ThemePanel.tsx) permite al usuario cambiar
  */
 
 export interface ThemeDefinition {
@@ -13,6 +14,7 @@ export interface ThemeDefinition {
   icon: string;          // Emoji para el selector
   isDark: boolean;       // ¿Usa la clase .dark?
   description: string;   // Descripción corta
+  preview: string[];     // 3-4 colores de preview para la swatch
   colors: {
     '--background': string;
     '--foreground': string;
@@ -59,12 +61,16 @@ export interface ThemeDefinition {
 }
 
 export const THEME_REGISTRY: ThemeDefinition[] = [
+  // ═══════════════════════════════════════════
+  //  TEMAS ORIGINALES — Luxo Dorado
+  // ═══════════════════════════════════════════
   {
     id: 'dark',
     label: 'Nocturno',
     icon: '🌙',
     isDark: true,
     description: 'Oscuro elegante con acentos dorados',
+    preview: ['#0e0f11', '#c8a96e', '#16181c', '#e2c898'],
     colors: {
       '--background': '#0e0f11',
       '--foreground': '#f0f0ee',
@@ -115,6 +121,7 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     icon: '☀️',
     isDark: false,
     description: 'Claro cálido con tonos crema',
+    preview: ['#f8f7f4', '#9e7c3e', '#ffffff', '#b8933f'],
     colors: {
       '--background': '#f8f7f4',
       '--foreground': '#1a1a1a',
@@ -157,6 +164,113 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
       '--af-text3': '#a3a3a3',
       '--af-accent': '#9e7c3e',
       '--af-accent2': '#b8933f',
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  //  TEMA NUEVO — Soft Pastel (Azul + Teal)
+  //  Basado en: Guía de Transformación Visual v2
+  // ═══════════════════════════════════════════
+  {
+    id: 'pastel',
+    label: 'Soft Pastel',
+    icon: '🎨',
+    isDark: false,
+    description: 'Amigable, cálido y moderno con tonos azul-teal',
+    preview: ['#FAFAF8', '#6C8EBF', '#FFFFFF', '#7BB8A8'],
+    colors: {
+      '--background': '#FAFAF8',
+      '--foreground': '#2D3436',
+      '--card': '#FFFFFF',
+      '--card-foreground': '#2D3436',
+      '--popover': '#FFFFFF',
+      '--popover-foreground': '#2D3436',
+      '--primary': '#6C8EBF',
+      '--primary-foreground': '#FFFFFF',
+      '--secondary': '#F0F4F8',
+      '--secondary-foreground': '#2D3436',
+      '--muted': '#EDF0F4',
+      '--muted-foreground': '#8B95A5',
+      '--accent': 'rgba(108,142,191,0.08)',
+      '--accent-foreground': '#6C8EBF',
+      '--destructive': '#E07B7B',
+      '--border': 'rgba(0,0,0,0.06)',
+      '--input': 'rgba(0,0,0,0.08)',
+      '--ring': '#6C8EBF',
+      '--chart-1': '#6C8EBF',
+      '--chart-2': '#7BB8A8',
+      '--chart-3': '#E8B87D',
+      '--chart-4': '#C49ABB',
+      '--chart-5': '#E07B7B',
+      '--sidebar': '#FFFFFF',
+      '--sidebar-foreground': '#2D3436',
+      '--sidebar-primary': '#6C8EBF',
+      '--sidebar-primary-foreground': '#FFFFFF',
+      '--sidebar-accent': 'rgba(108,142,191,0.08)',
+      '--sidebar-accent-foreground': '#6C8EBF',
+      '--sidebar-border': 'rgba(0,0,0,0.06)',
+      '--sidebar-ring': '#6C8EBF',
+      '--af-green': '#7BB8A8',
+      '--af-amber': '#E8B87D',
+      '--af-red': '#E07B7B',
+      '--af-blue': '#6C8EBF',
+      '--af-purple': '#C49ABB',
+      '--af-bg3': '#F0F4F8',
+      '--af-bg4': '#EDF0F4',
+      '--af-text3': '#A3ACBA',
+      '--af-accent': '#6C8EBF',
+      '--af-accent2': '#7BB8A8',
+    },
+  },
+  {
+    id: 'pastel-dark',
+    label: 'Soft Pastel Oscuro',
+    icon: '🌌',
+    isDark: true,
+    description: 'Soft pastel con fondo oscuro suave',
+    preview: ['#1A1D23', '#8AADDB', '#22262E', '#8FCEBF'],
+    colors: {
+      '--background': '#1A1D23',
+      '--foreground': '#E8ECF0',
+      '--card': '#22262E',
+      '--card-foreground': '#E8ECF0',
+      '--popover': '#22262E',
+      '--popover-foreground': '#E8ECF0',
+      '--primary': '#8AADDB',
+      '--primary-foreground': '#1A1D23',
+      '--secondary': '#282C36',
+      '--secondary-foreground': '#E8ECF0',
+      '--muted': '#303540',
+      '--muted-foreground': '#8B95A5',
+      '--accent': 'rgba(138,173,219,0.1)',
+      '--accent-foreground': '#8AADDB',
+      '--destructive': '#E89B9B',
+      '--border': 'rgba(255,255,255,0.06)',
+      '--input': 'rgba(255,255,255,0.08)',
+      '--ring': '#8AADDB',
+      '--chart-1': '#8AADDB',
+      '--chart-2': '#8FCEBF',
+      '--chart-3': '#E8C89D',
+      '--chart-4': '#D4B0C8',
+      '--chart-5': '#E89B9B',
+      '--sidebar': '#22262E',
+      '--sidebar-foreground': '#E8ECF0',
+      '--sidebar-primary': '#8AADDB',
+      '--sidebar-primary-foreground': '#1A1D23',
+      '--sidebar-accent': 'rgba(138,173,219,0.1)',
+      '--sidebar-accent-foreground': '#8AADDB',
+      '--sidebar-border': 'rgba(255,255,255,0.06)',
+      '--sidebar-ring': '#8AADDB',
+      '--af-green': '#8FCEBF',
+      '--af-amber': '#E8C89D',
+      '--af-red': '#E89B9B',
+      '--af-blue': '#8AADDB',
+      '--af-purple': '#D4B0C8',
+      '--af-bg3': '#282C36',
+      '--af-bg4': '#303540',
+      '--af-text3': '#6B7280',
+      '--af-accent': '#8AADDB',
+      '--af-accent2': '#8FCEBF',
     },
   },
 ];
