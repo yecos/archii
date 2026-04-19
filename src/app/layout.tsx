@@ -169,9 +169,9 @@ export default function RootLayout({
           ` }} />
           <ClientProviders>
             {children}
+            <AIFloatingWrapper />
+            <KeyboardShortcutsInitializer />
           </ClientProviders>
-          <AIFloatingWrapper />
-          <KeyboardShortcutsInitializer />
         </ThemeProvider>
       </body>
     </html>
