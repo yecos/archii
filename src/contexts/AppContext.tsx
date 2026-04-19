@@ -300,13 +300,29 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
 
-  // Init theme
+  // ===== TENANT STATE =====
+  const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
+  const [activeTenantName, setActiveTenantName] = useState<string | null>(null);
+  const [tenantReady, setTenantReady] = useState(false);
+  const [showTenantSelector, setShowTenantSelector] = useState(false);
+
+  // Init theme + restore tenant selection
   useEffect(() => {
     try {
       const saved = localStorage.getItem('archiflow-theme');
       const isDark = saved ? saved === 'dark' : true;
       setDarkMode(isDark);
       document.documentElement.classList.toggle('dark', isDark);
+    } catch (err) { console.error("[ArchiFlow]", err); }
+    // Restore tenant from localStorage
+    try {
+      const savedTenantId = localStorage.getItem('archiflow-active-tenant');
+      const savedTenantName = localStorage.getItem('archiflow-active-tenant-name');
+      if (savedTenantId && savedTenantName) {
+        setActiveTenantId(savedTenantId);
+        setActiveTenantName(savedTenantName);
+        setTenantReady(true);
+      }
     } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
@@ -625,52 +641,52 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser]);
 
-  // Load projects
+  // Load projects (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setProjects([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('projects').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load tasks
+  // Load tasks (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setTasks([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('tasks').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('tasks').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load expenses
+  // Load expenses (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setExpenses([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('expenses').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('expenses').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load suppliers
+  // Load suppliers (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setSuppliers([]); setCompanies([]); return; }
     const db = getFirebase().firestore();
     const unsubs: any[] = [];
-    unsubs.push(db.collection('suppliers').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    unsubs.push(db.collection('suppliers').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {}));
 
-    // Companies listener
-    unsubs.push(db.collection('companies').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    // Companies listener (tenant-filtered)
+    unsubs.push(db.collection('companies').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {}));
 
     return () => unsubs.forEach(u => u());
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
   // Load chat messages
   useEffect(() => {
@@ -725,95 +741,95 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
 
-  // Load meetings
+  // Load meetings (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setMeetings([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('meetings').orderBy('date', 'asc').onSnapshot(snap => {
+    const unsub = db.collection('meetings').where('tenantId', '==', activeTenantId).orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load gallery photos
+  // Load gallery photos (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setGalleryPhotos([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('galleryPhotos').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('galleryPhotos').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load inventory products
+  // Load inventory products (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setInvProducts([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('invProducts').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    const unsub = db.collection('invProducts').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setInvProducts(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load inventory categories
+  // Load inventory categories (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setInvCategories([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('invCategories').orderBy('name', 'asc').onSnapshot(snap => {
+    const unsub = db.collection('invCategories').where('tenantId', '==', activeTenantId).orderBy('name', 'asc').onSnapshot(snap => {
       setInvCategories(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load inventory movements
+  // Load inventory movements (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setInvMovements([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('invMovements').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invMovements').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvMovements(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load inventory transfers
+  // Load inventory transfers (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setInvTransfers([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('invTransfers').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invTransfers').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvTransfers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load time entries
+  // Load time entries (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setTimeEntries([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
+    const unsub = db.collection('timeEntries').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
       setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load invoices
+  // Load invoices (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setInvoices([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
+    const unsub = db.collection('invoices').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
       setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
-  // Load comments (all, filtered by view)
+  // Load comments (tenant-filtered)
   useEffect(() => {
-    if (!ready || !authUser) return;
+    if (!ready || !authUser || !activeTenantId) { setComments([]); return; }
     const db = getFirebase().firestore();
-    const unsub = db.collection('comments').orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
+    const unsub = db.collection('comments').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
       setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId]);
 
   // Load daily logs for selected project
   useEffect(() => {
@@ -1808,7 +1824,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
       else {
@@ -1845,7 +1861,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
-    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
@@ -2127,7 +2143,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
     const amount = Number(forms.expAmount) || 0;
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       await db.collection('expenses').add(data);
       showToast('Gasto registrado');
@@ -2147,7 +2163,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const db = getFirebase().firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
@@ -2163,7 +2179,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
@@ -2362,7 +2378,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
       const data = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser?.uid };
       if (editingId) { await db.collection('invProducts').doc(editingId).update(data); showToast('Producto actualizado'); }
-      else { await db.collection('invProducts').add({ ...data, createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
+      else { await db.collection('invProducts').add({ ...data, tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
       closeModal('invProduct'); setEditingId(null);
       const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
@@ -2834,6 +2850,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
 
+  // ===== TENANT MANAGEMENT =====
+  const switchTenant = useCallback((tenantId: string, tenantName: string) => {
+    setActiveTenantId(tenantId);
+    setActiveTenantName(tenantName);
+    setTenantReady(true);
+    setShowTenantSelector(false);
+    try {
+      localStorage.setItem('archiflow-active-tenant', tenantId);
+      localStorage.setItem('archiflow-active-tenant-name', tenantName);
+    } catch (err) { console.error("[ArchiFlow]", err); }
+    showToast(`Espacio de trabajo: ${tenantName}`);
+  }, [showToast]);
+
   // ===== CONTEXT VALUE =====
   const ctx = {
     screen,
@@ -2863,6 +2892,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     companies,
     selectedCompanyId,
     setSelectedCompanyId,
+    activeTenantId,
+    activeTenantName,
+    tenantReady,
+    switchTenant,
+    showTenantSelector,
+    setShowTenantSelector,
     currentProject,
     pendingCount,
     doLogin,
