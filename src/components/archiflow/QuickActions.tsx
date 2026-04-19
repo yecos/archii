@@ -7,20 +7,16 @@ import { useUIStore } from '@/stores/ui-store';
 interface QuickActionsProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenChat: () => void;
+  onOpenChat: (prefillText?: string) => void;
 }
 
-interface SuggestionResult {
-  text?: string;
-  action?: string;
-  title?: string;
-  concept?: string;
-  milestone?: string;
-  category?: string;
-  reason?: string;
-  description?: string;
-  impact?: string;
-  dependencies?: string;
+interface ExecutedAction {
+  type: string;
+  label: string;
+  icon: string;
+  details: string;
+  success: boolean;
+  error?: string;
 }
 
 const ACTION_BUTTONS = [
@@ -33,19 +29,19 @@ const ACTION_BUTTONS = [
         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
       </svg>
     ),
-    type: 'task' as const,
+    prompt: 'Sugiere 5 tareas importantes para mi proyecto actual con prioridades y fechas límite recomendadas',
     description: 'Genera tareas sugeridas para tu proyecto',
   },
   {
     id: 'budget',
-    label: 'Optimizar presupuesto',
+    label: 'Analizar presupuesto',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
-    type: 'expense' as const,
+    prompt: 'Analiza mi presupuesto actual, muestra gastos por categoría y recomienda cómo optimizar costos',
     description: 'Analiza y optimiza los gastos del proyecto',
   },
   {
@@ -59,7 +55,7 @@ const ACTION_BUTTONS = [
         <line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     ),
-    type: 'schedule' as const,
+    prompt: 'Crea un cronograma de obra con hitos y fechas clave para las próximas 8 semanas',
     description: 'Sugiere hitos y fechas clave',
   },
   {
@@ -72,14 +68,14 @@ const ACTION_BUTTONS = [
         <path d="M6 20v-4" />
       </svg>
     ),
-    type: 'project' as const,
+    prompt: 'Analiza mi proyecto y dame recomendaciones accionables para mejorarlo (tiempo, costo, calidad)',
     description: 'Recomendaciones para mejorar tu proyecto',
   },
 ];
 
 export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActionsProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<SuggestionResult[]>([]);
+  const [results, setResults] = useState<{ text: string; actions?: ExecutedAction[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const projectContext = useUIStore((s) => s.aiProjectContext);
@@ -89,16 +85,21 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
   const handleAction = async (action: (typeof ACTION_BUTTONS)[number]) => {
     setLoadingId(action.id);
     setActiveId(action.id);
-    setSuggestions([]);
+    setResults(null);
     setError(null);
 
     try {
-      const response = await fetch('/api/ai-suggestions', {
+      const response = await fetch('/api/ai-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          context: projectContext || 'Proyecto de arquitectura general',
-          type: action.type,
+          messages: [
+            {
+              role: 'user',
+              content: action.prompt,
+            },
+          ],
+          projectContext: projectContext || 'Proyecto de arquitectura general',
         }),
       });
 
@@ -113,11 +114,10 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
         return;
       }
 
-      const result = data.suggestions || [];
-      setSuggestions(result);
-      if (result.length === 0) {
-        setError('No se generaron sugerencias. Intenta de nuevo.');
-      }
+      setResults({
+        text: data.message || 'Sin respuesta',
+        actions: data.actions || undefined,
+      });
     } catch (err) {
       console.error('[ArchiFlow AI] Error en sugerencias:', err);
       setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -126,21 +126,19 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
     }
   };
 
-  const getSuggestionText = (s: SuggestionResult): string => {
-    if (s.text) return s.text;
-    if (s.title) return `${s.title}${s.reason ? ` — ${s.reason}` : ''}`;
-    if (s.concept) return `${s.concept}${s.reason ? ` — ${s.reason}` : ''}`;
-    if (s.action) return `${s.action}${s.description ? ` — ${s.description}` : ''}`;
-    if (s.milestone) return `${s.milestone}${s.dependencies ? ` (deps: ${s.dependencies})` : ''}`;
-    return JSON.stringify(s);
-  };
-
   return (
     <div className="fixed bottom-32 md:bottom-24 right-3 left-3 md:left-auto md:right-6 md:w-80 z-[95] animate-slideUp">
       <div className="bg-[var(--af-bg1)] border border-[var(--af-bg4)] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-[var(--af-bg4)] flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-foreground">Acciones rápidas</h4>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--af-accent)] to-amber-600 flex items-center justify-center">
+              <svg className="w-3 h-3 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <h4 className="text-sm font-semibold text-foreground">Acciones rápidas</h4>
+          </div>
           <button
             onClick={onClose}
             className="w-10 h-10 rounded-lg active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -198,22 +196,31 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
           </div>
         )}
 
-        {/* Suggestions Results */}
-        {suggestions.length > 0 && (
+        {/* Results */}
+        {results && (
           <div className="px-3 pb-3 border-t border-[var(--af-bg4)] pt-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 px-1">
-              Sugerencias ({suggestions.length})
-            </p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
-              {suggestions.map((s, i) => (
-                <div
-                  key={i}
-                  className="px-3 py-2 rounded-lg bg-[var(--af-bg3)] text-xs text-foreground leading-relaxed"
-                >
-                  {getSuggestionText(s)}
-                </div>
-              ))}
+            <div className="px-3 py-2.5 rounded-lg bg-[var(--af-bg3)] text-xs text-foreground leading-relaxed max-h-48 overflow-y-auto scrollbar-thin whitespace-pre-wrap">
+              {results.text}
             </div>
+            {results.actions && results.actions.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {results.actions.map((action, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] border',
+                      action.success
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                        : 'bg-red-500/10 border-red-500/20 text-red-300'
+                    )}
+                  >
+                    <span>{action.icon}</span>
+                    <span className="font-medium">{action.label}</span>
+                    <span className="opacity-80 truncate">{action.details}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -224,9 +231,16 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
               onClose();
               onOpenChat();
             }}
-            className="w-full py-3 rounded-xl bg-[var(--af-accent)]/10 text-[var(--af-accent)] text-xs font-medium active:bg-[var(--af-accent)]/20 transition-colors mb-[env(safe-area-inset-bottom,0px)]"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[var(--af-accent)]/15 to-amber-600/10 text-[var(--af-accent)] text-xs font-semibold active:from-[var(--af-accent)]/20 active:to-amber-600/15 transition-all border border-[var(--af-accent)]/10 mb-[env(safe-area-inset-bottom,0px)]"
           >
-            💬 Preguntar al asistente IA
+            <span className="flex items-center justify-center gap-1.5">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2Z" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+              </svg>
+              Abrir Super IA
+            </span>
           </button>
         </div>
       </div>
