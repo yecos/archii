@@ -20,7 +20,52 @@ import * as fbActions from '@/lib/firestore-actions';
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 
 /* ===== APP CONTEXT ===== */
-const AppContext = createContext<any>(null);
+type FormData = Record<string, string | number | boolean | undefined>;
+interface AppContextValue {
+  forms: Record<string, any>;
+  setForms: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  logForm: Record<string, any>;
+  setLogForm: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  openModal: (name: string) => void;
+  closeModal: (name: string) => void;
+  showToast: (msg: string, type?: string) => void;
+  editingId: string | null;
+  setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
+  authUser: any;
+  projects: any[];
+  tasks: any[];
+  expenses: any[];
+  suppliers: any[];
+  companies: any[];
+  teamUsers: any[];
+  meetings: any[];
+  invProducts: any[];
+  invCategories: any[];
+  invMovements: any[];
+  invTransfers: any[];
+  invoices: any[];
+  galleryPhotos: any[];
+  comments: any[];
+  timeEntries: any[];
+  generalMessages: any[];
+  dailyLogs: any[];
+  approvals: any[];
+  selectedProjectId: string;
+  navigateTo: (screen: string, itemId?: string) => void;
+  handleInvProductImageSelect: (e: any) => void;
+  saveApproval: () => Promise<void>;
+  saveExpense: () => Promise<void>;
+  saveMeeting: () => Promise<void>;
+  saveInvProduct: () => Promise<void>;
+  saveInvMovement: () => Promise<void>;
+  saveInvTransfer: () => Promise<void>;
+  saveInvCategory: () => Promise<void>;
+  getWarehouseStock: (product: any, warehouse?: string) => number;
+  getTotalStock: (product: any) => number;
+  saveManualTimeEntry: () => Promise<void>;
+  buildWarehouseStock: (product: any) => Record<string, number>;
+}
+const AppContext = createContext<AppContextValue & Record<string, any>>(null!);
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
