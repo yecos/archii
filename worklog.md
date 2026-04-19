@@ -158,3 +158,34 @@ Stage Summary:
 - PARTE 6 agregada con reglas obligatorias para todas las sesiones
 - 4 sesiones documentadas (2026-04-13, 2026-04-18, 2026-04-19, 2026-04-20)
 - Subido exitosamente a GitHub
+
+---
+Task ID: 2
+Agent: Super Z (Main)
+Task: Crear protocolo anti-errores concurrentes + mecanismo de lectura obligatoria para todas las sesiones
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Analizado el INSTRUCTIVO_BITACORA.txt completo (4474 lineas, Partes 1-6)
+- Analizado worklog.md para entender estado actual del proyecto
+- Identificado que el mecanismo de lectura obligatoria no existia previamente
+- Creado LEE_PRIMERO.txt (~90 lineas) en la raiz del repositorio como puerta de entrada obligatoria
+- Creada PARTE 7 en INSTRUCTIVO_BITACORA.txt: PROTOCOLO ANTI-ERRORES CONCURRENTES (~335 lineas)
+- Subsecciones de PARTE 7:
+  - 7.1 Mecanismo de entrada — como garantizar que todas las sesiones lo lean
+  - 7.2 Separacion de trabajo entre sesiones (areas seguras vs peligrosas)
+  - 7.3 Bloqueo virtual de archivos (Virtual File Lock via worklog.md)
+  - 7.4 Proteccion de datos en Firestore
+  - 7.5 Rollback y recuperacion de emergencia
+  - 7.6 Verificacion antes de push y deploy (checklists pre/post)
+  - 7.7 Protocolo de comunicacion entre sesiones (INTENT/LOCK/UNLOCK/DONE)
+  - 7.8 Escenarios de error comun y como prevenirlos (6 escenarios)
+  - 7.9 Resumen ejecutivo — Las 10 Reglas de Oro
+
+Stage Summary:
+- Nuevo archivo: LEE_PRIMERO.txt (protocolo corto de emergencia en raiz del repo)
+- Actualizado: INSTRUCTIVO_BITACORA.txt (4474 → 4809 lineas, +335 lineas PARTE 7)
+- Mecanismo de lectura obligatoria: LEE_PRIMERO.txt + usuario menciona al iniciar sesion + registro en worklog.md
+- Sistema de bloqueo virtual: LOCK/UNLOCK en worklog.md para archivos peligrosos
+- Pendiente: commit y push a GitHub

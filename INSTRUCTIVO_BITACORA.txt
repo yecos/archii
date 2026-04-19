@@ -4569,3 +4569,337 @@ TODAS LAS SESIONES DE TRABAJO, SIN EXCEPCION, INCLUYENDO ASISTENTES DE IA.
     * Fix avatarColor import
 
 --- FIN DE SESION 2026-04-13 ----------------------------------------------
+
+================================================================================
+PARTE 7: PROTOCOLO ANTI-ERRORES CONCURRENTES
+================================================================================
+
+ESTA SECCION ES OBLIGATORIA PARA TODAS LAS SESIONES QUE TRABAJEN EN EL
+PROYECTO SIMULTANEAMENTE. Su objetivo es prevenir la perdida de informacion,
+la sobreescritura de codigo, y errores criticos en produccion cuando multiples
+sesiones (agentes de IA o desarrolladores humanos) modifican el proyecto al
+mismo tiempo.
+
+SECCIONES RELACIONADAS:
+  - PARTE 3: Procedimientos de Proteccion de Datos (obligatorio siempre)
+  - PARTE 5: Reglas para Trabajo Multi-Seccion en Equipo (roles, ramas, merge)
+  - PARTE 6: Regla Obligatoria de Documentacion Continua (bitacora)
+
+SI NO HAS LEIDO LAS PARTES 3, 5 Y 6, NO ESTAS AUTORIZADO/A PARA TRABAJAR.
+
+--------------------------------------------------------------------------------
+7.1 MECANISMO DE ENTRADA — COMO GARANTIZAR QUE TODAS LAS SESIONES LO LEAN
+--------------------------------------------------------------------------------
+
+  [A] ARCHIVO LEE_PRIMERO.txt (RAIZ DEL REPOSITORIO)
+  ├── Archivo corto (~80 lineas) con reglas criticas de emergencia
+  ├── Ubicado en la raiz del repo para maxima visibilidad
+  ├── Contiene: pasos obligatorios, reglas criticas, archivos peligrosos
+  ├── Toda sesion nueva DEBE leerlo ANTES de tocar codigo
+  └── Si una sesion no lo lee, los errores que cause son su responsabilidad
+
+  [B] EL USUARIO/LEAD ES EL GUARDIAN
+  ├── Cuando el usuario inicie una nueva sesion, DEBE incluir en su primer
+  │   mensaje algo como: "lee LEE_PRIMERO.txt y sigue las instrucciones"
+  ├── Esto fuerza al agente a leer el protocolo antes de hacer nada
+  ├── Si el usuario olvida mencionarlo, el agente DEBE buscar y leer
+  │   LEE_PRIMERO.txt e INSTRUCTIVO_BITACORA.txt por iniciativa propia
+  └── El usuario puede verificar si la sesion leyo el protocolo preguntando:
+      "que archivos peligrosos no debemos tocar sin git pull?"
+
+  [C] REGISTRO DE LECTURA EN WORKLOG
+  ├── Toda sesion DEBE agregar a worklog.md una linea que confirme lectura:
+  │   "Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt"
+  ├── Si worklog.md no tiene esta linea, la sesion no leyo el protocolo
+  └── El usuario puede revisar worklog.md para confirmar cumplimiento
+
+  [D] LISTA DE VERIFICACION DE ENTRADA (SESSION CHECKLIST)
+  Toda sesion debe poder responder SI a todas estas preguntas:
+  [ ] Lei LEE_PRIMERO.txt?
+  [ ] Lei INSTRUCTIVO_BITACORA.txt (al menos Partes 1-6)?
+  [ ] Lei worklog.md para entender que hicieron sesiones anteriores?
+  [ ] Hice git pull origin main?
+  [ ] Se que archivos se modificaron recientemente? (git log --oneline -10)
+  [ ] Se que sesiones estan activas? (revisar worklog.md)
+  [ ] Entiendo la arquitectura multi-tenant del proyecto?
+  [ ] Se que archivos son ZONA DE MAXIMO RIESGO?
+
+  Si alguna respuesta es NO: DETENERSE y resolver antes de continuar.
+
+--------------------------------------------------------------------------------
+7.2 SEPARACION DE TRABAJO ENTRE SESIONES
+--------------------------------------------------------------------------------
+
+  [A] REGLA DE UNA SESION = UNA TAREA
+  ├── Cada sesion debe enfocarse en UNA area o tarea a la vez
+  ├── No mezclar: fix de auth + nueva pantalla + refactor de types en una sesion
+  ├── Si hay multiples tareas: priorizar y hacer UNA por sesion
+  └── Esto minimiza la superficie de conflicto entre sesiones
+
+  [B] AREAS DE TRABAJO SEGURAS (sin conflicto entre sesiones)
+  ├── Nuevas pantallas: src/screens/NuevaPantalla.tsx (archivo nuevo)
+  ├── Nuevos modales: src/components/modals/NuevoModal.tsx (archivo nuevo)
+  ├── Nuevas librerias: src/lib/nuevo-servicio.ts (archivo nuevo)
+  ├── Nuevos API endpoints: src/app/api/nuevo-endpoint/route.ts (archivo nuevo)
+  ├── Nuevos contextos: src/contexts/NuevoContext.tsx (archivo nuevo)
+  ├── Nuevos hooks: src/hooks/useNuevoHook.ts (archivo nuevo)
+  └── Archivos nuevos NO generan conflictos con otras sesiones
+
+  [C] AREAS DE TRABAJO PELIGROSAS (requieren coordinacion)
+  ├── src/contexts/AppContext.tsx — MODIFICADO POR MUCHAS SESIONES
+  ├── src/lib/types.ts — CAMBIOS AQUI AFECTAN TODA LA APP
+  ├── src/lib/helpers.ts — FUNCIONES COMPARTIDAS
+  ├── src/lib/firebase-admin.ts — CONFIG CRITICA
+  ├── src/lib/firebase-service.ts — CONFIG CRITICA
+  ├── src/app/HomeContent.tsx — NAVEGACION PRINCIPAL
+  ├── src/app/layout.tsx — LAYOUT RAIZ
+  ├── src/app/ClientProviders.tsx — PROVIDERS
+  ├── package.json — DEPENDENCIAS
+  ├── next.config.ts — CONFIG BUILD
+  ├── INSTRUCTIVO_BITACORA.txt — DOCUMENTACION
+  └── worklog.md — REGISTRO DE TRABAJO
+
+  [D] PROTOCOLO PARA ARCHIVOS PELIGROSOS
+  Antes de modificar un archivo de la seccion [C]:
+    1. git pull origin main (obtener ultimo estado)
+    2. Leer el archivo COMPLETO actual (no asumir que es igual al que viste antes)
+    3. Buscar en worklog.md si otra sesion lo esta modificando
+    4. Si otra sesion lo toco: esperar a que haga commit + push, THEN pull
+    5. Hacer cambios MINIMOS y ATOMICOS (una sola cosa por commit)
+    6. git add archivo + git commit + git push INMEDIATAMENTE
+    7. Documentar en worklog.md: "Modificado [archivo]: [que se cambio]"
+    8. Si hay conflicto de merge: NO usar force push, avisar al usuario
+
+--------------------------------------------------------------------------------
+7.3 BLOQUEO VIRTUAL DE ARCHIVOS (VIRTUAL FILE LOCK)
+--------------------------------------------------------------------------------
+
+  Dado que no tenemos un sistema de locking real, usamos un sistema
+  de bloqueo virtual basado en worklog.md.
+
+  [A] COMO BLOQUEAR UN ARCHIVO
+  Cuando una sesion va a trabajar en un archivo peligroso (seccion 7.2[C]),
+  debe registrar en worklog.md:
+
+    LOCK: [archivo] por [agente/sesion] desde [hora] — [motivo]
+    Ejemplo: LOCK: src/contexts/AppContext.tsx por Sesion-A desde 14:30 — Fix filtrado tenant
+
+  [B] COMO VERIFICAR SI UN ARCHIVO ESTA BLOQUEADO
+  Antes de tocar un archivo peligroso, buscar en worklog.md:
+    rg "LOCK:" worklog.md
+
+  Si el archivo aparece bloqueado por otra sesion activa:
+    1. NO MODIFICAR el archivo
+    2. Esperar a que la otra sesion haga UNLOCK
+    3. O coordinar con el usuario para saber si ya termino
+
+  [C] COMO DESBLOQUEAR UN ARCHIVO
+  Al terminar de trabajar en el archivo:
+    1. Hacer commit + push
+    2. Registrar en worklog.md:
+       UNLOCK: [archivo] por [agente/sesion] a [hora] — commit [hash]
+    Ejemplo: UNLOCK: src/contexts/AppContext.tsx por Sesion-A a 15:45 — commit abc1234
+
+  [D] EXPIRACION AUTOMATICA DE LOCKS
+  ├── Si un LOCK tiene mas de 2 horas sin UNLOCK, se considera expirado
+  ├── La sesion que necesite el archivo puede tomarlo despues de verificar
+  │   que la otra sesion ya no esta activa (revisando worklog.md completo)
+  ├── Al tomar un lock expirado, registrar: TAKEOVER: [archivo] — lock expirado de [agente]
+  └── Intentar hacer git pull antes de modificar para integrar cambios
+
+--------------------------------------------------------------------------------
+7.4 PROTECCION DE DATOS EN FIRESTORE
+--------------------------------------------------------------------------------
+
+  [A] REGLAS ABSOLUTAS SOBRE DATOS
+  ├── NUNCA eliminar una coleccion completa de Firestore
+  ├── NUNCA ejecutar db.collection('xxx').get() seguido de .delete() en batch
+  ├── NUNCA modificar el campo 'members' de un tenant sin saber su contenido actual
+  ├── NUNCA eliminar documentos de la coleccion 'users' (solo lectura)
+  ├── NUNCA cambiar el tenantId de documentos existentes sin confirmacion del usuario
+  ├── NUNCA ejecutar migraciones o scripts que toquen datos sin tag de respaldo
+  └── Si necesitas modificar datos masivamente: CREAR BACKUP PRIMERO
+
+  [B] PROTOCOLO DE MIGRACION DE DATOS
+  Si una tarea requiere modificar datos existentes en Firestore:
+    1. Documentar exactamente que datos se van a modificar
+    2. Obtener confirmacion del usuario antes de ejecutar
+    3. Crear tag de respaldo: git tag -a "backup-pre-migration-[fecha]"
+    4. Si es posible, exportar los datos afectados antes de modificar
+    5. Ejecutar la migracion
+    6. Verificar los resultados (conteo de documentos afectados)
+    7. Documentar en bitacora: que se migro, cuantos documentos, resultado
+
+  [C] COLECCIONES PROTEGIDAS
+  Estas colecciones requieren cuidado especial:
+  ├── users — NUNCA eliminar ni modificar uid/email sin confirmacion
+  ├── tenants — El campo 'members' es critico para el aislamiento
+  ├── projects — Contienen datos de produccion de clientes reales
+  ├── tasks — Historial de trabajo de usuarios reales
+  ├── expenses/invoices — Datos financieros
+  └── Cualquier coleccion con datos de produccion real
+
+  [D] BACKUP ANTES DE OPERACIONES PELIGROSAS
+  Si vas a:
+  ├── Eliminar documentos → Backup primero
+  ├── Migrar datos entre colecciones → Backup primero
+  ├── Cambiar estructura de documentos → Backup primero
+  ├── Modificar campos compartidos entre pantallas → Backup primero
+  └── Ejecutar scripts batch sobre Firestore → Backup primero
+
+  El sistema de Copia de Seguridad (v50) en BackupScreen.tsx puede usarse
+  para exportar datos antes de operaciones peligrosas.
+
+--------------------------------------------------------------------------------
+7.5 ROLLBACK Y RECUPERACION DE EMERGENCIA
+--------------------------------------------------------------------------------
+
+  [A] SI LA APP SE ROMPE EN PRODUCCION
+    1. Identificar el commit que causo el problema: git log --oneline -5
+    2. Revertir el commit: git revert [hash]
+    3. Push: git push origin main
+    4. Vercel hara deploy automatico del fix
+    5. Documentar en bitacora con severidad CRITICA
+    6. Si git revert no funciona: git reset --hard [hash-estable]
+       (ULTIMO RECURSO — solo si es absolutamente necesario)
+
+  [B] SI SE PIERDE CODIGO
+    1. Buscar commits recientes: git reflog
+    2. Restaurar desde un commit: git checkout [hash] -- [archivo]
+    3. O restaurar desde tag: git checkout [tag] -- [archivo]
+    4. Hacer commit del archivo restaurado
+    5. Documentar en bitacora
+
+  [C] SI SE PIERDEN DATOS DE FIRESTORE
+    1. Verificar si hay backup en BackupScreen (v50)
+    2. Restaurar desde backup si existe
+    3. Si no hay backup: documentar exactamente que se perdio
+    4. Informar al usuario inmediatamente
+    5. NO intentar recuperar datos manualmente sin saber lo que se hace
+
+  [D] SI DOS SESIONES SOBREESCRIBEN EL MISMO ARCHIVO
+    1. NO usar git push --force (PROHIBIDO bajo cualquier circunstancia)
+    2. Hacer git pull para obtener ambos cambios
+    3. Resolver conflictos manualmente (git abrira conflict markers)
+    4. Conservar TODOS los cambios de ambas sesiones
+    5. Si no se puede resolver: guardar ambas versiones como archivos separados
+       y pedir al usuario que decida que conservar
+    6. Documentar el conflicto en worklog.md
+
+--------------------------------------------------------------------------------
+7.6 VERIFICACION ANTES DE PUSH Y DEPLOY
+--------------------------------------------------------------------------------
+
+  [A] CHECKLIST PRE-PUSH (antes de cada push a main)
+  [ ] git status — solo archivos esperados
+  [ ] git diff — cambios correctos, nada inesperado
+  [ ] No hay archivos .env con valores reales
+  [ ] No hay console.log o debugger en codigo
+  [ ] La bitacora esta actualizada con los cambios
+  [ ] worklog.md esta actualizado
+  [ ] Si se toco un archivo lockeado: ya esta unlockeado
+
+  [B] CHECKLIST PRE-DEPLOY (antes de merge a main / push que dispara deploy)
+  [ ] Build local pasa sin errores: npx next build
+  [ ] Lint pasa sin errores: npx next lint
+  [ ] No hay archivos temporales o de prueba en el commit
+  [ ] Las dependencias en package.json son correctas
+  [ ] Los imports de firebase-admin estan solo en server components
+  [ ] Los componentes client tienen 'use client' directive
+  [ ] serverExternalPackages incluye 'firebase-admin' y 'sharp'
+  [ ] Se verifico que no se rompe funcionalidad existente
+
+  [C] CHECKLIST POST-DEPLOY (despues de que Vercel despliegue)
+  [ ] La app carga en https://archii-theta.vercel.app
+  [ ] Login funciona (Firebase Auth)
+  [ ] Seleccion de tenant funciona
+  [ ] Las pantallas principales cargan
+  [ ] No hay errores en la consola del navegador
+  [ ] La funcionalidad especifica desplegada funciona
+  [ ] Si algo falla: hotfix inmediato
+
+--------------------------------------------------------------------------------
+7.7 PROTOCOLO DE COMUNICACION ENTRE SESIONES
+--------------------------------------------------------------------------------
+
+  [A] CANAL DE COMUNICACION PRINCIPAL: worklog.md
+  ├── Toda sesion lee worklog.md al iniciar para saber que hacen otras sesiones
+  ├── Toda sesion escribe en worklog.md que va a hacer y que hizo
+  ├── worklog.md es el "tablero" de coordinacion entre sesiones
+  └── Formato de entrada detallado en LEE_PRIMERO.txt seccion "FORMATO"
+
+  [B] REGISTRO DE INTENCION (antes de empezar)
+  Antes de iniciar una tarea, registrar en worklog.md:
+    INTENT: [agente] va a trabajar en [area/archivo] — [tarea breve]
+    Ejemplo: INTENT: Sesion-A va a trabajar en src/contexts/AppContext.tsx — Fix filtrado
+
+  [C] REGISTRO DE AVISO (al tocar archivos compartidos)
+  Al modificar un archivo peligroso, registrar:
+    WORKING: [agente] modificando [archivo] desde [hora] — [motivo]
+    (Esto funciona como LOCK informal - ver seccion 7.3)
+
+  [D] REGISTRO DE COMPLETADO (al terminar)
+  Al terminar una tarea, registrar:
+    DONE: [agente] completo [tarea] — commit [hash] — [resultado]
+
+  [E] REGISTRO DE BLOQUEO (si no se puede continuar)
+  Si una sesion esta bloqueada por otra:
+    BLOCKED: [agente] bloqueado por [archivo] — esperando a [otro agente]
+
+--------------------------------------------------------------------------------
+7.8 ESCENARIOS DE ERROR COMUN Y COMO PREVENIRLOS
+--------------------------------------------------------------------------------
+
+  ESCENARIO 1: Dos sesiones modifican AppContext.tsx al mismo tiempo
+  ├── Prevencion: LOCK en worklog.md antes de modificar
+  ├── Si ya esta lockeado: esperar o pedir al usuario que coordine
+  ├── Si ambos modificaron: hacer git pull y resolver conflictos
+  └── NUNCA force push
+
+  ESCENARIO 2: Una sesion elimina codigo que otra sesion necesita
+  ├── Prevencion: antes de eliminar codigo, verificar con git log
+  │   si fue agregado recientemente por otra sesion
+  ├── Si no se sabe: preguntar al usuario antes de eliminar
+  └── NUNCA eliminar codigo "porque parece innecesario"
+
+  ESCENARIO 3: Una sesion rompe el build y otra no puede avanzar
+  ├── Prevencion: cada sesion hace build local antes de push
+  ├── Si el build esta roto: la sesion que lo rompio DEBE arreglarlo
+  │   antes de hacer otra cosa
+  ├── Si no puede arreglar: revertir su ultimo commit
+  └── Documentar en bitacora con severidad ALTA
+
+  ESCENARIO 4: Una sesion modifica tipos.ts y rompe toda la app
+  ├── Prevencion: cambios en types.ts deben ser backwards-compatible
+  ├── Si se necesita cambiar un tipo existente: crear un NUEVO tipo
+  │   y migrar gradualmente (no romper el tipo actual)
+  ├── Antes de cambiar tipos compartidos: verificar quien los usa
+  │   rg "NombreTipo" src/ --type ts
+  └── Hacer build despues de cambiar tipos para verificar
+
+  ESCENARIO 5: Push a main gasta deploy de Vercel innecesariamente
+  ├── Prevencion: trabajar en ramas (git checkout -b feature/nombre)
+  ├── Solo mergear a main cuando la feature esta completa y testeada
+  ├── Cuenta los deploys: cada push a main = 1 deploy
+  └── Limite: 100 deploys/dia en plan gratuito de Vercel
+
+  ESCENARIO 6: Una sesion sobreescribe el instructivo con version vieja
+  ├── Prevencion: siempre git pull antes de modificar instructivo
+  ├── El instructivo SOLO debe crecer (agregar al final)
+  ├── NUNCA eliminar secciones del instructivo
+  └── Si hay conflicto: conservar AMBAS versiones y el usuario consolida
+
+--------------------------------------------------------------------------------
+7.9 RESUMEN EJECUTIVO — LAS 10 REGLAS DE ORO
+--------------------------------------------------------------------------------
+
+  1. LEE PRIMERO: Lee LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt antes de tocar codigo
+  2. PULL SIEMPRE: git pull origin main antes de modificar CUALQUIER archivo
+  3. UNA TAREA: Una sesion = una tarea enfocada (no mezclar)
+  4. LOCK COMPARTIDOS: Registra LOCK en worklog.md para archivos peligrosos
+  5. COMMITS FRECUENTES: Cada 15-30 min de trabajo activo
+  6. PUSH CADA HORA: No acumules mas de 1 hora sin push
+  7. NUNCA FORCE PUSH: Bajo ninguna circunstancia
+  8. PROTEGE DATOS: Nunca elimines datos de Firestore sin backup + confirmacion
+  9. BUILD ANTES DE PUSH: Verifica que el build pasa localmente
+  10. DOCUMENTA TODO: Bitacora + worklog.md en cada sesion, sin excepcion
