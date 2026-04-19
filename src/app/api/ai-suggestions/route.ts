@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, AuthError } from "@/lib/api-auth";
 
 /**
  * POST /api/ai-suggestions
@@ -8,6 +9,15 @@ import { NextRequest, NextResponse } from "next/server";
  */
 
 export async function POST(request: NextRequest) {
+  try {
+    await requireAuth(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { type } = body;
