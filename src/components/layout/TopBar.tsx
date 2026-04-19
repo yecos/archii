@@ -27,6 +27,8 @@ export default function TopBar() {
     admin: 'Panel Admin', superAdmin: 'Super Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
     calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App',
     companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto',
+    rfis: 'RFIs', submittals: 'Submittals', punchList: 'Punch List',
+    timeTracking: 'Time Tracking', invoices: 'Facturación', reports: 'Reportes',
   };
 
   return (

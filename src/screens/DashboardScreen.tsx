@@ -301,7 +301,12 @@ export default function DashboardScreen() {
           ) : (
             <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
               {recentActivity.map(item => (
-                <div key={item.id + item.type} className="flex items-start gap-3 group">
+                <div key={item.id + item.type} className="flex items-start gap-3 group cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg p-1.5 -mx-1.5 transition-colors" onClick={() => {
+                  if (item.type === 'rfi') navigateTo('rfis');
+                  else if (item.type === 'submittal') navigateTo('submittals');
+                  else if (item.type === 'punch') navigateTo('punchList');
+                  else if (item.type === 'task') navigateTo('tasks');
+                }}>
                   <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5`}>{item.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-medium truncate">{item.title}</div>

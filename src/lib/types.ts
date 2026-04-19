@@ -470,6 +470,14 @@ export const DEFAULT_ROLE_PERMS: Record<string, string[]> = {
   'Panel Admin': ['Admin', 'Director'],
   'Chat general': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente', 'Miembro'],
   'Portal cliente': ['Admin', 'Director', 'Cliente'],
+  'Ver RFIs': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente'],
+  'Crear RFIs': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista'],
+  'Ver Submittals': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente'],
+  'Crear Submittals': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista'],
+  'Revisar Submittals': ['Admin', 'Director', 'Arquitecto', 'Interventor'],
+  'Ver Punch List': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista', 'Cliente'],
+  'Crear Punch List': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Contratista'],
+  'Ver Reportes': ['Admin', 'Director', 'Arquitecto', 'Interventor', 'Cliente'],
 };
 
 /** Navegación del sidebar */

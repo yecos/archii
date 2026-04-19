@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle } from 'lucide-react';
+import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle, CircleHelp, FileCheck, ListChecks } from 'lucide-react';
 
 export default function NotifPanel() {
   const {
@@ -123,7 +123,7 @@ export default function NotifPanel() {
         {/* Settings footer */}
         <div className="p-3 border-t border-[var(--border)] bg-[var(--af-bg3)] flex-shrink-0">
           <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Configurar alertas</div>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             {[
               { key: 'chat', label: 'Chat', Icon: MessageCircle },
               { key: 'tasks', label: 'Tareas', Icon: ClipboardList },
@@ -131,6 +131,9 @@ export default function NotifPanel() {
               { key: 'approvals', label: 'Aprobaciones', Icon: CheckCircle },
               { key: 'inventory', label: 'Inventario', Icon: Package },
               { key: 'projects', label: 'Proyectos', Icon: Folder },
+              { key: 'rfis', label: 'RFIs', Icon: CircleHelp },
+              { key: 'submittals', label: 'Submittals', Icon: FileCheck },
+              { key: 'punchList', label: 'Punch List', Icon: ListChecks },
             ].map(p => (
               <button
                 key={p.key}

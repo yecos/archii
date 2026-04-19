@@ -296,6 +296,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     approvals: true,
     inventory: true,
     projects: true,
+    rfis: true,
+    submittals: true,
+    punchList: true,
   });
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -306,6 +309,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const prevApprovalsRef = useRef<any[]>([]);
   const prevMovementsRef = useRef<any[]>([]);
   const prevTransfersRef = useRef<any[]>([]);
+  const prevRfisRef = useRef<any[]>([]);
+  const prevSubmittalsRef = useRef<any[]>([]);
+  const prevPunchItemsRef = useRef<any[]>([]);
   const navigateToRef = useRef<(s: string, projId?: string | null) => void>(() => {});
   const isTabVisibleRef = useRef(true);
   const prevProjectsRef = useRef<any[]>([]);
@@ -1011,6 +1017,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         prevApprovalsRef.current = approvals;
         prevMovementsRef.current = invMovements;
         prevTransfersRef.current = invTransfers;
+        prevRfisRef.current = rfis;
+        prevSubmittalsRef.current = submittals;
+        prevPunchItemsRef.current = punchItems;
         prevProjectsRef.current = projects;
         firstLoadDoneRef.current = true;
         console.log('[ArchiFlow] First load complete — notifications armed');
@@ -1324,6 +1333,148 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const iv = setInterval(check, 10 * 60 * 1000);
     return () => { clearTimeout(initTimer); clearInterval(iv); };
   }, [invProducts, notifPrefs.inventory, sendNotif]);
+
+  // Detect new/changed RFIs and notify
+  useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
+    if (rfis.length === 0) { prevRfisRef.current = []; return; }
+    const prev = prevRfisRef.current;
+    const newRfis = rfis.filter(r => !prev.find(p => p.id === r.id));
+    const changedRfis = rfis.filter(r => {
+      const p = prev.find(pp => pp.id === r.id);
+      return p && p.data.status !== r.data.status;
+    });
+
+    if (notifPrefs.rfis) {
+      newRfis.forEach(r => {
+        const proj = projects.find(p => p.id === r.data.projectId);
+        sendNotif(
+          '❓ Nuevo RFI',
+          `"${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}`,
+          undefined,
+          `rfi-${r.id}`,
+          { type: 'rfi', screen: 'rfis', itemId: r.id }
+        );
+      });
+      changedRfis.forEach(r => {
+        const proj = projects.find(p => p.id === r.data.projectId);
+        if (r.data.status === 'Respondido' && r.data.assignedTo === authUser?.uid) {
+          sendNotif(
+            '✅ RFI respondido',
+            `"${r.data.subject || r.data.number}" ha sido respondido${proj ? ` — ${proj.data.name}` : ''}`,
+            undefined,
+            `rfi-${r.id}`,
+            { type: 'rfi', screen: 'rfis', itemId: r.id }
+          );
+        } else if (r.data.status === 'Cerrado' && r.data.createdBy === authUser?.uid) {
+          sendNotif(
+            '🔒 RFI cerrado',
+            `"${r.data.subject || r.data.number}" ha sido cerrado`,
+            undefined,
+            `rfi-${r.id}`,
+            { type: 'rfi', screen: 'rfis', itemId: r.id }
+          );
+        }
+      });
+    }
+    prevRfisRef.current = rfis;
+  }, [rfis, notifPrefs.rfis, authUser, projects, sendNotif]);
+
+  // Detect new/changed Submittals and notify
+  useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
+    if (submittals.length === 0) { prevSubmittalsRef.current = []; return; }
+    const prev = prevSubmittalsRef.current;
+    const newSubs = submittals.filter(s => !prev.find(p => p.id === s.id));
+    const changedSubs = submittals.filter(s => {
+      const p = prev.find(pp => pp.id === s.id);
+      return p && p.data.status !== s.data.status;
+    });
+
+    if (notifPrefs.submittals) {
+      newSubs.forEach(s => {
+        if (s.data.reviewer === authUser?.uid) {
+          const proj = projects.find(p => p.id === s.data.projectId);
+          sendNotif(
+            '📋 Nuevo submittal para revisión',
+            `"${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}`,
+            undefined,
+            `sub-${s.id}`,
+            { type: 'submittal', screen: 'submittals', itemId: s.id }
+          );
+        }
+      });
+      changedSubs.forEach(s => {
+        const proj = projects.find(p => p.id === s.data.projectId);
+        if (s.data.status === 'Aprobado' && s.data.createdBy === authUser?.uid) {
+          sendNotif(
+            '✅ Submittal aprobado',
+            `"${s.data.title || s.data.number}" ha sido aprobado${proj ? ` — ${proj.data.name}` : ''}`,
+            undefined,
+            `sub-${s.id}`,
+            { type: 'submittal', screen: 'submittals', itemId: s.id }
+          );
+        } else if ((s.data.status === 'Rechazado' || s.data.status === 'Devuelto') && s.data.createdBy === authUser?.uid) {
+          sendNotif(
+            s.data.status === 'Rechazado' ? '❌ Submittal rechazado' : '↩️ Submittal devuelto',
+            `"${s.data.title || s.data.number}" — ${s.data.reviewNotes || 'Sin notas'}`,
+            undefined,
+            `sub-${s.id}`,
+            { type: 'submittal', screen: 'submittals', itemId: s.id }
+          );
+        } else if (s.data.status === 'En revisión' && s.data.reviewer === authUser?.uid) {
+          sendNotif(
+            '⚖️ Submittal listo para revisión',
+            `"${s.data.title || s.data.number}" requiere tu revisión${proj ? ` — ${proj.data.name}` : ''}`,
+            undefined,
+            `sub-${s.id}`,
+            { type: 'submittal', screen: 'submittals', itemId: s.id }
+          );
+        }
+      });
+    }
+    prevSubmittalsRef.current = submittals;
+  }, [submittals, notifPrefs.submittals, authUser, projects, sendNotif]);
+
+  // Detect new/changed Punch Items and notify
+  useEffect(() => {
+    if (!firstLoadDoneRef.current) return;
+    if (punchItems.length === 0) { prevPunchItemsRef.current = []; return; }
+    const prev = prevPunchItemsRef.current;
+    const newPunch = punchItems.filter(p => !prev.find(pp => pp.id === p.id));
+    const changedPunch = punchItems.filter(p => {
+      const pr = prev.find(pp => pp.id === p.id);
+      return pr && pr.data.status !== p.data.status;
+    });
+
+    if (notifPrefs.punchList) {
+      newPunch.forEach(p => {
+        if (p.data.assignedTo === authUser?.uid) {
+          const proj = projects.find(pr => pr.id === p.data.projectId);
+          sendNotif(
+            '✅ Nuevo item Punch List',
+            `"${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}`,
+            undefined,
+            `punch-${p.id}`,
+            { type: 'punchList', screen: 'punchList', itemId: p.id }
+          );
+        }
+      });
+      changedPunch.forEach(p => {
+        const proj = projects.find(pr => pr.id === p.data.projectId);
+        if (p.data.status === 'Completado' && p.data.assignedTo === authUser?.uid) {
+          sendNotif(
+            '✅ Punch item completado',
+            `"${p.data.title}" — ${p.data.location || ''}`,
+            undefined,
+            `punch-${p.id}`,
+            { type: 'punchList', screen: 'punchList', itemId: p.id }
+          );
+        }
+      });
+    }
+    prevPunchItemsRef.current = punchItems;
+  }, [punchItems, notifPrefs.punchList, authUser, projects, sendNotif]);
 
   /* ===== FIREBASE ACTIONS ===== */
   const doLogin = async () => {
