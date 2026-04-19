@@ -2,7 +2,7 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
 interface SidebarProps {
@@ -43,6 +43,10 @@ export default function Sidebar({
     { id: 'obra', label: 'Seguimiento obra', icon: <Camera size={18} className="stroke-current" /> },
     { id: 'gallery', label: 'Galería', icon: <Image size={18} className="stroke-current" />, badge: galleryPhotos.length > 0 ? galleryPhotos.length : undefined },
     { id: 'inventory', label: 'Inventario', icon: <Package size={18} className="stroke-current" />, badge: invLowStock.length > 0 ? invLowStock.length : undefined },
+    { divider: true },
+    { id: 'rfis', label: 'RFIs', icon: <CircleHelp size={18} className="stroke-current" /> },
+    { id: 'submittals', label: 'Submittals', icon: <ClipboardList size={18} className="stroke-current" /> },
+    { id: 'punchList', label: 'Punch List', icon: <ListChecks size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'admin', label: 'Panel Admin', icon: <Settings size={18} className="stroke-current" /> },
     { id: 'suppliers', label: 'Proveedores', icon: <Store size={18} className="stroke-current" /> },

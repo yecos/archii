@@ -317,6 +317,67 @@ export interface TimeSession {
   isRunning: boolean;
 }
 
+export interface RFI {
+  id: string;
+  data: {
+    number: string;
+    projectId: string;
+    subject: string;
+    question: string;
+    response: string;
+    status: 'Abierto' | 'En revisión' | 'Respondido' | 'Cerrado';
+    priority: 'Alta' | 'Media' | 'Baja';
+    assignedTo: string;
+    dueDate: string;
+    photos: string[];
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+    respondedBy: string;
+    respondedAt: any;
+  };
+}
+
+export interface Submittal {
+  id: string;
+  data: {
+    number: string;
+    projectId: string;
+    title: string;
+    description: string;
+    specification: string;
+    status: 'Borrador' | 'En revisión' | 'Aprobado' | 'Rechazado' | 'Devuelto';
+    submittedBy: string;
+    reviewer: string;
+    dueDate: string;
+    reviewedAt: any;
+    reviewNotes: string;
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+  };
+}
+
+export interface PunchItem {
+  id: string;
+  data: {
+    projectId: string;
+    title: string;
+    description: string;
+    location: string;
+    status: 'Pendiente' | 'En progreso' | 'Completado';
+    priority: 'Alta' | 'Media' | 'Baja';
+    assignedTo: string;
+    dueDate: string;
+    photos: string[];
+    completedAt: any;
+    completedBy: string;
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+  };
+}
+
 /* ===== CONSTANTES ===== */
 
 export const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
@@ -333,7 +394,37 @@ export const INV_WAREHOUSES = ['Almacén Principal', 'Obra en Curso', 'Bodega Re
 
 export const TRANSFER_STATUSES = ['Pendiente', 'En tránsito', 'Completada', 'Cancelada'] as const;
 
+export const RFI_STATUSES = ['Abierto', 'En revisión', 'Respondido', 'Cerrado'] as const;
+export const RFI_PRIORITIES = ['Alta', 'Media', 'Baja'] as const;
+
+export const SUBMITTAL_STATUSES = ['Borrador', 'En revisión', 'Aprobado', 'Rechazado', 'Devuelto'] as const;
+
+export const PUNCH_STATUSES = ['Pendiente', 'En progreso', 'Completado'] as const;
+export const PUNCH_PRIORITIES = ['Alta', 'Media', 'Baja'] as const;
+export const PUNCH_LOCATIONS = ['Fachada', 'Interior', 'Estructura', 'Instalaciones', 'Acabados', 'Terraza', 'Zonas comunes', 'Otro'] as const;
+
 export const CAT_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+
+export const RFI_STATUS_COLORS: Record<string, string> = {
+  'Abierto': 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  'En revisión': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  'Respondido': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  'Cerrado': 'bg-[var(--af-bg4)] text-[var(--muted-foreground)] border-[var(--border)]',
+};
+
+export const SUBMITTAL_STATUS_COLORS: Record<string, string> = {
+  'Borrador': 'bg-gray-500/10 text-gray-400 border-gray-500/30',
+  'En revisión': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  'Aprobado': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  'Rechazado': 'bg-red-500/10 text-red-400 border-red-500/30',
+  'Devuelto': 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+};
+
+export const PUNCH_STATUS_COLORS: Record<string, string> = {
+  'Pendiente': 'bg-red-500/10 text-red-400 border-red-500/30',
+  'En progreso': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  'Completado': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+};
 
 export const ADMIN_EMAILS = ['yecos11@gmail.com'];
 
@@ -401,6 +492,9 @@ export const NAV_ITEMS = [
   { id: 'gallery', icon: '📸', label: 'Galería' },
   { id: 'inventory', icon: '📦', label: 'Inventario' },
   { id: 'reports', icon: '📈', label: 'Reportes' },
+  { id: 'rfis', icon: '❓', label: 'RFIs' },
+  { id: 'submittals', icon: '📋', label: 'Submittals' },
+  { id: 'punchList', icon: '✅', label: 'Punch List' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
   { id: 'superAdmin', icon: '🛡️', label: 'Super Admin' },
 ] as const;
@@ -426,4 +520,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   reports: 'Reportes',
   admin: 'Panel de Administración',
   superAdmin: 'Super Administrador',
+  rfis: 'RFIs',
+  submittals: 'Submittals',
+  punchList: 'Punch List',
 };

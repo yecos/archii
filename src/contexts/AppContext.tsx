@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -169,6 +169,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Daily Log state
   const [dailyLogs, setDailyLogs] = useState<any[]>([]);
+
+  // RFIs / Submittals / Punch List state
+  const [rfis, setRfis] = useState<any[]>([]);
+  const [submittals, setSubmittals] = useState<any[]>([]);
+  const [punchItems, setPunchItems] = useState<any[]>([]);
+  const [rfiFilterProject, setRfiFilterProject] = useState<string>('');
+  const [rfiFilterStatus, setRfiFilterStatus] = useState<string>('');
+  const [subFilterProject, setSubFilterProject] = useState<string>('');
+  const [subFilterStatus, setSubFilterStatus] = useState<string>('');
+  const [punchFilterProject, setPunchFilterProject] = useState<string>('');
+  const [punchFilterStatus, setPunchFilterStatus] = useState<string>('');
+  const [punchFilterLocation, setPunchFilterLocation] = useState<string>('');
   const [dailyLogTab, setDailyLogTab] = useState<'list' | 'create' | 'detail'>('list');
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [logForm, setLogForm] = useState<Record<string, any>>({
@@ -883,6 +895,36 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('comments').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
       setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser, activeTenantId]);
+
+  // Load RFIs (tenant-filtered)
+  useEffect(() => {
+    if (!ready || !authUser || !activeTenantId) { setRfis([]); return; }
+    const db = getFirebase().firestore();
+    const unsub = db.collection('rfis').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
+      setRfis(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser, activeTenantId]);
+
+  // Load Submittals (tenant-filtered)
+  useEffect(() => {
+    if (!ready || !authUser || !activeTenantId) { setSubmittals([]); return; }
+    const db = getFirebase().firestore();
+    const unsub = db.collection('submittals').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
+      setSubmittals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser, activeTenantId]);
+
+  // Load Punch Items (tenant-filtered)
+  useEffect(() => {
+    if (!ready || !authUser || !activeTenantId) { setPunchItems([]); return; }
+    const db = getFirebase().firestore();
+    const unsub = db.collection('punchItems').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
+      setPunchItems(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -2881,6 +2923,50 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setInvoiceTab('list');
   };
 
+  /* ===== RFI / SUBMITTAL / PUNCH LIST FUNCTIONS ===== */
+
+  const saveRFI = async () => {
+    const result = await fbActions.saveRFI(forms, editingId, showToast, authUser, activeTenantId);
+    if (result !== null) {
+      closeModal('rfi'); setEditingId(null);
+      setForms(p => ({ ...p, rfiSubject: '', rfiQuestion: '', rfiResponse: '', rfiPriority: 'Media', rfiAssignedTo: '', rfiDueDate: '', rfiStatus: 'Abierto', rfiProject: '' }));
+    }
+  };
+
+  const openEditRFI = (r: any) => {
+    setEditingId(r.id);
+    setForms(f => ({ ...f, rfiSubject: r.data.subject, rfiQuestion: r.data.question, rfiResponse: r.data.response || '', rfiPriority: r.data.priority || 'Media', rfiAssignedTo: r.data.assignedTo || '', rfiDueDate: r.data.dueDate || '', rfiStatus: r.data.status || 'Abierto', rfiProject: r.data.projectId || '' }));
+    openModal('rfi');
+  };
+
+  const saveSubmittal = async () => {
+    const result = await fbActions.saveSubmittal(forms, editingId, showToast, authUser, activeTenantId);
+    if (result !== null) {
+      closeModal('submittal'); setEditingId(null);
+      setForms(p => ({ ...p, subTitle: '', subDescription: '', subSpecification: '', subStatus: 'Borrador', subReviewer: '', subDueDate: '', subReviewNotes: '', subProject: '' }));
+    }
+  };
+
+  const openEditSubmittal = (s: any) => {
+    setEditingId(s.id);
+    setForms(f => ({ ...f, subTitle: s.data.title, subDescription: s.data.description || '', subSpecification: s.data.specification || '', subStatus: s.data.status || 'Borrador', subReviewer: s.data.reviewer || '', subDueDate: s.data.dueDate || '', subReviewNotes: s.data.reviewNotes || '', subProject: s.data.projectId || '' }));
+    openModal('submittal');
+  };
+
+  const savePunchItem = async () => {
+    const result = await fbActions.savePunchItem(forms, editingId, showToast, authUser, activeTenantId);
+    if (result !== null) {
+      closeModal('punchItem'); setEditingId(null);
+      setForms(p => ({ ...p, punchTitle: '', punchDescription: '', punchLocation: 'Otro', punchStatus: 'Pendiente', punchPriority: 'Media', punchAssignedTo: '', punchDueDate: '', punchProject: '' }));
+    }
+  };
+
+  const openEditPunchItem = (p: any) => {
+    setEditingId(p.id);
+    setForms(f => ({ ...f, punchTitle: p.data.title, punchDescription: p.data.description || '', punchLocation: p.data.location || 'Otro', punchStatus: p.data.status || 'Pendiente', punchPriority: p.data.priority || 'Media', punchAssignedTo: p.data.assignedTo || '', punchDueDate: p.data.dueDate || '', punchProject: p.data.projectId || '' }));
+    openModal('punchItem');
+  };
+
   /* ===== COMMENT FUNCTIONS ===== */
   const postComment = (taskId: string, projectId: string) => {
     if (!commentText.trim()) return;
@@ -3332,6 +3418,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     deleteDailyLog,
     openEditLog,
     resetLogForm,
+    rfis, setRfis, submittals, setSubmittals, punchItems, setPunchItems,
+    rfiFilterProject, setRfiFilterProject, rfiFilterStatus, setRfiFilterStatus,
+    subFilterProject, setSubFilterProject, subFilterStatus, setSubFilterStatus,
+    punchFilterProject, setPunchFilterProject, punchFilterStatus, setPunchFilterStatus,
+    punchFilterLocation, setPunchFilterLocation,
+    saveRFI, openEditRFI,
+    saveSubmittal, openEditSubmittal,
+    savePunchItem, openEditPunchItem,
   };
 
   return <AppContext.Provider value={ctx as any}>{children}</AppContext.Provider>;

@@ -759,3 +759,200 @@ export async function deleteComment(commentId: string, showToast: ToastFn, tenan
     showToast('Comentario eliminado');
   }, showToast);
 }
+
+/* ===== RFIs (Request for Information) ===== */
+
+export function saveRFI(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('guardar RFI', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
+    if (editingId) {
+      await db.collection('rfis').doc(editingId).update({
+        subject: data.rfiSubject,
+        question: data.rfiQuestion,
+        assignedTo: data.rfiAssignedTo || '',
+        priority: data.rfiPriority || 'Media',
+        dueDate: data.rfiDueDate || '',
+        status: data.rfiStatus || 'Abierto',
+        response: data.rfiResponse || '',
+        updatedAt: ts,
+      });
+      showToast('RFI actualizado');
+    } else {
+      const countSnap = await db.collection('rfis').where('tenantId', '==', tenantId || '').get();
+      const num = `RFI-${String(countSnap.size + 1).padStart(3, '0')}`;
+      await db.collection('rfis').add({
+        number: num,
+        projectId: data.rfiProject || '',
+        subject: data.rfiSubject,
+        question: data.rfiQuestion,
+        response: '',
+        status: 'Abierto',
+        priority: data.rfiPriority || 'Media',
+        assignedTo: data.rfiAssignedTo || '',
+        dueDate: data.rfiDueDate || '',
+        photos: [],
+        createdAt: ts,
+        createdBy: authUser?.uid,
+        tenantId: tenantId || '',
+        updatedAt: ts,
+        respondedBy: '',
+        respondedAt: null,
+      });
+      showToast('✅ RFI creado');
+    }
+  }, showToast);
+}
+
+export async function deleteRFI(rfiId: string, showToast: ToastFn, tenantId: string | null) {
+  if (!confirm('¿Eliminar este RFI?')) return;
+  return fbAction('eliminar RFI', async () => {
+    await getFirebase().firestore().collection('rfis').doc(rfiId).delete();
+    showToast('RFI eliminado');
+  }, showToast);
+}
+
+export async function updateRFIStatus(rfiId: string, status: string, response: string, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('actualizar RFI', async () => {
+    const fb = getFirebase();
+    const updates: Record<string, any> = { status, updatedAt: fb.firestore.FieldValue.serverTimestamp() };
+    if (response !== undefined) updates.response = response;
+    if (status === 'Respondido') {
+      updates.respondedBy = authUser?.uid;
+      updates.respondedAt = fb.firestore.FieldValue.serverTimestamp();
+    }
+    await fb.firestore().collection('rfis').doc(rfiId).update(updates);
+    showToast(status === 'Cerrado' ? 'RFI cerrado' : status === 'Respondido' ? '✅ RFI respondido' : `RFI: ${status}`);
+  }, showToast);
+}
+
+/* ===== SUBMITTALS ===== */
+
+export function saveSubmittal(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('guardar submittal', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
+    if (editingId) {
+      await db.collection('submittals').doc(editingId).update({
+        title: data.subTitle,
+        description: data.subDescription || '',
+        specification: data.subSpecification || '',
+        status: data.subStatus || 'Borrador',
+        reviewer: data.subReviewer || '',
+        dueDate: data.subDueDate || '',
+        reviewNotes: data.subReviewNotes || '',
+        updatedAt: ts,
+      });
+      showToast('Submittal actualizado');
+    } else {
+      const countSnap = await db.collection('submittals').where('tenantId', '==', tenantId || '').get();
+      const num = `SUB-${String(countSnap.size + 1).padStart(3, '0')}`;
+      await db.collection('submittals').add({
+        number: num,
+        projectId: data.subProject || '',
+        title: data.subTitle,
+        description: data.subDescription || '',
+        specification: data.subSpecification || '',
+        status: 'Borrador',
+        submittedBy: authUser?.displayName || authUser?.email || 'Usuario',
+        reviewer: data.subReviewer || '',
+        dueDate: data.subDueDate || '',
+        reviewNotes: '',
+        reviewedAt: null,
+        createdAt: ts,
+        createdBy: authUser?.uid,
+        tenantId: tenantId || '',
+        updatedAt: ts,
+      });
+      showToast('✅ Submittal creado');
+    }
+  }, showToast);
+}
+
+export async function deleteSubmittal(subId: string, showToast: ToastFn, tenantId: string | null) {
+  if (!confirm('¿Eliminar este submittal?')) return;
+  return fbAction('eliminar submittal', async () => {
+    await getFirebase().firestore().collection('submittals').doc(subId).delete();
+    showToast('Submittal eliminado');
+  }, showToast);
+}
+
+export async function updateSubmittalStatus(subId: string, status: string, reviewNotes: string, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('actualizar submittal', async () => {
+    const fb = getFirebase();
+    const updates: Record<string, any> = { status, updatedAt: fb.firestore.FieldValue.serverTimestamp() };
+    if (reviewNotes !== undefined) updates.reviewNotes = reviewNotes;
+    if (status === 'Aprobado' || status === 'Rechazado' || status === 'Devuelto') {
+      updates.reviewedBy = authUser?.uid;
+      updates.reviewedAt = fb.firestore.FieldValue.serverTimestamp();
+    }
+    await fb.firestore().collection('submittals').doc(subId).update(updates);
+    const msgs: Record<string, string> = { 'Aprobado': '✅ Submittal aprobado', 'Rechazado': '❌ Submittal rechazado', 'Devuelto': '↩️ Submittal devuelto' };
+    showToast(msgs[status] || `Submittal: ${status}`);
+  }, showToast);
+}
+
+/* ===== PUNCH LIST ===== */
+
+export function savePunchItem(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('guardar item punch list', async () => {
+    const fb = getFirebase();
+    const db = fb.firestore();
+    const ts = fb.firestore.FieldValue.serverTimestamp();
+    if (editingId) {
+      await db.collection('punchItems').doc(editingId).update({
+        title: data.punchTitle,
+        description: data.punchDescription || '',
+        location: data.punchLocation || 'Otro',
+        status: data.punchStatus || 'Pendiente',
+        priority: data.punchPriority || 'Media',
+        assignedTo: data.punchAssignedTo || '',
+        dueDate: data.punchDueDate || '',
+        updatedAt: ts,
+      });
+      showToast('Item actualizado');
+    } else {
+      await db.collection('punchItems').add({
+        projectId: data.punchProject || '',
+        title: data.punchTitle,
+        description: data.punchDescription || '',
+        location: data.punchLocation || 'Otro',
+        status: 'Pendiente',
+        priority: data.punchPriority || 'Media',
+        assignedTo: data.punchAssignedTo || '',
+        dueDate: data.punchDueDate || '',
+        photos: [],
+        completedAt: null,
+        completedBy: '',
+        createdAt: ts,
+        createdBy: authUser?.uid,
+        tenantId: tenantId || '',
+        updatedAt: ts,
+      });
+      showToast('✅ Item agregado');
+    }
+  }, showToast);
+}
+
+export async function deletePunchItem(punchId: string, showToast: ToastFn, tenantId: string | null) {
+  if (!confirm('¿Eliminar este item?')) return;
+  return fbAction('eliminar item punch list', async () => {
+    await getFirebase().firestore().collection('punchItems').doc(punchId).delete();
+    showToast('Item eliminado');
+  }, showToast);
+}
+
+export async function updatePunchItemStatus(punchId: string, status: string, showToast: ToastFn, authUser: any, tenantId: string | null) {
+  return fbAction('actualizar punch item', async () => {
+    const fb = getFirebase();
+    const updates: Record<string, any> = { status, updatedAt: fb.firestore.FieldValue.serverTimestamp() };
+    if (status === 'Completado') {
+      updates.completedAt = fb.firestore.FieldValue.serverTimestamp();
+      updates.completedBy = authUser?.uid;
+    }
+    await fb.firestore().collection('punchItems').doc(punchId).update(updates);
+    showToast(status === 'Completado' ? '✅ Item completado' : `Item: ${status}`);
+  }, showToast);
+}

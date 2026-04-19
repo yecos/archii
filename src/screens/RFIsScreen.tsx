@@ -1,0 +1,196 @@
+'use client';
+import React, { useMemo } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import { fmtDate } from '@/lib/helpers';
+import { RFI_STATUS_COLORS, RFI_STATUSES } from '@/lib/types';
+import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
+import * as fbActions from '@/lib/firestore-actions';
+import { ChevronDown } from 'lucide-react';
+
+const PRIO_COLORS: Record<string, string> = {
+  'Alta': 'bg-red-500/10 text-red-400 border-red-500/30',
+  'Media': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  'Baja': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+};
+
+export default function RFIsScreen() {
+  const {
+    rfis, projects, teamUsers, loading,
+    rfiFilterProject, setRfiFilterProject, rfiFilterStatus, setRfiFilterStatus,
+    setEditingId, setForms, openModal, showToast, authUser, activeTenantId,
+  } = useApp();
+
+  const filtered = useMemo(() => {
+    return rfis.filter((r: any) => {
+      if (rfiFilterProject && r.data.projectId !== rfiFilterProject) return false;
+      if (rfiFilterStatus && r.data.status !== rfiFilterStatus) return false;
+      return true;
+    });
+  }, [rfis, rfiFilterProject, rfiFilterStatus]);
+
+  const stats = useMemo(() => ({
+    total: rfis.length,
+    open: rfis.filter((r: any) => r.data.status === 'Abierto').length,
+    inReview: rfis.filter((r: any) => r.data.status === 'En revisión').length,
+    responded: rfis.filter((r: any) => r.data.status === 'Respondido').length,
+    closed: rfis.filter((r: any) => r.data.status === 'Cerrado').length,
+  }), [rfis]);
+
+  const getProjectName = (pid: string) => {
+    const p = projects.find((pr: any) => pr.id === pid);
+    return p?.data.name || 'Sin proyecto';
+  };
+
+  const getUserName = (uid: string) => {
+    const u = teamUsers.find((t: any) => t.id === uid);
+    return u?.data.name || uid;
+  };
+
+  const handleStatusChange = async (rfiId: string, newStatus: string) => {
+    await fbActions.updateRFIStatus(rfiId, newStatus, '', showToast, authUser, activeTenantId);
+  };
+
+  return (
+    <div className="animate-fadeIn">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="text-sm text-[var(--muted-foreground)]">{rfis.length} RFIs</div>
+        <button
+          className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
+          onClick={() => { setEditingId(null); setForms(p => ({ ...p, rfiSubject: '', rfiQuestion: '', rfiResponse: '', rfiPriority: 'Media', rfiAssignedTo: '', rfiDueDate: '', rfiStatus: 'Abierto', rfiProject: '' })); openModal('rfi'); }}
+        >
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          Nuevo RFI
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+        {[
+          { label: 'Total', value: stats.total, color: 'bg-[var(--af-bg4)]' },
+          { label: 'Abiertos', value: stats.open, color: 'bg-blue-500/10 text-blue-400' },
+          { label: 'En revisión', value: stats.inReview, color: 'bg-amber-500/10 text-amber-400' },
+          { label: 'Respondidos', value: stats.responded, color: 'bg-emerald-500/10 text-emerald-400' },
+          { label: 'Cerrados', value: stats.closed, color: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]' },
+        ].map((s) => (
+          <div key={s.label} className={`${s.color} rounded-xl p-3 text-center`}>
+            <div className="text-xl font-bold">{s.value}</div>
+            <div className="text-[11px] opacity-80">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-4">
+        <select
+          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
+          value={rfiFilterProject}
+          onChange={(e) => setRfiFilterProject(e.target.value)}
+        >
+          <option value="">Todos los proyectos</option>
+          {projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => (
+            <option key={p.id} value={p.id}>{p.data.name}</option>
+          ))}
+        </select>
+        <select
+          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
+          value={rfiFilterStatus}
+          onChange={(e) => setRfiFilterStatus(e.target.value)}
+        >
+          <option value="">Todos los estados</option>
+          {RFI_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Status tabs */}
+      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+        {['', ...RFI_STATUSES].map((status, i) => (
+          <button
+            key={status || 'all'}
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
+              rfiFilterStatus === status
+                ? 'bg-[var(--af-accent)] text-background'
+                : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+            onClick={() => setRfiFilterStatus(status)}
+          >
+            {i === 0 ? 'Todos' : status}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      {loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+      {!loading && filtered.length === 0 ? (
+        <div className="text-center py-16 text-[var(--af-text3)]">
+          <div className="text-4xl mb-3">❓</div>
+          <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin RFIs</div>
+          <div className="text-[13px]">Crea tu primer RFI para solicitar información</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((r: any) => {
+            const statusCls = RFI_STATUS_COLORS[r.data.status] || 'bg-[var(--af-bg4)] text-[var(--muted-foreground)] border-[var(--border)]';
+            const prioCls = PRIO_COLORS[r.data.priority] || PRIO_COLORS['Media'];
+            return (
+              <div key={r.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20">
+                      {r.data.number}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${prioCls}`}>
+                      {r.data.priority}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusCls}`}>
+                      {r.data.status}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <select
+                      className="bg-[var(--af-bg3)] border border-[var(--input)] rounded px-1 py-0.5 text-[10px] text-[var(--foreground)] outline-none cursor-pointer"
+                      value={r.data.status}
+                      onChange={(e) => handleStatusChange(r.id, e.target.value)}
+                    >
+                      {RFI_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(r.id); setForms(p => ({ ...p, rfiSubject: r.data.subject, rfiQuestion: r.data.question, rfiResponse: r.data.response || '', rfiPriority: r.data.priority || 'Media', rfiAssignedTo: r.data.assignedTo || '', rfiDueDate: r.data.dueDate || '', rfiStatus: r.data.status || 'Abierto', rfiProject: r.data.projectId || '' })); openModal('rfi'); }}>✏️</button>
+                    <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deleteRFI(r.id, showToast, activeTenantId)}>🗑</button>
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div className="text-[14px] font-semibold mb-1">{r.data.subject}</div>
+                <div className="text-[12px] text-[var(--muted-foreground)] mb-2 line-clamp-2">{r.data.question}</div>
+
+                {/* Response inline */}
+                {r.data.status === 'Respondido' && r.data.response && (
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 mb-2">
+                    <div className="text-[10px] font-semibold text-emerald-400 mb-1">RESPUESTA</div>
+                    <div className="text-[12px] text-[var(--foreground)]">{r.data.response}</div>
+                  </div>
+                )}
+
+                {/* Meta */}
+                <div className="flex flex-wrap gap-3 text-[11px] text-[var(--af-text3)]">
+                  <span>📁 {getProjectName(r.data.projectId)}</span>
+                  {r.data.assignedTo && <span>👤 {getUserName(r.data.assignedTo)}</span>}
+                  {r.data.dueDate && <span>📅 {fmtDate(r.data.dueDate)}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

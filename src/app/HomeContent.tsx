@@ -32,6 +32,9 @@ import InvCategoryModal from '@/components/modals/InvCategoryModal';
 import InvMovementModal from '@/components/modals/InvMovementModal';
 import InvTransferModal from '@/components/modals/InvTransferModal';
 import CompanyModal from '@/components/modals/CompanyModal';
+import RFIModal from '@/components/modals/RFIModal';
+import SubmittalModal from '@/components/modals/SubmittalModal';
+import PunchItemModal from '@/components/modals/PunchItemModal';
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import AIFloatingWrapper from '@/components/archiflow/AIFloatingWrapper';
@@ -63,6 +66,9 @@ const TimeTrackingScreen = dynamic(() => import('@/screens/TimeTrackingScreen'),
 const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
 const SuperAdminScreen = dynamic(() => import('@/screens/SuperAdminScreen'), { ssr: false });
+const RFIsScreen = dynamic(() => import('@/screens/RFIsScreen'), { ssr: false });
+const SubmittalsScreen = dynamic(() => import('@/screens/SubmittalsScreen'), { ssr: false });
+const PunchListScreen = dynamic(() => import('@/screens/PunchListScreen'), { ssr: false });
 
 function AppContent() {
   const {
@@ -126,7 +132,7 @@ function AppContent() {
     budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario',
     admin: 'Panel Admin', superAdmin: 'Super Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
     calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App',
-    companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto',
+    companies: 'Empresas', rfis: 'RFIs', submittals: 'Submittals', punchList: 'Punch List', projectDetail: currentProject?.data.name || 'Proyecto',
   };
 
   return (
@@ -251,6 +257,9 @@ function AppContent() {
               {screen === 'invoices' && <InvoicesScreen />}
               {screen === 'reports' && <ReportsScreen />}
               {screen === 'superAdmin' && <SuperAdminScreen />}
+              {screen === 'rfis' && <RFIsScreen />}
+              {screen === 'submittals' && <SubmittalsScreen />}
+              {screen === 'punchList' && <PunchListScreen />}
               </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
@@ -278,6 +287,9 @@ function AppContent() {
       <InvMovementModal open={!!modals.invMovement} onClose={() => closeModal('invMovement')} />
       <InvTransferModal open={!!modals.invTransfer} onClose={() => closeModal('invTransfer')} />
       <CompanyModal open={!!modals.company} onClose={() => closeModal('company')} />
+      <RFIModal open={!!modals.rfi} onClose={() => closeModal('rfi')} />
+      <SubmittalModal open={!!modals.submittal} onClose={() => closeModal('submittal')} />
+      <PunchItemModal open={!!modals.punchItem} onClose={() => closeModal('punchItem')} />
 
       <LightboxViewer />
 
