@@ -221,6 +221,74 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FEAT — Aislamiento completo entre tenants (Firestore Rules + Security)
+  Estado: DESPLEGADO (pendiente deploy manual de Firestore Rules)
+  Commit: f1f70fe
+  Build: exitoso
+
+  Contexto: El usuario necesita que otras empresas puedan crear sus propios
+    tenants sin que la informacion se mezcle. Se realizo una auditoria completa
+    del sistema de aislamiento entre tenants.
+
+  Auditoria realizada:
+    1. firestore-actions.ts — TODOS los writes incluyen tenantId ✅
+    2. Listeners cliente (AppContext.tsx) — TODOS filtran por tenantId ✅
+    3. API routes — 2 queries sin filtro en ai-agent ❌ -> CORREGIDO
+    4. Firestore Security Rules — NO EXISTIAN ❌ -> CREADAS
+    5. Debug endpoints expuestos a cualquier usuario ❌ -> PROTEGIDOS
+    6. Endpoint migracion accesible por cualquier usuario ❌ -> PROTEGIDO
+
+  Cambios:
+
+  1. firestore.rules (NUEVO) — Reglas de seguridad completas:
+     - Helper isMemberOfTenant(tenantId): verifica que el usuario
+       autenticado este en el array members[] del tenant via get()
+     - Colecciones tenant-scoped (projects, tasks, expenses, suppliers,
+       companies, meetings, galleryPhotos, invProducts, invCategories,
+       invMovements, invTransfers, timeEntries, invoices, comments,
+       fieldNotes, generalMessages): solo lectura/escritura si el usuario
+       es miembro del tenant del documento
+     - users/: global, cualquier autenticado puede leer, solo el
+       propio usuario puede escribir su documento
+     - tenants/: solo miembros pueden leer/actualizar, solo creador puede
+       eliminar
+     - directMessages/: solo los dos participantes pueden acceder
+     - Subcolecciones de projects (messages, workPhases, files, approvals):
+       heredan la verificacion de tenantId del documento padre
+
+  2. ai-agent/route.ts — Fix queries sin filtro tenantId:
+     - get_tasks: project name lookup ahora filtra por tenantId
+     - get_expenses: project name lookup ahora filtra por tenantId
+     - Antes: db.collection('projects').limit(20).get() (SIN FILTRO!)
+     - Ahora: db.collection('projects').where('tenantId', '==', tenantId)
+
+  3. Proteccion de endpoints (requireAuth -> requireAdmin):
+     - /api/migrate-all-to-tenant
+     - /api/debug/tenant
+     - /api/debug/tenant/restore-members
+     - Solo yecos11@gmail.com puede acceder
+
+  ACCION REQUERIDA POR EL USUARIO:
+    Desplegar las Firestore Rules en Firebase Console:
+    1. Ir a Firebase Console > Firestore Database > Rules
+    2. Reemplazar el contenido con el archivo firestore.rules del repo
+    3. Click "Publish"
+    4. Sin esto, el aislamiento es solo a nivel de aplicacion (cliente/API),
+       no a nivel de base de datos
+
+  Pendiente para futuro:
+    - Integraciones WhatsApp y OneDrive no tienen aislamiento por tenant
+      (requieren refactoring mayor, son features secundarias)
+    - Eliminar endpoints temporales (debug/*, migrate-all-to-tenant) despues
+      de verificar que todo funciona correctamente
+
+  Archivos modificados (5):
+    firestore.rules (nuevo)
+    src/app/api/ai-agent/route.ts (+2, -2)
+    src/app/api/migrate-all-to-tenant/route.ts (requireAuth -> requireAdmin)
+    src/app/api/debug/tenant/route.ts (requireAuth -> requireAdmin)
+    src/app/api/debug/tenant/restore-members/route.ts (requireAuth -> requireAdmin)
+
 2026-04-20 | FIX — Migrar todos los usuarios de Firebase Auth al tenant existente
   Estado: DESPLEGADO
   Commit: 8078379
