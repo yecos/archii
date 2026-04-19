@@ -221,6 +221,54 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FIX — Login con Google y Microsoft (CSP + Headers)
+  Estado: COMPLETADO
+  Commit: 5c66a22
+  Build: exitoso (0 errores)
+
+  Contexto: El login con Google y Microsoft fallaba por restricciones en las
+    cabeceras de seguridad (Content Security Policy y X-Frame-Options).
+    Los iframes intermedios de Firebase Auth y los endpoints CDN de Microsoft
+    no estaban permitidos, causando que los popups OAuth fallaran silenciosamente
+    o mostraran errores de "popup blocked" / "unauthorized domain".
+
+  Problemas identificados (4):
+    1. X-Frame-Options: DENY bloqueaba iframes intermedios de Firebase Auth
+       necesarios durante el flujo OAuth popup
+    2. frame-src en CSP faltaba *.firebaseapp.com y *.firebaseio.com
+       (Firebase Auth abre iframes intermedios desde estos dominios)
+    3. connect-src en CSP faltaba aadcdn.msauth.net y aadcdn.msftauth.net
+       (Microsoft Authentication Library carga recursos desde estos CDN)
+    4. Permissions-Policy bloqueaba completamente camera, microphone y geolocation
+       lo cual podia interferir con flujos OAuth en dispositivos moviles
+
+  Correcciones aplicadas (archivo: next.config.ts):
+    * X-Frame-Options: DENY → SAMEORIGIN
+      - SAMEORIGIN permite iframes del mismo origen, necesarios para Firebase Auth
+    * frame-src: agregados 4 dominios
+      - https://*.firebaseapp.com (iframes Firebase Auth intermedios)
+      - https://*.firebaseio.com (Firebase Realtime Database)
+      - https://login.live.com (Microsoft Live Auth fallback)
+    * connect-src: agregados 2 dominios CDN de Microsoft
+      - https://aadcdn.msauth.net (Microsoft Authentication Library CDN)
+      - https://aadcdn.msftauth.net (Microsoft Authentication CDN alt)
+    * Permissions-Policy: camera=(), microphone=(), geolocation=()
+      → camera=(self), microphone=(self), geolocation=(self)
+      - Permite estos permisos solo desde el mismo origen
+    * img-src: agregado https://*.googleapis.com para avatares de Google
+    * CSP reorganizado como array join(' ') para legibilidad, con comentarios
+      por cada directiva explicando su proposito
+
+  Impacto en seguridad:
+    - SAMEORIGIN sigue siendo seguro: no permite que sitios externos incrusten
+      la app, pero si permite iframes del propio dominio (Firebase Auth)
+    - Los dominios agregados son exclusivamente de Google y Microsoft,
+      servicios oficiales requeridos para que OAuth funcione
+    - No se aflojan las restricciones de scripts ni estilos
+
+  Archivos modificados (1):
+    next.config.ts (+46, -3)
+
 2026-04-16 22:02 | SESION — Cierre de sesion + WhatsApp AI v3 + Actualizacion Instructivo
   Estado: COMPLETADO
   Commit: c1fcf38
