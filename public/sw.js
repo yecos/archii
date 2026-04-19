@@ -1,4 +1,4 @@
-const CACHE_NAME = 'archiflow-v4';
+const CACHE_NAME = 'archiflow-v5';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -39,13 +39,17 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Skip Firebase and API calls (real-time data)
+  // Skip Firebase, Google Auth, and API calls (real-time data)
   if (
     url.hostname.includes('firebaseio.com') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('google.com') ||
     url.hostname.includes('microsoft.com') ||
-    url.hostname.includes('firebaseapp.com')
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('live.com') ||
+    url.hostname.includes('msauth.net') ||
+    url.hostname.includes('msftauth.net')
   ) {
     return;
   }
@@ -53,7 +57,8 @@ self.addEventListener('fetch', (event) => {
   // Skip Chrome extension requests
   if (url.protocol === 'chrome-extension:') return;
 
-  // For navigation requests, try network first then cache
+  // For navigation requests, ALWAYS try network first (never serve cached HTML)
+  // This ensures Firebase config scripts are always up to date
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
