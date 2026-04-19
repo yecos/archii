@@ -241,3 +241,27 @@ Stage Summary:
 - Commit: b441b54 - fix(team): agregar boton Gestionar Miembros directo en TeamScreen
 - El usuario puede ahora ir a Equipo > clic "Gestionar miembros" > "Agregar todos los usuarios"
 - Desplegando en Vercel automaticamente
+---
+Task ID: 3
+Agent: Super Z (Main) + full-stack-developer subagent
+Task: Sistema multi-tenant OneDrive (equipo compartido + personal)
+
+Work Log:
+- Analizada integracion OneDrive existente (6 API routes, 7 UI components)
+- Diseñada arquitectura dual: Tenant OneDrive (server-side token) + Personal OneDrive (client-side token)
+- Creadas 4 nuevas API routes para tenant OneDrive:
+  - /api/tenants/onedrive/connect (connect/disconnect/status/refresh)
+  - /api/tenants/onedrive/files (list + upload)
+  - /api/tenants/onedrive/files/[id] (download/rename/delete)
+  - /api/tenants/onedrive/folders (create folders)
+- Rediseñado FilesScreen.tsx con tabs: Equipo + Personal
+- Actualizado ProfileScreen.tsx con seccion Mi OneDrive Personal
+- Build exitoso (0 errores)
+- Commit: fb3991c + push a main
+
+Stage Summary:
+- Sistema completo de OneDrive multi-tenant implementado
+- El Super Admin conecta la cuenta Microsoft del tenant → todos los miembros ven archivos
+- Cada usuario puede conectar su propio OneDrive personal desde Perfil
+- Tokens del tenant almacenados seguros en Firestore (server-side)
+- Deploy a Vercel en curso
