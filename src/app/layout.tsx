@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
-import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 
 export const metadata: Metadata = {
   title: "ArchiFlow — Gestión de Proyectos",
@@ -118,10 +116,6 @@ export default function RootLayout({
           }
         ` }} />
         {children}
-        {/* AI Assistant - Floating wrapper */}
-        <AIFloatingWrapper />
-        {/* Keyboard Shortcuts - Global initialization */}
-        <KeyboardShortcutsInitializer />
       </body>
     </html>
   );

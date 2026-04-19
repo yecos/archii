@@ -34,6 +34,8 @@ import InvTransferModal from '@/components/modals/InvTransferModal';
 import CompanyModal from '@/components/modals/CompanyModal';
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import AIFloatingWrapper from '@/components/archiflow/AIFloatingWrapper';
+import KeyboardShortcutsInitializer from '@/components/archiflow/KeyboardShortcutsInitializer';
 
 /* ─── Screens — core screens loaded directly ─── */
 import DashboardScreen from '@/screens/DashboardScreen';
@@ -254,6 +256,11 @@ function AppContent() {
       </div>
 
       <BottomNav />
+
+      {/* AI Assistant - Floating wrapper (MUST be inside AppProvider) */}
+      <AIFloatingWrapper />
+      {/* Keyboard Shortcuts - Global initialization (MUST be inside AppProvider) */}
+      <KeyboardShortcutsInitializer />
 
       {/* ===== Modals — each self-contained ===== */}
       <ProjectModal open={!!modals.project} onClose={() => closeModal('project')} />
