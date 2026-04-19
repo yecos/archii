@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
               "  https://*.googleapis.com",
               "  https://apis.google.com",
               "  https://www.gstatic.com",
+              "  https://lh3.googleusercontent.com",
               "  https://securetoken.googleapis.com",
               "  https://identitytoolkit.googleapis.com",
               "  https://accounts.google.com",
