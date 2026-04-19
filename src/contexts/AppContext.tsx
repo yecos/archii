@@ -547,7 +547,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
           console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
           if (!snap.exists) {
-            await ref.set({ name: user.displayName || user.email.split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+            await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
           } else if (isAdminEmail) {
             // Force admin role for ADMIN_EMAILS on every login
             const current = snap.data()?.role;
@@ -1844,7 +1844,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!chatProjectId) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || authUser?.email.split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
+      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || (authUser?.email || '').split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
