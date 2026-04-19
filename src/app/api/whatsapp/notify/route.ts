@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
-import { requireAuth } from "@/lib/api-auth";
+import { requireAuth, AuthError } from "@/lib/api-auth";
 
 /**
  * POST /api/whatsapp/notify
  * Endpoint server-side para enviar notificaciones de WhatsApp.
- * Se llama desde el cliente (whatsapp-notifications.ts) via fetch.
+ * Requiere autenticacion para TODAS las rutas (broadcast y individual).
  *
  * Body: { userId: string, message: string }
- *   - Busca en Firestore si el userId tiene un WhatsApp vinculado y envía el mensaje.
- *
  * Body: { broadcast: true, message: string }
- *   - Envía el mensaje a TODOS los usuarios con WhatsApp vinculado.
  */
 export async function POST(request: NextRequest) {
+  try {
+    // Autenticacion OBLIGATORIA para todas las rutas
+    await requireAuth(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { userId, message, broadcast } = body;
@@ -22,17 +29,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Mensaje requerido" }, { status: 400 });
     }
 
-    // Broadcast requires authentication; single-user notify is called from client with user context
-    if (broadcast) {
-      await requireAuth(request);
-    }
-
-    // Dinámicamente importar firebase-admin (solo server-side)
     const { getAdminDb } = await import("@/lib/firebase-admin");
     const db = getAdminDb();
 
     if (broadcast) {
-      // Enviar a todos los vinculados
       const snap = await db
         .collection("whatsappLinks")
         .where("active", "==", true)
@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "userId requerido" }, { status: 400 });
     }
 
-    // Buscar WhatsApp vinculado al userId
     const snap = await db
       .collection("whatsappLinks")
       .where("userId", "==", userId)
@@ -71,8 +70,9 @@ export async function POST(request: NextRequest) {
       ok: true,
       sent: result.success ? 1 : 0,
     });
-  } catch (error: any) {
-    console.error("[ArchiFlow Notify] Error:", error.message);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error interno del servidor";
+    console.error("[ArchiFlow Notify] Error:", message);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

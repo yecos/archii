@@ -1,30 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 
 /**
  * GET /api/whatsapp/test
  * Endpoint de diagnostico para verificar la configuracion de WhatsApp.
- * Usalo para comprobar que el token, phone ID y envio funcionan.
+ * Requiere autenticacion de administrador.
  *
  * Uso: GET /api/whatsapp/test?to=573001234567
  * (el parametro "to" es opcional — si lo incluyes, envia un mensaje de prueba)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
+  }
+
   const results: Record<string, any> = {
     timestamp: new Date().toISOString(),
     checks: {},
   };
 
-  // 1. Verificar variables de entorno
+  // 1. Verificar variables de entorno (SIN exponer valores sensibles)
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
 
   results.checks.envVars = {
     hasToken: !!token,
-    tokenPrefix: token ? token.substring(0, 10) + '...' : 'MISSING',
     tokenLength: token ? token.length : 0,
     hasPhoneId: !!phoneId,
-    phoneIdValue: phoneId || 'MISSING',
     hasVerifyToken: !!verifyToken,
   };
 
@@ -55,7 +63,7 @@ export async function GET(request: Request) {
         status: tokenCheck.status,
         error: tokenData,
       };
-      results.error = `Token INVALIDO (error ${tokenCheck.status}). Es probable que haya expirado. Genera uno nuevo en Meta Developer Console.`;
+      results.error = `Token INVALIDO (error ${tokenCheck.status}). Genera uno nuevo en Meta Developer Console.`;
       return NextResponse.json(results, { status: 401 });
     }
   } catch (err: any) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, AuthError } from "@/lib/api-auth";
 
 /**
  * POST /api/ai-assistant
@@ -38,6 +39,16 @@ Siempre que sea posible, estructura tus respuestas con:
 Si el usuario te pregunta sobre su proyecto (por el contexto proporcionado), usa esa información para dar respuestas personalizadas.`;
 
 export async function POST(request: NextRequest) {
+  try {
+    // Autenticacion obligatoria para proteger creditos de API
+    await requireAuth(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
+  }
+
   try {
     const { messages, projectContext } = await request.json();
 
