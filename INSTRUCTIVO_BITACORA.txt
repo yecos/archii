@@ -221,6 +221,45 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FIX — Indices compuestos faltantes en Firestore
+  Estado: DESPLEGADO (PENDIENTE creacion manual por el usuario)
+  Commit: 6a38125
+  Build: exitoso
+
+  Contexto: La consola mostraba multiples errores "The query requires an index"
+    para 6 colecciones: invTransfers, invProducts, invMovements, approvals,
+    companies, suppliers. Estas queries usan where('tenantId', '==', x)
+    combinado con orderBy('createdAt', 'desc'), lo cual requiere un indice
+    compuesto en Firestore.
+
+  Solucion:
+    * Creado endpoint GET /api/setup-indexes que retorna los enlaces directos
+      a Firebase Console para crear cada indice compuesto
+    * Creado archivo firestore.indexes.json con la configuracion completa
+      de 15 indices compuestos para deploy con Firebase CLI
+    * Los enlaces abren Firebase Console con el formulario pre-llenado
+
+  Colecciones que necesitan indices (tenantId ASC + field DESC):
+    projects, tasks, expenses, suppliers, companies, meetings,
+    invProducts, invCategories (name ASC), invMovements, invTransfers,
+    timeEntries, invoices, galleryPhotos, generalMessages (createdAt ASC),
+    fieldNotes
+
+  ACCION REQUERIDA: El usuario debe visitar
+    https://archii-theta.vercel.app/api/setup-indexes
+    y hacer clic en cada enlace para crear los indices.
+
+  Otros errores vistos en consola:
+    * Presence init error (onDisconnect is not a function): viene de codigo
+      minificado viejo que ya no existe en el repo. Se resolvera cuando el
+      service worker v5 limpie la cache del navegador.
+    * /api/ai-chat-history 500: endpoint no existe o error interno, no
+      relacionado con la carga de personas.
+
+  Archivos modificados (2):
+    src/app/api/setup-indexes/route.ts (nuevo)
+    firestore.indexes.json (nuevo)
+
 2026-04-20 | FIX — Google Auth internal-error (CSP + redirect fallback)
   Estado: DESPLEGADO
   Commit: d1dbdf3
