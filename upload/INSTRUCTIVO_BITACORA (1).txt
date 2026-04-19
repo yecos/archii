@@ -4135,3 +4135,340 @@ proyecto ArchiFlow simultaneamente sin conflictos ni perdida de datos.
 
   Archivos: 1 nuevo (jspdf-autotable.d.ts), 1 modificado (export-pdf.ts)
   Total: +50 lineas, -31 any eliminados
+
+================================================================================
+PARTE 6: REGLA OBLIGATORIA DE DOCUMENTACION CONTINUA
+================================================================================
+
+ESTA ES LA REGLA MAS IMPORTANTE DE TODO EL INSTRUCTIVO. SE APLICA A
+TODAS LAS SESIONES DE TRABAJO, SIN EXCEPCION, INCLUYENDO ASISTENTES DE IA.
+
+--------------------------------------------------------------------------------
+6.1 OBLIGACION DE CADA SESION
+--------------------------------------------------------------------------------
+
+  [A] AL INICIAR CADA SESION (OBLIGATORIO, SIN EXCEPCION):
+  ├── 1. Leer ESTE INSTRUCTIVO completo ANTES de escribir una sola linea de codigo
+  ├── 2. Hacer git pull origin main para tener el codigo mas reciente
+  ├── 3. Revisar la BITACORA (PARTE 4) para entender el estado actual del proyecto
+  ├── 4. Entender que features existen, que bugs se han resuelto, y que esta pendiente
+  ├── 5. NO asumir que nada funciona o que nada existe — verificar en el codigo
+  └── 6. Registrar el inicio de sesion en la bitacora con fecha y hora
+
+  [B] DURANTE LA SESION (OBLIGATORIO):
+  ├── 1. Documentar CADA cambio significativo en la bitacora (PARTE 4)
+  ├── 2. Documentar tanto fixes como features como refactors
+  ├── 3. Incluir: descripcion, archivos afectados, commits, resultado
+  ├── 4. Si es un bug: incluir ID (BUG-YYYYMMDD-NNN), causa y solucion
+  ├── 5. Si es una feature: incluir alcance, archivos nuevos/modificados
+  ├── 6. Commits frecuentes + push al remoto (no acumular cambios)
+  └── 7. Al finalizar: registrar cierre de sesion con resumen
+
+  [C] AL FINALIZAR CADA SESION (OBLIGATORIO):
+  ├── 1. Hacer commit + push de TODO el trabajo pendiente
+  ├── 2. Actualizar la bitacora con TODOS los cambios de la sesion
+  ├── 3. Subir el instructivo actualizado a GitHub
+  ├── 4. Listar archivos modificados/creados en la sesion
+  ├── 5. Documentar pendientes para la proxima sesion
+  └── 6. NUNCA cerrar una sesion sin actualizar la bitacora
+
+--------------------------------------------------------------------------------
+6.2 FORMATO DE ENTRADA DE BITACORA
+--------------------------------------------------------------------------------
+
+  Cada entrada DEBE seguir este formato:
+
+  YYYY-MM-DD HH:MM | TIPO — TITULO BREVE
+    Estado: [COMPLETADO] / [EN PROGRESO] / [PARCIALMENTE RESUELTO]
+    Commit(s): [hash1, hash2, ...]
+    Severidad (bugs): [CRITICA] / [ALTA] / [MEDIA] / [BAJA]
+
+    Contexto: Breve explicacion del problema o requerimiento.
+
+    Tarea N — Descripcion de lo que se hizo:
+      * Detalle del cambio
+      * Archivos afectados
+      * Resultado obtenido
+
+    Archivos modificados (N):
+      ruta/archivo1 (+lineas, -lineas)
+      ruta/archivo2 (descripcion)
+
+  Tipos validos para el titulo:
+    SESION — Sesion completa de trabajo
+    FEATURE vX — Nueva funcionalidad
+    FIX — Correccion de bug
+    REFACTOR — Reestructuracion sin cambio funcional
+    CHORE — Mantenimiento, dependencias, configuracion
+    DEPLOY — Despliegue a produccion
+
+--------------------------------------------------------------------------------
+6.3 PROHIBICIONES ABSOLUTAS
+--------------------------------------------------------------------------------
+
+  [X] NUNCA trabajar sin leer el instructivo primero
+  [X] NUNCA modificar entradas anteriores de la bitacora (solo agregar nuevas)
+  [X] NUNCA cerrar una sesion sin documentar en la bitacora
+  [X] NUNCA eliminar el instructivo
+  [X] NUNCA asumir que algo funciona sin verificar
+  [X] NUNCA escribir codigo sin entender el estado actual del proyecto
+  [X] NUNCA acumular cambios sin commit (max 30 min entre commits)
+
+--------------------------------------------------------------------------------
+6.4 LISTA DE VERIFICACION ANTES DE EMPEZAR
+--------------------------------------------------------------------------------
+
+  [ ] Lei el instructivo completo?
+  [ ] Hice git pull?
+  [ ] Revise la bitacora para entender el estado actual?
+  [ ] Se que features existen y como funcionan?
+  [ ] Se que bugs se han resuelto y cuales estan pendientes?
+  [ ] Entiendo la arquitectura del proyecto?
+  [ ] Se que archivos son compartidos y pueden causar conflictos?
+  [ ] Tengo claro que voy a hacer en esta sesion?
+
+  Si alguna respuesta es NO: NO EMPEZAR. Resolver primero.
+
+
+--- INICIO DE ENTRADAS NUEVAS -----------------------------------------------
+
+2026-04-20 13:00 | SESION — Fix autenticacion AI + Filtrado team por tenant + Actualizacion Instructivo
+  Estado: COMPLETADO
+  Commits: 651572a (sessión anterior: e38f422, 68259ff, 585540a, 67453e5, a44c223)
+
+  Contexto: Sesion continua (contexto de sesion anterior agotado). Se detectaron
+    tres problemas: (1) error de autenticacion "No autenticado. Se requiere un
+    token valido" al usar AI Chat y Quick Actions, (2) personas perdidas en el
+    tenant TEMPLO, (3) instructivo no actualizado con las sesiones recientes.
+
+  Tarea 1 — Investigacion del error de autenticacion (BUG-20260420-AUTH):
+    * Causa raiz: AIChatPanel.tsx y QuickActions.tsx llamaban a /api/ai-agent
+      sin incluir el header Authorization con el token Firebase ID.
+    * El servidor en api-auth.ts:93 lanza AuthError("No autenticado. Se requiere
+      un token valido.", 401) cuando authenticateRequest() retorna null.
+    * Otros componentes (TenantSelectionScreen) ya usaban getAuthHeaders()
+      correctamente. Solo faltaba en los componentes de IA.
+    * Solucion: importar getAuthHeaders() desde firebase-service.ts y agregar
+      ...authHeaders al objeto de headers en ambos fetch calls.
+
+  Tarea 2 — Fix autenticacion en AIChatPanel.tsx:
+    * Agregado import: import { getAuthHeaders } from '@/lib/firebase-service'
+    * Antes: fetch('/api/ai-agent', { headers: { 'Content-Type': ... } })
+    * Despues: const authHeaders = await getAuthHeaders();
+               fetch('/api/ai-agent', { headers: { 'Content-Type': ... , ...authHeaders } })
+
+  Tarea 3 — Fix autenticacion en QuickActions.tsx:
+    * Mismo fix: importar getAuthHeaders() y agregar al fetch de /api/ai-agent
+    * QuickActions.tsx es el panel de acciones rapidas que usa el AI agent
+
+  Tarea 4 — Investigacion de personas perdidas en tenant TEMPLO:
+    * La funcion migrateExistingData() en /api/tenants/route.ts NO toco la
+      coleccion 'users' ni el array 'members' de ningun tenant.
+      Las colecciones migradas fueron: projects, tasks, expenses, suppliers,
+      companies, meetings, galleryPhotos, invProducts, invCategories,
+      invMovements, invTransfers, timeEntries, invoices, comments,
+      generalMessages. NINGUNA de ellas es 'users'.
+    * El problema real: el listener de teamUsers en AppContext.tsx leia TODOS
+      los documentos de la coleccion 'users' SIN FILTRAR POR TENANT. Cada
+      usuario en la coleccion 'users' aparecia en la pantalla de equipo de
+      TODOS los tenants, sin importar a cual pertenecia.
+    * Los miembros de un tenant estan almacenados como un array de UIDs en
+      el campo 'members' del documento del tenant en la coleccion 'tenants'.
+    * El listener NO cruzaba esta referencia para filtrar.
+
+  Tarea 5 — Fix filtrado de teamUsers por tenant activo:
+    * Nuevo estado: activeTenantMembers (string[]) — array de UIDs del tenant
+    * Nuevo useEffect: listener en db.collection('tenants').doc(activeTenantId)
+      que obtiene el array 'members' del tenant activo en tiempo real.
+    * Modificacion del listener de teamUsers: ahora filtra allUsers para solo
+      mostrar usuarios cuyo UID este en activeTenantMembers.
+    * Fallback: si no hay tenant activo, muestra todos los usuarios (comportamiento
+      anterior para la pantalla de seleccion de tenant).
+    * Archivo: src/contexts/AppContext.tsx
+
+  Tarea 6 — Endpoints de debug existentes:
+    * GET /api/debug/tenant — muestra todos los tenants con miembros resueltos
+    * POST /api/debug/tenant/restore-members — restaura miembros con { tenantId, emails[] }
+    * Estos endpoints ya existian y pueden usarse para recuperar miembros si
+      el array 'members' del tenant fue modificado inadvertidamente.
+
+  Tarea 7 — Actualizacion del INSTRUCTIVO_BITACORA.txt:
+    * Agregada PARTE 6: REGLA OBLIGATORIA DE DOCUMENTACION CONTINUA
+      - 6.1 Obligacion de cada sesion (inicio, durante, finalizar)
+      - 6.2 Formato de entrada de bitacora
+      - 6.3 Prohibiciones absolutas
+      - 6.4 Lista de verificacion antes de empezar
+    * Documentadas todas las sesiones faltantes desde 2026-04-17 hasta 2026-04-20
+    * Regla principal: TODA sesion DEBE leer el instructivo y seguir documentando
+
+  Archivos modificados en esta sesion (3):
+    src/components/archiflow/AIChatPanel.tsx (+3, -1) — auth header fix
+    src/components/archiflow/QuickActions.tsx (+3, -1) — auth header fix
+    src/contexts/AppContext.tsx (+25, -7) — tenant member filtering
+    INSTRUCTIVO_BITACORA.txt (+nuevas entradas + PARTE 6)
+
+--- FIN DE SESION 2026-04-20 ----------------------------------------------
+
+2026-04-19 20:26 | SESION — Multi-tenant, AppProvider fix, loading, fotos, auth
+  Estado: COMPLETADO
+  Commits: 67453e5, a44c223, 585540a, 68259ff, e38f422
+
+  Contexto: Sesion enfocada en estabilizar la app en Vercel despues de implementar
+    multi-tenant. Multiples bugs criticos resueltos.
+
+  Tarea 1 — Fix AppProvider en layout.tsx (CRITICO, commit 67453e5):
+    * Problema: app no cargaba en Vercel con error "useApp must be used within
+      AppProvider". Causa: Next.js 16 + React 19 + dynamic(ssr:false) causaba
+      que el contexto no se propagara correctamente.
+    * Solucion: crear src/app/ClientProviders.tsx como wrapper client-side que
+      contiene <AppProvider>{children}</AppProvider>.
+    * Mover AppProvider de HomeContent.tsx a layout.tsx via ClientProviders.
+    * Eliminar AppProvider duplicado de HomeContent.tsx.
+
+  Tarea 2 — Migracion de datos a tenant nuevo (commit 67453e5):
+    * Agregada opcion migrateExisting en POST /api/tenants (action: "create")
+    * La funcion migrateExistingData(tenantId, userId) busca documentos en 16
+      colecciones que tengan tenantId == null y los asigna al nuevo tenant.
+    * Solo migra documentos donde createdBy o userId coincida con el creador.
+    * Colecciones migradas: projects, tasks, expenses, suppliers, companies,
+      meetings, galleryPhotos, invProducts, invCategories, invMovements,
+      invTransfers, timeEntries, invoices, comments, generalMessages.
+    * TenantSelectionScreen.tsx: toggle "Migrar datos existentes" al crear
+      tenant, default true para el primer tenant.
+
+  Tarea 3 — Fix pantalla de carga duplicada (commit 585540a):
+    * Problema: dos pantallas de carga al abrir la app.
+    * Solucion: eliminar el spinner duplicado de page.tsx (el que mostraba
+      "Cargando ArchiFlow..."). Mantener solo LoadingScreen (la bolita/logo).
+
+  Tarea 4 — Fix fotos de equipo no visibles (commit 68259ff):
+    * Problema: fotos de perfil no se mostraban en TeamScreen, Sidebar, TopBar.
+    * Causa 1: photoURL y name solo se guardaban en Firestore al PRIMER login,
+      no en inicios de sesion posteriores.
+    * Causa 2: avatares usaban CSS backgroundImage que fallaba con某些 URLs.
+    * Fix 1: handleSignIn en AppContext.tsx ahora sincroniza photoURL y name
+      desde Firebase Auth a Firestore en CADA login (no solo el primero).
+    * Fix 2: Cambiar todos los avatares de backgroundImage div a <img> con
+      object-cover en TeamScreen, Sidebar, TopBar, ProfileScreen.
+
+  Tarea 5 — Endpoints de debug para tenants (commit e38f422):
+    * GET /api/debug/tenant — lista todos los tenants con miembros resueltos
+    * POST /api/debug/tenant/restore-members — restaura miembros con emails
+    * Creados para diagnosticar y recuperar miembros del tenant TEMPLO.
+
+  Archivos modificados (8):
+    src/app/ClientProviders.tsx (NUEVO)
+    src/app/layout.tsx (wrapper ClientProviders)
+    src/app/HomeContent.tsx (removido AppProvider duplicado)
+    src/app/page.tsx (removido spinner duplicado)
+    src/app/api/tenants/route.ts (migrateExisting)
+    src/components/tenant/TenantSelectionScreen.tsx (toggle migracion)
+    src/contexts/AppContext.tsx (photoURL sync)
+    src/components/team/TeamScreen.tsx (avatar <img>)
+    src/components/layout/Sidebar.tsx (avatar <img>)
+    src/components/layout/TopBar.tsx (avatar <img>)
+    src/components/profile/ProfileScreen.tsx (avatar <img>)
+    src/app/api/debug/tenant/route.ts (NUEVO)
+    src/app/api/debug/tenant/restore-members/route.ts (NUEVO)
+
+--- FIN DE SESION 2026-04-19 ----------------------------------------------
+
+2026-04-19 16:00 | SESION — TypeScript cleanup, API security, WhatsApp fixes, Visual Premium
+  Estado: COMPLETADO
+  Commits: ab7a629, d79a67a, 72f89fb, c11e952, 76903cb, 4374fcd, a44c223
+
+  Contexto: Sesion intensiva de estabilizacion, seguridad y mejoras visuales.
+
+  Tarea 1 — TypeScript Cleanup (commit ab7a629):
+    * Eliminados 207 errores TypeScript — build a 0 errores
+    * Archivos tipados en toda la app
+
+  Tarea 2 — Transformacion visual premium v2.0 (commit d79a67a):
+    * Redesign visual completo de la interfaz
+    * Mejoras de estilos, colores, spacing y componentes UI
+
+  Tarea 3 — Super IA Agent (commit 72f89fb):
+    * Function calling para crear/editar tareas, proyectos, gastos,
+      proveedores y reuniones directamente desde el chat de IA
+    * Herramientas AI expandidas con capacidades CRUD
+
+  Tarea 4 — Multi-tenant completo (commit c11e952):
+    * Pantalla de seleccion de tenant/espacio de trabajo
+    * Aislamiento total de datos por tenant (tenantId en todas las queries)
+    * Roles: Super Admin (creador) y Miembro
+    * Flujo completo: login -> seleccion tenant -> app aislada
+
+  Tarea 5 — Fixes criticos de API security (13 bugs, commits multiples):
+    BUG-20260420-001: Dashboard crash con Firestore Timestamp en paidDate
+    BUG-20260420-002: ChatScreen className con template literal mal formado
+    BUG-20260420-003/005: FieldValue import + AuthError class en api-auth
+    BUG-20260420-006/007/008: Seguridad API routes — auth obligatorio en todas
+    BUG-20260420-009/010: null-check email.split + export-excel return type
+    BUG-20260420-011: Memory leaks en AuthScreen y AppContext
+    BUG-20260420-012: WhatsApp webhook email regex permite caracteres +
+    BUG-20260420-013: Limpiar imports no usados + turbopack root config
+    BUG-20260420-API-001: Status inconsistency en WhatsApp
+    BUG-20260420-API-002: LINKING_CODES de Map en memoria a Firestore
+    BUG-20260420-API-003: /api/ai-suggestions sin autenticacion
+    BUG-20260420-API-004: migrate-tenant usa requireAdmin
+    BUG-20260420-API-005: Race condition en inventario con transacciones
+    BUG-20260420-API-006: Tipar AppContext modals
+    BUG-20260420-API-007: Auth en rutas OneDrive + fix notificaciones
+
+  Tarea 6 — Configuracion Firebase (commits ce8f966, 759c074, 88fda62):
+    * Cambio a proyecto archiflow-prod-2026
+    * Credenciales correctas de Firebase Admin
+    * Indices Firestore creados
+    * Endpoint migrate-tenant para admin
+    * Navegacion completa entre pantallas
+
+  Tarea 7 — Mobile responsive (commit d35d3e9):
+    * ArchiFlow v2.0.0 mobile responsive optimization
+    * Fases A-E de optimizacion para dispositivos moviles
+
+--- FIN DE SESION 2026-04-19 ----------------------------------------------
+
+2026-04-18 06:00 | SESION — Firebase migration, login fixes, mobile responsive
+  Estado: COMPLETADO
+  Commits: d35d3e9, 03f81e6, 02563da, 759c074, ce8f966, 88fda62
+
+  Contexto: Migracion a Firebase proyecto de produccion (archiflow-prod-2026),
+    correcciones de login y responsive mobile.
+
+  Tarea 1 — Migracion a archiflow-prod-2026:
+    * Cambio de proyecto Firebase
+    * Eliminacion de archivos huérfanos (db.ts, firebase.ts.DISABLED)
+    * Correccion de require() en firebase-admin
+
+  Tarea 2 — Login fixes (3 correcciones criticas):
+    * Resolucion de problemas de autenticacion despues de la migracion
+
+  Tarea 3 — Mobile responsive v2.0:
+    * Optimizacion de layouts para pantallas pequeñas
+    * 5 fases de responsive (A-E)
+
+--- FIN DE SESION 2026-04-18 ----------------------------------------------
+
+2026-04-13 10:00 | SESION — Fixes multiples, modales, multiple assignees
+  Estado: COMPLETADO
+  Commits: multiples (3ff590c through 6f7e688)
+
+  Contexto: Sesion de correcciones multiples y nuevas funcionalidades menores.
+
+  Tarea 1 — Limpieza de z-ai-web-dev-sdk:
+    * Eliminado api-ai-assistente duplicado con z-ai-web-dev-sdk
+    * Removido z-ai-web-dev-sdk de ai-suggestions
+
+  Tarea 2 — Fixes de modales y UI:
+    * Reemplazo de Vaul con Radix Dialog para modales centrados
+    * Fix: centrar modales correctamente
+
+  Tarea 3 — Multiple assignees per task:
+    * Ahora las tareas pueden tener multiples asignados
+
+  Tarea 4 — ErrorBoundary improvements:
+    * Mejorado debug en ErrorBoundary
+    * Envolver toda la app con ErrorBoundary
+    * Fix avatarColor import
+
+--- FIN DE SESION 2026-04-13 ----------------------------------------------
