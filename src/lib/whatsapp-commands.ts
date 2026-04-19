@@ -261,21 +261,24 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
   }
 }
 
-// ─── LINKING FLOW ───
+// ─── LINKING FLOW (Firestore-persisted, serverless-compatible) ───
 
-const LINKING_CODES = new Map<string, { email: string; code: string; expires: number }>();
-
-export function generateLinkCode(email: string): string {
+export async function generateLinkCode(email: string, db: any): Promise<string> {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  LINKING_CODES.set(email, { email, code, expires: Date.now() + 5 * 60 * 1000 });
+  await db.collection('linkingCodes').doc(email).set({
+    email,
+    code,
+    expires: Date.now() + 5 * 60 * 1000,
+  });
   return code;
 }
 
-export function verifyLinkCode(email: string, code: string): boolean {
-  const entry = LINKING_CODES.get(email);
-  if (!entry) return false;
+export async function verifyLinkCode(email: string, code: string, db: any): Promise<boolean> {
+  const doc = await db.collection('linkingCodes').doc(email).get();
+  if (!doc.exists) return false;
+  const entry = doc.data();
   if (Date.now() > entry.expires) {
-    LINKING_CODES.delete(email);
+    await db.collection('linkingCodes').doc(email).delete();
     return false;
   }
   return entry.code === code;
