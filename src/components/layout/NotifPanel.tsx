@@ -75,7 +75,7 @@ export default function NotifPanel() {
         {/* Notification list */}
         <div className="overflow-y-auto flex-1 min-h-0">
           {(() => {
-            const filtered = notifFilterCat === 'all' ? notifHistory : notifHistory.filter(n => n.type === notifFilterCat);
+            const filtered = notifFilterCat === 'all' ? notifHistory : notifHistory.filter((n: any) => n.type === notifFilterCat);
             if (filtered.length === 0) return (
               <div className="p-8 text-center">
                 <Bell size={28} className="stroke-[var(--muted-foreground)] mb-2" />
@@ -83,7 +83,7 @@ export default function NotifPanel() {
                 <div className="text-[11px] text-[var(--af-text3)] mt-1">Las alertas aparecerán aquí</div>
               </div>
             );
-            return filtered.slice(0, 50).map((n) => (
+            return filtered.slice(0, 50).map((n: any) => (
               <div
                 key={n.id}
                 className={`flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-[var(--af-bg3)] border-b border-[var(--border)]/50 ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}

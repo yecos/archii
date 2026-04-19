@@ -24,7 +24,7 @@ export default function ProjectsScreen() {
         <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto flex-wrap">
           {[{ k: 'Todos', v: '' }, { k: 'Concepto', v: 'Concepto' }, { k: 'Diseño', v: 'Diseno' }, { k: 'Ejecución', v: 'Ejecucion' }, { k: 'Terminados', v: 'Terminado' }].map((tab, i) => {
             const projs = visibleProjects();
-            const count = tab.v ? projs.filter(p => p.data.status === tab.v).length : projs.length;
+            const count = tab.v ? projs.filter((p: any) => p.data.status === tab.v).length : projs.length;
             return (<button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, projFilter: tab.v }))}>{tab.k} ({count})</button>);
           })}
         </div>
@@ -48,12 +48,12 @@ export default function ProjectsScreen() {
       )}
       {loading && <SkeletonProjects />}
       {!loading && (() => {
-        const projs = visibleProjects().filter(p => !forms.projFilter || p.data.status === forms.projFilter).filter(p => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
+        const projs = visibleProjects().filter((p: any) => !forms.projFilter || p.data.status === forms.projFilter).filter((p: any) => !forms.projCompanyFilter || p.data.companyId === forms.projCompanyFilter);
         return projs.length === 0 ? (
           <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">📁</div><div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin proyectos</div><div className="text-[13px]">Crea tu primer proyecto</div></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projs.map(p => {
+            {projs.map((p: any) => {
               const d = p.data, prog = d.progress || 0;
               const compName = companies.find(c => c.id === d.companyId)?.data?.name;
               return (

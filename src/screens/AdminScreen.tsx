@@ -46,7 +46,7 @@ export default function AdminScreen() {
             const totalActive = teamWithTasks.reduce((s, m) => s + m.tasks.length, 0);
             const totalHours = activeTasks.length; // simplified
             const membersWithOverlaps = teamWithTasks.filter(m => findOverlaps(m.tasks).size > 0);
-            const uniqueProjs = [...new Set(activeTasks.map(t => t.data.projectId).filter(Boolean))];
+            const uniqueProjs = [...new Set(activeTasks.map((t: any) => t.data.projectId).filter(Boolean))];
 
             return (<div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -55,9 +55,9 @@ export default function AdminScreen() {
                   <p className="text-xs text-[var(--muted-foreground)]">Vista de tareas del equipo en el tiempo</p>
                 </div>
                 <div className="flex gap-1.5">
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(p => p - 1)}>◀ Anterior</button>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset((p: any) => p - 1)}>◀ Anterior</button>
                   <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(0)}>Hoy</button>
-                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset(p => p + 1)}>Siguiente ▶</button>
+                  <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[var(--af-bg3)] border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-all" onClick={() => setAdminWeekOffset((p: any) => p + 1)}>Siguiente ▶</button>
                 </div>
               </div>
 
@@ -87,7 +87,7 @@ export default function AdminScreen() {
                     <div className="flex border-b-2 border-[var(--border)] bg-[var(--card)]" style={{ height: 48 }}>
                       <div className="w-[180px] min-w-[180px] flex items-center px-3 text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Equipo</div>
                       <div className="flex-1 flex">
-                        {days.map((day, i) => {
+                        {days.map((day: any, i: any) => {
                           const isWknd = day.getDay() === 0 || day.getDay() === 6;
                           const isToday = day.toDateString() === new Date().toDateString();
                           return (<div key={i} className={`w-[72px] min-w-[72px] flex flex-col items-center justify-center border-r border-[var(--border)]/50 ${isWknd ? 'bg-[var(--af-bg4)]' : ''}`}>
@@ -114,11 +114,11 @@ export default function AdminScreen() {
                         </div>
                         <div className="flex-1 relative" style={{ minHeight: rowH }}>
                           {/* Weekend backgrounds */}
-                          {days.map((day, i) => { if (day.getDay() === 0 || day.getDay() === 6) return <div key={i} className="absolute top-0 bottom-0 bg-[var(--af-bg4)]/50" style={{ left: `${(i / GANTT_DAYS) * 100}%`, width: `${(1 / GANTT_DAYS) * 100}%` }} />; return null; })}
+                          {days.map((day: any, i: any) => { if (day.getDay() === 0 || day.getDay() === 6) return <div key={i} className="absolute top-0 bottom-0 bg-[var(--af-bg4)]/50" style={{ left: `${(i / GANTT_DAYS) * 100}%`, width: `${(1 / GANTT_DAYS) * 100}%` }} />; return null; })}
                           {/* Today line */}
                           {todayOffset >= 0 && todayOffset <= GANTT_DAYS && <div className="absolute top-0 bottom-0 w-0.5 bg-[var(--foreground)] z-20" style={{ left: `${((todayOffset + 0.5) / GANTT_DAYS) * 100}%` }} />}
                           {/* Task bars */}
-                          {rows.map((row, rIdx) => row.map(task => {
+                          {rows.map((row: any, rIdx: any) => row.map((task: any) => {
                             const pos = getTaskBar(task, days);
                             if (!pos) return null;
                             const isOvlp = overlapIds.has(task.id);
@@ -163,14 +163,14 @@ export default function AdminScreen() {
                 <div className="flex items-center gap-2 mb-3"><span className="text-sm font-semibold text-red-400">⚠️ Alertas de Carga</span></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {membersWithOverlaps.map(m => {
-                    const ovlTasks = m.tasks.filter(t => findOverlaps(m.tasks).has(t.id));
+                    const ovlTasks = m.tasks.filter((t: any) => findOverlaps(m.tasks).has(t.id));
                     return (<div key={m.id} className="bg-[var(--card)] rounded-lg p-3 border border-red-500/20">
                       <div className="flex items-center gap-2 mb-2">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-semibold ${avatarColor(m.id)}`}>{getInitials(m.data?.name || '?')}</div>
                         <span className="text-xs font-semibold">{m.data?.name}</span>
                         <span className="ml-auto text-[10px] text-red-400 font-semibold">{ovlTasks.length} traslape{ovlTasks.length > 1 ? 's' : ''}</span>
                       </div>
-                      {ovlTasks.map(t => (<div key={t.id} className="flex items-center gap-2 py-1">
+                      {ovlTasks.map((t: any) => (<div key={t.id} className="flex items-center gap-2 py-1">
                         <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: getProjectColor(t.data.projectId) }} />
                         <span className="text-[10px] truncate flex-1">{t.data.title}</span>
                       </div>))}
@@ -194,7 +194,7 @@ export default function AdminScreen() {
               {/* Upcoming */}
               <div className="bg-[var(--af-bg3)] rounded-xl border border-[var(--border)] p-4">
                 <h4 className="text-sm font-semibold mb-3">📅 Próximas Entregas</h4>
-                {activeTasks.filter(t => t.data.dueDate).sort((a, b) => Number(new Date(a.data.dueDate)) - Number(new Date(b.data.dueDate))).slice(0, 8).map(t => {
+                {activeTasks.filter((t: any) => t.data.dueDate).sort((a: any, b: any) => Number(new Date(a.data.dueDate)) - Number(new Date(b.data.dueDate))).slice(0, 8).map((t: any) => {
                   const proj = projects.find(p => p.id === t.data.projectId);
                   const sc = GANTT_STATUS_CFG[t.data.status] || { color: '#6b7280', label: t.data.status };
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString());
@@ -345,8 +345,8 @@ export default function AdminScreen() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamUsers.map(m => {
-                const mTasks = activeTasks.filter(t => t.data.assigneeId === m.id);
-                const mOverdue = mTasks.filter(t => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
+                const mTasks = activeTasks.filter((t: any) => t.data.assigneeId === m.id);
+                const mOverdue = mTasks.filter((t: any) => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
                 const isSelf = m.id === authUser?.uid;
                 const isAdminMember = (m.data?.role === 'Admin') || ADMIN_EMAILS.includes(m.data?.email || '');
                 return (<div key={m.id} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)] relative group">
@@ -382,7 +382,7 @@ export default function AdminScreen() {
                   </div>
                   {mOverdue.length > 0 && (<div className="text-[10px] text-red-400 mb-2">⚠ {mOverdue.length} vencida{mOverdue.length > 1 ? 's' : ''}</div>)}
                   {mTasks.length > 0 ? (<div className="space-y-1.5">
-                    {mTasks.slice(0, 4).map(t => {
+                    {mTasks.slice(0, 4).map((t: any) => {
                       const proj = projects.find(p => p.id === t.data.projectId);
                       const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString());
                       const sc = GANTT_STATUS_CFG[t.data.status] || { color: '#6b7280' };

@@ -72,14 +72,14 @@ export default function ProjectDetailScreen() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="text-[15px] font-semibold mb-4">Actividad reciente</div>
-                {projectTasks.filter(t => t.data.status !== 'Completado').slice(0, 5).map(t => (
+                {projectTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 5).map((t: any) => (
                   <div key={t.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
                     <div className={`w-2 h-2 rounded-full ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                     <div className="flex-1 text-sm truncate">{t.data.title}</div>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
                   </div>
                 ))}
-                {projectTasks.filter(t => t.data.status !== 'Completado').length === 0 && <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>}
+                {projectTasks.filter((t: any) => t.data.status !== 'Completado').length === 0 && <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>}
               </div>
             </div>)}
 
@@ -90,7 +90,7 @@ export default function ProjectDetailScreen() {
                 <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>+ Nueva tarea</button>
               </div>
               {projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
-              projectTasks.map(t => (
+              projectTasks.map((t: any) => (
                 <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
@@ -121,7 +121,7 @@ export default function ProjectDetailScreen() {
               </div>}
               {projectExpenses.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">💰</div><div className="text-sm">Sin gastos registrados</div></div> :
               <div className="space-y-2">
-                {projectExpenses.map(e => (
+                {projectExpenses.map((e: any) => (
                   <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 bg-[var(--card)] border border-[var(--border)] rounded-lg">
                     <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div></div>
                     <div className="text-sm font-semibold text-[var(--af-accent)]">{fmtCOP(e.data.amount)}</div>
@@ -209,7 +209,7 @@ export default function ProjectDetailScreen() {
                             {/* Breadcrumbs */}
                             <div className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)] min-w-0 flex-1 overflow-hidden">
                               <button onClick={() => { if (odProjectFolder) { setOdCurrentFolder(odProjectFolder); setOdBreadcrumbs([]); loadOneDriveFiles(odProjectFolder); } }} className="hover:text-[#00a4ef] truncate shrink-0 cursor-pointer bg-transparent border-none text-inherit">OneDrive</button>
-                              {odBreadcrumbs.map((crumb, i) => (
+                              {odBreadcrumbs.map((crumb: any, i: any) => (
                                 <React.Fragment key={crumb.id}>
                                   <span className="shrink-0">/</span>
                                   <button onClick={() => navigateToFolder(crumb.id, i)} className="hover:text-[#00a4ef] truncate max-w-[80px] sm:max-w-[120px] cursor-pointer bg-transparent border-none text-inherit">{crumb.name}</button>
@@ -296,7 +296,7 @@ export default function ProjectDetailScreen() {
                               /* Grid view */
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {oneDriveFiles.map((f: any) => (
-                                  <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs(prev => [...prev, { id: f.id, name: f.name }]); } }}>
+                                  <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any) => [...prev, { id: f.id, name: f.name }]); } }}>
                                     <div className="w-9 h-9 bg-[var(--af-bg4)] rounded-lg flex items-center justify-center text-base mb-2">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                                     <div className="text-[11px] font-medium truncate mb-0.5">
                                       {odRenaming === f.id ? (
@@ -335,7 +335,7 @@ export default function ProjectDetailScreen() {
                                   <div className="w-[60px] shrink-0"></div>
                                 </div>
                                 {oneDriveFiles.map((f: any) => (
-                                  <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs(prev => [...prev, { id: f.id, name: f.name }]); } }}>
+                                  <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any) => [...prev, { id: f.id, name: f.name }]); } }}>
                                     <div className="w-7 h-7 bg-[var(--af-bg3)] rounded-md flex items-center justify-center text-sm flex-shrink-0">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                                     <div className="flex-1 min-w-0">
                                       {odRenaming === f.id ? (
@@ -386,7 +386,7 @@ export default function ProjectDetailScreen() {
               </div>
               {projectFiles.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">📂</div><div className="text-sm">Sin archivos subidos</div></div> :
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {projectFiles.map(f => (
+                {projectFiles.map((f: any) => (
                   <div key={f.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all group">
                     <div className="flex items-start justify-between mb-2">
                       <div className="w-10 h-10 bg-[var(--af-bg3)] rounded-lg flex items-center justify-center text-lg">
@@ -420,7 +420,7 @@ export default function ProjectDetailScreen() {
               {forms.workView === 'timeline' && (workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> : (
               <div className="relative pl-6">
                 <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--input)]" />
-                {workPhases.map(phase => {
+                {workPhases.map((phase: any) => {
                   const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
                   return (<div key={phase.id} className="relative mb-5">
                     <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
@@ -446,8 +446,8 @@ export default function ProjectDetailScreen() {
               {forms.workView === 'gantt' && (workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> : (
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 overflow-x-auto">
                   {(() => {
-                    const phasesWithDates = workPhases.filter(ph => ph.data.startDate || ph.data.endDate);
-                    const allDates = workPhases.filter(ph => ph.data.startDate).map(ph => new Date(ph.data.startDate).getTime()).concat(workPhases.filter(ph => ph.data.endDate).map(ph => new Date(ph.data.endDate).getTime()));
+                    const phasesWithDates = workPhases.filter((ph: any) => ph.data.startDate || ph.data.endDate);
+                    const allDates = workPhases.filter((ph: any) => ph.data.startDate).map((ph: any) => new Date(ph.data.startDate).getTime()).concat(workPhases.filter((ph: any) => ph.data.endDate).map((ph: any) => new Date(ph.data.endDate).getTime()));
                     const timelineStart = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
                     const timelineEnd = allDates.length > 0 ? new Date(Math.max(...allDates)) : new Date(timelineStart.getTime() + 30 * 86400000);
                     const totalDays = Math.max(1, Math.ceil((timelineEnd.getTime() - timelineStart.getTime()) / 86400000) + 7);
@@ -463,7 +463,7 @@ export default function ProjectDetailScreen() {
                             return <div key={i} className="flex-shrink-0 text-center" style={{ width: dayWidth }}>{d.getDate()}/{d.getMonth() + 1}</div>;
                           })}
                         </div>
-                        {workPhases.map((phase, idx) => {
+                        {workPhases.map((phase: any, idx: any) => {
                           const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
                           const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
                           const color = ganttColors[idx % ganttColors.length];
@@ -833,7 +833,7 @@ export default function ProjectDetailScreen() {
               {workPhases.length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
                 <div className="text-[15px] font-semibold mb-3">Fases del proyecto</div>
                 <div className="space-y-2">
-                  {workPhases.map(ph => (
+                  {workPhases.map((ph: any) => (
                     <div key={ph.id} className="flex items-center gap-3 py-1.5">
                       <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
                       <span className="text-sm flex-1">{ph.data.name}</span>
@@ -843,10 +843,10 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>)}
               {/* Files gallery */}
-              {projectFiles.filter(f => f.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
+              {projectFiles.filter((f: any) => f.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
                 <div className="text-[15px] font-semibold mb-3">Galería</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {projectFiles.filter(f => f.type?.startsWith('image/')).map(f => (
+                  {projectFiles.filter((f: any) => f.type?.startsWith('image/')).map((f: any) => (
                     <a key={f.id} href={f.data} download={f.name}><img src={f.data} alt={f.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" loading="lazy" /></a>
                   ))}
                 </div>

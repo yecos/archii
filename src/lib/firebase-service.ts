@@ -24,20 +24,36 @@ interface FirebaseUser {
   [key: string]: any;
 }
 
+interface FieldValueHelpers {
+  serverTimestamp(): any;
+  arrayUnion(...items: any[]): any;
+  arrayRemove(...items: any[]): any;
+  increment(n: number): any;
+  delete(): any;
+}
+
+interface AuthInstance {
+  onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void;
+  currentUser: any;
+  signOut(): Promise<any>;
+  GoogleAuthProvider: any;
+  OAuthProvider: any;
+  signInWithEmailAndPassword(email: string, pass: string): Promise<any>;
+  createUserWithEmailAndPassword(email: string, pass: string): Promise<any>;
+  signInWithPopup(provider: any): Promise<any>;
+  signInWithRedirect(provider: any): Promise<any>;
+  getRedirectResult(): Promise<any>;
+  signInAnonymously(): Promise<any>;
+}
+
 interface FirebaseApp {
-  auth(): { onAuthStateChanged(cb: (user: FirebaseUser | null) => any): () => void; currentUser: any; signOut(): Promise<any>; GoogleAuthProvider: any; OAuthProvider: any; signInWithEmailAndPassword(email: string, pass: string): Promise<any>; createUserWithEmailAndPassword(email: string, pass: string): Promise<any>; signInWithPopup(provider: any): Promise<any>; signInWithRedirect(provider: any): Promise<any>; getRedirectResult(): Promise<any>; signInAnonymously(): Promise<any>; };
-  firestore(): FirestoreDB;
+  /** firebase.auth() devuelve instancia; firebase.auth.GoogleAuthProvider accede al namespace. */
+  auth: (() => AuthInstance) & { GoogleAuthProvider: any; OAuthProvider: any };
+  /** firebase.firestore() devuelve DB; firebase.firestore.FieldValue accede al namespace. */
+  firestore: (() => FirestoreDB) & { FieldValue: FieldValueHelpers };
   storage(): any;
   apps: any[];
-  auth: any;
-  firestore: any;
-  FieldValue: {
-    serverTimestamp(): any;
-    arrayUnion(...items: any[]): any;
-    arrayRemove(...items: any[]): any;
-    increment(n: number): any;
-    delete(): any;
-  };
+  FieldValue: FieldValueHelpers;
 }
 
 interface FirestoreDB {

@@ -51,7 +51,7 @@ interface AppContextValue {
   dailyLogs: any[];
   approvals: any[];
   selectedProjectId: string;
-  navigateTo: (screen: string, itemId?: string) => void;
+  navigateTo: (screen: string, itemId?: string | null) => void;
   handleInvProductImageSelect: (e: any) => void;
   saveApproval: () => Promise<void>;
   saveExpense: () => Promise<void>;
@@ -1184,11 +1184,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     let lastLowStockCount = -1;
     const check = () => {
       const lowStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? Object.values(p.data.warehouseStock).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
+        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
         return stock > 0 && stock <= (p.data.minStock || 5);
       });
       const outOfStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? Object.values(p.data.warehouseStock).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
+        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
         return stock <= 0;
       });
       const total = lowStock.length + outOfStock.length;
@@ -1867,7 +1867,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const openEditTask = (t: Task) => {
     setEditingId(t.id);
     const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: t.data.description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '' }));
     openModal('task');
   };
 
@@ -2196,7 +2196,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const deleteFile = async (file: ProjectFile) => {
     if (!confirm('¿Eliminar archivo?')) return;
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('files').doc(file.id).delete();
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete();
       showToast('Archivo eliminado');
     } catch { showToast('Error al eliminar', 'error'); }
   };
@@ -2233,9 +2233,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       showToast('Estado actualizado');
       // Notificar por WhatsApp al creador de la aprobación
       const approval = approvals.find(a => a.id === id);
-      if (approval?.data?.createdBy) {
+      if ((approval?.data as any)?.createdBy) {
         const projName = currentProject?.data.name || 'Proyecto';
-        notifyWhatsApp.approvalResolved(approval.data.createdBy, approval.data.title, status, authUser?.displayName || undefined).catch(() => {});
+        notifyWhatsApp.approvalResolved((approval!.data as any).createdBy, approval!.data.title, status, authUser?.displayName || undefined).catch(() => {});
       }
     } catch (err) { console.error("[ArchiFlow]", err); }
   };
@@ -2504,9 +2504,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const tStart = task.data.dueDate ? new Date(task.data.startDate || task.data.dueDate) : new Date();
     const tEnd = new Date(task.data.dueDate);
     const rangeStart = days[0]; const rangeEnd = new Date(days[days.length - 1]); rangeEnd.setDate(rangeEnd.getDate() + 1);
-    const DAY_MS = 86400000; const rangeSpan = (rangeEnd - rangeStart) / DAY_MS;
-    const leftPct = Math.max(0, (tStart - rangeStart) / DAY_MS / rangeSpan) * 100;
-    const widthPct = Math.max(2, ((tEnd - tStart) / DAY_MS + 1) / rangeSpan) * 100;
+    const DAY_MS = 86400000; const rangeSpan = (rangeEnd.getTime() - rangeStart.getTime()) / DAY_MS;
+    const leftPct = Math.max(0, (tStart.getTime() - rangeStart.getTime()) / DAY_MS / rangeSpan) * 100;
+    const widthPct = Math.max(2, ((tEnd.getTime() - tStart.getTime()) / DAY_MS + 1) / rangeSpan) * 100;
     return { left: leftPct, width: Math.min(widthPct, 100 - leftPct) };
   };
 
@@ -3236,7 +3236,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     resetLogForm,
   };
 
-  return <AppContext.Provider value={ctx}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={ctx as any}>{children}</AppContext.Provider>;
 }
 
 export function useApp() {

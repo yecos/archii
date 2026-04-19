@@ -27,8 +27,8 @@ export default function CalendarScreen() {
               return calTasks.filter(t => t.data.dueDate === dateStr);
             };
             const selectedDayTasks = calSelectedDate ? calTasks.filter(t => t.data.dueDate === calSelectedDate) : [];
-            const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else { setCalMonth(m => m - 1); } setCalSelectedDate(null); };
-            const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else { setCalMonth(m => m + 1); } setCalSelectedDate(null); };
+            const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear((y: any) => y - 1); } else { setCalMonth((m: any) => m - 1); } setCalSelectedDate(null); };
+            const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y: any) => y + 1); } else { setCalMonth((m: any) => m + 1); } setCalSelectedDate(null); };
 
             // Build calendar grid
             const cells: (number | null)[] = [];

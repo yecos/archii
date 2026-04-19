@@ -106,7 +106,7 @@ export default function InvoicesScreen() {
               <div className="grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
                 <div className="col-span-4">Concepto</div><div className="col-span-3">Fase</div><div className="col-span-2">Horas</div><div className="col-span-2">Tarifa</div><div className="col-span-1"></div>
               </div>
-              {invoiceItems.map((item, idx) => (
+              {invoiceItems.map((item: any, idx: any) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                   <input className="col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
                   <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
@@ -121,7 +121,7 @@ export default function InvoicesScreen() {
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-[var(--muted-foreground)]">Subtotal</span>
-              <span>{fmtCOP(invoiceItems.reduce((s, i) => s + (Number(i.amount) || 0), 0))}</span>
+              <span>{fmtCOP(invoiceItems.reduce((s: any, i: any) => s + (Number(i.amount) || 0), 0))}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--muted-foreground)]">IVA (%)</span>
@@ -129,7 +129,7 @@ export default function InvoicesScreen() {
             </div>
             <div className="flex justify-between items-center text-sm font-semibold">
               <span>Total</span>
-              <span className="text-[var(--af-accent)]">{fmtCOP(invoiceItems.reduce((s, i) => s + (Number(i.amount) || 0), 0) * (1 + (Number(forms.invTax) || 19) / 100))}</span>
+              <span className="text-[var(--af-accent)]">{fmtCOP(invoiceItems.reduce((s: any, i: any) => s + (Number(i.amount) || 0), 0) * (1 + (Number(forms.invTax) || 19) / 100))}</span>
             </div>
           </div>
           <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas..." value={forms.invNotes || ''} onChange={e => setForms(p => ({ ...p, invNotes: e.target.value }))} />

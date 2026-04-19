@@ -29,7 +29,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
-    const projData = {
+    const projData: Record<string, any> = {
       name: data.projName,
       status: data.projStatus || 'Concepto',
       client: data.projClient || '',
@@ -628,7 +628,7 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
-    const entryData = {
+    const entryData: Record<string, any> = {
       userId: authUser?.uid,
       userName: authUser?.displayName || authUser?.email || 'Usuario',
       projectId: data.teProject || '',
@@ -670,7 +670,7 @@ export function saveInvoice(data: Record<string, any>, editingId: string | null,
     const ts = fb.firestore.FieldValue.serverTimestamp();
     const proj = data.invProject ? await db.collection('projects').doc(data.invProject).get() : null;
     const projData = proj?.exists ? proj.data() : {};
-    const invoiceData = {
+    const invoiceData: Record<string, any> = {
       projectId: data.invProject || '',
       projectName: projData.name || '',
       clientName: projData.client || '',

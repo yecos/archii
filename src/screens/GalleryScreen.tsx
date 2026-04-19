@@ -50,7 +50,7 @@ export default function GalleryScreen() {
     </div>
   ) : (
     <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))' }}>
-      {getFilteredGalleryPhotos().map((photo, idx) => {
+      {getFilteredGalleryPhotos().map((photo: any, idx: any) => {
         const proj = projects.find(p => p.id === photo.data.projectId);
         return (
           <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:border-[var(--af-accent)]/50 transition-all" onClick={() => openLightbox(photo, idx)}>

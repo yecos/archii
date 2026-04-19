@@ -65,7 +65,7 @@ export default function InventoryScreen() {
               {invAlerts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-red-400">⚠️ Alertas activas</h4>
-                  {invAlerts.map((alert, i) => (
+                  {invAlerts.map((alert: any, i: any) => (
                     <div key={i} className={`rounded-lg px-3 py-2.5 border flex items-center gap-2 ${alert.severity === 'critical' ? 'bg-red-500/15 border-red-500/30' : alert.severity === 'high' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${alert.severity === 'critical' ? 'bg-red-500/20 text-red-400' : alert.severity === 'high' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>{alert.severity === 'critical' ? 'CRÍTICO' : alert.severity === 'high' ? 'ALTO' : 'MEDIO'}</span>
                       <span className="text-sm">{alert.msg}</span>

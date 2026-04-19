@@ -107,7 +107,7 @@ export default function ChatScreen() {
   const filteredMessages = useMemo(() => {
     if (!chatMsgSearch.trim()) return messages;
     const q = chatMsgSearch.toLowerCase();
-    return messages.filter(m => {
+    return messages.filter((m: any) => {
       const text = (m.text || '').toLowerCase();
       const name = (m.userName || '').toLowerCase();
       return text.includes(q) || name.includes(q);
@@ -363,7 +363,7 @@ export default function ChatScreen() {
                     {/* Reply reference */}
                     {m.replyTo && (
                       <div className={`mb-1 ml-1 max-w-[260px] px-2.5 py-1.5 rounded-lg border-l-2 border-l-[var(--af-accent)] bg-[var(--af-bg3)]/60 cursor-pointer transition-colors hover:bg-[var(--af-bg3)] ${isMe ? 'mr-1' : ''}`} onClick={() => {
-                        const target = filteredMessages.find(msg => msg.id === m.replyTo?.id);
+                        const target = filteredMessages.find((msg: any) => msg.id === m.replyTo?.id);
                         if (target) {
                           const el = document.getElementById(`msg-${target.id}`);
                           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -537,7 +537,7 @@ export default function ChatScreen() {
         {pendingFiles.length > 0 && (
           <div className="flex-shrink-0 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--af-bg3)] animate-fadeIn">
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-              {pendingFiles.map(f => (
+              {pendingFiles.map((f: any) => (
                 <div key={f.id} className="flex-shrink-0 w-[72px] h-[72px] rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 relative overflow-hidden shadow-sm">
                   {f.preview ? <img src={f.preview} className="w-full h-full object-cover rounded-lg" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">{fileIcon(f.type)}</div>}
                   <button className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center cursor-pointer border-none leading-none shadow-md" onClick={() => removePendingFile(f.id)}>✕</button>
@@ -638,7 +638,7 @@ export default function ChatScreen() {
             />
             <button
               className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors flex-shrink-0"
-              onClick={() => setShowEmojiPicker(p => !p)}
+              onClick={() => setShowEmojiPicker((p: any) => !p)}
               title="Emojis"
             >
               <span className="text-[20px]" role="img" aria-label="emojis">😀</span>
