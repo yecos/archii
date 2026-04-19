@@ -160,10 +160,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const { action, name, code } = body;
+  const { action, name, code, tenantId, emails, memberUid } = body;
 
-  if (!action || !["create", "join", "list"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list" }, { status: 400 });
+  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users" }, { status: 400 });
   }
 
   try {
@@ -261,6 +261,168 @@ export async function POST(request: NextRequest) {
         name: tenantData.name,
         code: tenantData.code,
         role: 'Miembro', // Joined users are always Miembro
+      });
+    }
+
+    // ===== ADD MEMBERS =====
+    if (action === "add-members") {
+      if (!tenantId || !Array.isArray(emails) || emails.length === 0) {
+        return NextResponse.json({ error: "Faltan tenantId o emails" }, { status: 400 });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+      if (tenantData.createdBy !== user.uid && !(tenantData.members || []).includes(user.uid)) {
+        return NextResponse.json({ error: "No eres miembro de este tenant" }, { status: 403 });
+      }
+
+      const uidsToAdd: string[] = [];
+      const notFound: string[] = [];
+      const alreadyMembers: string[] = [];
+      const currentMembers: string[] = tenantData.members || [];
+
+      for (const email of emails) {
+        const snap = await db.collection("users").where("email", "==", email.trim().toLowerCase()).limit(1).get();
+        if (snap.empty) {
+          notFound.push(email);
+          continue;
+        }
+        const uid = snap.docs[0].id;
+        if (currentMembers.includes(uid)) {
+          alreadyMembers.push(email);
+        } else {
+          uidsToAdd.push(uid);
+        }
+      }
+
+      if (uidsToAdd.length > 0) {
+        await db.collection("tenants").doc(tenantId).update({
+          members: FieldValue.arrayUnion(...uidsToAdd),
+        });
+      }
+
+      return NextResponse.json({
+        tenantName: tenantData.name,
+        added: uidsToAdd.length,
+        notFound,
+        alreadyMembers,
+        totalMembers: currentMembers.length + uidsToAdd.length,
+      });
+    }
+
+    // ===== ADD ALL EXISTING USERS =====
+    if (action === "add-all-users") {
+      if (!tenantId) {
+        return NextResponse.json({ error: "Faltan tenantId" }, { status: 400 });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+      if (tenantData.createdBy !== user.uid) {
+        return NextResponse.json({ error: "Solo el creador puede agregar todos los usuarios" }, { status: 403 });
+      }
+
+      const currentMembers: string[] = tenantData.members || [];
+
+      // Get all users
+      const usersSnap = await db.collection("users").get();
+      const allUids = usersSnap.docs.map(d => d.id);
+      const uidsToAdd = allUids.filter(uid => !currentMembers.includes(uid));
+
+      if (uidsToAdd.length > 0) {
+        await db.collection("tenants").doc(tenantId).update({
+          members: FieldValue.arrayUnion(...uidsToAdd),
+        });
+      }
+
+      return NextResponse.json({
+        tenantName: tenantData.name,
+        totalUsers: allUids.length,
+        alreadyMembers: currentMembers.length,
+        added: uidsToAdd.length,
+        newTotalMembers: currentMembers.length + uidsToAdd.length,
+      });
+    }
+
+    // ===== REMOVE MEMBER =====
+    if (action === "remove-member") {
+      if (!tenantId || !memberUid) {
+        return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+      if (tenantData.createdBy !== user.uid) {
+        return NextResponse.json({ error: "Solo el creador puede eliminar miembros" }, { status: 403 });
+      }
+      if (memberUid === user.uid) {
+        return NextResponse.json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+      }
+
+      await db.collection("tenants").doc(tenantId).update({
+        members: FieldValue.arrayRemove(memberUid),
+      });
+
+      return NextResponse.json({
+        tenantName: tenantData.name,
+        removed: memberUid,
+        totalMembers: (tenantData.members || []).length - 1,
+      });
+    }
+
+    // ===== GET MEMBERS =====
+    if (action === "get-members") {
+      if (!tenantId) {
+        return NextResponse.json({ error: "Faltan tenantId" }, { status: 400 });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+      const members: any[] = [];
+      const memberUids: string[] = tenantData.members || [];
+
+      for (const uid of memberUids) {
+        const uDoc = await db.collection("users").doc(uid).get();
+        members.push({
+          uid,
+          name: uDoc.exists ? uDoc.data()?.name : "Desconocido",
+          email: uDoc.exists ? uDoc.data()?.email : "N/A",
+          photoURL: uDoc.exists ? uDoc.data()?.photoURL || '' : '',
+          isCreator: uid === tenantData.createdBy,
+        });
+      }
+
+      // Also get users NOT in this tenant (available to add)
+      const allUsersSnap = await db.collection("users").get();
+      const availableUsers: any[] = [];
+      for (const doc of allUsersSnap.docs) {
+        if (!memberUids.includes(doc.id)) {
+          availableUsers.push({
+            uid: doc.id,
+            name: doc.data()?.name || "Sin nombre",
+            email: doc.data()?.email || "",
+          });
+        }
+      }
+
+      return NextResponse.json({
+        tenantName: tenantData.name,
+        tenantCode: tenantData.code,
+        createdBy: tenantData.createdBy,
+        members,
+        availableUsers,
       });
     }
 

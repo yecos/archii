@@ -2,7 +2,8 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users } from 'lucide-react';
+import ManageMembersModal from './ManageMembersModal';
 
 export default function TopBar() {
   const {
@@ -10,10 +11,11 @@ export default function TopBar() {
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
     initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
-    activeTenantName, activeTenantRole, setShowTenantSelector, doLogout,
+    activeTenantName, activeTenantRole, activeTenantId, setShowTenantSelector, doLogout,
   } = useApp();
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
+  const [showManageMembers, setShowManageMembers] = React.useState(false);
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -76,8 +78,25 @@ export default function TopBar() {
                     <LayoutGrid size={14} className="stroke-[var(--muted-foreground)]" />
                     Cambiar espacio
                   </button>
+                  {activeTenantId && (
+                    <button
+                      onClick={() => { setShowTenantMenu(false); setShowManageMembers(true); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-[var(--af-bg3)] transition-colors text-left bg-transparent border-none text-[var(--foreground)]"
+                    >
+                      <Users size={14} className="stroke-[var(--muted-foreground)]" />
+                      Gestionar miembros
+                    </button>
+                  )}
                 </div>
               </div>
+              {showManageMembers && activeTenantId && (
+                <ManageMembersModal
+                  tenantId={activeTenantId}
+                  tenantName={activeTenantName || ''}
+                  onClose={() => setShowManageMembers(false)}
+                  isCreator={activeTenantRole === 'Super Admin'}
+                />
+              )}
             </>
           )}
         </div>
