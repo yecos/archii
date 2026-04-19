@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminApp } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { requireAdmin, AuthError } from '@/lib/api-auth';
 
 /**
  * POST /api/migrate-tenant
@@ -11,13 +12,15 @@ import { getFirestore } from 'firebase-admin/firestore';
  */
 export async function POST(req: NextRequest) {
   try {
-    // Verificar autenticación
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token requerido' }, { status: 401 });
+    await requireAdmin(req);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
     }
+    return NextResponse.json({ error: 'Token requerido' }, { status: 401 });
+  }
 
-    // Inicializar Firebase Admin
+  try {
     const adminApp = getAdminApp();
     const db = getFirestore(adminApp);
 
