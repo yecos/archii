@@ -423,6 +423,14 @@ export async function POST(request: NextRequest) {
       const members: any[] = [];
       const memberUids: string[] = tenantData.members || [];
 
+      // Auto-generate invite code if tenant doesn't have one (legacy tenants)
+      if (!tenantData.code) {
+        const newCode = await ensureUniqueCode(db);
+        await db.collection("tenants").doc(tenantId).update({ code: newCode });
+        tenantData.code = newCode;
+        console.log(`[Tenants] Auto-generated code "${newCode}" for legacy tenant ${tenantId}`);
+      }
+
       for (const uid of memberUids) {
         const uDoc = await db.collection("users").doc(uid).get();
         members.push({
