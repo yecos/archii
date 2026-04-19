@@ -402,6 +402,7 @@ export const NAV_ITEMS = [
   { id: 'inventory', icon: '📦', label: 'Inventario' },
   { id: 'reports', icon: '📈', label: 'Reportes' },
   { id: 'admin', icon: '⚙️', label: 'Admin' },
+  { id: 'superAdmin', icon: '🛡️', label: 'Super Admin' },
 ] as const;
 
 export const SCREEN_TITLES: Record<string, string> = {
@@ -424,4 +425,5 @@ export const SCREEN_TITLES: Record<string, string> = {
   inventory: 'Inventario',
   reports: 'Reportes',
   admin: 'Panel de Administración',
+  superAdmin: 'Super Administrador',
 };

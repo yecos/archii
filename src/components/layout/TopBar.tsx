@@ -2,8 +2,9 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users, Shield } from 'lucide-react';
 import ManageMembersModal from './ManageMembersModal';
+import { ADMIN_EMAILS } from '@/lib/types';
 
 export default function TopBar() {
   const {
@@ -11,7 +12,7 @@ export default function TopBar() {
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
     initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
-    activeTenantName, activeTenantRole, activeTenantId, setShowTenantSelector, doLogout,
+    activeTenantName, activeTenantRole, activeTenantId, setShowTenantSelector, doLogout, isEmailAdmin,
   } = useApp();
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
@@ -21,7 +22,7 @@ export default function TopBar() {
   const localScreenTitles: Record<string, string> = {
     dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes',
     budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario',
-    admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
+    admin: 'Panel Admin', superAdmin: 'Super Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
     calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App',
     companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto',
   };
@@ -44,6 +45,17 @@ export default function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Super Admin button — only for platform super admins */}
+        {isEmailAdmin && screen !== 'superAdmin' && (
+          <button
+            onClick={() => navigateTo('superAdmin')}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            title="Super Admin Panel"
+          >
+            <Shield size={14} className="stroke-red-400" />
+            <span className="text-[10px] font-bold text-red-400 hidden lg:inline">SA</span>
+          </button>
+        )}
         {/* Tenant switcher */}
         <div className="relative hidden sm:block">
           <button

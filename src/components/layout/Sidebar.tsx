@@ -2,7 +2,7 @@
 import React from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3 } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
 interface SidebarProps {
@@ -54,6 +54,7 @@ export default function Sidebar({
     { divider: true },
     { id: 'companies', label: 'Empresas', icon: <Building2 size={18} className="stroke-current" /> },
     { id: 'install', label: 'Instalar App', icon: <Download size={18} className="stroke-current" /> },
+    ...(isEmailAdmin ? [{ divider: true }, { id: 'superAdmin', label: 'Super Admin', icon: <Shield size={18} className="stroke-red-400" />, isSuperAdmin: true }] : []),
   ];
 
   const principalItems = navItems.filter((n: any) => !n.divider).slice(0, 5);

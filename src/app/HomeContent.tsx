@@ -62,6 +62,7 @@ const InstallScreen = dynamic(() => import('@/screens/InstallScreen'), { ssr: fa
 const TimeTrackingScreen = dynamic(() => import('@/screens/TimeTrackingScreen'), { ssr: false });
 const InvoicesScreen = dynamic(() => import('@/screens/InvoicesScreen'), { ssr: false });
 const ReportsScreen = dynamic(() => import('@/screens/ReportsScreen'), { ssr: false });
+const SuperAdminScreen = dynamic(() => import('@/screens/SuperAdminScreen'), { ssr: false });
 
 function AppContent() {
   const {
@@ -123,7 +124,7 @@ function AppContent() {
   const localScreenTitles: Record<string, string> = {
     dashboard: 'Dashboard', projects: 'Proyectos', tasks: 'Tareas', chat: 'Mensajes',
     budget: 'Presupuestos', files: 'Planos y archivos', gallery: 'Galería', inventory: 'Inventario',
-    admin: 'Panel Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
+    admin: 'Panel Admin', superAdmin: 'Super Admin', obra: 'Seguimiento obra', suppliers: 'Proveedores', team: 'Equipo',
     calendar: 'Calendario', portal: 'Portal cliente', profile: 'Mi Perfil', install: 'Instalar App',
     companies: 'Empresas', projectDetail: currentProject?.data.name || 'Proyecto',
   };
@@ -249,6 +250,7 @@ function AppContent() {
               {screen === 'timeTracking' && <TimeTrackingScreen />}
               {screen === 'invoices' && <InvoicesScreen />}
               {screen === 'reports' && <ReportsScreen />}
+              {screen === 'superAdmin' && <SuperAdminScreen />}
               </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
