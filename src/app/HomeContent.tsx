@@ -69,6 +69,7 @@ const SuperAdminScreen = dynamic(() => import('@/screens/SuperAdminScreen'), { s
 const RFIsScreen = dynamic(() => import('@/screens/RFIsScreen'), { ssr: false });
 const SubmittalsScreen = dynamic(() => import('@/screens/SubmittalsScreen'), { ssr: false });
 const PunchListScreen = dynamic(() => import('@/screens/PunchListScreen'), { ssr: false });
+const KanbanBoardScreen = dynamic(() => import('@/screens/KanbanBoardScreen'), { ssr: false });
 
 function AppContent() {
   const {
@@ -239,6 +240,7 @@ function AppContent() {
               {screen === 'projects' && <ProjectsScreen />}
               {screen === 'projectDetail' && <ProjectDetailScreen />}
               {screen === 'tasks' && <TasksScreen />}
+              {screen === 'kanban' && <KanbanBoardScreen />}
               {screen === 'chat' && <ChatScreen />}
               {screen === 'budget' && <BudgetScreen />}
               {screen === 'files' && <FilesScreen />}

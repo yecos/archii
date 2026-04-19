@@ -378,6 +378,109 @@ export interface PunchItem {
   };
 }
 
+/* ===== KANBAN TYPES ===== */
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  color: string;
+  wipLimit: number | null;
+  order: number;
+  isDefault?: boolean;
+}
+
+export interface KanbanSwimlane {
+  id: string;
+  title: string;
+  filterField: 'assigneeId' | 'priority' | 'projectId';
+  filterValue?: string;
+  order: number;
+}
+
+export interface KanbanBoard {
+  id: string;
+  data: {
+    name: string;
+    type: 'tasks' | 'projects' | 'approvals' | 'invoices' | 'transfers' | 'phases' | 'incidents';
+    columns: KanbanColumn[];
+    swimlanes: KanbanSwimlane[];
+    cardPositions: Record<string, { columnId: string; swimlaneId?: string; order: number }>;
+    quickCards: KanbanQuickCard[];
+    filters: KanbanFilters;
+    viewMode: 'board' | 'list';
+    createdAt: any;
+    updatedAt?: any;
+    createdBy: string;
+  };
+}
+
+export interface KanbanQuickCard {
+  id: string;
+  title: string;
+  description: string;
+  columnId: string;
+  swimlaneId?: string;
+  order: number;
+  color: string;
+  tags: string[];
+  createdAt: any;
+  createdBy: string;
+}
+
+export interface KanbanFilters {
+  assigneeId: string | null;
+  priority: string | null;
+  projectIds: string[] | null;
+  dueDateFrom: string | null;
+  dueDateTo: string | null;
+  tags: string[] | null;
+  searchQuery: string | null;
+}
+
+export const KANBAN_DEFAULT_COLUMNS: Record<string, KanbanColumn[]> = {
+  tasks: [
+    { id: 'todo', title: 'Por hacer', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'inprogress', title: 'En progreso', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'review', title: 'Revision', color: '#8b5cf6', wipLimit: null, order: 2, isDefault: true },
+    { id: 'done', title: 'Completado', color: '#22c55e', wipLimit: null, order: 3, isDefault: true },
+  ],
+  projects: [
+    { id: 'concept', title: 'Concepto', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'design', title: 'Diseno', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'execution', title: 'Ejecucion', color: '#f97316', wipLimit: null, order: 2, isDefault: true },
+    { id: 'finished', title: 'Terminado', color: '#22c55e', wipLimit: null, order: 3, isDefault: true },
+  ],
+  approvals: [
+    { id: 'pending', title: 'Pendiente', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'inreview', title: 'En revision', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'approved', title: 'Aprobada', color: '#22c55e', wipLimit: null, order: 2, isDefault: true },
+    { id: 'rejected', title: 'Rechazada', color: '#ef4444', wipLimit: null, order: 3, isDefault: true },
+  ],
+  invoices: [
+    { id: 'draft', title: 'Borrador', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'sent', title: 'Enviada', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'paid', title: 'Pagada', color: '#22c55e', wipLimit: null, order: 2, isDefault: true },
+    { id: 'overdue', title: 'Vencida', color: '#ef4444', wipLimit: null, order: 3, isDefault: true },
+  ],
+  transfers: [
+    { id: 'pending', title: 'Pendiente', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'transit', title: 'En transito', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'completed', title: 'Completada', color: '#22c55e', wipLimit: null, order: 2, isDefault: true },
+    { id: 'cancelled', title: 'Cancelada', color: '#ef4444', wipLimit: null, order: 3, isDefault: true },
+  ],
+  phases: [
+    { id: 'planning', title: 'Planificacion', color: '#6366f1', wipLimit: null, order: 0, isDefault: true },
+    { id: 'active', title: 'En curso', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'paused', title: 'Pausada', color: '#f97316', wipLimit: null, order: 2, isDefault: true },
+    { id: 'completed', title: 'Completada', color: '#22c55e', wipLimit: null, order: 3, isDefault: true },
+  ],
+  incidents: [
+    { id: 'reported', title: 'Reportada', color: '#ef4444', wipLimit: null, order: 0, isDefault: true },
+    { id: 'analyzing', title: 'En analisis', color: '#f59e0b', wipLimit: null, order: 1, isDefault: true },
+    { id: 'fixing', title: 'En correccion', color: '#f97316', wipLimit: null, order: 2, isDefault: true },
+    { id: 'resolved', title: 'Resuelta', color: '#22c55e', wipLimit: null, order: 3, isDefault: true },
+  ],
+};
+
 /* ===== CONSTANTES ===== */
 
 export const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
@@ -486,6 +589,7 @@ export const NAV_ITEMS = [
   { id: 'profile', icon: '👤', label: 'Mi Perfil' },
   { id: 'projects', icon: '📁', label: 'Proyectos' },
   { id: 'tasks', icon: '✅', label: 'Tareas' },
+  { id: 'kanban', icon: '📊', label: 'Kanban' },
   { id: 'timeTracking', icon: '⏱️', label: 'Tiempo' },
   { id: 'chat', icon: '💬', label: 'Chat' },
   { id: 'budget', icon: '💰', label: 'Presupuestos' },
@@ -512,6 +616,7 @@ export const SCREEN_TITLES: Record<string, string> = {
   profile: 'Mi Perfil',
   projects: 'Proyectos',
   tasks: 'Tareas',
+  kanban: 'Tablero Kanban',
   timeTracking: 'Time Tracking',
   chat: 'Chat',
   budget: 'Presupuestos',

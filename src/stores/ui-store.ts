@@ -42,6 +42,16 @@ interface UIState {
   // AI Project Context
   aiProjectContext: string;
   setAIProjectContext: (context: string) => void;
+
+  // Kanban Board
+  kanbanBoardId: string | null;
+  setKanbanBoardId: (id: string | null) => void;
+  kanbanEntityType: 'tasks' | 'projects' | 'approvals' | 'invoices' | 'transfers' | 'phases' | 'incidents';
+  setKanbanEntityType: (type: 'tasks' | 'projects' | 'approvals' | 'invoices' | 'transfers' | 'phases' | 'incidents') => void;
+  kanbanViewMode: 'board' | 'list';
+  setKanbanViewMode: (mode: 'board' | 'list') => void;
+  kanbanCollapsedSwimlanes: string[];
+  toggleKanbanSwimlane: (id: string) => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -126,4 +136,18 @@ export const useUIStore = create<UIState>((set, get) => ({
   // AI Project Context
   aiProjectContext: '',
   setAIProjectContext: (context) => set({ aiProjectContext: context }),
+
+  // Kanban Board
+  kanbanBoardId: null,
+  setKanbanBoardId: (id) => set({ kanbanBoardId: id }),
+  kanbanEntityType: 'tasks' as const,
+  setKanbanEntityType: (type) => set({ kanbanEntityType: type }),
+  kanbanViewMode: 'board' as const,
+  setKanbanViewMode: (mode) => set({ kanbanViewMode: mode }),
+  kanbanCollapsedSwimlanes: [] as string[],
+  toggleKanbanSwimlane: (id) => set((state) => ({
+    kanbanCollapsedSwimlanes: state.kanbanCollapsedSwimlanes.includes(id)
+      ? state.kanbanCollapsedSwimlanes.filter(s => s !== id)
+      : [...state.kanbanCollapsedSwimlanes, id]
+  })),
 }));
