@@ -78,6 +78,7 @@ export default function RootLayout({
                 appId: "1:1090724963650:web:28468b10aef5e89c0f54db"
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
+              try { firebase.setLogLevel && firebase.setLogLevel('error'); } catch(e){}
             }
             window.__AF_FB = true;
             console.log('[ArchiFlow] Firebase ready:', firebase.apps[0]?.options?.projectId);
