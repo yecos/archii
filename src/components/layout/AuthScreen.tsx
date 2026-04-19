@@ -20,7 +20,10 @@ function useFirebaseStatus() {
   useEffect(() => {
     let attempts = 0;
     const maxAttempts = 10;
+    let mounted = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const check = () => {
+      if (!mounted) return;
       attempts++;
       try {
         const w = window as any;
@@ -30,7 +33,7 @@ function useFirebaseStatus() {
         
         if (!w.firebase) {
           if (attempts < maxAttempts) {
-            setTimeout(check, 500);
+            timers.push(setTimeout(check, 500));
             return;
           }
           setStatus('error');
@@ -39,7 +42,7 @@ function useFirebaseStatus() {
         }
         if (!w.firebase.apps || w.firebase.apps.length === 0) {
           if (attempts < maxAttempts) {
-            setTimeout(check, 500);
+            timers.push(setTimeout(check, 500));
             return;
           }
           setStatus('error');
@@ -53,7 +56,7 @@ function useFirebaseStatus() {
         
         if (!authNS || !authNS.GoogleAuthProvider) {
           if (attempts < maxAttempts) {
-            setTimeout(check, 500);
+            timers.push(setTimeout(check, 500));
             return;
           }
           setStatus('error');
@@ -62,7 +65,7 @@ function useFirebaseStatus() {
         }
         if (!authNS.OAuthProvider) {
           if (attempts < maxAttempts) {
-            setTimeout(check, 500);
+            timers.push(setTimeout(check, 500));
             return;
           }
           setStatus('error');
@@ -73,7 +76,7 @@ function useFirebaseStatus() {
         setDetail(`Firebase OK — ${w.firebase.apps[0]?.options?.projectId || '?'}`);
       } catch (e: any) {
         if (attempts < maxAttempts) {
-          setTimeout(check, 500);
+          timers.push(setTimeout(check, 500));
           return;
         }
         setStatus('error');
@@ -81,8 +84,11 @@ function useFirebaseStatus() {
       }
     };
     // Start checking after 1 second, retry every 500ms
-    const t = setTimeout(check, 1000);
-    return () => clearTimeout(t);
+    timers.push(setTimeout(check, 1000));
+    return () => {
+      mounted = false;
+      timers.forEach(t => clearTimeout(t));
+    };
   }, []);
   return { status, detail };
 }
