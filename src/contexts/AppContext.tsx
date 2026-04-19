@@ -306,6 +306,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [activeTenantRole, setActiveTenantRole] = useState<string>('Miembro'); // 'Super Admin' or 'Miembro'
   const [tenantReady, setTenantReady] = useState(false);
   const [showTenantSelector, setShowTenantSelector] = useState(false);
+  const [activeTenantMembers, setActiveTenantMembers] = useState<string[]>([]); // UIDs of tenant members
 
   // Init theme + restore tenant selection
   useEffect(() => {
@@ -644,15 +645,36 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsubscribe();
   }, [ready]);
 
-  // Load team
+  // Load team — filtered by active tenant members
   useEffect(() => {
     if (!ready || !authUser) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
-      setTeamUsers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      const allUsers = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+      // If we have an active tenant and its members list, filter to only show tenant members
+      if (activeTenantId && activeTenantMembers.length > 0) {
+        setTeamUsers(allUsers.filter((u: any) => activeTenantMembers.includes(u.id)));
+      } else {
+        setTeamUsers(allUsers);
+      }
     }, () => {});
     return () => unsub();
-  }, [ready, authUser]);
+  }, [ready, authUser, activeTenantId, activeTenantMembers]);
+
+  // Listen to active tenant document for members array
+  useEffect(() => {
+    if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
+    const db = getFirebase().firestore();
+    const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
+      if (snap.exists) {
+        const data = snap.data();
+        setActiveTenantMembers(data?.members || []);
+      } else {
+        setActiveTenantMembers([]);
+      }
+    }, () => {});
+    return () => unsub();
+  }, [ready, authUser, activeTenantId]);
 
   // Load projects (tenant-filtered)
   useEffect(() => {

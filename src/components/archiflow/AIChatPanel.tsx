@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { useApp } from '@/contexts/AppContext';
+import { getAuthHeaders } from '@/lib/firebase-service';
 
 interface ExecutedAction {
   type: string;
@@ -205,9 +206,10 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     setExecutingTools(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/ai-agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           messages: [
             ...messages

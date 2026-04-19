@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { useApp } from '@/contexts/AppContext';
+import { getAuthHeaders } from '@/lib/firebase-service';
 
 interface QuickActionsProps {
   isOpen: boolean;
@@ -91,9 +92,10 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
     setError(null);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/ai-agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           messages: [
             {
