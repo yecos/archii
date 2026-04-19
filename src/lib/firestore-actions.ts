@@ -24,7 +24,7 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
 
 /* ===== PROJECTS ===== */
 
-export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar proyecto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -49,6 +49,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
     } else {
       projData.createdAt = ts;
       projData.createdBy = authUser?.uid;
+      projData.tenantId = tenantId || '';
       const ref = await db.collection('projects').add(projData);
       // Init default phases
       const batch = db.batch();
@@ -62,7 +63,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
   }, showToast);
 }
 
-export async function deleteProject(projectId: string, showToast: ToastFn) {
+export async function deleteProject(projectId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este proyecto y todos sus datos?')) return;
   return fbAction('eliminar proyecto', async () => {
     const db = getFirebase().firestore();
@@ -81,7 +82,7 @@ export async function deleteProject(projectId: string, showToast: ToastFn) {
 
 /* ===== TASKS ===== */
 
-export function saveTask(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveTask(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar tarea', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -106,20 +107,21 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
         dueDate: data.taskDue || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Tarea creada');
     }
   }, showToast);
 }
 
-export async function toggleTask(taskId: string, currentStatus: string, showToast: ToastFn) {
+export async function toggleTask(taskId: string, currentStatus: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('cambiar estado tarea', async () => {
     const nextStatus = currentStatus === 'Completado' ? 'Por hacer' : 'Completado';
     await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus });
   }, showToast);
 }
 
-export async function deleteTask(taskId: string, showToast: ToastFn) {
+export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta tarea?')) return;
   return fbAction('eliminar tarea', async () => {
     await getFirebase().firestore().collection('tasks').doc(taskId).delete();
@@ -129,7 +131,7 @@ export async function deleteTask(taskId: string, showToast: ToastFn) {
 
 /* ===== CHAT MESSAGES ===== */
 
-export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: any, showToast: ToastFn) {
+export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: any, showToast: ToastFn, tenantId: string | null) {
   return fbAction('enviar mensaje', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -140,6 +142,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
       userName: authUser?.displayName || authUser?.email || 'Usuario',
       userPhoto: authUser?.photoURL || '',
       createdAt: ts,
+      tenantId: tenantId || '',
     };
     if (chatProjectId === '__general__') {
       await db.collection('generalMessages').add(msg);
@@ -151,7 +154,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
 
 /* ===== EXPENSES ===== */
 
-export function saveExpense(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveExpense(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar gasto', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -174,13 +177,14 @@ export function saveExpense(data: Record<string, any>, editingId: string | null,
         date: data.expDate || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Gasto registrado');
     }
   }, showToast);
 }
 
-export async function deleteExpense(expenseId: string, showToast: ToastFn) {
+export async function deleteExpense(expenseId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este gasto?')) return;
   return fbAction('eliminar gasto', async () => {
     await getFirebase().firestore().collection('expenses').doc(expenseId).delete();
@@ -190,7 +194,7 @@ export async function deleteExpense(expenseId: string, showToast: ToastFn) {
 
 /* ===== SUPPLIERS ===== */
 
-export function saveSupplier(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveSupplier(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar proveedor', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -219,13 +223,14 @@ export function saveSupplier(data: Record<string, any>, editingId: string | null
         rating: Number(data.supRating) || 0,
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Proveedor registrado');
     }
   }, showToast);
 }
 
-export async function deleteSupplier(supplierId: string, showToast: ToastFn) {
+export async function deleteSupplier(supplierId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este proveedor?')) return;
   return fbAction('eliminar proveedor', async () => {
     await getFirebase().firestore().collection('suppliers').doc(supplierId).delete();
@@ -235,7 +240,7 @@ export async function deleteSupplier(supplierId: string, showToast: ToastFn) {
 
 /* ===== COMPANIES ===== */
 
-export function saveCompany(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveCompany(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar empresa', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -260,13 +265,14 @@ export function saveCompany(data: Record<string, any>, editingId: string | null,
         legalName: data.compLegal || '',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Empresa registrada');
     }
   }, showToast);
 }
 
-export async function deleteCompany(companyId: string, showToast: ToastFn) {
+export async function deleteCompany(companyId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta empresa?')) return;
   return fbAction('eliminar empresa', async () => {
     await getFirebase().firestore().collection('companies').doc(companyId).delete();
@@ -276,7 +282,7 @@ export async function deleteCompany(companyId: string, showToast: ToastFn) {
 
 /* ===== PROJECT FILES ===== */
 
-export async function uploadProjectFile(projectId: string, file: File, showToast: ToastFn, authUser: any) {
+export async function uploadProjectFile(projectId: string, file: File, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('subir archivo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -289,12 +295,13 @@ export async function uploadProjectFile(projectId: string, file: File, showToast
       url: base64,
       uploadedBy: authUser?.displayName || authUser?.email || 'Usuario',
       createdAt: ts,
+      tenantId: tenantId || '',
     });
     showToast('✅ Archivo subido');
   }, showToast);
 }
 
-export async function deleteProjectFile(projectId: string, fileId: string, showToast: ToastFn) {
+export async function deleteProjectFile(projectId: string, fileId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este archivo?')) return;
   return fbAction('eliminar archivo', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('files').doc(fileId).delete();
@@ -304,7 +311,7 @@ export async function deleteProjectFile(projectId: string, fileId: string, showT
 
 /* ===== WORK PHASES ===== */
 
-export async function saveWorkPhase(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn) {
+export async function saveWorkPhase(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn, tenantId: string | null) {
   return fbAction('guardar fase', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -326,13 +333,14 @@ export async function saveWorkPhase(projectId: string, data: Record<string, any>
         startDate: data.phaseStart || '',
         endDate: data.phaseEnd || '',
         createdAt: ts,
+        tenantId: tenantId || '',
       });
       showToast('✅ Fase creada');
     }
   }, showToast);
 }
 
-export async function updatePhaseStatus(projectId: string, phaseId: string, status: string, showToast: ToastFn) {
+export async function updatePhaseStatus(projectId: string, phaseId: string, status: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('actualizar fase', async () => {
     await getFirebase().firestore()
       .collection('projects').doc(projectId)
@@ -343,7 +351,7 @@ export async function updatePhaseStatus(projectId: string, phaseId: string, stat
 
 /* ===== APPROVALS ===== */
 
-export function saveApproval(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveApproval(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar aprobación', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -362,13 +370,14 @@ export function saveApproval(projectId: string, data: Record<string, any>, editi
         requestedBy: authUser?.displayName || authUser?.email || 'Usuario',
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Solicitud creada');
     }
   }, showToast);
 }
 
-export async function updateApproval(projectId: string, approvalId: string, status: string, showToast: ToastFn) {
+export async function updateApproval(projectId: string, approvalId: string, status: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('actualizar aprobación', async () => {
     const fb = getFirebase();
     await fb.firestore().collection('projects').doc(projectId).collection('approvals').doc(approvalId).update({ status });
@@ -376,7 +385,7 @@ export async function updateApproval(projectId: string, approvalId: string, stat
   }, showToast);
 }
 
-export async function deleteApproval(projectId: string, approvalId: string, showToast: ToastFn) {
+export async function deleteApproval(projectId: string, approvalId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta solicitud?')) return;
   return fbAction('eliminar aprobación', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(approvalId).delete();
@@ -386,7 +395,7 @@ export async function deleteApproval(projectId: string, approvalId: string, show
 
 /* ===== MEETINGS ===== */
 
-export function saveMeeting(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveMeeting(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar reunión', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -416,13 +425,14 @@ export function saveMeeting(data: Record<string, any>, editingId: string | null,
         createdBy: authUser?.displayName || authUser?.email || 'Usuario',
         createdAt: ts,
         createdByUid: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Reunión programada');
     }
   }, showToast);
 }
 
-export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
+export async function deleteMeeting(meetingId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta reunión?')) return;
   return fbAction('eliminar reunión', async () => {
     await getFirebase().firestore().collection('meetings').doc(meetingId).delete();
@@ -432,7 +442,7 @@ export async function deleteMeeting(meetingId: string, showToast: ToastFn) {
 
 /* ===== GALLERY ===== */
 
-export async function saveGalleryPhoto(data: Record<string, any>, showToast: ToastFn, authUser: any) {
+export async function saveGalleryPhoto(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar foto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -443,12 +453,13 @@ export async function saveGalleryPhoto(data: Record<string, any>, showToast: Toa
       imageData: data.photoImage,
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId: tenantId || '',
     });
     showToast('✅ Foto subida');
   }, showToast);
 }
 
-export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
+export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta foto?')) return;
   return fbAction('eliminar foto', async () => {
     await getFirebase().firestore().collection('galleryPhotos').doc(photoId).delete();
@@ -458,7 +469,7 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn) {
 
 /* ===== INVENTORY ===== */
 
-export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar producto', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -491,13 +502,14 @@ export function saveInvProduct(data: Record<string, any>, editingId: string | nu
         warehouseStock: {},
         createdAt: ts,
         createdBy: authUser?.uid,
+        tenantId: tenantId || '',
       });
       showToast('✅ Producto registrado');
     }
   }, showToast);
 }
 
-export async function deleteInvProduct(productId: string, showToast: ToastFn) {
+export async function deleteInvProduct(productId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este producto?')) return;
   return fbAction('eliminar producto', async () => {
     await getFirebase().firestore().collection('invProducts').doc(productId).delete();
@@ -505,7 +517,7 @@ export async function deleteInvProduct(productId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn) {
+export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn, tenantId: string | null) {
   return fbAction('guardar categoría', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -522,13 +534,14 @@ export function saveInvCategory(data: Record<string, any>, editingId: string | n
         color: data.catColor || '#10b981',
         description: data.catDesc || '',
         createdAt: ts,
+        tenantId: tenantId || '',
       });
       showToast('✅ Categoría creada');
     }
   }, showToast);
 }
 
-export async function deleteInvCategory(catId: string, showToast: ToastFn) {
+export async function deleteInvCategory(catId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta categoría?')) return;
   return fbAction('eliminar categoría', async () => {
     await getFirebase().firestore().collection('invCategories').doc(catId).delete();
@@ -536,7 +549,7 @@ export async function deleteInvCategory(catId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: any) {
+export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('registrar movimiento', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -550,12 +563,13 @@ export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, a
       warehouse: data.movWarehouse || 'Almacén Principal',
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId: tenantId || '',
     });
     showToast('✅ Movimiento registrado');
   }, showToast);
 }
 
-export async function deleteInvMovement(movId: string, showToast: ToastFn) {
+export async function deleteInvMovement(movId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este movimiento?')) return;
   return fbAction('eliminar movimiento', async () => {
     await getFirebase().firestore().collection('invMovements').doc(movId).delete();
@@ -563,7 +577,7 @@ export async function deleteInvMovement(movId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: any) {
+export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('registrar transferencia', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -578,12 +592,13 @@ export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, a
       notes: data.transNotes || '',
       createdAt: ts,
       createdBy: authUser?.uid,
+      tenantId: tenantId || '',
     });
     showToast('✅ Transferencia creada');
   }, showToast);
 }
 
-export async function deleteInvTransfer(transId: string, showToast: ToastFn) {
+export async function deleteInvTransfer(transId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta transferencia?')) return;
   return fbAction('eliminar transferencia', async () => {
     await getFirebase().firestore().collection('invTransfers').doc(transId).delete();
@@ -591,7 +606,7 @@ export async function deleteInvTransfer(transId: string, showToast: ToastFn) {
   }, showToast);
 }
 
-export async function updateTransferStatus(transId: string, status: string, showToast: ToastFn) {
+export async function updateTransferStatus(transId: string, status: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('actualizar transferencia', async () => {
     const fb = getFirebase();
     const updates: any = { status };
@@ -603,7 +618,7 @@ export async function updateTransferStatus(transId: string, status: string, show
 
 /* ===== PROJECT PROGRESS ===== */
 
-export async function updateProjectProgress(projectId: string, progress: number) {
+export async function updateProjectProgress(projectId: string, progress: number, tenantId: string | null) {
   return fbAction('actualizar progreso', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).update({
       progress,
@@ -614,7 +629,7 @@ export async function updateProjectProgress(projectId: string, progress: number)
 
 /* ===== USER COMPANY ===== */
 
-export async function updateUserCompany(userId: string, companyId: string, showToast: ToastFn) {
+export async function updateUserCompany(userId: string, companyId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('asignar empresa', async () => {
     await getFirebase().firestore().collection('users').doc(userId).update({ companyId });
     showToast('Empresa asignada');
@@ -623,7 +638,7 @@ export async function updateUserCompany(userId: string, companyId: string, showT
 
 /* ===== TIME ENTRIES ===== */
 
-export function saveTimeEntry(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveTimeEntry(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar registro de tiempo', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -647,13 +662,14 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
       showToast('Registro actualizado');
     } else {
       entryData.createdAt = ts;
+      entryData.tenantId = tenantId || '';
       await db.collection('timeEntries').add(entryData);
       showToast('✅ Tiempo registrado');
     }
   }, showToast);
 }
 
-export async function deleteTimeEntry(entryId: string, showToast: ToastFn) {
+export async function deleteTimeEntry(entryId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar este registro de tiempo?')) return;
   return fbAction('eliminar tiempo', async () => {
     await getFirebase().firestore().collection('timeEntries').doc(entryId).delete();
@@ -663,7 +679,7 @@ export async function deleteTimeEntry(entryId: string, showToast: ToastFn) {
 
 /* ===== INVOICES ===== */
 
-export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any) {
+export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar factura', async () => {
     const fb = getFirebase();
     const db = fb.firestore();
@@ -691,13 +707,14 @@ export function saveInvoice(data: Record<string, any>, editingId: string | null,
     } else {
       invoiceData.createdAt = ts;
       invoiceData.createdBy = authUser?.uid;
+      invoiceData.tenantId = tenantId || '';
       await db.collection('invoices').add(invoiceData);
       showToast('✅ Factura creada');
     }
   }, showToast);
 }
 
-export async function updateInvoiceStatus(invoiceId: string, status: string, showToast: ToastFn) {
+export async function updateInvoiceStatus(invoiceId: string, status: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('actualizar factura', async () => {
     const fb = getFirebase();
     const updates: any = { status };
@@ -707,7 +724,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: string, sho
   }, showToast);
 }
 
-export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
+export async function deleteInvoice(invoiceId: string, showToast: ToastFn, tenantId: string | null) {
   if (!confirm('¿Eliminar esta factura?')) return;
   return fbAction('eliminar factura', async () => {
     await getFirebase().firestore().collection('invoices').doc(invoiceId).delete();
@@ -717,7 +734,7 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn) {
 
 /* ===== COMMENTS ===== */
 
-export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: any) {
+export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar comentario', async () => {
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -731,11 +748,12 @@ export function saveComment(data: Record<string, any>, showToast: ToastFn, authU
       mentions: data.mentions || [],
       parentId: data.parentId || null,
       createdAt: ts,
+      tenantId: tenantId || '',
     });
   });
 }
 
-export async function deleteComment(commentId: string, showToast: ToastFn) {
+export async function deleteComment(commentId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar comentario', async () => {
     await getFirebase().firestore().collection('comments').doc(commentId).delete();
     showToast('Comentario eliminado');

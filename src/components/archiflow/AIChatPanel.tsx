@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
+import { useApp } from '@/contexts/AppContext';
 
 interface ExecutedAction {
   type: string;
@@ -168,6 +169,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const projectContext = useUIStore((s) => s.aiProjectContext);
+  const { activeTenantId } = useApp();
 
   useTypewriter(messages, setMessages);
 
@@ -215,6 +217,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
             { role: userMessage.role, content: userMessage.content },
           ],
           projectContext: projectContext || undefined,
+          tenantId: activeTenantId || undefined,
         }),
       });
 

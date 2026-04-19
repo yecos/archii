@@ -8,6 +8,7 @@ import { Bell, X } from 'lucide-react';
 /* ─── Layout ─── */
 import LoadingScreen from '@/components/layout/LoadingScreen';
 import AuthScreen from '@/components/layout/AuthScreen';
+import TenantSelectionScreen from '@/components/layout/TenantSelectionScreen';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
@@ -75,6 +76,7 @@ function AppContent() {
     showNotifBanner, requestNotifPermission, dismissNotifBanner,
     inAppNotifs, setInAppNotifs, markNotifRead,
     screenTitles,
+    tenantReady, activeTenantName, showTenantSelector,
   } = useApp();
 
   if (!ready || loading) return <LoadingScreen />;
@@ -111,6 +113,9 @@ function AppContent() {
       />
     </>
   );
+
+  // Block app until tenant is selected
+  if (!tenantReady) return <TenantSelectionScreen />;
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -266,6 +271,9 @@ function AppContent() {
       <CompanyModal open={!!modals.company} onClose={() => closeModal('company')} />
 
       <LightboxViewer />
+
+      {/* Tenant switcher overlay */}
+      {showTenantSelector && <TenantSelectionScreen />}
     </div>
   );
 }

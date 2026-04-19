@@ -694,7 +694,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     let unsub: any;
     if (chatProjectId === '__general__') {
-      unsub = db.collection('generalMessages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
+      unsub = db.collection('generalMessages').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
         setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
       }, () => {});
     } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
@@ -709,7 +709,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }, () => {});
     }
     return () => { unsub(); setMessages([]); };
-  }, [ready, chatProjectId, chatDmUser, authUser]);
+  }, [ready, chatProjectId, chatDmUser, authUser, activeTenantId]);
 
   // Load work phases
   useEffect(() => {
@@ -1922,7 +1922,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (chatReplyingTo) {
         msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid };
       }
-      if (chatProjectId === '__general__') { await db.collection('generalMessages').add(msgData); }
+      if (chatProjectId === '__general__') { await db.collection('generalMessages').add({ ...msgData, tenantId: activeTenantId || '' }); }
       else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
         const ids = [authUser.uid, chatDmUser].sort();
         const dmId = `dm_${ids[0]}_${ids[1]}`;
@@ -2753,7 +2753,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       teBillable: true,
       teRate: Number(forms.teRate) || 50000,
       teDate: dateStr,
-    }, null, showToast, authUser);
+    }, null, showToast, authUser, activeTenantId);
     setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
     setTimeTimerMs(0);
   };
@@ -2772,7 +2772,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       teBillable: forms.teBillable !== false,
       teRate: Number(forms.teRate) || 50000,
       teDate: forms.teDate || new Date().toISOString().split('T')[0],
-    }, editingId, showToast, authUser);
+    }, editingId, showToast, authUser, activeTenantId);
     closeModal('timeEntry');
   };
 
@@ -2818,7 +2818,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       invNotes: forms.invNotes || '',
       invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
       invDueDate: forms.invDueDate || '',
-    }, editingId, showToast, authUser);
+    }, editingId, showToast, authUser, activeTenantId);
     setInvoiceTab('list');
   };
 
@@ -2833,7 +2833,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const mentionedUser = teamUsers.find(u => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
       if (mentionedUser) mentions.push(mentionedUser.id);
     }
-    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser);
+    fbActions.saveComment({ taskId, projectId, text: commentText.trim(), mentions, parentId: replyingTo }, showToast, authUser, activeTenantId);
     setCommentText('');
     setReplyingTo(null);
   };

@@ -10,7 +10,7 @@ export default function TimeTrackingScreen() {
     forms, openModal, projects, setForms, setTimeFilterDate,
     setTimeFilterProject, setTimeTab, showToast, startTimeTracking, stopTimeTracking,
     timeEntries, timeFilterDate, timeFilterProject, timeSession, timeTab,
-    timeTimerMs, userName,
+    timeTimerMs, userName, activeTenantId,
   } = useApp();
 
   return (
@@ -139,7 +139,7 @@ export default function TimeTrackingScreen() {
                             <td className="px-4 py-2.5 text-[var(--muted-foreground)]">{e.data.startTime} - {e.data.endTime}</td>
                             <td className="px-4 py-2.5 text-right font-semibold">{fmtDuration(e.data.duration)}</td>
                             <td className="px-4 py-2.5 text-center">{e.data.billable ? '✅' : '—'}</td>
-                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, showToast)}>🗑</button></td>
+                            <td className="px-4 py-2.5"><button className="text-xs text-red-400 cursor-pointer hover:text-red-300" onClick={() => fbActions.deleteTimeEntry(e.id, showToast, activeTenantId)}>🗑</button></td>
                           </tr>);
                         })}
                       </tbody>

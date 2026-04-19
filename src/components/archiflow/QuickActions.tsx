@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
+import { useApp } from '@/contexts/AppContext';
 
 interface QuickActionsProps {
   isOpen: boolean;
@@ -79,6 +80,7 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const projectContext = useUIStore((s) => s.aiProjectContext);
+  const { activeTenantId } = useApp();
 
   if (!isOpen) return null;
 
@@ -100,6 +102,7 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
             },
           ],
           projectContext: projectContext || 'Proyecto de arquitectura general',
+          tenantId: activeTenantId || undefined,
         }),
       });
 

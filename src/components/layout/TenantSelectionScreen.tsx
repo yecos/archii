@@ -1,322 +1,324 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import { getAuthHeaders } from '@/lib/firebase-service';
+import { Building2, Plus, ArrowRight, Users, Copy, Check, Sparkles, ChevronDown } from 'lucide-react';
 
 interface Tenant {
   id: string;
   name: string;
   code: string;
+  members?: string[];
   createdBy?: string;
   createdAt?: any;
-  members?: string[];
 }
 
-interface TenantSelectionScreenProps {
-  onSelectTenant: (tenantId: string, tenantName: string) => void;
-  showToast: (msg: string, type?: string) => void;
-}
-
-export default function TenantSelectionScreen({ onSelectTenant, showToast }: TenantSelectionScreenProps) {
+export default function TenantSelectionScreen() {
+  const { authUser, switchTenant, showToast, userName } = useApp();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [newTenantName, setNewTenantName] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [tab, setTab] = useState<'select' | 'create' | 'join'>('select');
-  const [error, setError] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
 
-  useEffect(() => {
-    loadTenants();
-  }, []);
-
-  const loadTenants = async () => {
+  // Load user's tenants
+  const loadTenants = useCallback(async () => {
     try {
-      const fb = getFirebase();
-      const db = fb.firestore();
-      const user = fb.auth().currentUser;
-      if (!user) return;
-
-      const snap = await db.collection('tenants').where('members', 'array-contains', user.uid).get();
-      const list = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-      setTenants(list);
-    } catch (err: any) {
-      console.error('[Tenant] Error loading:', err);
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/tenants', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list' }),
+      });
+      const data = await res.json();
+      if (data.tenants) {
+        setTenants(data.tenants);
+      }
+    } catch (err) {
+      console.error('[TenantSelection] Error loading tenants:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadTenants();
+  }, [loadTenants]);
+
+  // Auto-select if only one tenant exists
+  useEffect(() => {
+    if (tenants.length === 1 && !showCreate && !showJoin) {
+      const t = tenants[0];
+      switchTenant(t.id, t.name);
+    }
+  }, [tenants.length, showCreate, showJoin, tenants, switchTenant]);
 
   const handleCreate = async () => {
-    if (!newName.trim() || newName.trim().length < 2) {
-      setError('El nombre debe tener al menos 2 caracteres');
+    const name = newTenantName.trim();
+    if (name.length < 2) {
+      showToast('El nombre debe tener al menos 2 caracteres', 'error');
       return;
     }
-
     setCreating(true);
-    setError('');
-
     try {
-      const fb = getFirebase();
-      const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
-
-      // Generate unique code
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let code = '';
-      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-
-      // Ensure unique
-      let unique = false;
-      let attempts = 0;
-      while (!unique && attempts < 20) {
-        const snap = await db.collection('tenants').where('code', '==', code).limit(1).get();
-        if (snap.empty) unique = true;
-        else {
-          code = '';
-          for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-        }
-        attempts++;
-      }
-
-      const ref = await db.collection('tenants').add({
-        name: newName.trim(),
-        code,
-        members: [fb.auth().currentUser?.uid],
-        createdBy: fb.auth().currentUser?.uid,
-        createdAt: ts,
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/tenants', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', name }),
       });
-
-      // Auto-select the new tenant
-      onSelectTenant(ref.id, newName.trim());
-    } catch (err: any) {
-      console.error('[Tenant] Error creating:', err);
-      setError('Error al crear el espacio de trabajo');
+      const data = await res.json();
+      if (data.error) {
+        showToast(data.error, 'error');
+        return;
+      }
+      showToast(`Espacio "${data.name}" creado — Código: ${data.code}`);
+      switchTenant(data.tenantId, data.name);
+    } catch (err) {
+      console.error('[TenantSelection] Create error:', err);
+      showToast('Error al crear espacio', 'error');
     } finally {
       setCreating(false);
     }
   };
 
   const handleJoin = async () => {
-    if (!joinCode.trim() || joinCode.trim().length < 4) {
-      setError('Ingresa un código válido');
+    const code = joinCode.trim().toUpperCase();
+    if (code.length < 4) {
+      setJoinError('Ingresa un código válido');
       return;
     }
-
     setJoining(true);
-    setError('');
-
+    setJoinError('');
     try {
-      const fb = getFirebase();
-      const db = fb.firestore();
-      const uid = fb.auth().currentUser?.uid;
-
-      const snap = await db.collection('tenants').where('code', '==', joinCode.trim().toUpperCase()).limit(1).get();
-
-      if (snap.empty) {
-        setError('Código no encontrado. Verifica e intenta de nuevo.');
-        setJoining(false);
-        return;
-      }
-
-      const doc = snap.docs[0];
-      const data = doc.data();
-
-      if (data.members?.includes(uid)) {
-        onSelectTenant(doc.id, data.name);
-        setJoining(false);
-        return;
-      }
-
-      // Add user to members
-      await db.collection('tenants').doc(doc.id).update({
-        members: fb.firestore.FieldValue.arrayUnion(uid),
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/tenants', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'join', code }),
       });
-
-      onSelectTenant(doc.id, data.name);
-    } catch (err: any) {
-      console.error('[Tenant] Error joining:', err);
-      setError('Error al unirse. Intenta de nuevo.');
+      const data = await res.json();
+      if (data.error) {
+        setJoinError(data.error);
+        return;
+      }
+      if (data.alreadyMember) {
+        showToast(`Ya eres miembro de "${data.name}"`);
+      } else {
+        showToast(`Te uniste a "${data.name}"`);
+      }
+      switchTenant(data.tenantId, data.name);
+    } catch (err) {
+      console.error('[TenantSelection] Join error:', err);
+      setJoinError('Error al unirse al espacio');
     } finally {
       setJoining(false);
     }
   };
 
+  const copyCode = (code: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
+
+  const selectTenant = (t: Tenant) => {
+    switchTenant(t.id, t.name);
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-[var(--background)] z-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-[var(--muted-foreground)]">Cargando espacios...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4 af-noise" style={{ background: 'var(--af-bg1)' }}>
-      {/* Ambient background */}
+    <div className="fixed inset-0 bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--af-bg3)] z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="af-ambient-bg" />
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo / Brand */}
-        <div className="text-center mb-8 animate-fadeIn">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--af-accent)] to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-[var(--af-accent)]/20">
-            <svg className="w-8 h-8 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
+      <div className="relative w-full max-w-[480px] my-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-2xl shadow-lg af-glow-accent flex items-center justify-center mx-auto mb-4">
+            <Building2 size={28} className="stroke-background" />
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl font-bold text-foreground mb-1">
-            ArchiFlow
-          </h1>
-          <p className="text-sm text-muted-foreground">Selecciona o crea tu espacio de trabajo</p>
+          <h1 className="text-2xl font-bold af-heading">Bienvenido, {userName.split(' ')[0]}</h1>
+          <p className="text-sm text-[var(--muted-foreground)] mt-2">
+            Selecciona o crea un espacio de trabajo para comenzar
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-[var(--af-bg4)] bg-[var(--af-bg2)]/80 backdrop-blur-xl p-6 shadow-2xl animate-slideUp">
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl bg-[var(--af-bg3)] mb-6">
+        {/* Existing tenants */}
+        {tenants.length > 0 && !showCreate && !showJoin && (
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Tus espacios</span>
+              <span className="text-xs text-[var(--muted-foreground)]">{tenants.length} espacio{tenants.length !== 1 ? 's' : ''}</span>
+            </div>
+            {tenants.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => selectTenant(t)}
+                className="w-full af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--af-accent)]/40 transition-all group text-left"
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--af-accent)]/20 to-[var(--af-accent2)]/10 flex items-center justify-center flex-shrink-0 group-hover:from-[var(--af-accent)]/30 group-hover:to-[var(--af-accent2)]/20 transition-all">
+                  <Building2 size={20} className="stroke-[var(--af-accent)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">{t.name}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] text-[var(--muted-foreground)] font-mono bg-[var(--af-bg3)] px-2 py-0.5 rounded-md">{t.code}</span>
+                    <span className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1">
+                      <Users size={10} />
+                      {t.members?.length || 1} miembro{(t.members?.length || 1) !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={(e) => copyCode(t.code, e)}
+                    className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
+                    title="Copiar código"
+                  >
+                    {copiedCode === t.code ? (
+                      <Check size={14} className="stroke-emerald-400" />
+                    ) : (
+                      <Copy size={14} className="stroke-[var(--muted-foreground)]" />
+                    )}
+                  </button>
+                  <ArrowRight size={18} className="stroke-[var(--muted-foreground)] group-hover:stroke-[var(--af-accent)] group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {!showCreate && !showJoin && (
+          <div className="space-y-3">
             <button
-              onClick={() => { setTab('select'); setError(''); }}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border-none"
-              style={tab === 'select' ? { background: 'var(--af-accent)', color: '#000' } : { background: 'transparent', color: 'var(--muted-foreground)' }}
+              onClick={() => setShowCreate(true)}
+              className="w-full af-btn-primary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all border-none"
             >
-              Mis espacios
+              <Plus size={18} className="stroke-current" strokeWidth={2.5} />
+              Crear nuevo espacio
             </button>
             <button
-              onClick={() => { setTab('create'); setError(''); }}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border-none"
-              style={tab === 'create' ? { background: 'var(--af-accent)', color: '#000' } : { background: 'transparent', color: 'var(--muted-foreground)' }}
+              onClick={() => setShowJoin(true)}
+              className="w-full af-btn-secondary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
             >
-              Crear nuevo
-            </button>
-            <button
-              onClick={() => { setTab('join'); setError(''); }}
-              className="flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border-none"
-              style={tab === 'join' ? { background: 'var(--af-accent)', color: '#000' } : { background: 'transparent', color: 'var(--muted-foreground)' }}
-            >
-              Unirme
+              <Sparkles size={16} className="stroke-current" />
+              Unirme con un código
             </button>
           </div>
+        )}
 
-          {/* SELECT TAB */}
-          {tab === 'select' && (
-            <div>
-              {loading ? (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <div className="w-8 h-8 border-2 border-[var(--af-accent)]/30 border-t-[var(--af-accent)] rounded-full animate-spin" />
-                  <p className="text-sm text-muted-foreground">Cargando...</p>
-                </div>
-              ) : tenants.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-3 opacity-40">🏗️</div>
-                  <p className="text-sm text-muted-foreground mb-4">No tienes espacios de trabajo</p>
-                  <button
-                    onClick={() => setTab('create')}
-                    className="px-4 py-2 rounded-xl bg-[var(--af-accent)] text-black text-sm font-semibold cursor-pointer hover:opacity-90 transition-colors border-none"
-                  >
-                    Crear mi primer espacio
-                  </button>
-                </div>
+        {/* Create tenant form */}
+        {showCreate && (
+          <div className="af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 animate-fadeIn">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-base">Crear espacio de trabajo</h2>
+              <button
+                onClick={() => { setShowCreate(false); setNewTenantName(''); }}
+                className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] bg-transparent border-none"
+              >
+                Cancelar
+              </button>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] mb-4">
+              Crea un espacio para tu equipo. Se generará un código de invitación único para que otros puedan unirse.
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre del espacio</label>
+              <input
+                className="w-full bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--af-accent)]"
+                placeholder="Ej: Constructora ABC, Arquitectura XYZ..."
+                value={newTenantName}
+                onChange={(e) => setNewTenantName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+                autoFocus
+                disabled={creating}
+              />
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={creating || newTenantName.trim().length < 2}
+              className={`w-full af-btn-primary flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all border-none ${creating || newTenantName.trim().length < 2 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {creating ? (
+                <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
               ) : (
-                <div className="space-y-2">
-                  {tenants.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => onSelectTenant(t.id, t.name)}
-                      className="w-full flex items-center gap-3 p-4 rounded-xl border border-[var(--af-bg4)] bg-[var(--af-bg3)] hover:border-[var(--af-accent)]/30 hover:bg-[var(--af-accent)]/5 transition-all cursor-pointer text-left group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-[var(--af-accent)]/15 flex items-center justify-center text-lg font-bold text-[var(--af-accent)] shrink-0 group-hover:scale-105 transition-transform">
-                        {t.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <span className="font-mono bg-[var(--af-bg4)] px-1.5 py-0.5 rounded text-[10px]">{t.code}</span>
-                          <span>{t.members?.length || 1} miembro{(t.members?.length || 1) > 1 ? 's' : ''}</span>
-                        </p>
-                      </div>
-                      <svg className="w-4 h-4 text-muted-foreground group-hover:text-[var(--af-accent)] transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="m9 18 6-6-6-6" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
+                <Plus size={16} className="stroke-current" strokeWidth={2.5} />
+              )}
+              {creating ? 'Creando...' : 'Crear espacio'}
+            </button>
+          </div>
+        )}
+
+        {/* Join tenant form */}
+        {showJoin && (
+          <div className="af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 animate-fadeIn">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-base">Unirme con código</h2>
+              <button
+                onClick={() => { setShowJoin(false); setJoinCode(''); setJoinError(''); }}
+                className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] bg-transparent border-none"
+              >
+                Cancelar
+              </button>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] mb-4">
+              Ingresa el código de invitación de 6 caracteres que te compartió un miembro del espacio.
+            </p>
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Código de invitación</label>
+              <input
+                className={`w-full bg-[var(--af-bg3)] border rounded-lg px-3.5 py-3 text-sm text-[var(--foreground)] outline-none transition-colors text-center font-mono text-lg tracking-[0.3em] uppercase ${joinError ? 'border-[var(--destructive)]' : 'border-[var(--input)] focus:border-[var(--af-accent)]'}`}
+                placeholder="ABC123"
+                value={joinCode}
+                onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 6)); setJoinError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+                maxLength={6}
+                autoFocus
+                disabled={joining}
+              />
+              {joinError && (
+                <p className="text-xs mt-1.5 text-[var(--destructive)]">{joinError}</p>
               )}
             </div>
-          )}
+            <button
+              onClick={handleJoin}
+              disabled={joining || joinCode.trim().length < 4}
+              className={`w-full af-btn-primary flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all border-none ${joining || joinCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {joining ? (
+                <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Sparkles size={16} className="stroke-current" />
+              )}
+              {joining ? 'Uniéndome...' : 'Unirme al espacio'}
+            </button>
+          </div>
+        )}
 
-          {/* CREATE TAB */}
-          {tab === 'create' && (
-            <div>
-              <div className="mb-4">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Nombre del espacio</label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => { setNewName(e.target.value); setError(''); }}
-                  placeholder="Ej: Constructora López"
-                  className="w-full px-4 py-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[var(--af-accent)]/40 focus:border-[var(--af-accent)]/40 transition-all"
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                  autoFocus
-                />
-              </div>
-
-              <div className="mb-4 p-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)]">
-                <p className="text-xs text-muted-foreground mb-1">Se generará un código de invitación automático para que otros se unan</p>
-                <p className="text-xs text-muted-foreground">Ejemplo: <span className="font-mono text-[var(--af-accent)] font-semibold">ARCHI1</span></p>
-              </div>
-
-              {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-
-              <button
-                onClick={handleCreate}
-                disabled={creating || newName.trim().length < 2}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[var(--af-accent)] to-amber-600 text-black text-sm font-semibold cursor-pointer hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed border-none shadow-lg shadow-[var(--af-accent)]/20"
-              >
-                {creating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    Creando...
-                  </span>
-                ) : 'Crear espacio de trabajo'}
-              </button>
-            </div>
-          )}
-
-          {/* JOIN TAB */}
-          {tab === 'join' && (
-            <div>
-              <div className="mb-4">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Código de invitación</label>
-                <input
-                  type="text"
-                  value={joinCode}
-                  onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setError(''); }}
-                  placeholder="Ej: ARCHI1"
-                  maxLength={6}
-                  className="w-full px-4 py-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)] text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[var(--af-accent)]/40 focus:border-[var(--af-accent)]/40 transition-all font-mono tracking-widest text-center text-lg"
-                  onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                  autoFocus
-                />
-              </div>
-
-              <div className="mb-4 p-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)]">
-                <p className="text-xs text-muted-foreground">Pide el código al administrador del espacio de trabajo al que quieres unirte</p>
-              </div>
-
-              {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-
-              <button
-                onClick={handleJoin}
-                disabled={joining || joinCode.trim().length < 4}
-                className="w-full py-3 rounded-xl bg-[var(--af-bg3)] border border-[var(--af-accent)]/30 text-[var(--af-accent)] text-sm font-semibold cursor-pointer hover:bg-[var(--af-accent)]/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {joining ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-[var(--af-accent)]/30 border-t-[var(--af-accent)] rounded-full animate-spin" />
-                    Uniéndose...
-                  </span>
-                ) : 'Unirme al espacio'}
-              </button>
-            </div>
-          )}
+        {/* Bottom info */}
+        <div className="text-center mt-6">
+          <p className="text-[11px] text-[var(--muted-foreground)]">
+            Cada espacio es completamente independiente. Los proyectos, tareas, gastos y demás datos están aislados entre espacios.
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-[10px] text-muted-foreground/40 mt-6">
-          ArchiFlow Premium — Multi-tenancy habilitado
-        </p>
       </div>
     </div>
   );

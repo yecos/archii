@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut } from 'lucide-react';
 
 export default function TopBar() {
   const {
@@ -10,7 +10,10 @@ export default function TopBar() {
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
     initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
+    activeTenantName, setShowTenantSelector, doLogout,
   } = useApp();
+
+  const [showTenantMenu, setShowTenantMenu] = React.useState(false);
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -39,6 +42,39 @@ export default function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Tenant switcher */}
+        <div className="relative hidden sm:block">
+          <button
+            onClick={() => setShowTenantMenu(!showTenantMenu)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            title="Cambiar espacio de trabajo"
+          >
+            <Building2 size={14} className="stroke-[var(--af-accent)]" />
+            <span className="text-xs font-medium max-w-[120px] truncate">{activeTenantName || 'Espacio'}</span>
+            <ChevronDown size={12} className={`stroke-[var(--muted-foreground)] transition-transform ${showTenantMenu ? 'rotate-180' : ''}`} />
+          </button>
+          {showTenantMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowTenantMenu(false)} />
+              <div className="absolute right-0 top-full mt-1.5 z-50 af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-1.5 shadow-2xl min-w-[200px]">
+                <div className="px-3 py-2 text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Espacio actual</div>
+                <div className="px-3 py-1.5 text-sm font-medium flex items-center gap-2">
+                  <Building2 size={14} className="stroke-[var(--af-accent)]" />
+                  {activeTenantName || 'Sin espacio'}
+                </div>
+                <div className="border-t border-[var(--border)] mt-1.5 pt-1.5">
+                  <button
+                    onClick={() => { setShowTenantMenu(false); setShowTenantSelector(true); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-[var(--af-bg3)] transition-colors text-left bg-transparent border-none text-[var(--foreground)]"
+                  >
+                    <LayoutGrid size={14} className="stroke-[var(--muted-foreground)]" />
+                    Cambiar espacio
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
         {/* Notification bell */}
         <button
           className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all relative hover:scale-105 active:scale-95"

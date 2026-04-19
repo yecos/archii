@@ -380,7 +380,8 @@ async function executeToolCall(
   args: Record<string, any>,
   db: any,
   userUid: string,
-  actions: ExecutedAction[]
+  actions: ExecutedAction[],
+  tenantId: string
 ): Promise<string> {
   const FieldValue = getAdminFieldValue();
   const ts = FieldValue.serverTimestamp();
@@ -389,7 +390,7 @@ async function executeToolCall(
     switch (name) {
       // ── READ OPERATIONS ──
       case "get_projects": {
-        let query = db.collection("projects").orderBy("createdAt", "desc");
+        let query = db.collection("projects").where("tenantId", "==", tenantId).orderBy("createdAt", "desc");
         const snap = await query.limit(20).get();
         const projects = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
         const filter = args.status_filter;
@@ -411,7 +412,7 @@ async function executeToolCall(
       }
 
       case "get_project_detail": {
-        const projSnap = await db.collection("projects").orderBy("createdAt", "desc").limit(20).get();
+        const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(20).get();
         const allProjects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
         const project = args.project_id
           ? allProjects.find((p: any) => p.id === args.project_id)
@@ -428,6 +429,7 @@ async function executeToolCall(
         // Get tasks
         const tasksSnap = await db
           .collection("tasks")
+          .where("tenantId", "==", tenantId)
           .where("projectId", "==", project.id)
           .limit(50)
           .get();
@@ -436,6 +438,7 @@ async function executeToolCall(
         // Get expenses
         const expSnap = await db
           .collection("expenses")
+          .where("tenantId", "==", tenantId)
           .where("projectId", "==", project.id)
           .limit(50)
           .get();
@@ -487,7 +490,7 @@ async function executeToolCall(
       }
 
       case "get_tasks": {
-        let query = db.collection("tasks").orderBy("createdAt", "desc");
+        let query = db.collection("tasks").where("tenantId", "==", tenantId).orderBy("createdAt", "desc");
         const snap = await query.limit(50).get();
         const allTasks = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
@@ -518,9 +521,13 @@ async function executeToolCall(
       }
 
       case "get_team_members": {
+        // Get tenant members
+        const tenantSnap = await db.collection("tenants").doc(tenantId).get();
+        const tenantData = tenantSnap.exists ? tenantSnap.data() : null;
+        const memberIds: string[] = tenantData?.members || [];
         const snap = await db.collection("users").get();
-        const members = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
-        if (members.length === 0) return "No hay miembros en el equipo.";
+        const members = snap.docs.map((d: any) => ({ id: d.id, data: d.data() })).filter((m: any) => memberIds.includes(m.id));
+        if (members.length === 0) return "No hay miembros en este espacio de trabajo.";
 
         const lines = members.map(
           (m: any) =>
@@ -530,7 +537,7 @@ async function executeToolCall(
       }
 
       case "get_budget_summary": {
-        const projSnap = await db.collection("projects").limit(20).get();
+        const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
         const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
         const project = args.project_id
           ? projects.find((p: any) => p.id === args.project_id)
@@ -542,7 +549,7 @@ async function executeToolCall(
           return "No se encontró el proyecto. Especifica cuál proyecto quieres consultar.";
         }
 
-        const expSnap = await db.collection("expenses").where("projectId", "==", project.id).limit(100).get();
+        const expSnap = await db.collection("expenses").where("tenantId", "==", tenantId).where("projectId", "==", project.id).limit(100).get();
         const expenses = expSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
         const byCategory: Record<string, number> = {};
@@ -577,7 +584,7 @@ async function executeToolCall(
       }
 
       case "get_expenses": {
-        const expSnap = await db.collection("expenses").orderBy("createdAt", "desc").limit(50).get();
+        const expSnap = await db.collection("expenses").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
         let allExpenses = expSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
         if (args.project_id) {
@@ -608,7 +615,7 @@ async function executeToolCall(
         // Resolve project
         let projectId = args.project_id;
         if (!projectId && args.project_name) {
-          const projSnap = await db.collection("projects").limit(20).get();
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
           const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
           const proj = findProjectByName(projects, args.project_name);
           if (proj) projectId = proj.id;
@@ -635,6 +642,7 @@ async function executeToolCall(
           priority: args.priority || "Media",
           status: args.status || "Por hacer",
           dueDate: args.due_date || "",
+          tenantId,
           createdAt: ts,
           createdBy: userUid,
         });
@@ -661,6 +669,7 @@ async function executeToolCall(
           startDate: args.start_date || "",
           endDate: args.end_date || "",
           progress: 0,
+          tenantId,
           createdAt: ts,
           createdBy: userUid,
           updatedAt: ts,
@@ -704,7 +713,7 @@ async function executeToolCall(
       case "create_expense": {
         let projectId = args.project_id;
         if (!projectId && args.project_name) {
-          const projSnap = await db.collection("projects").limit(20).get();
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
           const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
           const proj = findProjectByName(projects, args.project_name);
           if (proj) projectId = proj.id;
@@ -716,6 +725,7 @@ async function executeToolCall(
           category: args.category || "Otro",
           amount: args.amount || 0,
           date: args.date || new Date().toISOString().split("T")[0],
+          tenantId,
           createdAt: ts,
           createdBy: userUid,
         });
@@ -741,6 +751,7 @@ async function executeToolCall(
           website: "",
           notes: args.notes || "",
           rating: 0,
+          tenantId,
           createdAt: ts,
           createdBy: userUid,
         });
@@ -759,7 +770,7 @@ async function executeToolCall(
       case "create_meeting": {
         let projectId = args.project_id;
         if (!projectId && args.project_name) {
-          const projSnap = await db.collection("projects").limit(20).get();
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
           const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
           const proj = findProjectByName(projects, args.project_name);
           if (proj) projectId = proj.id;
@@ -774,6 +785,7 @@ async function executeToolCall(
           location: args.location || "",
           description: args.description || "",
           attendees: [],
+          tenantId,
           createdBy: userUid,
           createdAt: ts,
         });
@@ -790,7 +802,7 @@ async function executeToolCall(
       }
 
       case "update_task_status": {
-        const tasksSnap = await db.collection("tasks").limit(100).get();
+        const tasksSnap = await db.collection("tasks").where("tenantId", "==", tenantId).limit(100).get();
         const allTasks = tasksSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
         let task: any = null;
@@ -860,11 +872,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { messages, projectContext } = await request.json();
+    const { messages, projectContext, tenantId } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: "Se requiere al menos un mensaje" },
+        { status: 400 }
+      );
+    }
+
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: "Se requiere el ID del espacio de trabajo (tenantId)" },
         { status: 400 }
       );
     }
@@ -961,7 +980,7 @@ export async function POST(request: NextRequest) {
 
         console.log(`[AI Agent] Executing tool: ${funcName}`, funcArgs);
 
-        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions);
+        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId);
 
         // Add tool result to conversation
         apiMessages.push({
