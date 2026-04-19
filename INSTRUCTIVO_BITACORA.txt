@@ -221,6 +221,53 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FIX — Google Auth internal-error (CSP + redirect fallback)
+  Estado: DESPLEGADO
+  Commit: d1dbdf3
+  Tag: backup-pre-fix-google-auth-internal-error-20260420
+  Build: exitoso (0 errores)
+
+  Contexto: Al intentar iniciar sesion con Google, la app mostraba el error
+    "Error interno de Firebase. Verifica que Google esté habilitado en
+    Firebase Console > Authentication > Sign-in method." (auth/internal-error).
+
+  Problemas identificados (2):
+    1. CSP (Content Security Policy) no incluia https://apis.google.com
+       en script-src ni connect-src. Este dominio es usado por Google Identity
+       Services y es necesario para que el flujo OAuth con Google funcione.
+       Aunque el popup de Firebase Auth abre en su propia ventana (donde CSP
+       del padre no aplica), la peticion inicial signInWithPopup puede
+       necesitar este dominio para validaciones previas.
+    2. Cuando el popup fallaba con auth/internal-error, NO habia fallback
+       a signInWithRedirect. Solo se intentaba redirect para popup-blocked
+       y unauthorized-domain. El flujo redirect a veces funciona cuando el
+       popup falla, especialmente en dispositivos moviles o cuando hay
+       restricciones de terceros cookies.
+
+  Correcciones aplicadas:
+    * next.config.ts: agregado https://apis.google.com a script-src y connect-src
+    * AppContext.tsx: doGoogleLogin ahora intenta redirect fallback cuando
+      popup falla con auth/internal-error (ademas de popup-blocked y
+      unauthorized-domain que ya estaban cubiertos)
+    * AppContext.tsx: agregado log del projectId de Firebase para diagnostico
+    * AppContext.tsx: mensajes de error mejorados con instrucciones mas
+      especificas (mencionar Sign-in method > Google > Habilitar)
+    * AppContext.tsx: agregado auth/invalid-api-key como caso manejado
+
+  NOTA IMPORTANTE — Accion requerida por el usuario en Firebase Console:
+    Si el error persiste despues del deploy, es probable que Google NO este
+    habilitado como proveedor de autenticacion. Pasos para verificar:
+    1. Ir a Firebase Console > proyecto archiflow-prod-2026
+    2. Authentication > Sign-in method
+    3. Verificar que Google esta habilitado (toggle ON)
+    4. Si no lo esta, habilitarlo y guardar
+    5. Verificar que el dominio archii-theta.vercel.app esta en
+       Authentication > Settings > Authorized domains
+
+  Archivos modificados (2):
+    next.config.ts (+4, -2)
+    src/contexts/AppContext.tsx (+13, -5)
+
 2026-04-20 | FIX — No se ven las personas en la app (Race Condition en teamUsers)
   Estado: COMPLETADO
   Commit: 8644aac
