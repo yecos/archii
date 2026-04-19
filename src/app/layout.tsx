@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import ClientProviders from "./ClientProviders";
-import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
 import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 import "./globals.css";
@@ -114,19 +113,16 @@ export default function RootLayout({
           }
         ` }} />
 
-        {/* Theme init — prevent FOUC (3 modes: light/dark/system) */}
+        {/* Theme init — prevent FOUC (dark/light only) */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            var t = localStorage.getItem('archiflow-theme');
-            var d = 'system';
-            if (t === 'light' || t === 'dark' || t === 'system') d = t;
-            if (d === 'system') {
-              var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
-              document.documentElement.classList.toggle('dark', m);
-              document.documentElement.style.colorScheme = m ? 'dark' : 'light';
+            var t = localStorage.getItem('archiflow-theme') || 'dark';
+            if (t === 'dark') {
+              document.documentElement.classList.add('dark');
+              document.documentElement.style.colorScheme = 'dark';
             } else {
-              document.documentElement.classList.toggle('dark', d === 'dark');
-              document.documentElement.style.colorScheme = d;
+              document.documentElement.classList.remove('dark');
+              document.documentElement.style.colorScheme = 'light';
             }
           } catch(e) {
             document.documentElement.classList.add('dark');
@@ -158,21 +154,19 @@ export default function RootLayout({
         ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
-        <ThemeProvider>
-          {/* Register Service Worker */}
-          <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').catch(function() {});
-              });
-            }
-          ` }} />
-          <ClientProviders>
-            {children}
-            <AIFloatingWrapper />
-            <KeyboardShortcutsInitializer />
-          </ClientProviders>
-        </ThemeProvider>
+        {/* Register Service Worker */}
+        <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+          }
+        ` }} />
+        <ClientProviders>
+          {children}
+          <AIFloatingWrapper />
+          <KeyboardShortcutsInitializer />
+        </ClientProviders>
       </body>
     </html>
   );

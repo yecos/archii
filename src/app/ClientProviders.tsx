@@ -1,15 +1,22 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppProvider from '@/contexts/AppContext';
+import { useUIStore } from '@/stores/ui-store';
 
 /**
  * ClientProviders — Client-side wrapper for layout.tsx
  *
  * Wraps all page content in AppProvider so that useApp() works
  * everywhere in the component tree, regardless of dynamic imports.
- * This fixes the "useApp must be used within AppProvider" error
- * that occurred with Next.js 16 + dynamic() + React 19 context.
+ *
+ * Also initializes the theme system from localStorage on mount.
  */
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
+  const initTheme = useUIStore(s => s.initTheme);
+
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
+
   return <AppProvider>{children}</AppProvider>;
 }

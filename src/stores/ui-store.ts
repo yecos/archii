@@ -17,18 +17,11 @@ interface UIState {
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
 
-  // Theme System — extensible
-  /** Current theme ID (e.g., 'dark', 'light', or future custom themes) */
+  // Theme System
   theme: ThemeId;
-  /** List of all registered themes */
   themes: ThemeDefinition[];
-  /** Set theme by ID — applies CSS variables + class toggle + persists */
   setTheme: (themeId: ThemeId) => void;
-  /** Toggle between first dark and first light theme */
   toggleTheme: () => void;
-  /** Apply theme CSS variables to <html> element */
-  applyThemeCSS: (themeId: ThemeId) => void;
-  /** Initialize theme from localStorage on mount */
   initTheme: () => void;
 
   // Command palette
@@ -46,7 +39,7 @@ interface UIState {
   currentScreen: string;
   setCurrentScreen: (screen: string) => void;
 
-  // AI Project Context (passed from page.tsx when a project is selected)
+  // AI Project Context
   aiProjectContext: string;
   setAIProjectContext: (context: string) => void;
 }
@@ -69,56 +62,49 @@ export const useUIStore = create<UIState>((set, get) => ({
   theme: 'dark',
   themes: THEME_REGISTRY,
 
+  /** Initialize theme from localStorage — called once on mount from ClientProviders */
   initTheme: () => {
     if (typeof window === 'undefined') return;
     try {
       const saved = localStorage.getItem('archiflow-theme') || 'dark';
       set({ theme: saved });
-      get().applyThemeCSS(saved);
+      // Apply .dark class + CSS variables
+      const themeDef = THEME_REGISTRY.find(t => t.id === saved);
+      const isDark = themeDef?.isDark ?? (saved === 'dark');
+      document.documentElement.classList.toggle('dark', isDark);
+      if (themeDef) {
+        Object.entries(themeDef.colors).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(key, value);
+        });
+      }
     } catch {
+      // Fallback to dark
       set({ theme: 'dark' });
-      get().applyThemeCSS('dark');
+      document.documentElement.classList.add('dark');
     }
   },
 
-  applyThemeCSS: (themeId: ThemeId) => {
-    if (typeof document === 'undefined') return;
-    const html = document.documentElement;
-    const themeDef = THEME_REGISTRY.find(t => t.id === themeId);
-
-    // Remove all theme data attributes first
-    THEME_REGISTRY.forEach(t => {
-      html.removeAttribute(`data-theme-${t.id}`);
-    });
-
-    if (themeDef) {
-      // Set data-theme attribute for the active theme
-      html.setAttribute(`data-theme-${themeDef.id}`, '');
-      // Apply all CSS variables
-      Object.entries(themeDef.colors).forEach(([key, value]) => {
-        html.style.setProperty(key, value);
-      });
-    }
-
-    // Toggle .dark class for backwards compatibility with Tailwind dark: prefix
-    const isDark = themeDef?.isDark ?? (themeId === 'dark');
-    html.classList.toggle('dark', isDark);
-  },
-
+  /** Set a specific theme by ID */
   setTheme: (themeId: ThemeId) => {
     set({ theme: themeId });
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    try {
       localStorage.setItem('archiflow-theme', themeId);
-      get().applyThemeCSS(themeId);
-    }
+      const themeDef = THEME_REGISTRY.find(t => t.id === themeId);
+      const isDark = themeDef?.isDark ?? (themeId === 'dark');
+      document.documentElement.classList.toggle('dark', isDark);
+      if (themeDef) {
+        Object.entries(themeDef.colors).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(key, value);
+        });
+      }
+    } catch {}
   },
 
+  /** Toggle between dark and light */
   toggleTheme: () => {
-    const { theme, themes } = get();
-    const current = themes.find(t => t.id === theme);
-    // Find first theme with opposite isDark value
-    const opposite = themes.find(t => t.isDark !== (current?.isDark ?? true));
-    const next = opposite || (theme === 'dark' ? 'light' : 'dark');
+    const { theme } = get();
+    const next = theme === 'dark' ? 'light' : 'dark';
     get().setTheme(next);
   },
 
