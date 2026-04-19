@@ -22,8 +22,8 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-[60px] bg-[var(--card)] border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
-      <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex" onClick={() => setSidebarOpen(true)}>
+    <header className="h-[60px] af-glass border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
+      <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex hover:scale-105 active:scale-95" onClick={() => setSidebarOpen(true)}>
         <Menu size={18} className="stroke-[var(--muted-foreground)]" />
       </button>
       {screen === 'projectDetail' ? (
@@ -41,7 +41,7 @@ export default function TopBar() {
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Notification bell */}
         <button
-          className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all relative"
+          className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all relative hover:scale-105 active:scale-95"
           onClick={() => setShowNotifPanel(!showNotifPanel)}
           title="Notificaciones"
         >
@@ -56,7 +56,7 @@ export default function TopBar() {
           )}
         </button>
         {/* Theme toggle */}
-        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all" onClick={toggleTheme} title={(darkMode ? 'Cambiar a modo día' : 'Cambiar a modo noche') + ' (Ctrl+D)'}>
+        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={toggleTheme} title={(darkMode ? 'Cambiar a modo día' : 'Cambiar a modo noche') + ' (Ctrl+D)'}>
           {darkMode ? (
             <Sun size={18} className="stroke-[var(--muted-foreground)]" />
           ) : (
@@ -64,19 +64,19 @@ export default function TopBar() {
           )}
         </button>
         {screen === 'projects' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); openModal('project'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 af-btn-primary text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); openModal('project'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nuevo proyecto
           </button>
         )}
         {screen === 'tasks' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 af-btn-primary text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nueva tarea
           </button>
         )}
         {screen === 'suppliers' && (
-          <button className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-[var(--af-accent2)] transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); openModal('supplier'); }}>
+          <button className="hidden sm:flex items-center gap-1.5 af-btn-primary text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, supName: '', supCategory: 'Otro', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' })); openModal('supplier'); }}>
             <Plus size={14} className="stroke-current" strokeWidth={2.5} />
             Nuevo proveedor
           </button>

@@ -122,7 +122,9 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-dvh overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="flex h-dvh overflow-hidden af-noise" style={{ height: '100dvh' }}>
+      {/* Ambient background — premium depth effect (dark mode only) */}
+      <div className="af-ambient-bg" />
       {/* Sonner Toaster — premium toast system */}
       <Toaster
         position="top-center"

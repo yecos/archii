@@ -168,7 +168,7 @@ export default function DashboardScreen() {
       {/* ─── v2.0 Badge ─── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/20">v2.0</span>
+          <span className="af-badge-gold">v2.0</span>
           <span className="text-[11px] text-[var(--af-text3)]">Dashboard Premium</span>
         </div>
         <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function DashboardScreen() {
           { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
           { val: overdueTasks.length, lbl: 'Tareas vencidas', icon: <AlertTriangle size={16} />, bg: 'bg-red-500/10', iconColor: 'text-red-400', sub: overdueTasks.length === 0 ? 'Al día' : 'Requieren atención' },
         ].map((m, i) => (
-          <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 md:p-5 hover:border-[var(--af-accent)]/30 transition-colors cursor-default">
+          <div key={i} className={`af-kpi-card p-5 animate-fadeInUp stagger-${i + 1} hover:border-[var(--af-accent)]/30 transition-colors cursor-default`}>
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
               {i === 3 && overdueTasks.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
@@ -222,8 +222,8 @@ export default function DashboardScreen() {
                   <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
                 </div>
-                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
+                <div className="af-progress">
+                  <div className={`af-progress-bar ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
                 </div>
                 <div className="flex justify-between mt-1.5">
                   <span className="text-[11px] text-[var(--muted-foreground)]">{prog}% completado</span>
@@ -260,13 +260,13 @@ export default function DashboardScreen() {
       {/* ─── Row 3: Mini widgets ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Sprint Progress Ring */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
           <div className="flex items-center justify-center">
             <div className="relative w-[100px] h-[100px]">
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="2.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" style={{ filter: 'drop-shadow(0 0 6px rgba(200,169,110,0.4))' }} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-[20px] font-bold">{tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%</span>
@@ -280,7 +280,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Financial Summary */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -304,7 +304,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Notifications */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-semibold">Notificaciones</div>
             {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
@@ -325,7 +325,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Task Distribution Pie */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="text-[15px] font-semibold mb-3">Distribución Tareas</div>
           {taskStatusData.length === 0 ? (
             <div className="text-center py-6 text-[var(--af-text3)] text-[12px]">Sin datos</div>
@@ -354,7 +354,7 @@ export default function DashboardScreen() {
       {/* ─── Row 4: Charts v2.0 ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Revenue Trend (NEW in v2.0) */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold flex items-center gap-2"><Zap size={16} className="text-[var(--af-accent)]" /> Tendencia de Ingresos</div>
             <span className="text-[10px] text-[var(--af-text3)]">Últimos 6 meses</span>
@@ -376,7 +376,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Burndown Chart */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
@@ -394,7 +394,7 @@ export default function DashboardScreen() {
       {/* ─── Row 5: Team Workload + Expense Categories (NEW v2.0) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Team Workload */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Carga de Trabajo</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Reporte completo →</button>
@@ -417,7 +417,7 @@ export default function DashboardScreen() {
         </div>
 
         {/* Expense by Category */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[15px] font-semibold">Gastos por Categoría</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('budget')}>Ver presupuesto →</button>

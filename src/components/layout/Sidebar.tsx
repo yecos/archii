@@ -107,7 +107,7 @@ export default function Sidebar({
         >
           {/* Brand header inside sheet */}
           <div className="flex items-center gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
-            <div className="w-9 h-9 bg-[var(--af-accent)] rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
               <Home size={20} strokeWidth={2} className="stroke-[var(--primary-foreground)]" />
             </div>
             <div>
@@ -144,12 +144,12 @@ export default function Sidebar({
       </div>
 
       {/* ─── Desktop/Tablet: Slide-in sidebar ─── */}
-      <aside className={`hidden md:flex fixed md:static z-50 h-full bg-[var(--card)] border-r border-[var(--border)] flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[270px]'}`}>
-        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="flex items-center justify-center h-8 w-8 self-end mr-2 mt-2 rounded-lg hover:bg-[var(--af-bg3)] text-[var(--muted-foreground)] transition-colors cursor-pointer" title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
+      <aside className={`hidden md:flex fixed md:static z-50 h-full af-glass shadow-xl border-r border-[var(--border)] flex-col flex-shrink-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[270px]'}`}>
+        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="flex items-center justify-center h-8 w-8 self-end mr-2 mt-2 rounded-lg hover:bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] transition-colors cursor-pointer" title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
           <ChevronLeft size={16} className="transition-transform" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none' }} />
         </button>
         <div className="p-4 pb-3 border-b border-[var(--border)] flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[var(--af-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
             <Home size={20} strokeWidth={2} className="stroke-background" />
           </div>
           <div className={`transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg flex items-center gap-1.5">ArchiFlow <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/15 text-[var(--af-accent)]" style={{ fontFamily: 'system-ui, sans-serif' }}>2.0</span></div><div className="text-[10px] text-[var(--af-text3)]">Premium</div></div>
@@ -157,7 +157,7 @@ export default function Sidebar({
         <div className="flex-1 overflow-y-auto py-3 px-3">
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Principal</div>
           {principalItems.map((n: any) => (
-            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${isActive(n) ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => handleNavClick(n.id)}>
+            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${isActive(n) ? 'bg-[var(--accent)] text-[var(--af-accent2)] shadow-sm' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => handleNavClick(n.id)}>
               {n.icon}
               <span className={`flex-1 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
               {n.badge !== undefined && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all duration-200 ${n.id === 'tasks' && pendingCount > 0 ? 'bg-red-500 text-white' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'} ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.badge}</span>}
@@ -165,7 +165,7 @@ export default function Sidebar({
           ))}
           <div className={`text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-2 mt-4 mb-1 transition-all duration-200 overflow-hidden ${sidebarCollapsed ? 'md:hidden md:h-0' : 'md:block'}`}>Gestión</div>
           {gestionItems.map((n: any) => (
-            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${isActive(n) ? 'bg-[var(--accent)] text-[var(--af-accent2)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => handleNavClick(n.id)}>
+            <div key={n.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-[13.5px] mb-0.5 transition-all ${isActive(n) ? 'bg-[var(--accent)] text-[var(--af-accent2)] shadow-sm' : 'text-[var(--muted-foreground)] hover:bg-[var(--af-bg3)] hover:text-[var(--foreground)]'}`} onClick={() => handleNavClick(n.id)}>
               {n.icon}
               <span className={`transition-all duration-200 ${sidebarCollapsed ? 'md:hidden' : ''}`}>{n.label}</span>
             </div>

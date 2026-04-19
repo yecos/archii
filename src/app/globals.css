@@ -183,9 +183,27 @@
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 
-/* Animations */
+/* ═══════════════════════════════════════════
+   PREMIUM ANIMATIONS & EFFECTS v2.0
+   ═══════════════════════════════════════════ */
+
+/* Smooth theme transitions — dark/light toggle animates colors */
+body, body *, body *::before, body *::after {
+  transition-property: background-color, border-color, color, box-shadow, fill, stroke;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
+}
+/* Exclude elements that need instant transitions (videos, canvases, etc.) */
+body video, body canvas, body input, body textarea, body select {
+  transition-duration: 0s;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes slideIn {
@@ -199,10 +217,275 @@
   from { opacity: 0; transform: translateY(100%); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fadeIn { animation: fadeIn 0.2s ease; }
-.animate-slideIn { animation: slideIn 0.2s ease; }
-.animate-slideUp { animation: slideUp 0.3s ease; }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,169,110,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(200,169,110,0); }
+}
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-fadeIn { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-fadeInUp { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slideIn { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slideUp { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-scaleIn { animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-spin { animation: spin 0.7s linear infinite; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════
+   GLASSMORPHISM SYSTEM
+   ═══════════════════════════════════════════ */
+.af-glass {
+  background: rgba(22, 24, 28, 0.6);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.af-glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.af-glass-strong {
+  background: rgba(22, 24, 28, 0.8);
+  backdrop-filter: blur(30px) saturate(1.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════════════════════════════════
+   PREMIUM CARD SYSTEM
+   ═══════════════════════════════════════════ */
+.af-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+}
+.af-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-color: rgba(200, 169, 110, 0.2);
+}
+.dark .af-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(200, 169, 110, 0.1);
+}
+
+/* KPI card with gradient accent border */
+.af-kpi-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.af-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--af-accent), var(--af-accent2), var(--af-accent));
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.af-kpi-card:hover::before {
+  opacity: 1;
+  animation: shimmer 2s linear infinite;
+}
+.af-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+.dark .af-kpi-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(200, 169, 110, 0.05);
+}
+
+/* ═══════════════════════════════════════════
+   PREMIUM BUTTON SYSTEM
+   ═══════════════════════════════════════════ */
+.af-btn-primary {
+  background: linear-gradient(135deg, var(--af-accent) 0%, var(--af-accent2) 100%);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.af-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(200, 169, 110, 0.35);
+  filter: brightness(1.08);
+}
+.af-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(200, 169, 110, 0.2);
+}
+.dark .af-btn-primary:hover {
+  box-shadow: 0 4px 24px rgba(200, 169, 110, 0.25), 0 0 40px rgba(200, 169, 110, 0.1);
+}
+
+.af-btn-secondary {
+  background: var(--af-bg3);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.af-btn-secondary:hover {
+  background: var(--af-bg4);
+  border-color: rgba(200, 169, 110, 0.2);
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT BACKGROUND (dark mode depth)
+   ═══════════════════════════════════════════ */
+.af-ambient-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.af-ambient-bg::before {
+  content: '';
+  position: absolute;
+  top: -20%; right: -10%;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200, 169, 110, 0.06) 0%, transparent 70%);
+  animation: glow-breathe 8s ease-in-out infinite;
+  filter: blur(80px);
+}
+.af-ambient-bg::after {
+  content: '';
+  position: absolute;
+  bottom: -15%; left: -5%;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(91, 155, 213, 0.04) 0%, transparent 70%);
+  animation: glow-breathe 10s ease-in-out infinite 2s;
+  filter: blur(60px);
+}
+:root:not(.dark) .af-ambient-bg {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   GLOW EFFECTS
+   ═══════════════════════════════════════════ */
+.af-glow-accent {
+  box-shadow: 0 0 20px rgba(200, 169, 110, 0.15), 0 0 60px rgba(200, 169, 110, 0.05);
+}
+.af-glow-accent-strong {
+  box-shadow: 0 0 30px rgba(200, 169, 110, 0.25), 0 0 80px rgba(200, 169, 110, 0.08);
+}
+.af-glow-success { box-shadow: 0 0 20px rgba(76, 175, 125, 0.2); }
+.af-glow-danger { box-shadow: 0 0 20px rgba(224, 85, 85, 0.2); }
+
+/* ═══════════════════════════════════════════
+   PREMIUM PROGRESS BAR
+   ═══════════════════════════════════════════ */
+.af-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--af-bg4);
+  overflow: hidden;
+  position: relative;
+}
+.af-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--af-accent), var(--af-accent2));
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.af-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+.dark .af-progress-bar {
+  box-shadow: 0 0 12px rgba(200, 169, 110, 0.3);
+}
+.af-progress-green .af-progress-bar {
+  background: linear-gradient(90deg, var(--af-green), #6dd5a0);
+}
+.af-progress-amber .af-progress-bar {
+  background: linear-gradient(90deg, var(--af-amber), #f0b870);
+}
+.af-progress-red .af-progress-bar {
+  background: linear-gradient(90deg, var(--af-red), #f08080);
+}
+
+/* ═══════════════════════════════════════════
+   STAGGERED ANIMATION UTILITIES
+   ═══════════════════════════════════════════ */
+.stagger-1 { animation-delay: 0.05s; animation-fill-mode: both; }
+.stagger-2 { animation-delay: 0.1s; animation-fill-mode: both; }
+.stagger-3 { animation-delay: 0.15s; animation-fill-mode: both; }
+.stagger-4 { animation-delay: 0.2s; animation-fill-mode: both; }
+.stagger-5 { animation-delay: 0.25s; animation-fill-mode: both; }
+.stagger-6 { animation-delay: 0.3s; animation-fill-mode: both; }
+
+/* ═══════════════════════════════════════════
+   PREMIUM BADGE
+   ═══════════════════════════════════════════ */
+.af-badge-gold {
+  background: linear-gradient(135deg, rgba(200,169,110,0.15) 0%, rgba(226,200,152,0.08) 100%);
+  color: var(--af-accent2);
+  border: 1px solid rgba(200, 169, 110, 0.2);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ═══════════════════════════════════════════
+   NOISE TEXTURE OVERLAY (dark mode)
+   ═══════════════════════════════════════════ */
+.af-noise::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+:root:not(.dark) .af-noise::after { display: none; }
 
 /* Toast (Sonner overrides) */
 [data-sonner-toaster][data-theme] {
