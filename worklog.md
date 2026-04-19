@@ -97,3 +97,26 @@ Stage Summary:
 - Roles con badge visual dorado "SUPER ADMIN" en toda la UI
 - Commit: 76903cb, deploy a Vercel en progreso
 
+---
+Task ID: 4
+Agent: Super Z (Main)
+Task: Diagnosticar y corregir error persistente "This page couldn't load" en Vercel
+
+Work Log:
+- Verificado deployment actual en Vercel: curl https://archii-theta.vercel.app/ retorna HTTP 200
+- HTML servido correctamente con Firebase scripts, CSS, JS chunks
+- Verificados TODOS los JS chunks (11d0x0h03oee-.js, etc.) - todos retornan 200
+- Verificado que firebase-admin NO se filtra al bundle del cliente
+- Confirmado que el flujo Login→Tenant está correctamente implementado
+- Agregado serverExternalPackages: ['firebase-admin', 'sharp'] a next.config.ts
+- Agregado window.onerror global handler en layout.tsx para capturar errores de cliente
+- Actualizado service worker cache de v3 a v4 para forzar refresh de cache
+- Build exitoso (0 errores), push completado (4374fcd)
+
+Stage Summary:
+- El servidor Vercel responde correctamente (HTTP 200, HTML completo, chunks OK)
+- El error probablemente era causado por: (a) cache antigua del service worker, o (b) firebase-admin sin serverExternalPackages
+- Fixes aplicados: serverExternalPackages + error handler global + SW cache bust v4
+- Flujo verificado: Login → Tenant Selection → Super Admin/Miembro (ya estaba correcto)
+- Commit: 4374fcd, deploy en vivo en https://archii-theta.vercel.app
+
