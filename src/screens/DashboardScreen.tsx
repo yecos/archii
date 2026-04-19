@@ -30,7 +30,7 @@ export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
-    dailyLogs, timeEntries, showToast,
+    dailyLogs, timeEntries, showToast, visibleProjects, companies,
   } = useApp();
 
   // Computed data
@@ -212,26 +212,36 @@ export default function DashboardScreen() {
             <div className="text-[15px] font-semibold">Proyectos recientes</div>
             <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
           </div>
-          {projects.length === 0 ? (
-            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
-          ) : projects.slice(0, 4).map((p: any) => {
-            const prog = p.data.progress || 0;
-            return (
-              <div key={p.id} className="p-3 bg-[var(--af-bg3)] rounded-lg mb-2 cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => openProject(p.id)}>
-                <div className="flex justify-between mb-2">
-                  <div className="text-sm font-semibold truncate flex-1 mr-2">{p.data.name}</div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(p.data.status)}`}>{p.data.status}</span>
-                </div>
-                <div className="af-progress">
-                  <div className={`af-progress-bar ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
-                </div>
-                <div className="flex justify-between mt-1.5">
-                  <span className="text-[11px] text-[var(--muted-foreground)]">{prog}% completado</span>
-                  {p.data.endDate && <span className="text-[11px] text-[var(--af-text3)]">{fmtDate(p.data.endDate)}</span>}
-                </div>
+          {(() => {
+            const projs = visibleProjects().slice(0, 4);
+            return projs.length === 0 ? (
+              <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
+            ) : (
+              <div className="space-y-3">
+                {projs.map((p: any) => {
+                  const d = p.data, prog = d.progress || 0;
+                  const compName = companies.find((c: any) => c.id === d.companyId)?.data?.name;
+                  return (
+                    <div key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-3 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
+                          {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">{compName}</span>}
+                        </div>
+                        <div className="text-lg font-semibold">{prog}%</div>
+                      </div>
+                      <div className="text-[14px] font-semibold mb-0.5">{d.name}</div>
+                      <div className="text-[11px] text-[var(--af-text3)] mb-2">{d.location ? d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
+                      <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
-          })}
+          })()}
         </div>
 
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
