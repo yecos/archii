@@ -12,6 +12,7 @@
  */
 
 import { fmtCOP, fmtDate } from './helpers';
+import { getAuthHeaders } from './firebase-service';
 
 // URL base del API interno
 const NOTIFY_API = '/api/whatsapp/notify';
@@ -19,9 +20,10 @@ const NOTIFY_API = '/api/whatsapp/notify';
 // Enviar notificacion a un usuario por userId via API
 async function sendToUser(userId: string, message: string): Promise<void> {
   try {
+    const authHeaders = await getAuthHeaders();
     await fetch(NOTIFY_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ userId, message }),
     });
   } catch (err: any) {
@@ -32,9 +34,10 @@ async function sendToUser(userId: string, message: string): Promise<void> {
 // Broadcast a todos los vinculados via API
 async function sendBroadcast(message: string): Promise<void> {
   try {
+    const authHeaders = await getAuthHeaders();
     await fetch(NOTIFY_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ broadcast: true, message }),
     });
   } catch (err: any) {

@@ -9,7 +9,7 @@ import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
 
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 
 // Custom hooks available for future extraction:
@@ -1627,9 +1627,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         formData.append('folderId', odCurrentFolder);
         formData.append('projectId', selectedProjectId || '');
         setOdUploadProgress(50);
+        const fbToken = await getFirebaseIdToken();
         const res = await fetch('/api/onedrive/files', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${msAccessToken}` },
+          headers: { 'Authorization': `Bearer ${msAccessToken}`, 'X-Firebase-Token': fbToken || '' },
           body: formData
         });
         setOdUploadProgress(100);
@@ -1691,9 +1692,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const renameOneDriveFile = async (fileId: string, newName: string) => {
     if (!newName.trim()) { setOdRenaming(null); return; }
     try {
+      const fbToken = await getFirebaseIdToken();
       const res = await fetch(`/api/onedrive/files/${fileId}`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'Content-Type': 'application/json', 'X-Firebase-Token': fbToken || '' },
         body: JSON.stringify({ name: newName })
       });
       if (res.ok) {
@@ -1708,8 +1710,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const downloadOneDriveFile = async (fileId: string, fileName: string) => {
     try {
+      const fbToken = await getFirebaseIdToken();
       const res = await fetch(`/api/onedrive/files/${fileId}`, {
-        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'X-Firebase-Token': fbToken || '' }
       });
       if (res.ok) {
         const blob = await res.blob();
@@ -1727,8 +1730,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!query.trim()) { setOdSearchResults([]); return; }
     setOdSearching(true);
     try {
+      const fbToken = await getFirebaseIdToken();
       const res = await fetch(`/api/onedrive/search?q=${encodeURIComponent(query)}`, {
-        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'X-Firebase-Token': fbToken || '' }
       });
       if (res.ok) {
         const data = await res.json();
@@ -1741,8 +1745,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const loadGalleryPhotos = useCallback(async (projectId: string) => {
     setGalleryLoading(true);
     try {
+      const fbToken = await getFirebaseIdToken();
       const res = await fetch(`/api/onedrive/gallery/${projectId}`, {
-        headers: { 'Authorization': `Bearer ${msAccessToken}` }
+        headers: { 'Authorization': `Bearer ${msAccessToken}`, 'X-Firebase-Token': fbToken || '' }
       });
       if (res.ok) {
         const data = await res.json();

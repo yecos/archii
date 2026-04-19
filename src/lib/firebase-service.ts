@@ -140,5 +140,37 @@ export function getStorage() {
   return getFirebase().storage();
 }
 
+/**
+ * Returns Authorization headers with the current Firebase ID token.
+ * Used for calling ArchiFlow API routes that require authentication.
+ * Returns empty headers if user is not logged in or Firebase is not ready.
+ */
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const auth = getFirebase().auth();
+    const user = auth.currentUser;
+    if (!user) return {};
+    const token = await user.getIdToken();
+    return { 'Authorization': `Bearer ${token}` };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Returns the current Firebase ID token string (for custom headers).
+ * Used when the Authorization header is needed for another purpose (e.g., MS Graph API).
+ */
+export async function getFirebaseIdToken(): Promise<string | null> {
+  try {
+    const auth = getFirebase().auth();
+    const user = auth.currentUser;
+    if (!user) return null;
+    return await user.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
 /* ---- Re-export types for use in hooks/components ---- */
 export type { FirebaseApp, FirebaseUser, FirestoreDB, CollectionRef, DocRef, QuerySnapshot, QueryDocSnapshot, BatchWriter };

@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { authenticateRequest } from '@/lib/api-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Verify ArchiFlow authentication from X-Firebase-Token header.
+ * OneDrive routes use the Authorization header for MS access tokens,
+ * so ArchiFlow auth is passed via a separate custom header.
+ */
+async function verifyArchiFlowAuth(request: NextRequest): Promise<boolean> {
+  const fbToken = request.headers.get('x-firebase-token');
+  if (!fbToken) return false;
+  try {
+    const user = await authenticateRequest({
+      ...request,
+      headers: new Headers({ 'authorization': `Bearer ${fbToken}` }),
+    } as NextRequest);
+    return !!user;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Extract the MS access token from the Authorization header.
@@ -34,6 +54,10 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    if (!(await verifyArchiFlowAuth(request))) {
+      return NextResponse.json({ error: 'ArchiFlow authentication required' }, { status: 401 });
+    }
+
     const token = getAccessToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Authorization token required' }, { status: 401 });
