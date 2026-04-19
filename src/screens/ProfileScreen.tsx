@@ -297,23 +297,23 @@ export default function ProfileScreen() {
                 )}
               </div>
 
-              {/* Microsoft / OneDrive */}
+              {/* Microsoft / OneDrive — Personal */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <svg viewBox="0 0 21 21" className="w-5 h-5"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-                    <div className="text-[13px] sm:text-[15px] font-semibold">Microsoft OneDrive</div>
+                    <div className="text-[13px] sm:text-[15px] font-semibold">Mi OneDrive Personal</div>
                   </div>
                   {msConnected && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Conectado</span>}
                 </div>
+                <div className="text-[11px] text-[var(--muted-foreground)] mb-3">Tu almacenamiento personal en la nube. Solo tú tienes acceso a estos archivos.</div>
                 {!msConnected ? (
                   <div>
-                    <div className="text-xs text-[var(--muted-foreground)] mb-3">Conecta tu cuenta de Microsoft para gestionar archivos de proyectos directamente en OneDrive. Cada proyecto tendrá su propia carpeta en la nube.</div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
                       {[
-                        { icon: '☁️', title: 'Almacenamiento en la nube', desc: 'Sin límite de tamaño en OneDrive' },
-                        { icon: '📂', title: 'Carpetas por proyecto', desc: 'Organización automática' },
-                        { icon: '🔗', title: 'Compartir archivos', desc: 'Enlaces seguros para el equipo' },
+                        { icon: '☁️', title: 'Almacenamiento personal', desc: 'Tus archivos privados en la nube' },
+                        { icon: '📂', title: 'Carpetas ilimitadas', desc: 'Organización flexible' },
+                        { icon: '🔒', title: 'Privado y seguro', desc: 'Solo tú puedes acceder' },
                       ].map((f, i) => (
                         <div key={i} className="bg-[var(--af-bg3)] rounded-lg p-3 text-center">
                           <div className="text-lg mb-1">{f.icon}</div>
@@ -324,15 +324,34 @@ export default function ProfileScreen() {
                     </div>
                     <button className="w-full bg-[#00a4ef] text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer hover:bg-[#0091d5] transition-colors flex items-center justify-center gap-2" onClick={doMicrosoftLogin}>
                       <svg viewBox="0 0 21 21" className="w-4 h-4"><rect x="1" y="1" width="9" height="9" fill="#fff"/><rect x="1" y="11" width="9" height="9" fill="#fff"/><rect x="11" y="1" width="9" height="9" fill="#fff"/><rect x="11" y="11" width="9" height="9" fill="#fff"/></svg>
-                      Conectar con Microsoft
+                      Conectar mi OneDrive
                     </button>
                   </div>
                 ) : (
-                  <div>
-                    <div className="text-xs text-[var(--muted-foreground)] mb-3">Tu cuenta está vinculada. Los archivos de cada proyecto se guardan en <strong>OneDrive/ArchiFlow/[Nombre del proyecto]/</strong></div>
+                  <div className="space-y-3">
+                    <div className="bg-[var(--af-bg3)] rounded-lg p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-base">☁️</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-medium text-emerald-400">Cuenta conectada</div>
+                        <div className="text-[10px] text-[var(--af-text3)]">Los archivos se guardan en tu OneDrive personal</div>
+                      </div>
+                    </div>
+                    {/* Quick access to personal OneDrive */}
+                    <button
+                      className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-3 text-left cursor-pointer hover:border-[var(--af-accent)]/40 transition-all flex items-center gap-3"
+                      onClick={() => { navigateTo('files'); }}
+                    >
+                      <span className="text-lg">📁</span>
+                      <div className="flex-1">
+                        <div className="text-[12px] font-medium">Ver mis archivos en OneDrive</div>
+                        <div className="text-[10px] text-[var(--af-text3)]">Ir a la pantalla de Archivos → Mi OneDrive</div>
+                      </div>
+                      <svg className="w-4 h-4 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                    {/* Project folders */}
                     {projects.length > 0 && (
-                      <div className="mb-3">
-                        <div className="text-[11px] font-semibold text-[var(--muted-foreground)] mb-2">Abrir carpeta de proyecto:</div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-[var(--muted-foreground)] mb-2">Carpetas de proyectos:</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {projects.slice(0, 6).map(p => (
                             <button key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef] transition-all" onClick={() => openOneDriveForProject(p.data.name)}>
@@ -344,7 +363,7 @@ export default function ProfileScreen() {
                       </div>
                     )}
                     <button className="w-full sm:w-auto px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-medium cursor-pointer hover:bg-red-500/10 transition-colors" onClick={disconnectMicrosoft}>
-                      Desconectar Microsoft
+                      Desconectar mi OneDrive
                     </button>
                   </div>
                 )}
