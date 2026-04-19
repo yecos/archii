@@ -189,3 +189,38 @@ Stage Summary:
 - Mecanismo de lectura obligatoria: LEE_PRIMERO.txt + usuario menciona al iniciar sesion + registro en worklog.md
 - Sistema de bloqueo virtual: LOCK/UNLOCK en worklog.md para archivos peligrosos
 - Pendiente: commit y push a GitHub
+
+---
+Task ID: 3
+Agent: Super Z (Main)
+Task: Agregar gestion de miembros del tenant desde la UI
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+LOCK: src/app/api/tenants/route.ts por Sesion-3 desde 15:00 — agregar acciones de gestion de miembros
+
+Work Log:
+- Analizado sistema actual de miembros (array UIDs en documento de Firestore)
+- Verificados endpoints existentes: /api/debug/tenant, /api/debug/tenant/restore-members
+- Tag de respaldo creado: backup-pre-manage-members-20260420
+- Agregadas 4 nuevas acciones a /api/tenants:
+  - add-members: busca usuarios por email y los agrega al array members
+  - add-all-users: agrega TODOS los usuarios registrados al tenant (solo creador)
+  - remove-member: elimina un miembro del array members (solo creador)
+  - get-members: lista miembros con datos resueltos + usuarios disponibles
+- Creado ManageMembersModal.tsx con 3 tabs:
+  - Miembros: lista actual con fotos, badges ADMIN, boton eliminar
+  - Agregar: seleccionar usuarios disponibles + agregar por email
+  - Codigo: ver y copiar codigo de invitacion
+- TopBar.tsx: agregado boton "Gestionar miembros" en dropdown del tenant
+- Build verificado: 0 errores TypeScript, 0 errores de compilacion
+
+UNLOCK: src/app/api/tenants/route.ts por Sesion-3 a 15:45 — commit 3dd3bfa
+
+Stage Summary:
+- Archivos modificados: 3 (route.ts, ManageMembersModal.tsx nuevo, TopBar.tsx)
+- Total: +543 lineas, -5 lineas
+- Commit: 3dd3bfa
+- Tag: backup-pre-manage-members-20260420
+- Build: exitoso (0 errores)
+- Deploy: Vercel auto-deploy en progreso
