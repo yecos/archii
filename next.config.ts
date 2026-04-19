@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  turbopack: {
-    root: "/home/z/my-project",
-  },
   async headers() {
     return [
       {

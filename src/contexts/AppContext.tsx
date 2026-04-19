@@ -303,6 +303,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // ===== TENANT STATE =====
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   const [activeTenantName, setActiveTenantName] = useState<string | null>(null);
+  const [activeTenantRole, setActiveTenantRole] = useState<string>('Miembro'); // 'Super Admin' or 'Miembro'
   const [tenantReady, setTenantReady] = useState(false);
   const [showTenantSelector, setShowTenantSelector] = useState(false);
 
@@ -314,13 +315,15 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       setDarkMode(isDark);
       document.documentElement.classList.toggle('dark', isDark);
     } catch (err) { console.error("[ArchiFlow]", err); }
-    // Restore tenant from localStorage
+    // Restore tenant from localStorage (will be validated against server after auth)
     try {
       const savedTenantId = localStorage.getItem('archiflow-active-tenant');
       const savedTenantName = localStorage.getItem('archiflow-active-tenant-name');
+      const savedTenantRole = localStorage.getItem('archiflow-active-tenant-role');
       if (savedTenantId && savedTenantName) {
         setActiveTenantId(savedTenantId);
         setActiveTenantName(savedTenantName);
+        setActiveTenantRole(savedTenantRole || 'Miembro');
         setTenantReady(true);
       }
     } catch (err) { console.error("[ArchiFlow]", err); }
@@ -2851,16 +2854,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
 
   // ===== TENANT MANAGEMENT =====
-  const switchTenant = useCallback((tenantId: string, tenantName: string) => {
+  const switchTenant = useCallback((tenantId: string, tenantName: string, role: string = 'Miembro') => {
     setActiveTenantId(tenantId);
     setActiveTenantName(tenantName);
+    setActiveTenantRole(role);
     setTenantReady(true);
     setShowTenantSelector(false);
     try {
       localStorage.setItem('archiflow-active-tenant', tenantId);
       localStorage.setItem('archiflow-active-tenant-name', tenantName);
+      localStorage.setItem('archiflow-active-tenant-role', role);
     } catch (err) { console.error("[ArchiFlow]", err); }
-    showToast(`Espacio de trabajo: ${tenantName}`);
+    const roleLabel = role === 'Super Admin' ? ' (Super Admin)' : '';
+    showToast(`Espacio de trabajo: ${tenantName}${roleLabel}`);
   }, [showToast]);
 
   // ===== CONTEXT VALUE =====
@@ -2894,6 +2900,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setSelectedCompanyId,
     activeTenantId,
     activeTenantName,
+    activeTenantRole,
     tenantReady,
     switchTenant,
     showTenantSelector,

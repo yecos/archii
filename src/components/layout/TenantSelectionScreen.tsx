@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getAuthHeaders } from '@/lib/firebase-service';
-import { Building2, Plus, ArrowRight, Users, Copy, Check, Sparkles, ChevronDown } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Users, Copy, Check, Sparkles, Crown, UserCheck, Shield } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -11,6 +11,7 @@ interface Tenant {
   members?: string[];
   createdBy?: string;
   createdAt?: any;
+  role?: string; // 'Super Admin' | 'Miembro'
 }
 
 export default function TenantSelectionScreen() {
@@ -50,11 +51,11 @@ export default function TenantSelectionScreen() {
     loadTenants();
   }, [loadTenants]);
 
-  // Auto-select if only one tenant exists
+  // Auto-select if only one tenant exists (skip showing the selector)
   useEffect(() => {
     if (tenants.length === 1 && !showCreate && !showJoin) {
       const t = tenants[0];
-      switchTenant(t.id, t.name);
+      switchTenant(t.id, t.name, t.role || 'Miembro');
     }
   }, [tenants.length, showCreate, showJoin, tenants, switchTenant]);
 
@@ -77,8 +78,8 @@ export default function TenantSelectionScreen() {
         showToast(data.error, 'error');
         return;
       }
-      showToast(`Espacio "${data.name}" creado — Código: ${data.code}`);
-      switchTenant(data.tenantId, data.name);
+      showToast(`Espacio "${data.name}" creado — Eres Super Admin`);
+      switchTenant(data.tenantId, data.name, data.role || 'Super Admin');
     } catch (err) {
       console.error('[TenantSelection] Create error:', err);
       showToast('Error al crear espacio', 'error');
@@ -110,9 +111,9 @@ export default function TenantSelectionScreen() {
       if (data.alreadyMember) {
         showToast(`Ya eres miembro de "${data.name}"`);
       } else {
-        showToast(`Te uniste a "${data.name}"`);
+        showToast(`Te uniste a "${data.name}" como ${data.role || 'Miembro'}`);
       }
-      switchTenant(data.tenantId, data.name);
+      switchTenant(data.tenantId, data.name, data.role || 'Miembro');
     } catch (err) {
       console.error('[TenantSelection] Join error:', err);
       setJoinError('Error al unirse al espacio');
@@ -125,12 +126,13 @@ export default function TenantSelectionScreen() {
     e.stopPropagation();
     navigator.clipboard.writeText(code).then(() => {
       setCopiedCode(code);
+      showToast('Código copiado al portapapeles');
       setTimeout(() => setCopiedCode(null), 2000);
     });
   };
 
   const selectTenant = (t: Tenant) => {
-    switchTenant(t.id, t.name);
+    switchTenant(t.id, t.name, t.role || 'Miembro');
   };
 
   if (loading) {
@@ -156,7 +158,10 @@ export default function TenantSelectionScreen() {
           </div>
           <h1 className="text-2xl font-bold af-heading">Bienvenido, {userName.split(' ')[0]}</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-2">
-            Selecciona o crea un espacio de trabajo para comenzar
+            {tenants.length === 0
+              ? 'Crea tu primer espacio de trabajo para comenzar'
+              : 'Selecciona o crea un espacio de trabajo'
+            }
           </p>
         </div>
 
@@ -167,41 +172,52 @@ export default function TenantSelectionScreen() {
               <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Tus espacios</span>
               <span className="text-xs text-[var(--muted-foreground)]">{tenants.length} espacio{tenants.length !== 1 ? 's' : ''}</span>
             </div>
-            {tenants.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => selectTenant(t)}
-                className="w-full af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--af-accent)]/40 transition-all group text-left"
-              >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--af-accent)]/20 to-[var(--af-accent2)]/10 flex items-center justify-center flex-shrink-0 group-hover:from-[var(--af-accent)]/30 group-hover:to-[var(--af-accent2)]/20 transition-all">
-                  <Building2 size={20} className="stroke-[var(--af-accent)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{t.name}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-[var(--muted-foreground)] font-mono bg-[var(--af-bg3)] px-2 py-0.5 rounded-md">{t.code}</span>
-                    <span className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1">
-                      <Users size={10} />
-                      {t.members?.length || 1} miembro{(t.members?.length || 1) !== 1 ? 's' : ''}
-                    </span>
+            {tenants.map((t) => {
+              const isSuperAdmin = t.role === 'Super Admin' || t.createdBy === authUser?.uid;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => selectTenant(t)}
+                  className="w-full af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--af-accent)]/40 transition-all group text-left"
+                >
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${isSuperAdmin ? 'bg-gradient-to-br from-[var(--af-accent)]/30 to-amber-500/20' : 'bg-gradient-to-br from-[var(--af-accent)]/20 to-[var(--af-accent2)]/10'} group-hover:from-[var(--af-accent)]/30 group-hover:to-[var(--af-accent2)]/20`}>
+                    <Building2 size={20} className="stroke-[var(--af-accent)]" />
                   </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={(e) => copyCode(t.code, e)}
-                    className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
-                    title="Copiar código"
-                  >
-                    {copiedCode === t.code ? (
-                      <Check size={14} className="stroke-emerald-400" />
-                    ) : (
-                      <Copy size={14} className="stroke-[var(--muted-foreground)]" />
-                    )}
-                  </button>
-                  <ArrowRight size={18} className="stroke-[var(--muted-foreground)] group-hover:stroke-[var(--af-accent)] group-hover:translate-x-0.5 transition-all" />
-                </div>
-              </button>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate flex items-center gap-2">
+                      {t.name}
+                      {isSuperAdmin && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-gradient-to-r from-[var(--af-accent)] to-amber-500 text-background px-1.5 py-0.5 rounded-md flex-shrink-0">
+                          <Crown size={10} />
+                          SUPER ADMIN
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[11px] text-[var(--muted-foreground)] font-mono bg-[var(--af-bg3)] px-2 py-0.5 rounded-md">{t.code}</span>
+                      <span className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1">
+                        <Users size={10} />
+                        {t.members?.length || 1} miembro{(t.members?.length || 1) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={(e) => copyCode(t.code, e)}
+                      className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
+                      title="Copiar código de invitación"
+                    >
+                      {copiedCode === t.code ? (
+                        <Check size={14} className="stroke-emerald-400" />
+                      ) : (
+                        <Copy size={14} className="stroke-[var(--muted-foreground)]" />
+                      )}
+                    </button>
+                    <ArrowRight size={18} className="stroke-[var(--muted-foreground)] group-hover:stroke-[var(--af-accent)] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -213,15 +229,17 @@ export default function TenantSelectionScreen() {
               className="w-full af-btn-primary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all border-none"
             >
               <Plus size={18} className="stroke-current" strokeWidth={2.5} />
-              Crear nuevo espacio
+              {tenants.length === 0 ? 'Crear mi espacio de trabajo' : 'Crear nuevo espacio'}
             </button>
-            <button
-              onClick={() => setShowJoin(true)}
-              className="w-full af-btn-secondary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-            >
-              <Sparkles size={16} className="stroke-current" />
-              Unirme con un código
-            </button>
+            {tenants.length > 0 && (
+              <button
+                onClick={() => setShowJoin(true)}
+                className="w-full af-btn-secondary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
+              >
+                <Sparkles size={16} className="stroke-current" />
+                Unirme con un código
+              </button>
+            )}
           </div>
         )}
 
@@ -237,9 +255,16 @@ export default function TenantSelectionScreen() {
                 Cancelar
               </button>
             </div>
-            <p className="text-xs text-[var(--muted-foreground)] mb-4">
-              Crea un espacio para tu equipo. Se generará un código de invitación único para que otros puedan unirse.
-            </p>
+
+            {/* Super Admin info */}
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-gradient-to-r from-[var(--af-accent)]/10 via-amber-500/5 to-transparent border border-[var(--af-accent)]/20 mb-4">
+              <Crown size={16} className="stroke-[var(--af-accent)] flex-shrink-0" />
+              <div>
+                <div className="text-xs font-semibold">Serás Super Admin</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">Tendrás control total del espacio. Comparte el código para invitar miembros.</div>
+              </div>
+            </div>
+
             <div className="mb-4">
               <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre del espacio</label>
               <input
@@ -260,9 +285,9 @@ export default function TenantSelectionScreen() {
               {creating ? (
                 <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Plus size={16} className="stroke-current" strokeWidth={2.5} />
+                <Shield size={16} className="stroke-current" />
               )}
-              {creating ? 'Creando...' : 'Crear espacio'}
+              {creating ? 'Creando...' : 'Crear espacio como Super Admin'}
             </button>
           </div>
         )}
@@ -279,9 +304,16 @@ export default function TenantSelectionScreen() {
                 Cancelar
               </button>
             </div>
-            <p className="text-xs text-[var(--muted-foreground)] mb-4">
-              Ingresa el código de invitación de 6 caracteres que te compartió un miembro del espacio.
-            </p>
+
+            {/* Member info */}
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] mb-4">
+              <UserCheck size={16} className="stroke-[var(--af-accent)] flex-shrink-0" />
+              <div>
+                <div className="text-xs font-semibold">Entrarás como Miembro</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">Podrás ver y colaborar en los proyectos del espacio.</div>
+              </div>
+            </div>
+
             <div className="mb-2">
               <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Código de invitación</label>
               <input

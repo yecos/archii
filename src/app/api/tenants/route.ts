@@ -6,10 +6,18 @@ import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
  * POST /api/tenants
  *
  * Gestión de tenants (espacios de trabajo) para multi-tenancy.
+ * Flujo:
+ *   1. Login/Register (Firebase Auth)
+ *   2. Pantalla de Tenant:
+ *      - Si NO tiene tenants → Crear uno (se convierte en Super Admin)
+ *      - Si tiene 1 tenant → Auto-seleccionar
+ *      - Si tiene varios → Mostrar selector
+ *      - Si lo invitan con código → Entra como Miembro
+ *
  * Operaciones:
- *   - create: Crear un nuevo tenant
- *   - join: Unirse a un tenant por código de invitación
- *   - list: Listar los tenants del usuario
+ *   - create: Crear un nuevo tenant (creador = Super Admin)
+ *   - join: Unirse a un tenant por código (entra como Miembro)
+ *   - list: Listar los tenants del usuario con su rol
  */
 
 function generateCode(): string {
@@ -62,9 +70,22 @@ export async function POST(request: NextRequest) {
     const FieldValue = getAdminFieldValue();
 
     if (action === "list") {
-      // List tenants where user is a member
+      // List tenants where user is a member, with their role in each tenant
       const snap = await db.collection("tenants").where("members", "array-contains", user.uid).get();
-      const tenants = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const tenants = snap.docs.map((d: any) => {
+        const data = d.data();
+        // Determine user's role: Super Admin if they created it, Miembro otherwise
+        const isCreator = data.createdBy === user.uid;
+        return {
+          id: d.id,
+          name: data.name || '',
+          code: data.code || '',
+          members: data.members || [],
+          createdBy: data.createdBy || '',
+          createdAt: data.createdAt || null,
+          role: isCreator ? 'Super Admin' : 'Miembro',
+        };
+      });
       return NextResponse.json({ tenants });
     }
 
@@ -82,12 +103,13 @@ export async function POST(request: NextRequest) {
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      console.log(`[Tenants] Created tenant "${name.trim()}" (${tenantCode}) by ${user.email}`);
+      console.log(`[Tenants] Created tenant "${name.trim()}" (${tenantCode}) by ${user.email} — Super Admin`);
 
       return NextResponse.json({
         tenantId: tenantRef.id,
         name: name.trim(),
         code: tenantCode,
+        role: 'Super Admin', // Creator is always Super Admin
       });
     }
 
@@ -105,27 +127,30 @@ export async function POST(request: NextRequest) {
       const tenantDoc = snap.docs[0];
       const tenantData = tenantDoc.data();
       const tenantId = tenantDoc.id;
+      const isCreator = tenantData.createdBy === user.uid;
 
       if (tenantData.members && tenantData.members.includes(user.uid)) {
         return NextResponse.json({
           tenantId,
           name: tenantData.name,
           code: tenantData.code,
+          role: isCreator ? 'Super Admin' : 'Miembro',
           alreadyMember: true,
         });
       }
 
-      // Add user to members array
+      // Add user to members array (joins as Miembro)
       await db.collection("tenants").doc(tenantId).update({
         members: FieldValue.arrayUnion(user.uid),
       });
 
-      console.log(`[Tenants] User ${user.email} joined tenant "${tenantData.name}" (${code})`);
+      console.log(`[Tenants] User ${user.email} joined tenant "${tenantData.name}" (${code}) as Miembro`);
 
       return NextResponse.json({
         tenantId,
         name: tenantData.name,
         code: tenantData.code,
+        role: 'Miembro', // Joined users are always Miembro
       });
     }
 

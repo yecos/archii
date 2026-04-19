@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut } from 'lucide-react';
+import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown } from 'lucide-react';
 
 export default function TopBar() {
   const {
@@ -10,7 +10,7 @@ export default function TopBar() {
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
     initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
-    activeTenantName, setShowTenantSelector, doLogout,
+    activeTenantName, activeTenantRole, setShowTenantSelector, doLogout,
   } = useApp();
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
@@ -60,7 +60,13 @@ export default function TopBar() {
                 <div className="px-3 py-2 text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Espacio actual</div>
                 <div className="px-3 py-1.5 text-sm font-medium flex items-center gap-2">
                   <Building2 size={14} className="stroke-[var(--af-accent)]" />
-                  {activeTenantName || 'Sin espacio'}
+                  <span className="flex-1 min-w-0 truncate">{activeTenantName || 'Sin espacio'}</span>
+                  {activeTenantRole === 'Super Admin' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-gradient-to-r from-[var(--af-accent)] to-amber-500 text-background px-1.5 py-0.5 rounded-md flex-shrink-0">
+                      <Crown size={9} />
+                      ADMIN
+                    </span>
+                  )}
                 </div>
                 <div className="border-t border-[var(--border)] mt-1.5 pt-1.5">
                   <button
