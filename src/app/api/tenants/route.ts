@@ -32,8 +32,10 @@ async function ensureUniqueCode(db: any): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  // Auth check first (reads Authorization header, not body)
+  let user: any;
   try {
-    const user = await requireAuth(request);
+    user = await requireAuth(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -41,22 +43,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
   }
 
+  // Read body ONCE — request.json() can only be called once
+  let body: any;
   try {
-    const { action } = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+  }
 
-    if (!action || !["create", "join", "list"].includes(action)) {
-      return NextResponse.json({ error: "Acción inválida. Usa: create, join, list" }, { status: 400 });
-    }
+  const { action, name, code } = body;
 
-    // Re-auth after body parse
-    let user: any;
-    try {
-      user = await requireAuth(request);
-    } catch (err) {
-      if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
+  if (!action || !["create", "join", "list"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list" }, { status: 400 });
+  }
 
+  try {
     const db = getAdminDb();
     const FieldValue = getAdminFieldValue();
 
@@ -68,31 +69,29 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "create") {
-      const { name } = await request.json();
       if (!name || typeof name !== "string" || name.trim().length < 2) {
         return NextResponse.json({ error: "El nombre debe tener al menos 2 caracteres" }, { status: 400 });
       }
 
-      const code = await ensureUniqueCode(db);
+      const tenantCode = await ensureUniqueCode(db);
       const tenantRef = await db.collection("tenants").add({
         name: name.trim(),
-        code,
+        code: tenantCode,
         members: [user.uid],
         createdBy: user.uid,
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      console.log(`[Tenants] Created tenant "${name.trim()}" (${code}) by ${user.email}`);
+      console.log(`[Tenants] Created tenant "${name.trim()}" (${tenantCode}) by ${user.email}`);
 
       return NextResponse.json({
         tenantId: tenantRef.id,
         name: name.trim(),
-        code,
+        code: tenantCode,
       });
     }
 
     if (action === "join") {
-      const { code } = await request.json();
       if (!code || typeof code !== "string") {
         return NextResponse.json({ error: "Código requerido" }, { status: 400 });
       }
@@ -129,6 +128,8 @@ export async function POST(request: NextRequest) {
         code: tenantData.code,
       });
     }
+
+    return NextResponse.json({ error: "Acción no reconocida" }, { status: 400 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error interno";
     console.error("[Tenants] Error:", message);
