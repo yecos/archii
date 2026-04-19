@@ -224,3 +224,20 @@ Stage Summary:
 - Tag: backup-pre-manage-members-20260420
 - Build: exitoso (0 errores)
 - Deploy: Vercel auto-deploy en progreso
+---
+Task ID: 2
+Agent: Super Z (Main)
+Task: Fix - Personas del equipo no aparecen en TeamScreen
+
+Work Log:
+- Investigado el flujo de carga de teamUsers en AppContext.tsx
+- Identificada la causa: tenant members array solo contiene UID del creador
+- Verificado que el filtro teamUsers = allUsersCache.filter(u => activeTenantMembers.includes(u.id)) es correcto
+- Agregado boton "Gestionar miembros" directamente en TeamScreen para Admins/Directores/Super Admins
+- Agregado estado vacio cuando no hay miembros con boton para agregar
+- Build exitoso, commit y push a main
+
+Stage Summary:
+- Commit: b441b54 - fix(team): agregar boton Gestionar Miembros directo en TeamScreen
+- El usuario puede ahora ir a Equipo > clic "Gestionar miembros" > "Agregar todos los usuarios"
+- Desplegando en Vercel automaticamente
