@@ -221,6 +221,55 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FIX — No se ven las personas en la app (Race Condition en teamUsers)
+  Estado: COMPLETADO
+  Commit: 8644aac
+  Build: exitoso (0 errores)
+
+  Contexto: Los usuarios (miembros del equipo) no aparecian en la pantalla de
+    Equipo ni en los selectores de asignación. La lista quedaba vacía o mostraba
+    datos incorrectos depsues de seleccionar o cambiar de espacio de trabajo.
+
+  Problema identificado — Race Condition:
+    El useEffect original de teamUsers combinaba dos operaciones asíncronas en
+    un solo efecto:
+    1. onSnapshot('users') → escucha todos los usuarios de Firestore
+    2. Filtrado con activeTenantMembers → solo mostrar miembros del tenant activo
+
+    El problema: activeTenantMembers se cargaba desde un SEGUNDO useEffect
+    que escucha el documento 'tenants/{activeTenantId}'. Cuando los miembros
+    del tenant finalmente llegaban, el onSnapshot de 'users' NO se volvía a
+    disparar (porque no había cambios en la colección 'users'). Resultado:
+    teamUsers quedaba vacía.
+
+    Flujo con bug:
+      switchTenant() → activeTenantId = X → activeTenantMembers = []
+      → useEffect team ejecuta → setTeamUsers(allUsers) (muestra todos, mal)
+      → useEffect tenant members ejecuta → setActiveTenantMembers([uid1, uid2])
+      → NINGÚN efecto re-filtra teamUsers → lista rota
+
+  Solución — Separar en 3 efectos independientes:
+    1. allUsersCache: onSnapshot('users') → cache de TODOS los usuarios
+       - Se ejecuta una vez al iniciar sesión
+       - No depende de activeTenantMembers
+    2. Tenant members listener: onSnapshot('tenants/{id}') → members[]
+       - Carga los UIDs de los miembros del tenant activo
+       - Independiente del listener de usuarios
+    3. Derivación de teamUsers:
+       useEffect(() => {
+         if (activeTenantId && activeTenantMembers.length > 0) {
+           setTeamUsers(allUsersCache.filter(u => activeTenantMembers.includes(u.id)));
+         } else {
+           setTeamUsers(allUsersCache);
+         }
+       }, [allUsersCache, activeTenantId, activeTenantMembers]);
+
+    Ahora cuando activeTenantMembers cambia, el efecto 3 se ejecuta
+    inmediatamente y re-filtra el cache de usuarios. Sin race condition.
+
+  Archivos modificados (1):
+    src/contexts/AppContext.tsx (+19, -10)
+
 2026-04-20 | FIX — Login con Google y Microsoft (CSP + Headers)
   Estado: COMPLETADO
   Commit: 5c66a22
