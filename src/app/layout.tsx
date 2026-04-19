@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import ClientProviders from "./ClientProviders";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
+import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ArchiFlow — Gestión de Proyectos",
-  description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo",
+  title: {
+    default: "ArchiFlow — Gestión de Proyectos",
+    template: "%s | ArchiFlow",
+  },
+  description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo. Planifica, ejecuta y controla todos tus proyectos en un solo lugar.",
+  keywords: ["arquitectura", "interiorismo", "gestión de proyectos", "construcción", "presupuestos", "planificación de obra", "colombia", "diseño", "obras"],
+  authors: [{ name: "ArchiFlow" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -14,6 +22,22 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "ArchiFlow",
+    title: "ArchiFlow — Gestión de Proyectos de Arquitectura",
+    description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo. Planifica, ejecuta y controla todos tus proyectos en un solo lugar.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ArchiFlow — Gestión de Proyectos",
+    description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -28,6 +52,7 @@ export const viewport: Viewport = {
 const FB_APP = "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js";
 const FB_AUTH = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js";
 const FB_FS = "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js";
+const FB_STORAGE = "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js";
 
 export default function RootLayout({
   children,
@@ -66,6 +91,7 @@ export default function RootLayout({
         <script src={FB_APP} />
         <script src={FB_AUTH} />
         <script src={FB_FS} />
+        <script src={FB_STORAGE} />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
@@ -88,13 +114,36 @@ export default function RootLayout({
           }
         ` }} />
 
-        {/* Theme init - prevent FOUC */}
+        {/* Theme init — prevent FOUC (3 modes: light/dark/system) */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            var t = localStorage.getItem('archiflow-theme') || 'dark';
-            if (t === 'dark') document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-          } catch(e) { document.documentElement.classList.add('dark'); }
+            var t = localStorage.getItem('archiflow-theme');
+            var d = 'system';
+            if (t === 'light' || t === 'dark' || t === 'system') d = t;
+            if (d === 'system') {
+              var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              document.documentElement.classList.toggle('dark', m);
+              document.documentElement.style.colorScheme = m ? 'dark' : 'light';
+            } else {
+              document.documentElement.classList.toggle('dark', d === 'dark');
+              document.documentElement.style.colorScheme = d;
+            }
+          } catch(e) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          }
+        ` }} />
+
+        {/* Color theme init — prevent flash on 7 color themes */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            try {
+              var ct = localStorage.getItem('archiflow-color-theme');
+              if (ct && ct !== 'dorado') {
+                document.documentElement.setAttribute('data-color-theme', ct);
+              }
+            } catch(e) {}
+          })();
         ` }} />
 
         {/* Global error handler — catch and log client-side errors */}
@@ -109,17 +158,21 @@ export default function RootLayout({
         ` }} />
       </head>
       <body className="antialiased bg-background text-foreground" suppressHydrationWarning>
-        {/* Register Service Worker */}
-        <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js').catch(function() {});
-            });
-          }
-        ` }} />
-        <ClientProviders>
-          {children}
-        </ClientProviders>
+        <ThemeProvider>
+          {/* Register Service Worker */}
+          <Script id="sw-register" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function() {});
+              });
+            }
+          ` }} />
+          <ClientProviders>
+            {children}
+          </ClientProviders>
+          <AIFloatingWrapper />
+          <KeyboardShortcutsInitializer />
+        </ThemeProvider>
       </body>
     </html>
   );
