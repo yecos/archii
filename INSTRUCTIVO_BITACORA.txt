@@ -221,6 +221,47 @@ Si se necesita corregir algo, agregar nota aclaratoria.
 
 --- INICIO DE BITACORA ---------------------------------------------------
 
+2026-04-20 | FIX — Migrar todos los usuarios de Firebase Auth al tenant existente
+  Estado: DESPLEGADO
+  Commit: 8078379
+  Build: pendiente (Vercel auto-deploy)
+
+  Contexto: La app pedia "Crear tu primer espacio de trabajo" a usuarios que ya
+    tenian un tenant creado. Causa: los UIDs de los usuarios no estaban en el
+    array members[] del documento tenants/{id}. Esto puede pasar cuando:
+    - El tenant fue creado por otro usuario
+    - Los usuarios se registraron antes de que existiera el sistema de tenants
+    - Los UIDs nunca fueron agregados al array members[]
+
+  Solucion (2 endpoints):
+    1. POST /api/migrate-all-to-tenant (nuevo, temporal):
+       - Encuentra el tenant destino (unico existente o el especificado por body)
+       - Obtiene TODOS los usuarios de Firebase Auth via listUsers()
+       - Crea documentos users/{uid} para auth users que no tienen uno
+       - Agrega TODOS los UIDs al array members[] del tenant
+       - Migra documentos huerfanos (sin tenantId) al tenant
+       - Retorna reporte completo con detalle de lo que se hizo
+       - Uso: POST /api/migrate-all-to-tenant
+         o POST /api/migrate-all-to-tenant con body { tenantId: '...' }
+
+    2. Accion add-all-users en POST /api/tenants (modificada):
+       - Ya no requiere ser creador del tenant, cualquier miembro puede usarla
+       - Ahora tambien obtiene usuarios de Firebase Auth (no solo coleccion users/)
+       - Crea documentos users/ faltantes automaticamente
+
+  Pasos para el usuario:
+    1. Ir a https://archii-theta.vercel.app/api/migrate-all-to-tenant
+       (desde el navegador, estando logueado, con POST)
+    2. Esperar el resultado JSON con el reporte
+    3. Hacer Ctrl+Shift+R (hard refresh) en la app
+    4. La app deberia detectar el tenant automaticamente y no pedir crear uno
+
+  Archivos modificados (2):
+    src/app/api/migrate-all-to-tenant/route.ts (nuevo, temporal)
+    src/app/api/tenants/route.ts (+39, -3)
+
+  NOTA: Este endpoint es TEMPORAL. Eliminar despues de la migracion.
+
 2026-04-20 | FIX — Indices compuestos faltantes en Firestore
   Estado: DESPLEGADO (PENDIENTE creacion manual por el usuario)
   Commit: 6a38125
