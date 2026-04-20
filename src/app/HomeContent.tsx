@@ -86,7 +86,7 @@ function AppContent() {
     showNotifBanner, requestNotifPermission, dismissNotifBanner,
     inAppNotifs, setInAppNotifs, markNotifRead,
     screenTitles,
-    tenantReady, activeTenantName, showTenantSelector,
+    tenantReady, activeTenantName, activeTenantRole, showTenantSelector, setShowTenantSelector,
   } = useApp();
 
   if (!ready || loading) return <LoadingScreen />;
