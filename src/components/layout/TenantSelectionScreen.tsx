@@ -189,7 +189,7 @@ export default function TenantSelectionScreen() {
               <span className="text-xs text-[var(--muted-foreground)]">{tenants.length} espacio{tenants.length !== 1 ? 's' : ''}</span>
             </div>
             {tenants.map((t) => {
-              const isSuperAdmin = t.role === 'Super Admin' || t.createdBy === authUser?.uid;
+              const isSuperAdmin = t.role === 'Super Admin' || t.createdBy === authUser?.uid || (t as any).superAdmins?.includes(authUser?.uid);
               return (
                 <button
                   key={t.id}

@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
 
   const { action, name, code, tenantId, emails, memberUid } = body;
 
-  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users" }, { status: 400 });
+  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users", "set-super-admin"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users, set-super-admin" }, { status: 400 });
   }
 
   try {
@@ -177,14 +177,16 @@ export async function POST(request: NextRequest) {
         const data = d.data();
         // Determine user's role: Super Admin if they created it, Miembro otherwise
         const isCreator = data.createdBy === user.uid;
+        const isSuperAdmin = isCreator || (data.superAdmins || []).includes(user.uid);
         return {
           id: d.id,
           name: data.name || '',
           code: data.code || '',
           members: data.members || [],
           createdBy: data.createdBy || '',
+          superAdmins: data.superAdmins || [],
           createdAt: data.createdAt || null,
-          role: isCreator ? 'Super Admin' : 'Miembro',
+          role: isSuperAdmin ? 'Super Admin' : 'Miembro',
         };
       });
       return NextResponse.json({ tenants });
@@ -238,13 +240,14 @@ export async function POST(request: NextRequest) {
       const tenantData = tenantDoc.data();
       const tenantId = tenantDoc.id;
       const isCreator = tenantData.createdBy === user.uid;
+      const isSuperAdmin = isCreator || (tenantData.superAdmins || []).includes(user.uid);
 
       if (tenantData.members && tenantData.members.includes(user.uid)) {
         return NextResponse.json({
           tenantId,
           name: tenantData.name,
           code: tenantData.code,
-          role: isCreator ? 'Super Admin' : 'Miembro',
+          role: isSuperAdmin ? 'Super Admin' : 'Miembro',
           alreadyMember: true,
         });
       }
@@ -406,6 +409,54 @@ export async function POST(request: NextRequest) {
         tenantName: tenantData.name,
         removed: memberUid,
         totalMembers: (tenantData.members || []).length - 1,
+      });
+    }
+
+    // ===== SET SUPER ADMIN =====
+    if (action === "set-super-admin") {
+      if (!tenantId || !memberUid) {
+        return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
+      }
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+      // Only current Super Admin can set others as Super Admin
+      const isCreator = tenantData.createdBy === user.uid;
+      const isCurrentSuperAdmin = isCreator || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isCurrentSuperAdmin) {
+        return NextResponse.json({ error: "Solo un Super Admin puede designar otro Super Admin" }, { status: 403 });
+      }
+
+      // Add to superAdmins array
+      const currentSuperAdmins: string[] = tenantData.superAdmins || [];
+      if (!currentSuperAdmins.includes(memberUid) && memberUid !== tenantData.createdBy) {
+        await db.collection("tenants").doc(tenantId).update({
+          superAdmins: FieldValue.arrayUnion(memberUid),
+        });
+      }
+
+      // Also ensure they are in members
+      if (!(tenantData.members || []).includes(memberUid)) {
+        await db.collection("tenants").doc(tenantId).update({
+          members: FieldValue.arrayUnion(memberUid),
+        });
+      }
+
+      // Get the user's name for the response
+      const targetUserDoc = await db.collection("users").doc(memberUid).get();
+      const targetName = targetUserDoc.exists ? targetUserDoc.data()?.name : memberUid;
+
+      console.log(`[Tenants] ${user.email} set ${targetName} (${memberUid}) as Super Admin in tenant ${tenantData.name}`);
+
+      return NextResponse.json({
+        success: true,
+        tenantName: tenantData.name,
+        userName: targetName,
+        userId: memberUid,
+        message: `${targetName} es ahora Super Admin de "${tenantData.name}"`,
       });
     }
 
