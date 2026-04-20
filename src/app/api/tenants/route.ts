@@ -425,9 +425,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      // Only current Super Admin can set others as Super Admin
-      const isCreator = tenantData.createdBy === user.uid;
-      const isCurrentSuperAdmin = isCreator || (tenantData.superAdmins || []).includes(user.uid);
+      // Check if user is Super Admin of ANY tenant (not just the target one)
+      // This allows a Super Admin from one tenant to set Super Admins in another
+      let isCurrentSuperAdmin = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isCurrentSuperAdmin) {
+        const allTenants = await db.collection("tenants")
+          .where("members", "array-contains", user.uid)
+          .get();
+        for (const doc of allTenants.docs) {
+          const d = doc.data();
+          if (d.createdBy === user.uid || (d.superAdmins || []).includes(user.uid)) {
+            isCurrentSuperAdmin = true;
+            break;
+          }
+        }
+      }
       if (!isCurrentSuperAdmin) {
         return NextResponse.json({ error: "Solo un Super Admin puede designar otro Super Admin" }, { status: 403 });
       }
