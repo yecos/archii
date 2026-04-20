@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
+import ZAI from "z-ai-web-dev-sdk";
 
 /**
  * POST /api/ai-agent
  *
  * Super IA Agent para ArchiFlow.
- * Usa OpenAI function calling para ejecutar acciones reales en la app:
+ * Usa z-ai-web-dev-sdk (GLM) con function calling para ejecutar acciones reales en la app:
  * - Crear/editar tareas, proyectos, gastos, proveedores, reuniones
  * - Consultar datos del proyecto, equipo, presupuesto
  * - Gestionar fases de obra, aprobaciones, inventario
  *
- * Variables de entorno (mismas que ai-assistant):
- *   OPENAI_API_KEY          — Tu API key (obligatoria)
- *   OPENAI_BASE_URL         — URL base (por defecto OpenAI)
- *   AI_MODEL                — Modelo a usar (por defecto gpt-4o-mini)
+ * Powered by GLM (z-ai-web-dev-sdk) — Sin API keys externas necesarias
  */
 
 // ─── TOOL DEFINITIONS ────────────────────────────────────────────────
@@ -1057,21 +1055,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-    const model = process.env.AI_MODEL || "gpt-4o-mini";
-
-    if (!apiKey) {
-      return NextResponse.json({
-        error: "API key no configurada",
-        message:
-          "⚠️ IA no configurada. Configura OPENAI_API_KEY en Vercel.",
-        setupRequired: true,
-      });
-    }
-
     const db = getAdminDb();
     const actions: ExecutedAction[] = [];
+
+    // Initialize z-ai-web-dev-sdk (GLM)
+    const zai = await ZAI.create();
 
     // Build messages
     const apiMessages: any[] = [
@@ -1093,33 +1081,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // First call: with tools
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
+    // First call: with tools (using z-ai-web-dev-sdk)
+    let data;
+    try {
+      data = await zai.chat.completions.create({
         messages: apiMessages,
         tools: TOOLS,
         tool_choice: "auto",
         max_tokens: 2048,
         temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[AI Agent] API error:", response.status, errorText);
+      });
+    } catch (error: any) {
+      console.error("[AI Agent] SDK error:", error?.message);
       return NextResponse.json({
         error: "Error en la API de IA",
-        message: `⚠️ Error de la API (${response.status}). Intenta de nuevo.`,
+        message: `⚠️ Error de la IA. Intenta de nuevo.`,
       });
     }
-
-    const data = await response.json();
     const choice = data.choices?.[0];
 
     if (!choice) {
@@ -1159,27 +1137,24 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Second call: get final response with tool results
-      const followUpResponse = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
+      // Second call: get final response with tool results (using z-ai-web-dev-sdk)
+      try {
+        const followUpData = await zai.chat.completions.create({
           messages: apiMessages,
           max_tokens: 2048,
           temperature: 0.7,
-        }),
-      });
+        });
 
-      if (followUpResponse.ok) {
-        const followUpData = await followUpResponse.json();
         const finalMessage = followUpData.choices?.[0]?.message?.content;
 
         return NextResponse.json({
           message: finalMessage || "Acciones ejecutadas correctamente.",
+          actions: actions.length > 0 ? actions : undefined,
+        });
+      } catch (error: any) {
+        console.error("[AI Agent] Follow-up error:", error?.message);
+        return NextResponse.json({
+          message: "Acciones ejecutadas correctamente.",
           actions: actions.length > 0 ? actions : undefined,
         });
       }
