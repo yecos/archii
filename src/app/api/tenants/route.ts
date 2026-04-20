@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const { action, name, code, tenantId, emails, memberUid } = body;
+  const { action, name, code, tenantId, emails, memberUid, email } = body;
 
   if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users", "set-super-admin"].includes(action)) {
     return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users, set-super-admin" }, { status: 400 });
@@ -413,9 +413,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== SET SUPER ADMIN =====
+    // Accepts: { action: 'set-super-admin', tenantId, email } OR { ..., memberUid }
+    // If email is provided, it searches by email (handles duplicates by picking the one with name)
     if (action === "set-super-admin") {
-      if (!tenantId || !memberUid) {
-        return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
+      if (!tenantId) {
+        return NextResponse.json({ error: "Falta tenantId" }, { status: 400 });
       }
 
       const tenantDoc = await db.collection("tenants").doc(tenantId).get();
@@ -430,32 +432,97 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Solo un Super Admin puede designar otro Super Admin" }, { status: 403 });
       }
 
-      // Add to superAdmins array
-      const currentSuperAdmins: string[] = tenantData.superAdmins || [];
-      if (!currentSuperAdmins.includes(memberUid) && memberUid !== tenantData.createdBy) {
-        await db.collection("tenants").doc(tenantId).update({
-          superAdmins: FieldValue.arrayUnion(memberUid),
+      // Resolve target UID: by memberUid directly, or search by email
+      let targetUid = memberUid || '';
+      let targetName = '';
+
+      if (email && !memberUid) {
+        // Search users by email (case-insensitive)
+        const normalizedEmail = email.trim().toLowerCase();
+        const usersByMail = await db.collection('users')
+          .where('email', '==', normalizedEmail)
+          .get();
+
+        if (usersByMail.empty) {
+          // Try partial match (contains)
+          const allUsers = await db.collection('users').get();
+          const matches: any[] = [];
+          for (const doc of allUsers.docs) {
+            const data = doc.data();
+            if (data.email && data.email.toLowerCase().includes(normalizedEmail)) {
+              matches.push({ uid: doc.id, name: data.name, email: data.email });
+            }
+            // Also search by name (Juan Mateo Yepes Correa)
+            if (data.name && data.name.toLowerCase().includes(email.toLowerCase())) {
+              matches.push({ uid: doc.id, name: data.name, email: data.email });
+            }
+          }
+          if (matches.length === 0) {
+            return NextResponse.json({ error: `No se encontró usuario con email/nombre "${email}"` }, { status: 404 });
+          }
+          // Pick the one with a real name (not just email prefix)
+          const withName = matches.filter(m => m.name && m.name.length > 3 && !m.name.includes('@'));
+          const picked = withName.length > 0 ? withName[0] : matches[0];
+          targetUid = picked.uid;
+          targetName = picked.name || picked.email;
+        } else if (usersByMail.docs.length === 1) {
+          targetUid = usersByMail.docs[0].id;
+          targetName = usersByMail.docs[0].data()?.name || normalizedEmail;
+        } else {
+          // Multiple docs with same email (duplicates) — pick the one with a real name
+          let picked = usersByMail.docs[0];
+          for (const doc of usersByMail.docs) {
+            const d = doc.data();
+            if (d.name && d.name.length > 3 && !d.name.includes('@')) {
+              picked = doc;
+              break;
+            }
+          }
+          targetUid = picked.id;
+          targetName = picked.data()?.name || normalizedEmail;
+          // Report duplicates
+          console.warn(`[Tenants] Duplicates found for ${normalizedEmail}: ${usersByMail.docs.length} docs. Using UID: ${targetUid}`);
+        }
+      }
+
+      if (!targetUid) {
+        return NextResponse.json({ error: "Falta memberUid o email" }, { status: 400 });
+      }
+
+      // Already creator = already Super Admin
+      if (targetUid === tenantData.createdBy) {
+        return NextResponse.json({
+          success: true,
+          alreadySuperAdmin: true,
+          message: `${targetName || targetUid} ya es Super Admin (creador del espacio)`,
         });
       }
+
+      // Add to superAdmins array
+      await db.collection("tenants").doc(tenantId).update({
+        superAdmins: FieldValue.arrayUnion(targetUid),
+      });
 
       // Also ensure they are in members
-      if (!(tenantData.members || []).includes(memberUid)) {
+      if (!(tenantData.members || []).includes(targetUid)) {
         await db.collection("tenants").doc(tenantId).update({
-          members: FieldValue.arrayUnion(memberUid),
+          members: FieldValue.arrayUnion(targetUid),
         });
       }
 
-      // Get the user's name for the response
-      const targetUserDoc = await db.collection("users").doc(memberUid).get();
-      const targetName = targetUserDoc.exists ? targetUserDoc.data()?.name : memberUid;
+      // Get the user's name for the response (if not already resolved)
+      if (!targetName) {
+        const targetUserDoc = await db.collection("users").doc(targetUid).get();
+        targetName = targetUserDoc.exists ? (targetUserDoc.data()?.name || '') : targetUid;
+      }
 
-      console.log(`[Tenants] ${user.email} set ${targetName} (${memberUid}) as Super Admin in tenant ${tenantData.name}`);
+      console.log(`[Tenants] ${user.email} set ${targetName} (${targetUid}) as Super Admin in tenant ${tenantData.name}`);
 
       return NextResponse.json({
         success: true,
         tenantName: tenantData.name,
         userName: targetName,
-        userId: memberUid,
+        userId: targetUid,
         message: `${targetName} es ahora Super Admin de "${tenantData.name}"`,
       });
     }
