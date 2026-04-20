@@ -6,6 +6,9 @@
 import type { KanbanColumn, KanbanFilters } from '@/lib/types';
 import { KANBAN_DEFAULT_COLUMNS } from '@/lib/types';
 
+// Re-export KanbanColumn so consumers can import from this module
+export type { KanbanColumn } from '@/lib/types';
+
 export type KanbanEntityType = 'tasks' | 'projects' | 'approvals' | 'invoices' | 'transfers' | 'phases' | 'incidents';
 
 export interface KanbanCardData {

@@ -34,7 +34,7 @@ export default function BudgetScreen() {
     deleteExpense, expenses, openModal, projects, setForms, showToast,
   } = useApp();
 
-  const confirm = useConfirmDialog();
+  const confirmDialog = useConfirmDialog();
 
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
 
@@ -206,7 +206,7 @@ export default function BudgetScreen() {
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
                     {/* Desktop: delete button with hover */}
-                    <button className="hidden md:flex text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={async () => { if (await confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); }}>✕</button>
+                    <button className="hidden md:flex text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={async () => { if (await confirmDialog.confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); }}>✕</button>
                     {/* Mobile: OverflowMenu */}
                     <div className="md:hidden flex-shrink-0">
                       <OverflowMenu
@@ -214,7 +214,7 @@ export default function BudgetScreen() {
                           {
                             label: 'Eliminar gasto',
                             icon: <Trash2 size={14} />,
-                            onClick: async () => { if (await confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); },
+                            onClick: async () => { if (await confirmDialog.confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); },
                             variant: 'danger',
                           },
                         ]}
@@ -240,7 +240,7 @@ export default function BudgetScreen() {
           <div className="text-xs mt-1">Registra tu primer gasto para empezar a llevar control</div>
         </div>
       )}
-      <ConfirmDialog {...confirm} />
+      <ConfirmDialog {...confirmDialog} />
     </div>
   );
 }

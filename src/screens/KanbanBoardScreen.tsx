@@ -15,7 +15,7 @@ import {
   quickCardId,
 } from '@/lib/kanban-helpers';
 import type { KanbanBoard as KanbanBoardType, KanbanFilters } from '@/lib/types';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, FieldValue as FV } from '@/lib/firebase-service';
 import { Plus, Trash2, Settings, ChevronRight } from 'lucide-react';
 
 export default function KanbanBoardScreen() {
@@ -87,7 +87,7 @@ export default function KanbanBoardScreen() {
         setLoading(false);
 
         // Subscribe for real-time updates
-        const unsub = doc.ref.onSnapshot(docSnap => {
+        const unsub = (doc as any).ref.onSnapshot((docSnap: any) => {
           if (docSnap.exists) {
             setBoard({ id: docSnap.id, data: docSnap.data().data });
           }
@@ -141,7 +141,7 @@ export default function KanbanBoardScreen() {
     if (!activeTenantId || !authUser) return;
     try {
       const db = getFirebase().firestore();
-      const ts = db.FieldValue.serverTimestamp();
+      const ts = FV().serverTimestamp();
       const defaultCols = getDefaultColumns(kanbanEntityType);
       const boardData = {
         tenantId: activeTenantId,
@@ -161,7 +161,7 @@ export default function KanbanBoardScreen() {
             tags: null,
             searchQuery: null,
           },
-          viewMode: 'board',
+          viewMode: 'board' as const,
           createdAt: ts,
           updatedAt: ts,
           createdBy: authUser.uid,
@@ -193,13 +193,13 @@ export default function KanbanBoardScreen() {
       } else if (kanbanEntityType === 'phases' && selectedProjectId) {
         await db.collection('projects').doc(selectedProjectId)
           .collection('workPhases').doc(entityId)
-          .update({ status: newStatus, updatedAt: db.FieldValue.serverTimestamp() });
+          .update({ status: newStatus, updatedAt: FV().serverTimestamp() });
       } else if (kanbanEntityType === 'transfers') {
         await db.collection('invTransfers').doc(entityId)
-          .update({ status: newStatus, updatedAt: db.FieldValue.serverTimestamp() });
+          .update({ status: newStatus, updatedAt: FV().serverTimestamp() });
       } else if (kanbanEntityType === 'invoices') {
         await db.collection('invoices').doc(entityId)
-          .update({ status: newStatus, updatedAt: db.FieldValue.serverTimestamp() });
+          .update({ status: newStatus, updatedAt: FV().serverTimestamp() });
       }
 
       // Update card positions in board
@@ -211,7 +211,7 @@ export default function KanbanBoardScreen() {
         await db.collection('kanbanBoards').doc(kanbanBoardId)
           .update({
             'data.cardPositions': updatedPositions,
-            'data.updatedAt': db.FieldValue.serverTimestamp(),
+            'data.updatedAt': FV().serverTimestamp(),
           });
       }
 
@@ -231,7 +231,7 @@ export default function KanbanBoardScreen() {
 
     try {
       const db = getFirebase().firestore();
-      const ts = db.FieldValue.serverTimestamp();
+      const ts = FV().serverTimestamp();
       const qcId = quickCardId();
 
       if (kanbanEntityType === 'tasks') {
@@ -310,7 +310,7 @@ export default function KanbanBoardScreen() {
 
     try {
       const db = getFirebase().firestore();
-      const ts = db.FieldValue.serverTimestamp();
+      const ts = FV().serverTimestamp();
       const commentData = {
         taskId: selectedCard.entityId,
         projectId: selectedCard.projectId || selectedProjectId || '',

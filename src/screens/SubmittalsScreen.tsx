@@ -21,7 +21,7 @@ export default function SubmittalsScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
-  const confirm = useConfirmDialog();
+  const confirmDialog = useConfirmDialog();
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [showReviewInput, setShowReviewInput] = useState<string | null>(null);
@@ -138,7 +138,7 @@ export default function SubmittalsScreen() {
                   <div className="hidden md:flex gap-1.5 flex-shrink-0">
                     <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(s)}><Pencil size={12} /></button>
                     <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
-                      const ok = await confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
+                      const ok = await confirmDialog.confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
                       if (!ok) return;
                       fbActions.deleteSubmittal(s.id, showToast, activeTenantId);
                     }}><Trash2 size={12} /></button>
@@ -148,7 +148,7 @@ export default function SubmittalsScreen() {
                       actions={[
                         { label: 'Editar submittal', icon: <Pencil size={14} />, onClick: () => handleEdit(s) },
                         { label: 'Eliminar submittal', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
-                          const ok = await confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
+                          const ok = await confirmDialog.confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
                           if (!ok) return;
                           fbActions.deleteSubmittal(s.id, showToast, activeTenantId);
                         }},
@@ -224,7 +224,7 @@ export default function SubmittalsScreen() {
           })}
         </div>
       )}
-      <ConfirmDialog {...confirm} />
+      <ConfirmDialog {...confirmDialog} />
     </div>
   );
 }

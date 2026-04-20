@@ -23,7 +23,7 @@ export default function PunchListScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
-  const confirm = useConfirmDialog();
+  const confirmDialog = useConfirmDialog();
 
   const filtered = useMemo(() => {
     return punchItems.filter((p: any) => {
@@ -204,7 +204,7 @@ export default function PunchListScreen() {
                   )}
                   <button className="hidden md:block px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(p)}><Pencil size={12} /></button>
                   <button className="hidden md:block px-1.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
-                    const ok = await confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
+                    const ok = await confirmDialog.confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
                     if (!ok) return;
                     fbActions.deletePunchItem(p.id, showToast, activeTenantId);
                   }}><Trash2 size={12} /></button>
@@ -213,7 +213,7 @@ export default function PunchListScreen() {
                       actions={[
                         { label: 'Editar item', icon: <Pencil size={14} />, onClick: () => handleEdit(p) },
                         { label: 'Eliminar item', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
-                          const ok = await confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
+                          const ok = await confirmDialog.confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
                           if (!ok) return;
                           fbActions.deletePunchItem(p.id, showToast, activeTenantId);
                         }},
@@ -226,7 +226,7 @@ export default function PunchListScreen() {
           })}
         </div>
       )}
-      <ConfirmDialog {...confirm} />
+      <ConfirmDialog {...confirmDialog} />
     </div>
   );
 }

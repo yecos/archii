@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -32,24 +32,27 @@ interface AppContextValue {
   editingId: string | null;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
   authUser: any;
-  projects: any[];
-  tasks: any[];
-  expenses: any[];
-  suppliers: any[];
-  companies: any[];
-  teamUsers: any[];
+  projects: Project[];
+  tasks: Task[];
+  expenses: Expense[];
+  suppliers: Supplier[];
+  companies: Company[];
+  teamUsers: TeamUser[];
   meetings: any[];
-  invProducts: any[];
-  invCategories: any[];
-  invMovements: any[];
-  invTransfers: any[];
-  invoices: any[];
-  galleryPhotos: any[];
-  comments: any[];
-  timeEntries: any[];
+  invProducts: InvProduct[];
+  invCategories: InvCategory[];
+  invMovements: InvMovement[];
+  invTransfers: InvTransfer[];
+  invoices: Invoice[];
+  galleryPhotos: GalleryPhoto[];
+  comments: Comment[];
+  timeEntries: TimeEntry[];
   generalMessages: any[];
   dailyLogs: any[];
-  approvals: any[];
+  approvals: Approval[];
+  rfis: RFI[];
+  submittals: Submittal[];
+  punchItems: PunchItem[];
   selectedProjectId: string;
   navigateTo: (screen: string, itemId?: string | null) => void;
   handleInvProductImageSelect: (e: any) => void;
@@ -77,7 +80,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [chatProjectId, setChatProjectId] = useState<string | null>(null);
@@ -127,21 +130,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [meetings, setMeetings] = useState<any[]>([]);
 
   // Gallery state
-  const [galleryPhotos, setGalleryPhotos] = useState<any[]>([]);
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [galleryFilterProject, setGalleryFilterProject] = useState<string>('all');
   const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
   const [lightboxPhoto, setLightboxPhoto] = useState<any>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   // Inventory state
-  const [invProducts, setInvProducts] = useState<any[]>([]);
-  const [invCategories, setInvCategories] = useState<any[]>([]);
-  const [invMovements, setInvMovements] = useState<any[]>([]);
+  const [invProducts, setInvProducts] = useState<InvProduct[]>([]);
+  const [invCategories, setInvCategories] = useState<InvCategory[]>([]);
+  const [invMovements, setInvMovements] = useState<InvMovement[]>([]);
   const [invTab, setInvTab] = useState<'dashboard' | 'products' | 'categories' | 'warehouse' | 'movements' | 'transfers' | 'reports'>('dashboard');
   const [invFilterCat, setInvFilterCat] = useState<string>('all');
   const [invSearch, setInvSearch] = useState('');
   const [invMovFilterType, setInvMovFilterType] = useState<string>('all');
-  const [invTransfers, setInvTransfers] = useState<any[]>([]);
+  const [invTransfers, setInvTransfers] = useState<InvTransfer[]>([]);
   const [invTransferFilterStatus, setInvTransferFilterStatus] = useState<string>('all');
   const [invWarehouseFilter, setInvWarehouseFilter] = useState<string>('all');
 
@@ -168,12 +171,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
 
   // Daily Log state
-  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
+  const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
 
   // RFIs / Submittals / Punch List state
-  const [rfis, setRfis] = useState<any[]>([]);
-  const [submittals, setSubmittals] = useState<any[]>([]);
-  const [punchItems, setPunchItems] = useState<any[]>([]);
+  const [rfis, setRfis] = useState<RFI[]>([]);
+  const [submittals, setSubmittals] = useState<Submittal[]>([]);
+  const [punchItems, setPunchItems] = useState<PunchItem[]>([]);
   const [rfiFilterProject, setRfiFilterProject] = useState<string>('');
   const [rfiFilterStatus, setRfiFilterStatus] = useState<string>('');
   const [subFilterProject, setSubFilterProject] = useState<string>('');

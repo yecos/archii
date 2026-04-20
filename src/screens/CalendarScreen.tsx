@@ -45,8 +45,8 @@ export default function CalendarScreen() {
             const selectedDayRFIs = calSelectedDate ? calRFIs.filter(r => r.data.dueDate === calSelectedDate) : [];
             const selectedDaySubs = calSelectedDate ? calSubmittals.filter(s => s.data.dueDate === calSelectedDate) : [];
             const selectedDayPunch = calSelectedDate ? calPunch.filter(p => p.data.dueDate === calSelectedDate) : [];
-            const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear((y: any) => y - 1); } else { setCalMonth((m: any) => m - 1); } setCalSelectedDate(null); };
-            const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y: any) => y + 1); } else { setCalMonth((m: any) => m + 1); } setCalSelectedDate(null); };
+            const prevMonth = () => { if (calMonth === 0) { setCalMonth(11); setCalYear((y: number) => y - 1); } else { setCalMonth((m: number) => m - 1); } setCalSelectedDate(null); };
+            const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y: number) => y + 1); } else { setCalMonth((m: number) => m + 1); } setCalSelectedDate(null); };
 
             // Build calendar grid
             const cells: (number | null)[] = [];

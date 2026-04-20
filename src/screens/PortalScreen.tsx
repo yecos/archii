@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtDate, statusColor } from '@/lib/helpers';
+import type { Submittal } from '@/lib/types';
 
 export default function PortalScreen() {
   const {
@@ -17,7 +18,7 @@ export default function PortalScreen() {
       const totalTasks = projTasks.length;
       const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
       const openRFIs = rfis.filter(r => r.data.projectId === p.id && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido').length;
-      const pendingSubs = submittals.filter(s => s.data.projectId === p.id && (s.data.status === 'Borrador' || s.data.status === 'En revision')).length;
+      const pendingSubs = submittals.filter((s: Submittal) => s.data.projectId === p.id && (s.data.status === 'Borrador' || s.data.status === 'En revisión')).length;
       const openPunch = punchItems.filter(pi => pi.data.projectId === p.id && pi.data.status !== 'Completado').length;
       return { ...p, totalTasks, completedTasks, progress, openRFIs, pendingSubs, openPunch };
     });

@@ -68,7 +68,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
               <div className="flex flex-wrap gap-1.5 p-2 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg min-h-[36px]">
                 {assignees.map((uid: string) => {
                   const user = teamUsers.find((u: any) => u.id === uid);
-                  const name = user?.data?.name || user?.name || uid;
+                  const name = user?.data?.name || (user as any)?.name || uid;
                   return (
                     <span
                       key={uid}

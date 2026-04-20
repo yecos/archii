@@ -200,7 +200,7 @@ export default function ChatScreen() {
               {projects
                 .filter(p => !forms.chatSearch || p.data.name.toLowerCase().includes((forms.chatSearch || '').toLowerCase()))
                 .map(p => {
-                  const projColor = p.data.color || 'var(--af-accent)';
+                  const projColor = (p.data as Record<string, any>).color || 'var(--af-accent)';
                   return (
                     <div
                       key={p.id}

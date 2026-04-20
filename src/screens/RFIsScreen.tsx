@@ -22,7 +22,7 @@ export default function RFIsScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
-  const confirm = useConfirmDialog();
+  const confirmDialog = useConfirmDialog();
 
   const filtered = useMemo(() => {
     return rfis.filter((r: any) => {
@@ -145,7 +145,7 @@ export default function RFIsScreen() {
                     </select>
                     <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(r)}><Pencil size={12} /></button>
                     <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
-                      const ok = await confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
+                      const ok = await confirmDialog.confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
                       if (!ok) return;
                       fbActions.deleteRFI(r.id, showToast, activeTenantId);
                     }}><Trash2 size={12} /></button>
@@ -155,7 +155,7 @@ export default function RFIsScreen() {
                       actions={[
                         { label: 'Editar RFI', icon: <Pencil size={14} />, onClick: () => handleEdit(r) },
                         { label: 'Eliminar RFI', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
-                          const ok = await confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
+                          const ok = await confirmDialog.confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
                           if (!ok) return;
                           fbActions.deleteRFI(r.id, showToast, activeTenantId);
                         }},
@@ -187,7 +187,7 @@ export default function RFIsScreen() {
           })}
         </div>
       )}
-      <ConfirmDialog {...confirm} />
+      <ConfirmDialog {...confirmDialog} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ interface KanbanColumnProps {
   column: KanbanColumnType;
   cards: KanbanCardData[];
   onCardClick: (card: KanbanCardData) => void;
-  getUserName: (uid: string) => void;
+  getUserName: (uid: string) => string;
   onQuickAdd?: (columnId: string, title: string) => void;
   onDeleteColumn?: (columnId: string) => void;
 }
