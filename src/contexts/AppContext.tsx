@@ -2196,6 +2196,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
 
+  /** Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore */
+  const scrubUndefined = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = scrubUndefined(value);
+      }
+    }
+    return cleaned;
+  };
+
   const getUserName = (uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; };
 
   const saveProject = async () => {
@@ -2204,11 +2217,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const raw = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
       else {
-        await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser.uid, progress: 0 });
+        const createData = scrubUndefined({ ...raw, createdAt: ts, createdBy: authUser.uid, progress: 0 });
+        await db.collection('projects').add(createData);
         showToast('Proyecto creado');
         // Si hay sesion de OneDrive activa, crear carpeta del proyecto
         if (msConnected && msAccessToken) {
@@ -2222,7 +2237,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         }
       }
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
   };
 
   const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
@@ -2242,12 +2257,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
-    const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()) : [];
-    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const subtasks = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()).map((s: any) => ({ text: String(s.text || ''), done: Boolean(s.done) })) : [];
+    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
-        await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser.uid });
+        const createData = scrubUndefined({ ...raw, createdAt: ts, createdBy: authUser.uid });
+        await db.collection('tasks').add(createData);
         showToast('Tarea creada');
         if (assignees.length > 0 && forms.taskProject) {
           const proj = projects.find((p: any) => p.id === forms.taskProject);
@@ -2258,7 +2275,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         }
       }
       closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
     finally { setIsSavingTask(false); }
   };
 

@@ -11,6 +11,19 @@ import { DEFAULT_PHASES } from '@/lib/types';
 
 type ToastFn = (msg: string, type?: string) => void;
 
+/** Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore */
+function scrubUndefined(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = scrubUndefined(value);
+    }
+  }
+  return cleaned;
+}
+
 /** Helper: ejecuta acción Firebase con manejo de errores consistente */
 async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: ToastFn): Promise<T | null> {
   try {
@@ -29,7 +42,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
-    const projData: Record<string, any> = {
+    const projData: Record<string, any> = scrubUndefined({
       name: data.projName,
       status: data.projStatus || 'Concepto',
       client: data.projClient || '',
@@ -42,7 +55,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
       progress: 0,
       updatedAt: ts,
       updatedBy: authUser?.uid || '',
-    };
+    });
     if (editingId) {
       await db.collection('projects').doc(editingId).update(projData);
       showToast('Proyecto actualizado');
@@ -88,17 +101,17 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
-      await db.collection('tasks').doc(editingId).update({
+      await db.collection('tasks').doc(editingId).update(scrubUndefined({
         title: data.taskTitle,
         projectId: data.taskProject,
         assigneeId: data.taskAssignee,
         priority: data.taskPriority,
         status: data.taskStatus,
         dueDate: data.taskDue || '',
-      });
+      }));
       showToast('Tarea actualizada');
     } else {
-      await db.collection('tasks').add({
+      await db.collection('tasks').add(scrubUndefined({
         title: data.taskTitle,
         projectId: data.taskProject,
         assigneeId: data.taskAssignee,
@@ -106,9 +119,9 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
         status: data.taskStatus,
         dueDate: data.taskDue || '',
         createdAt: ts,
-        createdBy: authUser?.uid,
+        createdBy: authUser?.uid || '',
         tenantId: tenantId || '',
-      });
+      }));
       showToast('✅ Tarea creada');
     }
   }, showToast);
