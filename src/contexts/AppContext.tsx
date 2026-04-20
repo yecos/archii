@@ -3104,14 +3104,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveMeeting = async () => {
     const title = forms.meetTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      const data = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser?.uid };
+      const raw = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser.uid, tenantId: activeTenantId || '' };
+      const data = scrubUndefined(raw);
       if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
       else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveMeeting error:', err); showToast('Error al guardar reunión', 'error'); }
   };
   const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
   const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
