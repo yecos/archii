@@ -693,6 +693,46 @@ export default function AppProvider({ children }: { children: React.ReactNode })
               await ref.update(updates);
             }
           }
+          // RESTORE TENANT FROM FIRESTORE (survives cache clearing)
+          // If localStorage was cleared, check if user has a saved tenant in Firestore
+          const savedTenantId = localStorage.getItem('archiflow-active-tenant');
+          if (!savedTenantId) {
+            try {
+              const userData = snap.exists ? snap.data() : null;
+              const fsDefaultTenantId = userData?.defaultTenantId;
+              if (fsDefaultTenantId) {
+                // Verify the user still belongs to this tenant
+                const tenantDoc = await db.collection('tenants').doc(fsDefaultTenantId).get();
+                if (tenantDoc.exists) {
+                  const tData = tenantDoc.data();
+                  const members: string[] = tData.members || [];
+                  if (members.includes(user.uid)) {
+                    // Determine role
+                    let role = 'Miembro';
+                    if (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid)) {
+                      role = 'Super Admin';
+                    }
+                    const tenantName = userData.defaultTenantName || tData.name || fsDefaultTenantId;
+                    console.log('[ArchiFlow Auth] Restoring tenant from Firestore:', tenantName, '— cache was cleared');
+                    setActiveTenantId(fsDefaultTenantId);
+                    setActiveTenantName(tenantName);
+                    setActiveTenantRole(role);
+                    setTenantReady(true);
+                    // Also restore localStorage for future fast loads
+                    localStorage.setItem('archiflow-active-tenant', fsDefaultTenantId);
+                    localStorage.setItem('archiflow-active-tenant-name', tenantName);
+                    localStorage.setItem('archiflow-active-tenant-role', role);
+                  } else {
+                    console.log('[ArchiFlow Auth] Saved tenant no longer has this user as member, showing selector');
+                  }
+                } else {
+                  console.log('[ArchiFlow Auth] Saved tenant no longer exists, showing selector');
+                }
+              }
+            } catch (restoreErr) {
+              console.warn('[ArchiFlow Auth] Could not restore tenant from Firestore:', restoreErr);
+            }
+          }
       }
       setLoading(false);
       } catch (authErr: any) {
@@ -3246,9 +3286,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       localStorage.setItem('archiflow-active-tenant-name', tenantName);
       localStorage.setItem('archiflow-active-tenant-role', role);
     } catch (err) { console.error("[ArchiFlow]", err); }
+    // Persist tenant preference to Firestore (survives cache clearing)
+    if (authUser) {
+      try {
+        const db = getFirebase().firestore();
+        db.collection('users').doc(authUser.uid).update({
+          defaultTenantId: tenantId,
+          defaultTenantName: tenantName,
+          defaultTenantRole: role,
+        }).catch((err: any) => console.warn('[ArchiFlow] Could not save tenant pref to Firestore:', err));
+      } catch (_e) { /* silent */ }
+    }
     const roleLabel = role === 'Super Admin' ? ' (Super Admin)' : '';
     showToast(`Espacio de trabajo: ${tenantName}${roleLabel}`);
-  }, [showToast]);
+  }, [showToast, authUser]);
 
   // ===== CONTEXT VALUE =====
   const ctx = {
