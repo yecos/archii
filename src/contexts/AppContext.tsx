@@ -807,7 +807,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser]);
 
-  // Listen to active tenant document for members array
+  // Listen to active tenant document for members array + verify role in real-time
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
     const db = getFirebase().firestore();
@@ -818,6 +818,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const members = data?.members || [];
         console.log('[ArchiFlow Team] Tenant members loaded:', members.length, '— UIDs:', members);
         setActiveTenantMembers(members);
+        // VERIFY ROLE: Always re-derive the real role from tenant document
+        const isCreator = data?.createdBy === authUser.uid;
+        const superAdmins: string[] = data?.superAdmins || [];
+        const isSuperAdmin = isCreator || superAdmins.includes(authUser.uid);
+        const realRole = isSuperAdmin ? 'Super Admin' : 'Miembro';
+        if (realRole !== activeTenantRole) {
+          console.log('[ArchiFlow Team] Role corrected:', activeTenantRole, '→', realRole, '(createdBy:', data?.createdBy, '=== uid:', authUser.uid, '=', isCreator, '| superAdmins:', superAdmins, ')');
+          setActiveTenantRole(realRole);
+          // Persist corrected role
+          try {
+            localStorage.setItem('archiflow-active-tenant-role', realRole);
+            db.collection('users').doc(authUser.uid).update({ defaultTenantRole: realRole });
+          } catch (_) { /* ignore */ }
+        }
       } else {
         console.warn('[ArchiFlow Team] Tenant document does NOT exist:', activeTenantId);
         setActiveTenantMembers([]);
