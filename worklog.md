@@ -311,3 +311,27 @@ Stage Summary:
 - Commit: a7fe673
 - Tag: backup-pre-phase1-integration-20260420
 - Deploy a Vercel en curso
+
+---
+Task ID: 1
+Agent: Super Z (Main)
+Task: Reemplazar OpenAI por z-ai-web-dev-sdk (GLM) como motor de IA de la app
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Investigada integración actual: ai-agent/route.ts (function calling con OpenAI) + ai-assistant/route.ts (chat simple con OpenAI)
+- Descubierto que la app require OPENAI_API_KEY configurada en Vercel, la cual no estaba configurada
+- Probado z-ai-web-dev-sdk: soporta function calling nativo (tools + tool_choice: auto) igual que OpenAI
+- Instalado z-ai-web-dev-sdk como dependencia del proyecto
+- Modificado ai-agent/route.ts: reemplazado fetch a OpenAI por zai.chat.completions.create() (mantiene function calling)
+- Modificado ai-assistant/route.ts: reemplazado fetch a OpenAI por zai.chat.completions.create()
+- Eliminada dependencia de OPENAI_API_KEY, OPENAI_BASE_URL, AI_MODEL
+- Build verificado: 0 errores TypeScript en archivos modificados
+- Commit: 8bf46f4, push a main completado
+
+Stage Summary:
+- La IA de ArchiFlow ahora usa GLM (z-ai-web-dev-sdk) sin necesidad de API keys externas
+- Function calling funciona: 17 herramientas (crear tareas, proyectos, gastos, proveedores, reuniones, RFIs, consultar datos, etc.)
+- Commit: 8bf46f4
+- Deploy automático a Vercel en curso (https://archii-theta.vercel.app)
