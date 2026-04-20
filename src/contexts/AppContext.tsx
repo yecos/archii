@@ -622,7 +622,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         // (stored in IndexedDB), which would overwrite valid Firestore photoURL.
         if (user) {
           try { await user.reload(); } catch (_e) { /* ignore if offline */ }
-          setAuthUser({ ...user, photoURL: user.photoURL || null });
+          // IMPORTANT: Firebase User properties (uid, email, displayName, etc.) are
+          // prototype getters — spread operator does NOT copy them. Must extract explicitly.
+          setAuthUser(user); // Store the real Firebase User object (not a copy)
         } else {
           setAuthUser(null);
         }
