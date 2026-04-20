@@ -149,16 +149,14 @@ export default function TopBar() {
                       Gestionar miembros
                     </button>
                   )}
-                  {activeTenantRole !== 'Super Admin' && (
-                    <button
-                      onClick={handleFixRole}
-                      disabled={fixingRole}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-amber-500/10 transition-colors text-left bg-transparent border-none text-amber-400 disabled:opacity-50"
-                    >
-                      <Shield size={14} className="stroke-amber-400" />
-                      {fixingRole ? 'Corrigiendo...' : 'Corregir mi rol a Super Admin'}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleFixRole}
+                    disabled={fixingRole}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-amber-500/10 transition-colors text-left bg-transparent border-none text-amber-400 disabled:opacity-50"
+                  >
+                    <Shield size={14} className="stroke-amber-400" />
+                    {fixingRole ? 'Corrigiendo...' : `Corregir mi rol (${activeTenantRole || 'sin rol'})`}
+                  </button>
                 </div>
               </div>
               {showManageMembers && activeTenantId && (
