@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
 
   const { action, name, code, tenantId, emails, memberUid, email } = body;
 
-  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users", "set-super-admin"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users, set-super-admin" }, { status: 400 });
+  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role", "debug-me"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users, set-super-admin, fix-my-role, debug-me" }, { status: 400 });
   }
 
   try {
@@ -189,6 +189,23 @@ export async function POST(request: NextRequest) {
           role: isSuperAdmin ? 'Super Admin' : 'Miembro',
         };
       });
+
+      // Auto-fix: if user is Super Admin in any tenant, ensure defaultTenantRole is correct
+      // This fixes the case where defaultTenantRole was incorrectly saved as "Miembro"
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data()!;
+        const isSAInAnyTenant = tenants.some((t: any) => t.role === 'Super Admin');
+        if (isSAInAnyTenant && (userData.defaultTenantRole || 'Miembro') !== 'Super Admin') {
+          // Check if the default tenant is one where they're SA
+          const defaultTenant = tenants.find((t: any) => t.id === userData.defaultTenantId);
+          if (defaultTenant && defaultTenant.role === 'Super Admin') {
+            await db.collection("users").doc(user.uid).update({ defaultTenantRole: "Super Admin" });
+            console.log(`[Tenants] Auto-fixed defaultTenantRole to Super Admin for ${user.email}`);
+          }
+        }
+      }
+
       return NextResponse.json({ tenants });
     }
 
@@ -591,6 +608,92 @@ export async function POST(request: NextRequest) {
         createdBy: tenantData.createdBy,
         members,
         availableUsers,
+      });
+    }
+
+    // ===== DEBUG ME — shows full diagnostic info for current user =====
+    if (action === "debug-me") {
+      // Find ALL user docs matching this email
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+
+      const allByEmail = await db.collection("users").where("email", "==", user.email).get();
+      const allByEmailDocs = allByEmail.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const allTenants = await db.collection("tenants").get();
+      const tenantInfo = allTenants.docs.map(d => {
+        const t = d.data();
+        return {
+          id: d.id,
+          name: t.name,
+          createdBy: t.createdBy,
+          members: t.members || [],
+          superAdmins: t.superAdmins || [],
+          isCurrentUserMember: (t.members || []).includes(user.uid),
+          isCurrentUserSuperAdmin: t.createdBy === user.uid || (t.superAdmins || []).includes(user.uid),
+        };
+      });
+
+      return NextResponse.json({
+        authUid: user.uid,
+        authEmail: user.email,
+        userDoc: userData ? { ...userData, _id: user.uid } : null,
+        allUsersWithEmail: allByEmailDocs,
+        allTenants: tenantInfo,
+      });
+    }
+
+    // ===== FIX MY ROLE — forces Super Admin on all tenants =====
+    if (action === "fix-my-role") {
+      const targetTenantId = tenantId; // optional — if provided, only fix this tenant
+      const allTenants = await db.collection("tenants")
+        .where("members", "array-contains", user.uid)
+        .get();
+
+      const fixed: string[] = [];
+      const already: string[] = [];
+
+      for (const doc of allTenants.docs) {
+        if (targetTenantId && doc.id !== targetTenantId) continue;
+        const t = doc.data();
+        const isSA = t.createdBy === user.uid || (t.superAdmins || []).includes(user.uid);
+
+        if (isSA) {
+          already.push(`${t.name} (ya eres SA — createdBy=${t.createdBy === user.uid}, superAdmins=${(t.superAdmins || []).includes(user.uid)})`);
+        } else {
+          // Add to superAdmins
+          await db.collection("tenants").doc(doc.id).update({
+            superAdmins: FieldValue.arrayUnion(user.uid),
+          });
+          fixed.push(t.name);
+        }
+      }
+
+      // Also fix defaultTenantRole in user doc
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      if (userDoc.exists) {
+        await db.collection("users").doc(user.uid).update({
+          defaultTenantRole: "Super Admin",
+          lastUid: user.uid,
+        });
+      }
+
+      // Also fix ALL user docs with same email
+      const sameEmail = await db.collection("users").where("email", "==", user.email).get();
+      for (const d of sameEmail.docs) {
+        if (d.id !== user.uid) {
+          await db.collection("users").doc(d.id).update({
+            defaultTenantRole: "Super Admin",
+            lastUid: user.uid,
+          });
+        }
+      }
+
+      return NextResponse.json({
+        message: `Rol corregido. UIDs con Super Admin: ${user.uid}`,
+        fixed,
+        already,
+        allTenantsChecked: allTenants.docs.map(d => d.data().name),
       });
     }
 
