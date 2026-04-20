@@ -9,6 +9,7 @@ import { exportInvoicePDF } from '@/lib/export-pdf';
 import { FileText, Download, Pencil, Trash2 } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import EmptyState from '@/components/common/EmptyState';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 
 export default function InvoicesScreen() {
@@ -19,7 +20,25 @@ export default function InvoicesScreen() {
     activeTenantId,
   } = useApp();
 
-  const confirm = useConfirmDialog();
+  const confirmDialog = useConfirmDialog();
+  const confirm = confirmDialog.confirm;
+
+  const summaryCards = useMemo(() => {
+    const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
+    const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
+    const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
+    const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
+    return [
+      { lbl: 'Facturado', val: fmtCOP(totalInvoiced), color: 'text-[var(--af-accent)]' },
+      { lbl: 'Pagado', val: fmtCOP(totalPaid), color: 'text-emerald-400' },
+      { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-blue-400' },
+      { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-red-400' },
+    ];
+  }, [invoices]);
+
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(i => invoiceFilterStatus === 'all' || i.data.status === invoiceFilterStatus);
+  }, [invoices, invoiceFilterStatus]);
 
   return (
 <div className="animate-fadeIn space-y-4">
@@ -34,30 +53,19 @@ export default function InvoicesScreen() {
           </div>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            {(() => {
-              const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
-              const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
-              const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
-              const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
-              return [
-                { lbl: 'Facturado', val: fmtCOP(totalInvoiced), color: 'text-[var(--af-accent)]' },
-                { lbl: 'Pagado', val: fmtCOP(totalPaid), color: 'text-emerald-400' },
-                { lbl: 'Pendiente', val: fmtCOP(totalPending), color: 'text-blue-400' },
-                { lbl: 'Vencido', val: fmtCOP(totalOverdue), color: 'text-red-400' },
-              ].map((c, i) => (
-                <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
-                  <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
-                  <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
-                </div>
-              ));
-            })()}
+            {summaryCards.map((c, i) => (
+              <div key={i} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                <div className={`text-lg font-bold ${c.color}`}>{c.val}</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">{c.lbl}</div>
+              </div>
+            ))}
           </div>
           {/* Invoice List */}
-          {(() => {
-            const filtered = invoices.filter(i => invoiceFilterStatus === 'all' || i.data.status === invoiceFilterStatus);
-            return filtered.length === 0 ? <div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">🧾</div><div className="text-sm">Sin facturas</div></div> : (
+          {filteredInvoices.length === 0 ? (
+            <EmptyState emoji="🧾" title="Sin facturas" description="Crea tu primera factura para empezar" />
+          ) : (
               <div className="space-y-2">
-                {filtered.map(inv => {
+                {filteredInvoices.map(inv => {
                   const statusColors: Record<string, string> = { Borrador: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', Enviada: 'bg-blue-500/10 text-blue-400', Pagada: 'bg-emerald-500/10 text-emerald-400', Vencida: 'bg-red-500/10 text-red-400', Cancelada: 'bg-red-500/5 text-red-300 line-through' };
                   const proj = projects.find(p => p.id === inv.data.projectId);
                   return (<div key={inv.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--input)] transition-all">
@@ -108,8 +116,7 @@ export default function InvoicesScreen() {
                   </div>);
                 })}
               </div>
-            );
-          })()}
+          )}
         </div>)}
 
         {invoiceTab === 'create' && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
@@ -162,7 +169,7 @@ export default function InvoicesScreen() {
           <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas..." value={forms.invNotes || ''} onChange={e => setForms(p => ({ ...p, invNotes: e.target.value }))} />
           <button className="w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)]" onClick={saveInvoice}>Crear Factura</button>
         </div>)}
-      <ConfirmDialog {...confirm} />
+      <ConfirmDialog {...confirmDialog} />
       </div>
   );
 }
