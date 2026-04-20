@@ -61,16 +61,29 @@ export default function TopBar() {
             <span className="text-[10px] font-bold text-red-400 hidden lg:inline">SA</span>
           </button>
         )}
-        {/* Tenant switcher */}
-        <div className="relative hidden sm:block">
+        {/* Tenant switcher — compact on mobile, full on desktop */}
+        <div className="relative">
+          {/* Mobile: tap opens tenant selector directly */}
           <button
-            onClick={() => setShowTenantMenu(!showTenantMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            onClick={() => {
+              if (window.innerWidth < 640) {
+                setShowTenantSelector(true);
+              } else {
+                setShowTenantMenu(!showTenantMenu);
+              }
+            }}
+            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Cambiar espacio de trabajo"
           >
             <Building2 size={14} className="stroke-[var(--af-accent)]" />
-            <span className="text-xs font-medium max-w-[120px] truncate">{activeTenantName || 'Espacio'}</span>
-            <ChevronDown size={12} className={`stroke-[var(--muted-foreground)] transition-transform ${showTenantMenu ? 'rotate-180' : ''}`} />
+            <span className="text-xs font-medium max-w-[80px] sm:max-w-[120px] truncate hidden xs:inline">{activeTenantName || 'Espacio'}</span>
+            {activeTenantRole === 'Super Admin' && (
+              <span className="text-[8px] font-bold bg-gradient-to-r from-[var(--af-accent)] to-amber-500 text-background px-1 py-0.5 rounded hidden sm:inline-flex items-center gap-0.5 flex-shrink-0">
+                <Crown size={7} />
+                SA
+              </span>
+            )}
+            <ChevronDown size={12} className={`stroke-[var(--muted-foreground)] transition-transform hidden sm:block ${showTenantMenu ? 'rotate-180' : ''}`} />
           </button>
           {showTenantMenu && (
             <>
