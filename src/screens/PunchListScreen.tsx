@@ -6,23 +6,10 @@ import { PUNCH_STATUS_COLORS, PUNCH_STATUSES, PUNCH_PRIORITIES, PUNCH_LOCATIONS 
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
 import { Camera } from 'lucide-react';
-
-const PRIO_COLORS: Record<string, string> = {
-  'Alta': 'bg-red-500/10 text-red-400 border-red-500/30',
-  'Media': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  'Baja': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-};
-
-const LOC_COLORS: Record<string, string> = {
-  'Fachada': 'bg-orange-500/10 text-orange-400 border-orange-500/30',
-  'Interior': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
-  'Estructura': 'bg-gray-500/10 text-gray-400 border-gray-500/30',
-  'Instalaciones': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-  'Acabados': 'bg-pink-500/10 text-pink-400 border-pink-500/30',
-  'Terraza': 'bg-teal-500/10 text-teal-400 border-teal-500/30',
-  'Zonas comunes': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
-  'Otro': 'bg-[var(--af-bg4)] text-[var(--muted-foreground)] border-[var(--border)]',
-};
+import { PRIO_COLORS, LOC_COLORS } from '@/lib/constants/colors';
+import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import FilterBar from '@/components/common/FilterBar';
+import EmptyState from '@/components/common/EmptyState';
 
 export default function PunchListScreen() {
   const {
@@ -31,6 +18,8 @@ export default function PunchListScreen() {
     punchFilterLocation, setPunchFilterLocation,
     setEditingId, setForms, openModal, showToast, authUser, activeTenantId,
   } = useApp();
+
+  const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
 
   const filtered = useMemo(() => {
     return punchItems.filter((p: any) => {
@@ -50,18 +39,20 @@ export default function PunchListScreen() {
     return { total, pending, inProgress, completed, pct };
   }, [punchItems]);
 
-  const getProjectName = (pid: string) => {
-    const p = projects.find((pr: any) => pr.id === pid);
-    return p?.data.name || '';
-  };
-
-  const getUserName = (uid: string) => {
-    const u = teamUsers.find((t: any) => t.id === uid);
-    return u?.data.name || '';
-  };
-
   const handleStatusChange = async (punchId: string, newStatus: string) => {
     await fbActions.updatePunchItemStatus(punchId, newStatus, showToast, authUser, activeTenantId);
+  };
+
+  const handleCreate = () => {
+    setEditingId(null);
+    setForms(p => ({ ...p, punchTitle: '', punchDescription: '', punchLocation: 'Otro', punchStatus: 'Pendiente', punchPriority: 'Media', punchAssignedTo: '', punchDueDate: '', punchProject: '' }));
+    openModal('punchItem');
+  };
+
+  const handleEdit = (p: any) => {
+    setEditingId(p.id);
+    setForms(f => ({ ...f, punchTitle: p.data.title, punchDescription: p.data.description || '', punchLocation: p.data.location || 'Otro', punchStatus: p.data.status || 'Pendiente', punchPriority: p.data.priority || 'Media', punchAssignedTo: p.data.assignedTo || '', punchDueDate: p.data.dueDate || '', punchProject: p.data.projectId || '' }));
+    openModal('punchItem');
   };
 
   return (
@@ -71,7 +62,7 @@ export default function PunchListScreen() {
         <div className="text-sm text-[var(--muted-foreground)]">{punchItems.length} items</div>
         <button
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-          onClick={() => { setEditingId(null); setForms(p => ({ ...p, punchTitle: '', punchDescription: '', punchLocation: 'Otro', punchStatus: 'Pendiente', punchPriority: 'Media', punchAssignedTo: '', punchDueDate: '', punchProject: '' })); openModal('punchItem'); }}
+          onClick={handleCreate}
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nuevo item
@@ -107,56 +98,25 @@ export default function PunchListScreen() {
         <div className="text-[11px] text-[var(--muted-foreground)] mt-1 text-right">{stats.pct}% completado</div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={punchFilterProject}
-          onChange={(e) => setPunchFilterProject(e.target.value)}
-        >
-          <option value="">Todos los proyectos</option>
-          {projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => (
-            <option key={p.id} value={p.id}>{p.data.name}</option>
-          ))}
-        </select>
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={punchFilterStatus}
-          onChange={(e) => setPunchFilterStatus(e.target.value)}
-        >
-          <option value="">Todos los estados</option>
-          {PUNCH_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={punchFilterLocation}
-          onChange={(e) => setPunchFilterLocation(e.target.value)}
-        >
-          <option value="">Todas las ubicaciones</option>
-          {PUNCH_LOCATIONS.map((l) => (
-            <option key={l} value={l}>{l}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Status tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {['', ...PUNCH_STATUSES].map((status, i) => (
-          <button
-            key={status || 'all'}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
-              punchFilterStatus === status
-                ? 'bg-[var(--af-accent)] text-background'
-                : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-            onClick={() => setPunchFilterStatus(status)}
-          >
-            {i === 0 ? 'Todos' : status}
-          </button>
-        ))}
-      </div>
+      {/* Filters + Status Tabs (unified) */}
+      <FilterBar
+        statuses={PUNCH_STATUSES}
+        activeStatus={punchFilterStatus}
+        onStatusChange={setPunchFilterStatus}
+        projectFilter={{
+          value: punchFilterProject,
+          onChange: setPunchFilterProject,
+          projects: projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => ({ id: p.id, name: p.data.name })),
+        }}
+        filters={[{
+          key: 'location',
+          label: 'Todas las ubicaciones',
+          value: punchFilterLocation,
+          options: PUNCH_LOCATIONS.map(l => ({ value: l, label: l })),
+          onChange: setPunchFilterLocation,
+        }]}
+        className="mb-4"
+      />
 
       {/* Grid */}
       {loading && (
@@ -165,11 +125,13 @@ export default function PunchListScreen() {
         </div>
       )}
       {!loading && filtered.length === 0 ? (
-        <div className="text-center py-16 text-[var(--af-text3)]">
-          <div className="text-4xl mb-3">✅</div>
-          <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin items</div>
-          <div className="text-[13px]">Agrega tu primer item a la punch list</div>
-        </div>
+        <EmptyState
+          emoji="✅"
+          title="Sin items"
+          description="Agrega tu primer item a la punch list"
+          actionLabel="Nuevo item"
+          onAction={handleCreate}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((p: any) => {
@@ -236,7 +198,7 @@ export default function PunchListScreen() {
                       ↩ Reabrir
                     </button>
                   )}
-                  <button className="px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(p.id); setForms(f => ({ ...f, punchTitle: p.data.title, punchDescription: p.data.description || '', punchLocation: p.data.location || 'Otro', punchStatus: p.data.status || 'Pendiente', punchPriority: p.data.priority || 'Media', punchAssignedTo: p.data.assignedTo || '', punchDueDate: p.data.dueDate || '', punchProject: p.data.projectId || '' })); openModal('punchItem'); }}>✏️</button>
+                  <button className="px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(p)}>✏️</button>
                   <button className="px-1.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deletePunchItem(p.id, showToast, activeTenantId)}>🗑</button>
                 </div>
               </div>

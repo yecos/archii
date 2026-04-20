@@ -5,12 +5,10 @@ import { fmtDate } from '@/lib/helpers';
 import { RFI_STATUS_COLORS, RFI_STATUSES } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
-
-const PRIO_COLORS: Record<string, string> = {
-  'Alta': 'bg-red-500/10 text-red-400 border-red-500/30',
-  'Media': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  'Baja': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-};
+import { PRIO_COLORS } from '@/lib/constants/colors';
+import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import FilterBar from '@/components/common/FilterBar';
+import EmptyState from '@/components/common/EmptyState';
 
 export default function RFIsScreen() {
   const {
@@ -18,6 +16,8 @@ export default function RFIsScreen() {
     rfiFilterProject, setRfiFilterProject, rfiFilterStatus, setRfiFilterStatus,
     setEditingId, setForms, openModal, showToast, authUser, activeTenantId,
   } = useApp();
+
+  const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
 
   const filtered = useMemo(() => {
     return rfis.filter((r: any) => {
@@ -35,18 +35,20 @@ export default function RFIsScreen() {
     closed: rfis.filter((r: any) => r.data.status === 'Cerrado').length,
   }), [rfis]);
 
-  const getProjectName = (pid: string) => {
-    const p = projects.find((pr: any) => pr.id === pid);
-    return p?.data.name || 'Sin proyecto';
-  };
-
-  const getUserName = (uid: string) => {
-    const u = teamUsers.find((t: any) => t.id === uid);
-    return u?.data.name || uid;
-  };
-
   const handleStatusChange = async (rfiId: string, newStatus: string) => {
     await fbActions.updateRFIStatus(rfiId, newStatus, '', showToast, authUser, activeTenantId);
+  };
+
+  const handleCreate = () => {
+    setEditingId(null);
+    setForms(p => ({ ...p, rfiSubject: '', rfiQuestion: '', rfiResponse: '', rfiPriority: 'Media', rfiAssignedTo: '', rfiDueDate: '', rfiStatus: 'Abierto', rfiProject: '' }));
+    openModal('rfi');
+  };
+
+  const handleEdit = (r: any) => {
+    setEditingId(r.id);
+    setForms(p => ({ ...p, rfiSubject: r.data.subject, rfiQuestion: r.data.question, rfiResponse: r.data.response || '', rfiPriority: r.data.priority || 'Media', rfiAssignedTo: r.data.assignedTo || '', rfiDueDate: r.data.dueDate || '', rfiStatus: r.data.status || 'Abierto', rfiProject: r.data.projectId || '' }));
+    openModal('rfi');
   };
 
   return (
@@ -56,7 +58,7 @@ export default function RFIsScreen() {
         <div className="text-sm text-[var(--muted-foreground)]">{rfis.length} RFIs</div>
         <button
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-          onClick={() => { setEditingId(null); setForms(p => ({ ...p, rfiSubject: '', rfiQuestion: '', rfiResponse: '', rfiPriority: 'Media', rfiAssignedTo: '', rfiDueDate: '', rfiStatus: 'Abierto', rfiProject: '' })); openModal('rfi'); }}
+          onClick={handleCreate}
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nuevo RFI
@@ -79,46 +81,18 @@ export default function RFIsScreen() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={rfiFilterProject}
-          onChange={(e) => setRfiFilterProject(e.target.value)}
-        >
-          <option value="">Todos los proyectos</option>
-          {projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => (
-            <option key={p.id} value={p.id}>{p.data.name}</option>
-          ))}
-        </select>
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={rfiFilterStatus}
-          onChange={(e) => setRfiFilterStatus(e.target.value)}
-        >
-          <option value="">Todos los estados</option>
-          {RFI_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Status tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {['', ...RFI_STATUSES].map((status, i) => (
-          <button
-            key={status || 'all'}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
-              rfiFilterStatus === status
-                ? 'bg-[var(--af-accent)] text-background'
-                : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-            onClick={() => setRfiFilterStatus(status)}
-          >
-            {i === 0 ? 'Todos' : status}
-          </button>
-        ))}
-      </div>
+      {/* Filters + Status Tabs (unified) */}
+      <FilterBar
+        statuses={RFI_STATUSES}
+        activeStatus={rfiFilterStatus}
+        onStatusChange={setRfiFilterStatus}
+        projectFilter={{
+          value: rfiFilterProject,
+          onChange: setRfiFilterProject,
+          projects: projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => ({ id: p.id, name: p.data.name })),
+        }}
+        className="mb-4"
+      />
 
       {/* List */}
       {loading && (
@@ -127,11 +101,13 @@ export default function RFIsScreen() {
         </div>
       )}
       {!loading && filtered.length === 0 ? (
-        <div className="text-center py-16 text-[var(--af-text3)]">
-          <div className="text-4xl mb-3">❓</div>
-          <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin RFIs</div>
-          <div className="text-[13px]">Crea tu primer RFI para solicitar información</div>
-        </div>
+        <EmptyState
+          emoji="❓"
+          title="Sin RFIs"
+          description="Crea tu primer RFI para solicitar información"
+          actionLabel="Nuevo RFI"
+          onAction={handleCreate}
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map((r: any) => {
@@ -162,7 +138,7 @@ export default function RFIsScreen() {
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
-                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(r.id); setForms(p => ({ ...p, rfiSubject: r.data.subject, rfiQuestion: r.data.question, rfiResponse: r.data.response || '', rfiPriority: r.data.priority || 'Media', rfiAssignedTo: r.data.assignedTo || '', rfiDueDate: r.data.dueDate || '', rfiStatus: r.data.status || 'Abierto', rfiProject: r.data.projectId || '' })); openModal('rfi'); }}>✏️</button>
+                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(r)}>✏️</button>
                     <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deleteRFI(r.id, showToast, activeTenantId)}>🗑</button>
                   </div>
                 </div>
@@ -172,7 +148,7 @@ export default function RFIsScreen() {
                 <div className="text-[12px] text-[var(--muted-foreground)] mb-2 line-clamp-2">{r.data.question}</div>
 
                 {/* Response inline */}
-                {r.data.status === 'Respondido' && r.data.response && (
+                {r.data.response && (
                   <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 mb-2">
                     <div className="text-[10px] font-semibold text-emerald-400 mb-1">RESPUESTA</div>
                     <div className="text-[12px] text-[var(--foreground)]">{r.data.response}</div>

@@ -5,6 +5,9 @@ import { fmtDate } from '@/lib/helpers';
 import { SUBMITTAL_STATUS_COLORS, SUBMITTAL_STATUSES } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
+import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import FilterBar from '@/components/common/FilterBar';
+import EmptyState from '@/components/common/EmptyState';
 
 export default function SubmittalsScreen() {
   const {
@@ -12,6 +15,8 @@ export default function SubmittalsScreen() {
     subFilterProject, setSubFilterProject, subFilterStatus, setSubFilterStatus,
     setEditingId, setForms, openModal, showToast, authUser, activeTenantId,
   } = useApp();
+
+  const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [showReviewInput, setShowReviewInput] = useState<string | null>(null);
@@ -33,20 +38,22 @@ export default function SubmittalsScreen() {
     returned: submittals.filter((s: any) => s.data.status === 'Devuelto').length,
   }), [submittals]);
 
-  const getProjectName = (pid: string) => {
-    const p = projects.find((pr: any) => pr.id === pid);
-    return p?.data.name || 'Sin proyecto';
-  };
-
-  const getUserName = (uid: string) => {
-    const u = teamUsers.find((t: any) => t.id === uid);
-    return u?.data.name || uid;
-  };
-
   const handleStatusChange = async (subId: string, newStatus: string, notes?: string) => {
     await fbActions.updateSubmittalStatus(subId, newStatus, notes || '', showToast, authUser, activeTenantId);
     setShowReviewInput(null);
     setReviewNotes(prev => { const n = { ...prev }; delete n[subId]; return n; });
+  };
+
+  const handleCreate = () => {
+    setEditingId(null);
+    setForms(p => ({ ...p, subTitle: '', subDescription: '', subSpecification: '', subStatus: 'Borrador', subReviewer: '', subDueDate: '', subReviewNotes: '', subProject: '' }));
+    openModal('submittal');
+  };
+
+  const handleEdit = (s: any) => {
+    setEditingId(s.id);
+    setForms(f => ({ ...f, subTitle: s.data.title, subDescription: s.data.description || '', subSpecification: s.data.specification || '', subStatus: s.data.status || 'Borrador', subReviewer: s.data.reviewer || '', subDueDate: s.data.dueDate || '', subReviewNotes: s.data.reviewNotes || '', subProject: s.data.projectId || '' }));
+    openModal('submittal');
   };
 
   return (
@@ -56,7 +63,7 @@ export default function SubmittalsScreen() {
         <div className="text-sm text-[var(--muted-foreground)]">{submittals.length} submittals</div>
         <button
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-          onClick={() => { setEditingId(null); setForms(p => ({ ...p, subTitle: '', subDescription: '', subSpecification: '', subStatus: 'Borrador', subReviewer: '', subDueDate: '', subReviewNotes: '', subProject: '' })); openModal('submittal'); }}
+          onClick={handleCreate}
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nuevo submittal
@@ -80,46 +87,18 @@ export default function SubmittalsScreen() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={subFilterProject}
-          onChange={(e) => setSubFilterProject(e.target.value)}
-        >
-          <option value="">Todos los proyectos</option>
-          {projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => (
-            <option key={p.id} value={p.id}>{p.data.name}</option>
-          ))}
-        </select>
-        <select
-          className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-xs text-[var(--foreground)] outline-none"
-          value={subFilterStatus}
-          onChange={(e) => setSubFilterStatus(e.target.value)}
-        >
-          <option value="">Todos los estados</option>
-          {SUBMITTAL_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Status tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {['', ...SUBMITTAL_STATUSES].map((status, i) => (
-          <button
-            key={status || 'all'}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
-              subFilterStatus === status
-                ? 'bg-[var(--af-accent)] text-background'
-                : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-            onClick={() => setSubFilterStatus(status)}
-          >
-            {i === 0 ? 'Todos' : status}
-          </button>
-        ))}
-      </div>
+      {/* Filters + Status Tabs (unified) */}
+      <FilterBar
+        statuses={SUBMITTAL_STATUSES}
+        activeStatus={subFilterStatus}
+        onStatusChange={setSubFilterStatus}
+        projectFilter={{
+          value: subFilterProject,
+          onChange: setSubFilterProject,
+          projects: projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => ({ id: p.id, name: p.data.name })),
+        }}
+        className="mb-4"
+      />
 
       {/* List */}
       {loading && (
@@ -128,11 +107,13 @@ export default function SubmittalsScreen() {
         </div>
       )}
       {!loading && filtered.length === 0 ? (
-        <div className="text-center py-16 text-[var(--af-text3)]">
-          <div className="text-4xl mb-3">📋</div>
-          <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin submittals</div>
-          <div className="text-[13px]">Crea tu primer submittal para enviar a revisión</div>
-        </div>
+        <EmptyState
+          emoji="📋"
+          title="Sin submittals"
+          description="Crea tu primer submittal para enviar a revisión"
+          actionLabel="Nuevo submittal"
+          onAction={handleCreate}
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map((s: any) => {
@@ -150,7 +131,7 @@ export default function SubmittalsScreen() {
                     </span>
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0">
-                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => { setEditingId(s.id); setForms(f => ({ ...f, subTitle: s.data.title, subDescription: s.data.description || '', subSpecification: s.data.specification || '', subStatus: s.data.status || 'Borrador', subReviewer: s.data.reviewer || '', subDueDate: s.data.dueDate || '', subReviewNotes: s.data.reviewNotes || '', subProject: s.data.projectId || '' })); openModal('submittal'); }}>✏️</button>
+                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(s)}>✏️</button>
                     <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deleteSubmittal(s.id, showToast, activeTenantId)}>🗑</button>
                   </div>
                 </div>
@@ -213,7 +194,7 @@ export default function SubmittalsScreen() {
                 {/* Meta */}
                 <div className="flex flex-wrap gap-3 text-[11px] text-[var(--af-text3)]">
                   <span>📁 {getProjectName(s.data.projectId)}</span>
-                  {s.data.submittedBy && <span>👤 {s.data.submittedBy}</span>}
+                  {s.data.submittedBy && <span>👤 {getUserName(s.data.submittedBy)}</span>}
                   {s.data.reviewer && <span>🔍 {getUserName(s.data.reviewer)}</span>}
                   {s.data.dueDate && <span>📅 {fmtDate(s.data.dueDate)}</span>}
                 </div>
