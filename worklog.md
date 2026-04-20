@@ -365,3 +365,25 @@ Stage Summary:
 - User must set GEMINI_API_KEY in Vercel environment variables
 - Both AI endpoints (/api/ai-agent and /api/ai-assistant) now work from Vercel
 - No changes to tool definitions, system prompts, or tool execution logic
+---
+Task ID: 6
+Agent: Super Z (Main)
+Task: Fix - Mostrar botón 'Unirme con código' para usuarios nuevos sin tenant
+
+Protocolo leído: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Investigado el flujo de TenantSelectionScreen para nuevos usuarios
+- Identificado el bug: el botón "Unirme con un código" solo se mostraba cuando tenants.length > 0
+- Cuando un usuario nuevo se logeaba (0 tenants), solo veía "Crear espacio" pero no podía unirse a uno existente
+- Removida la condición {tenants.length > 0 && (...)} del botón de unirse
+- Ahora el botón siempre se muestra, permitiendo a nuevos usuarios crear o unirse
+- Actualizado el subtítulo para usuarios sin tenants: "Crea tu espacio o únete con un código de invitación"
+- Build verificado: 0 errores TypeScript en archivos del proyecto
+- Commit: 7739a68, push a main completado
+
+Stage Summary:
+- Archivo modificado: src/components/layout/TenantSelectionScreen.tsx (+8, -10)
+- Commit: 7739a68
+- Deploy automático a Vercel en curso
+- Ahora los usuarios nuevos ven AMBAS opciones: Crear espacio y Unirme con código
