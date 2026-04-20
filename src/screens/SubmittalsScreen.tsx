@@ -6,6 +6,10 @@ import { SUBMITTAL_STATUS_COLORS, SUBMITTAL_STATUSES } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import { Pencil, Trash2 } from 'lucide-react';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import FilterBar from '@/components/common/FilterBar';
 import EmptyState from '@/components/common/EmptyState';
 
@@ -17,6 +21,7 @@ export default function SubmittalsScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
+  const confirm = useConfirmDialog();
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [showReviewInput, setShowReviewInput] = useState<string | null>(null);
@@ -130,9 +135,25 @@ export default function SubmittalsScreen() {
                       {s.data.status}
                     </span>
                   </div>
-                  <div className="flex gap-1.5 flex-shrink-0">
-                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(s)}>✏️</button>
-                    <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deleteSubmittal(s.id, showToast, activeTenantId)}>🗑</button>
+                  <div className="hidden md:flex gap-1.5 flex-shrink-0">
+                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(s)}><Pencil size={12} /></button>
+                    <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
+                      const ok = await confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
+                      if (!ok) return;
+                      fbActions.deleteSubmittal(s.id, showToast, activeTenantId);
+                    }}><Trash2 size={12} /></button>
+                  </div>
+                  <div className="md:hidden flex-shrink-0">
+                    <OverflowMenu
+                      actions={[
+                        { label: 'Editar submittal', icon: <Pencil size={14} />, onClick: () => handleEdit(s) },
+                        { label: 'Eliminar submittal', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
+                          const ok = await confirm({ title: 'Eliminar submittal', description: '¿Estás seguro de eliminar este submittal?' });
+                          if (!ok) return;
+                          fbActions.deleteSubmittal(s.id, showToast, activeTenantId);
+                        }},
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -203,6 +224,7 @@ export default function SubmittalsScreen() {
           })}
         </div>
       )}
+      <ConfirmDialog {...confirm} />
     </div>
   );
 }

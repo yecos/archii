@@ -5,9 +5,12 @@ import { fmtDate } from '@/lib/helpers';
 import { PUNCH_STATUS_COLORS, PUNCH_STATUSES, PUNCH_PRIORITIES, PUNCH_LOCATIONS } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
-import { Camera } from 'lucide-react';
+import { Camera, Pencil, Trash2 } from 'lucide-react';
 import { PRIO_COLORS, LOC_COLORS } from '@/lib/constants/colors';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import FilterBar from '@/components/common/FilterBar';
 import EmptyState from '@/components/common/EmptyState';
 
@@ -20,6 +23,7 @@ export default function PunchListScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
+  const confirm = useConfirmDialog();
 
   const filtered = useMemo(() => {
     return punchItems.filter((p: any) => {
@@ -198,14 +202,31 @@ export default function PunchListScreen() {
                       ↩ Reabrir
                     </button>
                   )}
-                  <button className="px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(p)}>✏️</button>
-                  <button className="px-1.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deletePunchItem(p.id, showToast, activeTenantId)}>🗑</button>
+                  <button className="hidden md:block px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(p)}><Pencil size={12} /></button>
+                  <button className="hidden md:block px-1.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
+                    const ok = await confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
+                    if (!ok) return;
+                    fbActions.deletePunchItem(p.id, showToast, activeTenantId);
+                  }}><Trash2 size={12} /></button>
+                  <div className="md:hidden">
+                    <OverflowMenu
+                      actions={[
+                        { label: 'Editar item', icon: <Pencil size={14} />, onClick: () => handleEdit(p) },
+                        { label: 'Eliminar item', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
+                          const ok = await confirm({ title: 'Eliminar item', description: '¿Estás seguro de eliminar este item?' });
+                          if (!ok) return;
+                          fbActions.deletePunchItem(p.id, showToast, activeTenantId);
+                        }},
+                      ]}
+                    />
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      <ConfirmDialog {...confirm} />
     </div>
   );
 }

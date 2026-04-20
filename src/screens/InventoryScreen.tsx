@@ -4,6 +4,10 @@ import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
 import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
 import { INV_WAREHOUSES, TRANSFER_STATUSES } from '@/lib/types';
+import { Pencil, Trash2 } from 'lucide-react';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 
 export default function InventoryScreen() {
   const {
@@ -15,6 +19,8 @@ export default function InventoryScreen() {
     openModal, setEditingId, setForms, setInvFilterCat, setInvMovFilterType,
     setInvSearch, setInvTab, setInvTransferFilterStatus, setInvWarehouseFilter, showToast,
   } = useApp();
+
+  const confirm = useConfirmDialog();
 
   return (
 <div className="animate-fadeIn">
@@ -189,9 +195,21 @@ export default function InventoryScreen() {
                               <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{getInvCategoryName(p.data.categoryId)} · {p.data.unit}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Desktop: edit/delete buttons */}
+                          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                             <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvProduct(p.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar producto', description: '¿Estás seguro? El producto será eliminado permanentemente.' })) deleteInvProduct(p.id); }}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          </div>
+                          {/* Mobile: OverflowMenu */}
+                          <div className="md:hidden flex-shrink-0">
+                            <OverflowMenu
+                              actions={[
+                                { label: 'Editar producto', icon: <Pencil size={14} />, onClick: () => openEditInvProduct(p) },
+                                { label: 'Eliminar producto', icon: <Trash2 size={14} />, onClick: async () => { if (await confirm({ title: 'Eliminar producto', description: '¿Estás seguro? El producto será eliminado permanentemente.' })) deleteInvProduct(p.id); }, variant: 'danger', separator: true },
+                              ]}
+                              side="left"
+                              align="end"
+                            />
                           </div>
                         </div>
                         {/* Per-warehouse stock breakdown */}
@@ -240,9 +258,21 @@ export default function InventoryScreen() {
                             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: (c.data.color || '#6b7280') + '20' }}><div className="w-5 h-5 rounded" style={{ backgroundColor: c.data.color }} /></div>
                             <div><div className="text-sm font-semibold">{c.data.name}</div><div className="text-xs text-[var(--muted-foreground)]">{count} producto{count !== 1 ? 's' : ''}</div>{c.data.description && <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{c.data.description}</div>}</div>
                           </div>
-                          <div className="flex gap-1">
+                          {/* Desktop: edit/delete buttons */}
+                          <div className="hidden md:flex gap-1">
                             <button className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvCategory(c)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvCategory(c.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                            <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar categoría', description: '¿Estás seguro? La categoría será eliminada permanentemente.' })) deleteInvCategory(c.id); }}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          </div>
+                          {/* Mobile: OverflowMenu */}
+                          <div className="md:hidden flex-shrink-0">
+                            <OverflowMenu
+                              actions={[
+                                { label: 'Editar categoría', icon: <Pencil size={14} />, onClick: () => openEditInvCategory(c) },
+                                { label: 'Eliminar categoría', icon: <Trash2 size={14} />, onClick: async () => { if (await confirm({ title: 'Eliminar categoría', description: '¿Estás seguro? La categoría será eliminada permanentemente.' })) deleteInvCategory(c.id); }, variant: 'danger', separator: true },
+                              ]}
+                              side="left"
+                              align="end"
+                            />
                           </div>
                         </div>
                       </div>
@@ -341,9 +371,21 @@ export default function InventoryScreen() {
                             {m.data.reason && <div className="text-[11px] text-[var(--muted-foreground)]">{m.data.reason}</div>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        {/* Desktop: quantity + delete */}
+                        <div className="hidden md:flex items-center gap-2">
                           <div className="text-right"><div className={`text-sm font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '+' : '-'}{m.data.quantity}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data.date || ''}</div></div>
-                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvMovement(m.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar movimiento', description: '¿Estás seguro?' })) deleteInvMovement(m.id); }}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                        </div>
+                        {/* Mobile: quantity + OverflowMenu */}
+                        <div className="md:hidden flex items-center gap-2">
+                          <div className="text-right"><div className={`text-sm font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '+' : '-'}{m.data.quantity}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data.date || ''}</div></div>
+                          <OverflowMenu
+                            actions={[
+                              { label: 'Eliminar movimiento', icon: <Trash2 size={14} />, onClick: async () => { if (await confirm({ title: 'Eliminar movimiento', description: '¿Estás seguro?' })) deleteInvMovement(m.id); }, variant: 'danger' },
+                            ]}
+                            side="left"
+                            align="end"
+                          />
                         </div>
                       </div>
                     </div>
@@ -379,9 +421,21 @@ export default function InventoryScreen() {
                             {t.data.notes && <div className="text-[11px] text-[var(--muted-foreground)] mt-0.5">{t.data.notes}</div>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        {/* Desktop: status badge + delete */}
+                        <div className="hidden md:flex items-center gap-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${t.data.status === 'Completada' ? 'bg-emerald-500/15 text-emerald-400' : t.data.status === 'En tránsito' ? 'bg-blue-500/15 text-blue-400' : t.data.status === 'Cancelada' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>{t.data.status}</span>
-                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={() => deleteInvTransfer(t.id)}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                          <button className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar transferencia', description: '¿Estás seguro?' })) deleteInvTransfer(t.id); }}><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                        </div>
+                        {/* Mobile: status badge + OverflowMenu */}
+                        <div className="md:hidden flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${t.data.status === 'Completada' ? 'bg-emerald-500/15 text-emerald-400' : t.data.status === 'En tránsito' ? 'bg-blue-500/15 text-blue-400' : t.data.status === 'Cancelada' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>{t.data.status}</span>
+                          <OverflowMenu
+                            actions={[
+                              { label: 'Eliminar transferencia', icon: <Trash2 size={14} />, onClick: async () => { if (await confirm({ title: 'Eliminar transferencia', description: '¿Estás seguro?' })) deleteInvTransfer(t.id); }, variant: 'danger' },
+                            ]}
+                            side="left"
+                            align="end"
+                          />
                         </div>
                       </div>
                     </div>
@@ -658,6 +712,7 @@ export default function InventoryScreen() {
                 </div>
               </div>
             </div>)}
+          <ConfirmDialog {...confirm} />
           </div>
   );
 }

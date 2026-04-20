@@ -6,7 +6,10 @@ import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 import { exportInvoicePDF } from '@/lib/export-pdf';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Pencil, Trash2 } from 'lucide-react';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 
 export default function InvoicesScreen() {
   const {
@@ -15,6 +18,8 @@ export default function InvoicesScreen() {
     setForms, setInvoiceFilterStatus, setInvoiceTab, showToast, updateInvoiceItem,
     activeTenantId,
   } = useApp();
+
+  const confirm = useConfirmDialog();
 
   return (
 <div className="animate-fadeIn space-y-4">
@@ -67,8 +72,8 @@ export default function InvoicesScreen() {
                       <div className="text-lg font-bold text-[var(--af-accent)]">{fmtCOP(inv.data.total)}</div>
                       <div className="text-[10px] text-[var(--muted-foreground)]">{inv.data.issueDate}{inv.data.dueDate ? ' → ' + inv.data.dueDate : ''}</div>
                     </div>
-                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                      {/* NEW: PDF Download */}
+                    <div className="hidden md:flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                      {/* PDF Download */}
                       <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-[var(--af-accent)]/10 text-[var(--af-accent)] hover:bg-[var(--af-accent)]/20" onClick={() => {
                         try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { showToast('Error al generar PDF', 'error'); }
                       }} title="Descargar PDF">
@@ -77,7 +82,28 @@ export default function InvoicesScreen() {
                       {inv.data.status === 'Borrador' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast, activeTenantId)}>Enviar</button>}
                       {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId)}>Pagar</button>}
                       {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast, activeTenantId)}>Vencer</button>}
-                      <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.deleteInvoice(inv.id, showToast, activeTenantId)}>🗑</button>
+                      <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={async () => {
+                        const ok = await confirm({ title: 'Eliminar factura', description: '¿Estás seguro de eliminar esta factura?' });
+                        if (!ok) return;
+                        fbActions.deleteInvoice(inv.id, showToast, activeTenantId);
+                      }}><Trash2 size={14} /></button>
+                    </div>
+                    <div className="md:hidden shrink-0" onClick={e => e.stopPropagation()}>
+                      <OverflowMenu
+                        actions={[
+                          { label: 'Descargar PDF', icon: <FileText size={14} />, onClick: () => {
+                            try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { showToast('Error al generar PDF', 'error'); }
+                          }},
+                          ...(inv.data.status === 'Borrador' ? [{ label: 'Enviar factura', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast, activeTenantId) }] : []),
+                          ...(inv.data.status === 'Enviada' ? [{ label: 'Marcar como pagada', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId) }] : []),
+                          ...(inv.data.status === 'Enviada' ? [{ label: 'Marcar como vencida', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast, activeTenantId) }] : []),
+                          { label: 'Eliminar factura', icon: <Trash2 size={14} />, variant: 'danger' as const, separator: true, onClick: async () => {
+                            const ok = await confirm({ title: 'Eliminar factura', description: '¿Estás seguro de eliminar esta factura?' });
+                            if (!ok) return;
+                            fbActions.deleteInvoice(inv.id, showToast, activeTenantId);
+                          }},
+                        ]}
+                      />
                     </div>
                   </div>);
                 })}
@@ -136,6 +162,7 @@ export default function InvoicesScreen() {
           <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas..." value={forms.invNotes || ''} onChange={e => setForms(p => ({ ...p, invNotes: e.target.value }))} />
           <button className="w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)]" onClick={saveInvoice}>Crear Factura</button>
         </div>)}
+      <ConfirmDialog {...confirm} />
       </div>
   );
 }

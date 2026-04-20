@@ -2,8 +2,11 @@
 import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
-import { DollarSign, Download, Plus, TrendingDown, Receipt } from 'lucide-react';
+import { DollarSign, Download, Plus, TrendingDown, Receipt, Trash2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 
 const CAT_COLORS: Record<string, string> = {
   'Materiales': '#c8a96e',
@@ -30,6 +33,8 @@ export default function BudgetScreen() {
   const {
     deleteExpense, expenses, openModal, projects, setForms, showToast,
   } = useApp();
+
+  const confirm = useConfirmDialog();
 
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
 
@@ -200,7 +205,23 @@ export default function BudgetScreen() {
                       <div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div>
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
-                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => deleteExpense(e.id)}>✕</button>
+                    {/* Desktop: delete button with hover */}
+                    <button className="hidden md:flex text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={async () => { if (await confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); }}>✕</button>
+                    {/* Mobile: OverflowMenu */}
+                    <div className="md:hidden flex-shrink-0">
+                      <OverflowMenu
+                        actions={[
+                          {
+                            label: 'Eliminar gasto',
+                            icon: <Trash2 size={14} />,
+                            onClick: async () => { if (await confirm({ title: 'Eliminar gasto', description: '¿Estás seguro? El gasto será eliminado permanentemente.' })) deleteExpense(e.id); },
+                            variant: 'danger',
+                          },
+                        ]}
+                        side="left"
+                        align="end"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -219,6 +240,7 @@ export default function BudgetScreen() {
           <div className="text-xs mt-1">Registra tu primer gasto para empezar a llevar control</div>
         </div>
       )}
+      <ConfirmDialog {...confirm} />
     </div>
   );
 }

@@ -7,6 +7,10 @@ import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
 import { PRIO_COLORS } from '@/lib/constants/colors';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
+import { Pencil, Trash2 } from 'lucide-react';
+import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import FilterBar from '@/components/common/FilterBar';
 import EmptyState from '@/components/common/EmptyState';
 
@@ -18,6 +22,7 @@ export default function RFIsScreen() {
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
+  const confirm = useConfirmDialog();
 
   const filtered = useMemo(() => {
     return rfis.filter((r: any) => {
@@ -128,7 +133,7 @@ export default function RFIsScreen() {
                       {r.data.status}
                     </span>
                   </div>
-                  <div className="flex gap-1.5 flex-shrink-0">
+                  <div className="hidden md:flex gap-1.5 flex-shrink-0">
                     <select
                       className="bg-[var(--af-bg3)] border border-[var(--input)] rounded px-1 py-0.5 text-[10px] text-[var(--foreground)] outline-none cursor-pointer"
                       value={r.data.status}
@@ -138,8 +143,24 @@ export default function RFIsScreen() {
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
-                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(r)}>✏️</button>
-                    <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={() => fbActions.deleteRFI(r.id, showToast, activeTenantId)}>🗑</button>
+                    <button className="px-1.5 py-0.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => handleEdit(r)}><Pencil size={12} /></button>
+                    <button className="px-1.5 py-0.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
+                      const ok = await confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
+                      if (!ok) return;
+                      fbActions.deleteRFI(r.id, showToast, activeTenantId);
+                    }}><Trash2 size={12} /></button>
+                  </div>
+                  <div className="md:hidden flex-shrink-0">
+                    <OverflowMenu
+                      actions={[
+                        { label: 'Editar RFI', icon: <Pencil size={14} />, onClick: () => handleEdit(r) },
+                        { label: 'Eliminar RFI', icon: <Trash2 size={14} />, variant: 'danger', separator: true, onClick: async () => {
+                          const ok = await confirm({ title: 'Eliminar RFI', description: '¿Estás seguro de eliminar este RFI?' });
+                          if (!ok) return;
+                          fbActions.deleteRFI(r.id, showToast, activeTenantId);
+                        }},
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -166,6 +187,7 @@ export default function RFIsScreen() {
           })}
         </div>
       )}
+      <ConfirmDialog {...confirm} />
     </div>
   );
 }

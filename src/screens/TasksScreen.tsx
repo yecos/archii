@@ -3,7 +3,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2 } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
@@ -473,7 +473,7 @@ export default function TasksScreen() {
 
                           {/* Task title */}
                           <div className="flex items-start gap-2">
-                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                            <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity" />
                             <div className={`text-[13px] font-medium flex-1 leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
                               {t.data.title}
                             </div>
@@ -501,6 +501,17 @@ export default function TasksScreen() {
                               <X size={12} />
                             </button>
                           </div>
+                          {/* Mobile: Status change dropdown */}
+                          <select
+                            className="md:hidden w-full mt-2 text-[10px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-[var(--foreground)] outline-none cursor-pointer appearance-none"
+                            value={t.data.status}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => { if (e.target.value !== t.data.status) changeTaskStatus(t.id, e.target.value); }}
+                          >
+                            {KANBAN_COLS.map(col => (
+                              <option key={col.status} value={col.status}>{col.status}</option>
+                            ))}
+                          </select>
                         </div>
                       );
                     })}
