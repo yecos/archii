@@ -840,7 +840,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       console.error('[ArchiFlow Team] ERROR loading tenant document:', err.code, err.message);
     });
     return () => unsub();
-  }, [ready, authUser, activeTenantId]);
+  }, [ready, authUser, activeTenantId, activeTenantRole]);
 
   // Derive teamUsers from allUsersCache + activeTenantMembers
   // This REACTS immediately when members change — no race condition
