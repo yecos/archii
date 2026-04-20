@@ -14,11 +14,43 @@ export default function TopBar() {
     initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
     projects, userName, companies, showNotifPanel, screenTitles,
     activeTenantName, activeTenantRole, activeTenantId, setShowTenantSelector, doLogout, isEmailAdmin,
+    showToast,
   } = useApp();
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
   const [showManageMembers, setShowManageMembers] = React.useState(false);
   const [showThemePanel, setShowThemePanel] = React.useState(false);
+  const [fixingRole, setFixingRole] = React.useState(false);
+
+  const handleFixRole = async () => {
+    setFixingRole(true);
+    setShowTenantMenu(false);
+    try {
+      const token = authUser ? await authUser.getIdToken() : '';
+      const res = await fetch('/api/tenants', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fix-my-role' }),
+      });
+      const data = await res.json();
+      console.log('[TopBar] fix-my-role result:', data);
+      if (data.fixed?.length > 0 || data.addedToMembers?.length > 0) {
+        showToast(`Rol corregido en ${data.fixed?.length || 0} espacios`, 'success');
+        // Reload page to pick up corrected role
+        setTimeout(() => window.location.reload(), 1500);
+      } else if (data.already?.length > 0) {
+        showToast('Ya eres Super Admin en todos los espacios', 'success');
+      } else {
+        showToast('No se encontraron espacios para corregir', 'error');
+        console.warn('[TopBar] fix-my-role full response:', JSON.stringify(data));
+      }
+    } catch (err) {
+      console.error('[TopBar] fix-my-role error:', err);
+      showToast('Error al corregir rol', 'error');
+    } finally {
+      setFixingRole(false);
+    }
+  };
 
   // Local screen title overrides (dynamic titles like projectDetail)
   const localScreenTitles: Record<string, string> = {
@@ -115,6 +147,16 @@ export default function TopBar() {
                     >
                       <Users size={14} className="stroke-[var(--muted-foreground)]" />
                       Gestionar miembros
+                    </button>
+                  )}
+                  {activeTenantRole !== 'Super Admin' && (
+                    <button
+                      onClick={handleFixRole}
+                      disabled={fixingRole}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer hover:bg-amber-500/10 transition-colors text-left bg-transparent border-none text-amber-400 disabled:opacity-50"
+                    >
+                      <Shield size={14} className="stroke-amber-400" />
+                      {fixingRole ? 'Corrigiendo...' : 'Corregir mi rol a Super Admin'}
                     </button>
                   )}
                 </div>

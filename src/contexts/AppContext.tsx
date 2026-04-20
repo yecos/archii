@@ -870,6 +870,33 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
+  // AUTO-FIX: When auth is ready and tenant is loaded, if role is Miembro, call fix-my-role from server
+  // This runs once after auth + tenant are ready, and ensures the role is correct in Firestore
+  useEffect(() => {
+    if (!ready || !authUser || !activeTenantId || activeTenantRole !== 'Miembro') return;
+    // Only run once (debounced)
+    const timer = setTimeout(async () => {
+      try {
+        const token = await authUser.getIdToken();
+        console.log('[ArchiFlow] AUTO-FIX: Calling fix-my-role from AppContext...');
+        const res = await fetch('/api/tenants', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'fix-my-role' }),
+        });
+        const data = await res.json();
+        console.log('[ArchiFlow] AUTO-FIX result:', JSON.stringify(data));
+        if (data.fixed?.length > 0 || data.addedToMembers?.length > 0) {
+          console.log('[ArchiFlow] AUTO-FIX: Role corrected — reloading in 2s');
+          setTimeout(() => window.location.reload(), 2000);
+        }
+      } catch (err) {
+        console.error('[ArchiFlow] AUTO-FIX error:', err);
+      }
+    }, 3000); // Wait 3s to let the tenant onSnapshot listener try first
+    return () => clearTimeout(timer);
+  }, [ready, authUser, activeTenantId, activeTenantRole]);
+
   // Derive teamUsers from allUsersCache + activeTenantMembers
   // This REACTS immediately when members change — no race condition
   useEffect(() => {
