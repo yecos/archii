@@ -76,7 +76,12 @@ export default function TasksScreen() {
   const taskFilterProject = forms.taskFilterProject || '';
 
   const handleNewTask = () => {
-    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0] }));
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer' }));
+    openModal('task');
+  };
+
+  const handleNewTaskInColumn = (status: string) => {
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: taskFilterProject }));
     openModal('task');
   };
 
@@ -119,11 +124,12 @@ export default function TasksScreen() {
     const taskId = e.dataTransfer.getData('text/plain');
     if (taskId && newStatus) {
       changeTaskStatus(taskId, newStatus);
+      showToast(`Tarea movida a ${newStatus}`);
     }
     setDragTaskId(null);
     setDragOverCol(null);
     dragCounterRef.current = {};
-  }, [changeTaskStatus]);
+  }, [changeTaskStatus, showToast]);
 
   // Multi-filter
   const filteredTasks = useMemo(() => {
@@ -412,6 +418,9 @@ export default function TasksScreen() {
             <div className="text-[15px] font-medium text-[var(--muted-foreground)]">
               {searchQuery || filterPriority || filterAssignee ? 'Sin resultados' : 'Sin tareas'}
             </div>
+            <div className="text-xs mt-1">
+              {searchQuery || filterPriority || filterAssignee ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
+            </div>
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
@@ -423,67 +432,97 @@ export default function TasksScreen() {
                   key={col.status}
                   className={`flex-shrink-0 w-[270px] sm:w-[290px] rounded-xl transition-all ${
                     isDragOver
-                      ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20`
+                      ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20 scale-[1.01]`
                       : 'bg-[var(--af-bg3)] border border-[var(--border)]'
-                  } p-3 flex flex-col`}
+                  } flex flex-col overflow-hidden`}
                   onDragEnter={e => handleDragEnter(e, col.status)}
                   onDragLeave={e => handleDragLeave(e, col.status)}
                   onDragOver={handleDragOver}
                   onDrop={e => handleDrop(e, col.status)}
                 >
-                  {/* Column Header */}
-                  <div className="flex items-center gap-2 mb-3 px-1">
-                    <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
-                    <span className="text-[13px] font-semibold flex-1">{col.status}</span>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                      col.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' :
-                      col.status === 'En progreso' ? 'bg-blue-500/10 text-blue-400' :
-                      'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'
-                    }`}>
-                      {colTasks.length}
-                    </span>
-                  </div>
+                  {/* Colored top border */}
+                  <div className={`h-[3px] w-full ${col.color} transition-all ${isDragOver ? 'h-[4px]' : ''}`} />
 
-                  {/* Progress bar for column */}
-                  {colTasks.length > 0 && (
-                    <div className="h-0.5 bg-[var(--af-bg4)] rounded-full mb-3 overflow-hidden">
-                      <div className={`h-full rounded-full ${col.dot}`} style={{ width: '100%' }} />
+                  <div className="p-3 flex flex-col flex-1">
+                    {/* Column Header */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
+                      <span className="text-[13px] font-semibold flex-1">{col.status}</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                        col.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' :
+                        col.status === 'En progreso' ? 'bg-blue-500/10 text-blue-400' :
+                        col.status === 'Revision' ? 'bg-amber-500/10 text-amber-400' :
+                        'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'
+                      }`}>
+                        {colTasks.length}
+                      </span>
+                      <button
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--af-text3)] hover:text-[var(--af-accent)] hover:bg-[var(--af-accent)]/10 cursor-pointer transition-all opacity-60 hover:opacity-100"
+                        onClick={() => handleNewTaskInColumn(col.status)}
+                        title={`Agregar tarea en ${col.status}`}
+                      >
+                        <Plus size={14} />
+                      </button>
                     </div>
-                  )}
 
-                  {/* Task Cards */}
-                  <div className="flex-1 space-y-2 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
-                    {colTasks.length === 0 && !isDragOver && (
-                      <div className="text-center py-8 text-[var(--af-text3)] text-[11px]">
-                        Sin tareas
-                      </div>
-                    )}
-                    {colTasks.length === 0 && isDragOver && (
-                      <div className={`text-center py-8 rounded-lg border-2 border-dashed ${col.border} text-[var(--af-text3)] text-[11px]`}>
-                        Soltar aqui
-                      </div>
-                    )}
-                    {colTasks.map((t: any) => {
-                      const proj = projects.find((p: any) => p.id === t.data.projectId);
-                      const isDragging = dragTaskId === t.id;
-                      const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
-                      return (
-                        <div
-                          key={t.id}
-                          draggable
-                          onDragStart={e => handleDragStart(e, t.id)}
-                          onDragEnd={handleDragEnd}
-                          className={`bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5 group/card ${
-                            isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'border-[var(--border)] hover:border-[var(--input)]'
-                          }`}
-                          onClick={() => openEditTask(t)}
-                        >
-                          {/* Project tag */}
-                          {proj && (
-                            <div className="text-[10px] text-[var(--af-text3)] mb-1.5 truncate">
-                              {proj.data.name}
+                    {/* Task Cards */}
+                    <div className="flex-1 space-y-2 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                      {colTasks.length === 0 && !isDragOver && (
+                        <div className="text-center py-10 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--af-text3)]">
+                          <div className="text-[11px] mb-1.5">Arrastra tareas aquí</div>
+                          <button
+                            className="text-[10px] px-2.5 py-1 rounded-md bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--af-accent)]/30 hover:text-[var(--af-accent)] transition-all"
+                            onClick={() => handleNewTaskInColumn(col.status)}
+                          >
+                            <Plus size={10} className="inline mr-0.5" /> Crear tarea
+                          </button>
+                        </div>
+                      )}
+                      {colTasks.length === 0 && isDragOver && (
+                        <div className={`text-center py-10 rounded-lg border-2 border-dashed ${col.border} text-[var(--af-text3)] text-[11px] animate-pulse`}>
+                          <div className="text-base mb-1">↓</div>
+                          Soltar aquí
+                        </div>
+                      )}
+                      {colTasks.map((t: any) => {
+                        const proj = projects.find((p: any) => p.id === t.data.projectId);
+                        const isDragging = dragTaskId === t.id;
+                        const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
+                        return (
+                          <div
+                            key={t.id}
+                            draggable
+                            onDragStart={e => handleDragStart(e, t.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`relative bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5 group/card ${
+                              isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'border-[var(--border)] hover:border-[var(--input)]'
+                            }`}
+                            onClick={() => openEditTask(t)}
+                          >
+                            {/* Hover actions - top right */}
+                            <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
+                              <button
+                                className="w-6 h-6 rounded flex items-center justify-center bg-[var(--card)]/90 backdrop-blur-sm text-[var(--af-text3)] hover:text-[var(--af-accent)] hover:bg-[var(--af-accent)]/10 cursor-pointer transition-colors border border-[var(--border)]"
+                                onClick={e => { e.stopPropagation(); openEditTask(t); }}
+                                title="Editar"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                className="w-6 h-6 rounded flex items-center justify-center bg-[var(--card)]/90 backdrop-blur-sm text-[var(--af-text3)] hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors border border-[var(--border)]"
+                                onClick={e => { e.stopPropagation(); deleteTask(t.id); }}
+                                title="Eliminar"
+                              >
+                                <Trash2 size={11} />
+                              </button>
                             </div>
-                          )}
+
+                            {/* Project tag */}
+                            {proj && (
+                              <div className="text-[10px] text-[var(--af-text3)] mb-1.5 truncate pr-16">
+                                {proj.data.name}
+                              </div>
+                            )}
 
                           {/* Task title */}
                           <div className="flex items-start gap-2">
@@ -491,17 +530,15 @@ export default function TasksScreen() {
                             <div className={`text-[13px] font-medium flex-1 leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
                               {t.data.title}
                             </div>
-                          </div>
 
-                          {/* Tags row */}
-                          <div className="flex items-center justify-between mt-2.5 gap-1.5">
-                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            {/* Tags row */}
+                            <div className="flex items-center mt-2.5 gap-1.5">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>
                                 {t.data.priority}
                               </span>
                               {t.data.dueDate && (
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
-                                  {isOverdue && <span className="w-1 h-1 rounded-full bg-red-400" />}
+                                  <Calendar size={9} className="flex-shrink-0" />
                                   {fmtDate(t.data.dueDate)}
                                 </span>
                               )}
@@ -541,6 +578,7 @@ export default function TasksScreen() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               );

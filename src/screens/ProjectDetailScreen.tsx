@@ -1,7 +1,58 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
+import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor, avatarColor, getInitials } from '@/lib/helpers';
+import { LayoutList, KanbanSquare, Plus, GripVertical, Calendar, User, Pencil, Trash2 } from 'lucide-react';
+
+const KANBAN_COLS = [
+  { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
+  { status: 'En progreso', color: 'bg-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-500' },
+  { status: 'Revision', color: 'bg-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
+  { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
+];
+
+function getAssigneeIds(t: any): string[] {
+  if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
+  if (t.data.assigneeId) return [t.data.assigneeId];
+  return [];
+}
+
+function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
+  const ids = getAssigneeIds(task);
+  if (ids.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-[10px] text-[var(--af-text3)]">
+        <User size={10} /> Sin asignar
+      </div>
+    );
+  }
+  const isSmall = size === 'sm';
+  return (
+    <div className="flex items-center gap-1">
+      <div className="flex -space-x-1">
+        {ids.slice(0, 3).map((uid: string) => (
+          <span
+            key={uid}
+            className={`${isSmall ? 'w-4 h-4 text-[7px]' : 'w-5 h-5 text-[8px]'} rounded-full font-semibold flex items-center justify-center ring-1 ring-[var(--card)] ${avatarColor(uid)}`}
+            title={getUserName(uid)}
+          >
+            {getInitials(getUserName(uid))}
+          </span>
+        ))}
+      </div>
+      {ids.length > 3 && (
+        <span className={`text-[var(--af-text3)] ${isSmall ? 'text-[10px]' : 'text-[11px]'}`}>
+          +{ids.length - 3}
+        </span>
+      )}
+      {ids.length <= 3 && (
+        <span className={`text-[var(--af-text3)] truncate ${isSmall ? 'text-[10px] max-w-[80px]' : 'text-[11px] max-w-[100px]'}`}>
+          {ids.map((uid: string) => getUserName(uid)).join(', ')}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function ProjectDetailScreen() {
   const {
@@ -23,7 +74,7 @@ export default function ProjectDetailScreen() {
     updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
-    rfis, submittals, punchItems,
+    rfis, submittals, punchItems, changeTaskStatus, showToast,
   } = useApp();
 
   // Computed values
@@ -40,6 +91,63 @@ export default function ProjectDetailScreen() {
 
   // Progress edit state
   const [editingProgress, setEditingProgress] = useState(false);
+
+  // Kanban view state
+  const [taskView, setTaskView] = useState<'list' | 'kanban'>('list');
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const dragCounterRef = useRef<Record<string, number>>({});
+
+  const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
+    setDragTaskId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', taskId);
+    try { (e.target as HTMLElement).style.opacity = '0.4'; } catch {}
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.DragEvent) => {
+    setDragTaskId(null);
+    setDragOverCol(null);
+    dragCounterRef.current = {};
+    try { (e.target as HTMLElement).style.opacity = '1'; } catch {}
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent, colStatus: string) => {
+    e.preventDefault();
+    dragCounterRef.current[colStatus] = (dragCounterRef.current[colStatus] || 0) + 1;
+    setDragOverCol(colStatus);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent, colStatus: string) => {
+    e.preventDefault();
+    dragCounterRef.current[colStatus] = (dragCounterRef.current[colStatus] || 0) - 1;
+    if (dragCounterRef.current[colStatus] <= 0) {
+      dragCounterRef.current[colStatus] = 0;
+      if (dragOverCol === colStatus) setDragOverCol(null);
+    }
+  }, [dragOverCol]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && newStatus) {
+      changeTaskStatus(taskId, newStatus);
+      showToast(`Tarea movida a ${newStatus}`);
+    }
+    setDragTaskId(null);
+    setDragOverCol(null);
+    dragCounterRef.current = {};
+  }, [changeTaskStatus, showToast]);
+
+  const handleNewTaskInColumn = (status: string) => {
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: selectedProjectId }));
+    openModal('task');
+  };
 
   if (!currentProject) return null;
 
@@ -214,54 +322,190 @@ export default function ProjectDetailScreen() {
             </div>
             )}
 
-            {/* 5. TAB: Tareas (with status filters) */}
-            {forms.detailTab === 'Tareas' && (() => {
-              const taskFilters = [
-                { k: 'Todas', v: '' },
-                { k: 'Pendientes', v: 'Pendiente' },
-                { k: 'En progreso', v: 'En progreso' },
-                { k: 'Completadas', v: 'Completado' },
-              ];
-              const filteredTasks = forms.taskStatusFilter
-                ? projectTasks.filter((t: any) => t.data.status === forms.taskStatusFilter)
-                : projectTasks;
-
-              return (
-                <div>
-                  {/* Header row */}
-                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    {/* Status filter pills */}
-                    <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
-                      {taskFilters.map(tf => (
-                        <button key={tf.k} className={`px-2.5 py-1 rounded-md text-[12px] cursor-pointer transition-all ${(!forms.taskStatusFilter || '') === tf.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, taskStatusFilter: tf.v }))}>
-                          {tf.k}
-                        </button>
-                      ))}
-                    </div>
-                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>+ Nueva tarea</button>
+            {/* 5. TAB: Tareas (Kanban + List with status filters) */}
+            {forms.detailTab === 'Tareas' && (<div>
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-[var(--muted-foreground)]">{projectTasks.length} tareas en este proyecto</div>
+                  <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-0.5">
+                    <button
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] cursor-pointer transition-all ${taskView === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
+                      onClick={() => setTaskView('list')}
+                    >
+                      <LayoutList size={13} /> Lista
+                    </button>
+                    <button
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] cursor-pointer transition-all ${taskView === 'kanban' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
+                      onClick={() => setTaskView('kanban')}
+                    >
+                      <KanbanSquare size={13} /> Kanban
+                    </button>
                   </div>
-                  <div className="text-sm text-[var(--muted-foreground)] mb-3">{filteredTasks.length} tarea{filteredTasks.length !== 1 ? 's' : ''}</div>
-                  {filteredTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
-                  filteredTasks.map((t: any) => (
-                    <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                      <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
-                        <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
-                          {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
-                          {t.data.assigneeId && <span>👤 {getUserName(t.data.assigneeId)}</span>}
-                        </div>
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                      <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
-                      <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>✕</button>
-                    </div>
-                  ))}
                 </div>
-              );
-            })()}
+                <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer' })); openModal('task'); }}>+ Nueva tarea</button>
+              </div>
+
+              {taskView === 'kanban' ? (
+                /* KANBAN VIEW */
+                projectTasks.length === 0 ? (
+                  <div className="text-center py-12 text-[var(--af-text3)]">
+                    <div className="w-14 h-14 rounded-2xl bg-[var(--af-bg3)] flex items-center justify-center mx-auto mb-3">
+                      <KanbanSquare size={24} className="text-[var(--af-text3)]" />
+                    </div>
+                    <div className="text-sm">Sin tareas en este proyecto</div>
+                    <div className="text-xs mt-1">Crea tu primera tarea</div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: '400px' }}>
+                    {KANBAN_COLS.map(col => {
+                      const colTasks = projectTasks.filter((t: any) => t.data.status === col.status);
+                      const isDragOver = dragOverCol === col.status;
+                      return (
+                        <div
+                          key={col.status}
+                          className={`flex-shrink-0 w-[270px] sm:w-[290px] rounded-xl transition-all ${
+                            isDragOver
+                              ? `${col.bg} border-2 border-dashed ${col.border} ring-2 ring-[var(--af-accent)]/20 scale-[1.01]`
+                              : 'bg-[var(--af-bg3)] border border-[var(--border)]'
+                          } flex flex-col overflow-hidden`}
+                          onDragEnter={e => handleDragEnter(e, col.status)}
+                          onDragLeave={e => handleDragLeave(e, col.status)}
+                          onDragOver={handleDragOver}
+                          onDrop={e => handleDrop(e, col.status)}
+                        >
+                          {/* Colored top border */}
+                          <div className={`h-[3px] w-full ${col.color} transition-all ${isDragOver ? 'h-[4px]' : ''}`} />
+
+                          <div className="p-3 flex flex-col flex-1">
+                            {/* Column Header */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
+                              <span className="text-[13px] font-semibold flex-1">{col.status}</span>
+                              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                col.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' :
+                                col.status === 'En progreso' ? 'bg-blue-500/10 text-blue-400' :
+                                col.status === 'Revision' ? 'bg-amber-500/10 text-amber-400' :
+                                'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'
+                              }`}>
+                                {colTasks.length}
+                              </span>
+                              <button
+                                className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--af-text3)] hover:text-[var(--af-accent)] hover:bg-[var(--af-accent)]/10 cursor-pointer transition-all opacity-60 hover:opacity-100"
+                                onClick={() => handleNewTaskInColumn(col.status)}
+                                title={`Agregar tarea en ${col.status}`}
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+
+                            {/* Task Cards */}
+                            <div className="flex-1 space-y-2 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                              {colTasks.length === 0 && !isDragOver && (
+                                <div className="text-center py-10 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--af-text3)]">
+                                  <div className="text-[11px] mb-1.5">Arrastra tareas aquí</div>
+                                  <button
+                                    className="text-[10px] px-2.5 py-1 rounded-md bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--af-accent)]/30 hover:text-[var(--af-accent)] transition-all"
+                                    onClick={() => handleNewTaskInColumn(col.status)}
+                                  >
+                                    <Plus size={10} className="inline mr-0.5" /> Crear tarea
+                                  </button>
+                                </div>
+                              )}
+                              {colTasks.length === 0 && isDragOver && (
+                                <div className={`text-center py-10 rounded-lg border-2 border-dashed ${col.border} text-[var(--af-text3)] text-[11px] animate-pulse`}>
+                                  <div className="text-base mb-1">↓</div>
+                                  Soltar aquí
+                                </div>
+                              )}
+                              {colTasks.map((t: any) => {
+                                const isDragging = dragTaskId === t.id;
+                                const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
+                                return (
+                                  <div
+                                    key={t.id}
+                                    draggable
+                                    onDragStart={e => handleDragStart(e, t.id)}
+                                    onDragEnd={handleDragEnd}
+                                    className={`relative bg-[var(--card)] border rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all hover:shadow-md hover:-translate-y-0.5 group/card ${
+                                      isDragging ? 'opacity-40 scale-95 border-[var(--af-accent)]' : 'border-[var(--border)] hover:border-[var(--input)]'
+                                    }`}
+                                    onClick={() => openEditTask(t)}
+                                  >
+                                    {/* Hover actions */}
+                                    <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
+                                      <button
+                                        className="w-6 h-6 rounded flex items-center justify-center bg-[var(--card)]/90 backdrop-blur-sm text-[var(--af-text3)] hover:text-[var(--af-accent)] hover:bg-[var(--af-accent)]/10 cursor-pointer transition-colors border border-[var(--border)]"
+                                        onClick={e => { e.stopPropagation(); openEditTask(t); }}
+                                        title="Editar"
+                                      >
+                                        <Pencil size={11} />
+                                      </button>
+                                      <button
+                                        className="w-6 h-6 rounded flex items-center justify-center bg-[var(--card)]/90 backdrop-blur-sm text-[var(--af-text3)] hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors border border-[var(--border)]"
+                                        onClick={e => { e.stopPropagation(); deleteTask(t.id); }}
+                                        title="Eliminar"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
+
+                                    {/* Task title */}
+                                    <div className="flex items-start gap-2">
+                                      <GripVertical size={14} className="text-[var(--af-text3)] flex-shrink-0 mt-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                                      <div className={`text-[13px] font-medium flex-1 leading-snug ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>
+                                        {t.data.title}
+                                      </div>
+                                    </div>
+
+                                    {/* Tags row */}
+                                    <div className="flex items-center mt-2.5 gap-1.5">
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>
+                                        {t.data.priority}
+                                      </span>
+                                      {t.data.dueDate && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                                          <Calendar size={9} className="flex-shrink-0" />
+                                          {fmtDate(t.data.dueDate)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Footer: assignees */}
+                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
+                                      <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                /* LIST VIEW */
+                projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
+                projectTasks.map((t: any) => (
+                  <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                    <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
+                      <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                        {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
+                        {t.data.assigneeId && <span>👤 {getUserName(t.data.assigneeId)}</span>}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                    <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
+                    <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>✕</button>
+                  </div>
+                ))
+              )}
+            </div>)}
 
             {/* 6. TAB: Calidad (with Calidad | Finanzas sub-tabs) */}
             {forms.detailTab === 'Calidad' && (() => {
