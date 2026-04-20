@@ -2,9 +2,9 @@
 import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
-import { fmtCOP, fmtDate, statusColor } from '@/lib/helpers';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
+import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -28,94 +28,59 @@ function ChartTooltip({ active, payload, label }: any) {
 
 export default function DashboardScreen() {
   const {
-    loading, projects, tasks, pendingCount, navigateTo, toggleTask, openProject, getUserName,
+    loading, projects, tasks, pendingCount, navigateTo, openProject, getUserName,
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
-    timeEntries, showToast, visibleProjects, companies,
-    rfis, submittals, punchItems,
+    timeEntries, showToast, visibleProjects, companies, meetings,
+    rfis, submittals, punchItems, overdueTasks, userName,
   } = useApp();
 
-  // Computed data
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const todayOnly = new Date(new Date().toDateString());
+
+  // ─── Computed data ───
   const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
   const totalInvoiced = useMemo(() => invoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [invoices]);
   const totalPaid = useMemo(() => invoices.filter((i: any) => i.data.status === 'Pagada').reduce((s: number, i: any) => s + (Number(i.data.total) || 0), 0), [invoices]);
-  const overdueTasks = useMemo(() => tasks.filter((t: any) => {
-    if (t.data.status === 'Completado' || !t.data.dueDate) return false;
-    return new Date(t.data.dueDate) < new Date();
-  }), [tasks]);
+  const overdueCount = overdueTasks.length;
 
-  // Burndown chart data
-  const burndownData = useMemo(() => {
-    const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const total = pendingCount + completedTasks.length;
-    return days.map((label, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + mondayOffset + i);
-      const dayStr = d.toISOString().split('T')[0];
-      let doneSoFar = 0;
-      for (let j = 0; j <= i; j++) {
-        const dj = new Date(today);
-        dj.setDate(today.getDate() + mondayOffset + j);
-        const djStr = dj.toISOString().split('T')[0];
-        doneSoFar += tasks.filter((t: any) => {
-          if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
-          try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === djStr : false; } catch { return false; }
-        }).length;
-      }
-      const done = i === 0 ? doneSoFar : doneSoFar - days.slice(0, i).reduce((acc, _, k) => {
-        const dk = new Date(today);
-        dk.setDate(today.getDate() + mondayOffset + k);
-        const dkStr = dk.toISOString().split('T')[0];
-        return acc + tasks.filter((t: any) => {
-          if (t.data.status !== 'Completado' || !t.data.updatedAt) return false;
-          try { return t.data.updatedAt.toDate ? t.data.updatedAt.toDate().toISOString().split('T')[0] === dkStr : false; } catch { return false; }
-        }).length;
-      }, 0);
-      return { name: label, pendientes: Math.max(total - doneSoFar, 0), completadas: done };
-    });
-  }, [tasks, pendingCount, completedTasks]);
+  // Quick access metrics
+  const openRFIs = useMemo(() => rfis.filter((r: any) => r.data.status === 'Abierto' || r.data.status === 'En revisión').length, [rfis]);
+  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión').length, [submittals]);
+  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente').length, [punchItems]);
+  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date()).length, [rfis]);
+  const execProjects = useMemo(() => projects.filter((p: any) => p.data.status === 'Ejecucion').length, [projects]);
 
-  // Task status distribution
-  const taskStatusData = useMemo(() => {
-    const statuses: Record<string, number> = {};
-    tasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
-    return Object.entries(statuses).map(([name, value]) => ({ name, value }));
-  }, [tasks]);
+  // Today's meetings
+  const todayMeetings = useMemo(() => meetings.filter((m: any) => m.data.date === todayStr).sort((a: any, b: any) => (a.data.time || '').localeCompare(b.data.time || '')), [meetings, todayStr]);
 
-  // Expenses by category
-  const expenseByCategory = useMemo(() => {
-    const cats: Record<string, number> = {};
-    expenses.forEach((e: any) => { cats[e.data.category] = (cats[e.data.category] || 0) + (Number(e.data.amount) || 0); });
-    return Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value })).slice(0, 5);
-  }, [expenses]);
+  // Tasks due today (not completed)
+  const todayDueTasks = useMemo(() => tasks.filter((t: any) => t.data.dueDate === todayStr && t.data.status !== 'Completado'), [tasks, todayStr]);
 
-  // NEW: Revenue trend (last 6 months)
+  // Tasks due this week (within 7 days, not completed, not overdue)
+  const weekTasks = useMemo(() => tasks.filter((t: any) => {
+    if (!t.data.dueDate || t.data.status === 'Completado') return false;
+    const diff = Math.ceil((new Date(t.data.dueDate).getTime() - today.getTime()) / 86400000);
+    return diff >= 0 && diff <= 7;
+  }), [tasks, today]);
+
+  // Revenue trend (last 6 months)
   const revenueTrend = useMemo(() => {
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const data: { name: string; facturado: number; cobrado: number }[] = [];
     for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
+      const d = new Date(); d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const monthInvoiced = invoices.filter((inv: any) => {
-        if (!inv.data.issueDate || inv.data.status === 'Cancelada') return false;
-        return inv.data.issueDate.startsWith(key);
-      }).reduce((s, inv) => s + (inv.data.total || 0), 0);
-      const monthPaid = invoices.filter((inv: any) => {
-        if (!inv.data.paidDate) return false;
-        try {
-          const d = inv.data.paidDate?.toDate ? inv.data.paidDate.toDate() : new Date(inv.data.paidDate);
-          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === key;
-        } catch { return false; }
-      }).reduce((s, inv) => s + (inv.data.total || 0), 0);
+      const monthInvoiced = invoices.filter((inv: any) => inv.data.issueDate && inv.data.status !== 'Cancelada' && inv.data.issueDate.startsWith(key)).reduce((s, inv) => s + (inv.data.total || 0), 0);
+      const monthPaid = invoices.filter((inv: any) => inv.data.paidDate).reduce((s, inv: any) => {
+        try { const pd = inv.data.paidDate?.toDate ? inv.data.paidDate.toDate() : new Date(inv.data.paidDate); return `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}` === key ? s + (inv.data.total || 0) : s; } catch { return s; }
+      }, 0);
       data.push({ name: monthNames[d.getMonth()], facturado: monthInvoiced, cobrado: monthPaid });
     }
     return data;
   }, [invoices]);
 
-  // NEW: Team workload
+  // Team workload
   const teamWorkload = useMemo(() => {
     const byUser: Record<string, { total: number; active: number; done: number }> = {};
     teamUsers.forEach(u => { byUser[u.id] = { total: 0, active: 0, done: 0 }; });
@@ -126,41 +91,33 @@ export default function DashboardScreen() {
         if (t.data.status === 'Completado') byUser[t.data.assigneeId].done++;
       }
     });
-    return Object.entries(byUser)
-      .filter(([_, v]) => v.total > 0)
-      .sort((a, b) => b[1].active - a[1].active)
-      .slice(0, 6)
-      .map(([uid, data]) => {
-        const user = teamUsers.find((u: any) => u.id === uid);
-        return {
-          name: (user?.data.name || 'Sin nombre').split(' ')[0],
-          activas: data.active,
-          completadas: data.done,
-          pendientes: data.total - data.active - data.done,
-        };
-      });
+    return Object.entries(byUser).filter(([_, v]) => v.total > 0).sort((a, b) => b[1].active - a[1].active).slice(0, 8).map(([uid, data]) => {
+      const user = teamUsers.find((u: any) => u.id === uid);
+      return { name: (user?.data.name || 'Sin nombre').split(' ')[0], activas: data.active, completadas: data.done, pendientes: data.total - data.active - data.done };
+    });
   }, [tasks, teamUsers]);
 
-  // RFIs, Submittals, Punch quick stats
-  const openRFIs = useMemo(() => rfis.filter((r: any) => r.data.status === 'Abierto' || r.data.status === 'En revisión').length, [rfis]);
-  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión').length, [submittals]);
-  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente').length, [punchItems]);
-  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date()).length, [rfis]);
+  // Task status distribution (for donut)
+  const taskStatusData = useMemo(() => {
+    const statuses: Record<string, number> = {};
+    tasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
+    return Object.entries(statuses).map(([name, value]) => ({ name, value }));
+  }, [tasks]);
 
   // Recent activity
   const recentActivity = useMemo(() => {
     const items: { id: string; type: string; title: string; subtitle: string; time: any; icon: string; color: string }[] = [];
-    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 3).forEach((t: any) => {
-      items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Tarea completada · ${projects.find((p: any) => p.id === t.data.projectId)?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
-    });
-    expenses.slice(0, 3).forEach((e: any) => {
-      items.push({ id: e.id, type: 'expense', title: e.data.concept, subtitle: `${fmtCOP(Number(e.data.amount))} · ${e.data.category}`, time: e.data.createdAt, icon: '$', color: 'bg-[var(--af-accent)]' });
+    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 4).forEach((t: any) => {
+      const proj = projects.find((p: any) => p.id === t.data.projectId);
+      items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Completada · ${proj?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
     });
     rfis.filter((r: any) => r.data.status !== 'Cerrado').slice(0, 3).forEach((r: any) => {
-      items.push({ id: r.id, type: 'rfi', title: r.data.subject || r.data.number, subtitle: `RFI ${r.data.status} · ${projects.find((p: any) => p.id === r.data.projectId)?.data?.name || ''}`, time: r.data.createdAt, icon: '?', color: 'bg-blue-500' });
+      const proj = projects.find((p: any) => p.id === r.data.projectId);
+      items.push({ id: r.id, type: 'rfi', title: r.data.subject || r.data.number, subtitle: `RFI ${r.data.status} · ${proj?.data?.name || ''}`, time: r.data.createdAt, icon: '?', color: 'bg-blue-500' });
     });
     submittals.filter((s: any) => s.data.status === 'En revisión').slice(0, 2).forEach((s: any) => {
-      items.push({ id: s.id, type: 'submittal', title: s.data.title || s.data.number, subtitle: `Submittal en revisión · ${projects.find((p: any) => p.id === s.data.projectId)?.data?.name || ''}`, time: s.data.createdAt, icon: '📋', color: 'bg-purple-500' });
+      const proj = projects.find((p: any) => p.id === s.data.projectId);
+      items.push({ id: s.id, type: 'submittal', title: s.data.title || s.data.number, subtitle: `Submittal en revisión · ${proj?.data?.name || ''}`, time: s.data.createdAt, icon: '📋', color: 'bg-purple-500' });
     });
     punchItems.filter((p: any) => p.data.status !== 'Completado').slice(0, 2).forEach((p: any) => {
       items.push({ id: p.id, type: 'punch', title: p.data.title, subtitle: `Punch ${p.data.status} · ${p.data.location || ''}`, time: p.data.createdAt, icon: '✅', color: 'bg-teal-500' });
@@ -170,117 +127,252 @@ export default function DashboardScreen() {
       const tb = b.time?.toDate?.() || new Date(b.time) || new Date(0);
       return tb.getTime() - ta.getTime();
     });
-    return items.slice(0, 10);
-  }, [tasks, expenses, projects, rfis, submittals, punchItems]);
+    return items.slice(0, 8);
+  }, [tasks, projects, rfis, submittals, punchItems]);
+
+  // Unread notifications (most recent first)
+  const unreadNotifs = useMemo(() => notifHistory.filter((n: any) => !n.read).slice(0, 5), [notifHistory]);
+  const readNotifs = useMemo(() => notifHistory.filter((n: any) => n.read).slice(0, 3), [notifHistory]);
+
+  // Greeting based on time of day
+  const greeting = useMemo(() => {
+    const h = today.getHours();
+    if (h < 12) return 'Buenos días';
+    if (h < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  }, []);
+
+  // Date formatted in Spanish
+  const dateFormatted = today.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="animate-fadeIn space-y-5">
+    <div className="animate-fadeIn space-y-4">
       {loading && <SkeletonDashboard />}
       {!loading && (<>
 
-      {/* ─── v2.0 Badge ─── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="af-badge-gold">v2.0</span>
-          <span className="text-[11px] text-[var(--af-text3)]">Dashboard Premium</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
-            try { exportGeneralReportPDF({ projects, tasks, expenses, invoices, teamUsers, timeEntries }); showToast('Reporte PDF descargado'); } catch { showToast('Error', 'error'); }
-          }}>
-            <FileText size={12} /> PDF
-          </button>
-          <button className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors" onClick={() => {
-            try { exportProjectsExcel(projects, tasks, expenses); showToast('Excel descargado'); } catch { showToast('Error', 'error'); }
-          }}>
-            <Download size={12} /> Excel
-          </button>
+      {/* ════════════ ROW 0: Personalized Header ════════════ */}
+      <div className="bg-gradient-to-br from-[var(--card)] via-[var(--af-bg3)] to-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+        {/* Subtle decorative gradient blob */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-[var(--af-accent)]/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative">
+          {/* Top row: greeting + actions */}
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <div className="text-[11px] text-[var(--af-text3)] mb-1 capitalize">{dateFormatted}</div>
+              <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-lg sm:text-xl">
+                {greeting}, <span className="text-[var(--af-accent)]">{userName}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {unreadCount > 0 && (
+                <div className="relative">
+                  <button className="w-9 h-9 rounded-xl bg-[var(--af-bg4)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)] transition-colors" onClick={() => navigateTo('chat')}>
+                    <span className="text-sm">🔔</span>
+                  </button>
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                </div>
+              )}
+              <button className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors px-2 py-1.5 rounded-lg bg-[var(--af-bg4)] border border-[var(--border)]" onClick={() => { try { exportGeneralReportPDF({ projects, tasks, expenses, invoices, teamUsers, timeEntries }); showToast('Reporte PDF descargado'); } catch { showToast('Error', 'error'); } }}>
+                <FileText size={11} /> PDF
+              </button>
+              <button className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--af-accent)] transition-colors px-2 py-1.5 rounded-lg bg-[var(--af-bg4)] border border-[var(--border)]" onClick={() => { try { exportProjectsExcel(projects, tasks, expenses); showToast('Excel descargado'); } catch { showToast('Error', 'error'); } }}>
+                <Download size={11} /> Excel
+              </button>
+            </div>
+          </div>
+
+          {/* Quick summary pills */}
+          <div className="flex flex-wrap gap-2">
+            {overdueCount > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors" onClick={() => navigateTo('tasks')}>
+                <AlertTriangle size={12} className="text-red-400" />
+                <span className="text-[11px] text-red-400 font-medium">{overdueCount} tarea{overdueCount !== 1 ? 's' : ''} vencida{overdueCount !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {todayMeetings.length > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 cursor-pointer hover:bg-purple-500/15 transition-colors" onClick={() => navigateTo('calendar')}>
+                <CalendarDays size={12} className="text-purple-400" />
+                <span className="text-[11px] text-purple-400 font-medium">{todayMeetings.length} reunión{todayMeetings.length !== 1 ? 'es' : ''} hoy</span>
+              </div>
+            )}
+            {todayDueTasks.length > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/15 transition-colors" onClick={() => navigateTo('tasks')}>
+                <Clock size={12} className="text-amber-400" />
+                <span className="text-[11px] text-amber-400 font-medium">{todayDueTasks.length} vence{todayDueTasks.length !== 1 ? 'n' : ''} hoy</span>
+              </div>
+            )}
+            {overdueRFIs > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/15 transition-colors" onClick={() => navigateTo('rfis')}>
+                <CircleHelp size={12} className="text-blue-400" />
+                <span className="text-[11px] text-blue-400 font-medium">{overdueRFIs} RFI{overdueRFIs !== 1 ? 's' : ''} vencida{overdueRFIs !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {overdueCount === 0 && todayMeetings.length === 0 && todayDueTasks.length === 0 && overdueRFIs === 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle2 size={12} className="text-emerald-400" />
+                <span className="text-[11px] text-emerald-400 font-medium">Todo al día</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ─── Row 1: KPI Cards ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* ════════════ ROW 1: KPI Cards (6) ════════════ */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { val: projects.length, lbl: 'Proyectos totales', icon: <FolderKanban size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${projects.filter((p: any) => p.data.status === 'Ejecucion').length} en ejecución` },
-          { val: pendingCount, lbl: 'Tareas pendientes', icon: <Clock size={16} />, bg: 'bg-orange-500/10', iconColor: 'text-orange-400', sub: `${activeTasks.length} en progreso` },
-          { val: fmtCOP(totalExpenses), lbl: 'Gastos totales', icon: <DollarSign size={16} />, bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', sub: `${expenses.length} registros` },
-          { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Submittals', icon: <CircleHelp size={16} />, bg: 'bg-blue-500/10', iconColor: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} en revisión` },
-          { val: openPunchItems, lbl: 'Punch List', icon: <ListChecks size={16} />, bg: 'bg-teal-500/10', iconColor: 'text-teal-400', sub: `${punchItems.length} items totales` },
+          { val: projects.length, lbl: 'Proyectos', icon: <FolderKanban size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${execProjects} en ejecución`, click: 'projects' },
+          { val: pendingCount, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${activeTasks.length} activas`, click: 'tasks' },
+          { val: overdueCount, lbl: 'Vencidas', icon: <AlertTriangle size={15} />, bg: overdueCount > 0 ? 'bg-red-500/10' : 'bg-[var(--af-bg4)]', iconC: overdueCount > 0 ? 'text-red-400' : 'text-emerald-400', sub: overdueCount > 0 ? 'Requieren atención' : 'Sin vencidas', click: 'tasks', alert: overdueCount > 0 },
+          { val: todayMeetings.length, lbl: 'Reuniones hoy', icon: <CalendarDays size={15} />, bg: 'bg-purple-500/10', iconC: 'text-purple-400', sub: weekTasks.length > 0 ? `${weekTasks.length} tareas esta semana` : '', click: 'calendar' },
+          { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Subs', icon: <CircleHelp size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} subs`, click: 'rfis', alert: overdueRFIs > 0 },
+          { val: openPunchItems, lbl: 'Punch List', icon: <ListChecks size={15} />, bg: 'bg-teal-500/10', iconC: 'text-teal-400', sub: `${punchItems.length} items totales`, click: 'punchList' },
         ].map((m, i) => (
-          <div key={i} className={`af-kpi-card p-5 animate-fadeInUp stagger-${i + 1} hover:border-[var(--af-accent)]/30 transition-colors cursor-default`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-xl ${m.bg} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
-              {i === 3 && overdueRFIs > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+          <div key={i} className={`af-kpi-card p-3.5 sm:p-4 animate-fadeInUp stagger-${Math.min(i + 1, 6)} hover:border-[var(--af-accent)]/30 transition-all cursor-pointer group`} onClick={() => navigateTo(m.click)}>
+            <div className="flex items-center justify-between mb-2">
+              <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconC}`}>{m.icon}</div>
+              {m.alert && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
             </div>
-            <div className="text-xl md:text-2xl font-bold leading-tight">{m.val}</div>
-            <div className="text-[11px] text-[var(--muted-foreground)] mt-1.5">{m.lbl}</div>
-            <div className="text-[10px] text-[var(--af-text3)] mt-0.5">{m.sub}</div>
+            <div className="text-lg sm:text-xl font-bold leading-tight">{m.val}</div>
+            <div className="text-[10px] sm:text-[11px] text-[var(--muted-foreground)] mt-1">{m.lbl}</div>
+            <div className="text-[9px] sm:text-[10px] text-[var(--af-text3)] mt-0.5 truncate">{m.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* ─── Phase 1 Quick Actions ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-blue-500/30 transition-colors" onClick={() => navigateTo('rfis')}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400"><CircleHelp size={16} /></div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold">RFIs</div>
-              <div className="text-[10px] text-[var(--muted-foreground)]">{rfis.length} total · {openRFIs} abiertos{overdueRFIs > 0 ? ` · ${overdueRFIs} vencidos` : ''}</div>
+      {/* ════════════ ROW 2: Today's Agenda + Projects ════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Today's Agenda (3 cols) */}
+        <div className="lg:col-span-3 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] sm:text-[15px] font-semibold flex items-center gap-2">
+              <CalendarDays size={16} className="text-[var(--af-accent)]" />
+              Agenda de Hoy
             </div>
-            {overdueRFIs > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />}
+            <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('calendar')}>
+              Calendario <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
           </div>
-        </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-purple-500/30 transition-colors" onClick={() => navigateTo('submittals')}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400"><ClipboardList size={16} /></div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold">Submittals</div>
-              <div className="text-[10px] text-[var(--muted-foreground)]">{submittals.length} total · {pendingSubmittals} por revisar</div>
-            </div>
-            {pendingSubmittals > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />}
-          </div>
-        </div>
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 cursor-pointer hover:border-teal-500/30 transition-colors" onClick={() => navigateTo('punchList')}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400"><ListChecks size={16} /></div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold">Punch List</div>
-              <div className="text-[10px] text-[var(--muted-foreground)]">{punchItems.length} items · {openPunchItems} pendientes</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* ─── Row 2: Projects + Activity ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[15px] font-semibold">Proyectos recientes</div>
-            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('projects')}>Ver todos</button>
+          {todayMeetings.length === 0 && todayDueTasks.length === 0 && overdueCount === 0 ? (
+            <div className="text-center py-8 text-[var(--af-text3)]">
+              <div className="text-3xl mb-2">🏖️</div>
+              <div className="text-sm">Sin actividades para hoy</div>
+              <div className="text-[11px] text-[var(--muted-foreground)] mt-1">Tu día está libre o todo está al día</div>
+            </div>
+          ) : (
+            <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+              {/* Overdue tasks (urgent, show first) */}
+              {overdueCount > 0 && (
+                <div className="mb-1">
+                  <div className="text-[10px] font-semibold text-red-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <AlertTriangle size={10} /> {overdueCount} vencida{overdueCount !== 1 ? 's' : ''}
+                  </div>
+                  <div className="space-y-1">
+                    {overdueTasks.slice(0, 4).map((t: any) => {
+                      const proj = projects.find((p: any) => p.id === t.data.projectId);
+                      const daysOver = Math.floor((todayOnly.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
+                      return (
+                        <div key={t.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-red-500/5 border border-red-500/15 cursor-pointer hover:bg-red-500/10 transition-colors" onClick={() => navigateTo('tasks')}>
+                          <div className="w-6 h-6 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-[10px]">⚡</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-medium truncate">{t.data.title}</div>
+                            <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || ''} · Venció hace {daysOver}d</div>
+                          </div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                        </div>
+                      );
+                    })}
+                    {overdueCount > 4 && <div className="text-[10px] text-red-400/70 pl-9">+{overdueCount - 4} más</div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Today's meetings */}
+              {todayMeetings.length > 0 && (
+                <div className="mb-1">
+                  <div className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <CalendarDays size={10} /> {todayMeetings.length} reunión{todayMeetings.length !== 1 ? 'es' : ''}
+                  </div>
+                  <div className="space-y-1">
+                    {todayMeetings.map((m: any) => {
+                      const proj = projects.find((p: any) => p.id === m.data.projectId);
+                      return (
+                        <div key={m.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-purple-500/5 border border-purple-500/15 cursor-pointer hover:bg-purple-500/10 transition-colors" onClick={() => navigateTo('calendar')}>
+                          <div className="w-6 h-6 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 text-[10px] font-bold">{m.data.time ? m.data.time.split(':')[0] : '📅'}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-medium truncate">{m.data.title}</div>
+                            <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || ''} · {m.data.time || '09:00'} · {m.data.duration || 60}min</div>
+                          </div>
+                          {m.data.attendees && Array.isArray(m.data.attendees) && m.data.attendees.length > 0 && (
+                            <span className="text-[9px] text-[var(--af-text3)] flex-shrink-0">👥 {m.data.attendees.length}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tasks due today */}
+              {todayDueTasks.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Timer size={10} /> {todayDueTasks.length} vence{todayDueTasks.length !== 1 ? 'n' : ''} hoy
+                  </div>
+                  <div className="space-y-1">
+                    {todayDueTasks.map((t: any) => {
+                      const proj = projects.find((p: any) => p.id === t.data.projectId);
+                      return (
+                        <div key={t.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-amber-500/5 border border-amber-500/15 cursor-pointer hover:bg-amber-500/10 transition-colors" onClick={() => navigateTo('tasks')}>
+                          <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 text-[10px]">📝</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-medium truncate">{t.data.title}</div>
+                            <div className="text-[10px] text-[var(--af-text3)]">{proj?.data?.name || ''} · {t.data.status}</div>
+                          </div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Projects (2 cols) */}
+        <div className="lg:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] sm:text-[15px] font-semibold flex items-center gap-2">
+              <FolderKanban size={16} className="text-blue-400" />
+              Proyectos
+            </div>
+            <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('projects')}>
+              Ver todos <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
           </div>
           {(() => {
-            const projs = visibleProjects().slice(0, 4);
+            const projs = visibleProjects().slice(0, 6);
             return projs.length === 0 ? (
               <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
                 {projs.map((p: any) => {
                   const d = p.data, prog = d.progress || 0;
                   const compName = companies.find((c: any) => c.id === d.companyId)?.data?.name;
                   return (
-                    <div key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-3 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5 relative overflow-hidden" onClick={() => openProject(p.id)}>
-                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--af-accent)] opacity-0 transition-opacity hover:!opacity-100" />
-                      <div className="flex justify-between items-start mb-2">
+                    <div key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-3 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5" onClick={() => openProject(p.id)}>
+                      <div className="flex justify-between items-start mb-1.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
-                          {compName && <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">{compName}</span>}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusColor(d.status)}`}>{d.status || 'Concepto'}</span>
+                          {compName && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--af-text3)]">{compName}</span>}
                         </div>
-                        <div className="text-lg font-semibold">{prog}%</div>
+                        <div className="text-sm font-bold">{prog}%</div>
                       </div>
-                      <div className="text-[14px] font-semibold mb-0.5">{d.name}</div>
-                      <div className="text-[11px] text-[var(--af-text3)] mb-2">{d.location ? d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
-                      <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                      <div className="text-[13px] font-medium truncate mb-0.5">{d.name}</div>
+                      <div className="text-[10px] text-[var(--af-text3)] mb-2">{d.location ? d.location : ''}{d.client ? ' · ' + d.client : ''}</div>
+                      <div className="h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${prog >= 80 ? 'bg-emerald-500' : prog >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: prog + '%' }} />
                       </div>
                     </div>
@@ -290,142 +382,146 @@ export default function DashboardScreen() {
             );
           })()}
         </div>
+      </div>
 
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[15px] font-semibold">Actividad reciente</div>
-            <TrendingUp size={16} className="text-[var(--af-text3)]" />
+      {/* ════════════ ROW 3: Sprint Progress + Financial Summary ════════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Sprint Progress Ring */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="text-[14px] font-semibold mb-3 flex items-center gap-2">
+            <Zap size={14} className="text-[var(--af-accent)]" /> Progreso Sprint
           </div>
-          {recentActivity.length === 0 ? (
-            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin actividad reciente</div>
-          ) : (
-            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
-              {recentActivity.map(item => (
-                <div key={item.id + item.type} className="flex items-start gap-3 group cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg p-1.5 -mx-1.5 transition-colors" onClick={() => {
-                  if (item.type === 'rfi') navigateTo('rfis');
-                  else if (item.type === 'submittal') navigateTo('submittals');
-                  else if (item.type === 'punch') navigateTo('punchList');
-                  else if (item.type === 'task') navigateTo('tasks');
-                }}>
-                  <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5`}>{item.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium truncate">{item.title}</div>
-                    <div className="text-[11px] text-[var(--af-text3)] truncate">{item.subtitle}</div>
-                  </div>
+          <div className="flex items-center justify-center">
+            <div className="relative w-[90px] h-[90px]">
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="2.5" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" style={{ filter: 'drop-shadow(0 0 6px rgba(200,169,110,0.3))' }} />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[18px] font-bold">{tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%</span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 text-center">
+            <div className="text-[11px] text-[var(--muted-foreground)]">{completedTasks.length} de {tasks.length} tareas</div>
+            <div className="flex items-center justify-center gap-3 mt-1.5">
+              <span className="text-[10px] text-blue-400">{activeTasks.length} activas</span>
+              <span className="text-[10px] text-[var(--af-text3)]">·</span>
+              <span className="text-[10px] text-emerald-400">{completedTasks.length} completadas</span>
+            </div>
+          </div>
+          {/* Task distribution legend */}
+          {taskStatusData.length > 0 && (
+            <div className="flex flex-wrap gap-x-2.5 gap-y-1 mt-3 pt-3 border-t border-[var(--border)] justify-center">
+              {taskStatusData.map((d: any, i: number) => (
+                <div key={i} className="flex items-center gap-1 text-[9px]">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                  <span className="text-[var(--muted-foreground)]">{d.name}</span>
+                  <span className="font-semibold">{d.value}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* ─── Row 3: Mini widgets ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Sprint Progress Ring */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="text-[15px] font-semibold mb-3">Progreso Sprint</div>
-          <div className="flex items-center justify-center">
-            <div className="relative w-[100px] h-[100px]">
-              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="2.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" style={{ filter: 'drop-shadow(0 0 6px rgba(200,169,110,0.4))' }} />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[20px] font-bold">{tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%</span>
-              </div>
+        {/* Financial Summary (consolidated) */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="text-[14px] font-semibold mb-3 flex items-center gap-2">
+            <DollarSign size={14} className="text-emerald-400" /> Resumen Financiero
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[var(--af-accent)]" /><span className="text-[12px]">Facturado</span></div>
+              <span className="text-[12px] font-semibold">{fmtCOP(totalInvoiced)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[12px]">Cobrado</span></div>
+              <span className="text-[12px] font-semibold text-emerald-400">{fmtCOP(totalPaid)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[12px]">Gastado</span></div>
+              <span className="text-[12px] font-semibold text-red-400">{fmtCOP(totalExpenses)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-400" /><span className="text-[12px]">Por cobrar</span></div>
+              <span className="text-[12px] font-semibold text-blue-400">{fmtCOP(totalInvoiced - totalPaid)}</span>
             </div>
           </div>
-          <div className="mt-3 text-center">
-            <div className="text-[12px] text-[var(--muted-foreground)]">{completedTasks.length} de {tasks.length} tareas</div>
-            <div className="text-[11px] text-emerald-400 mt-1">{activeTasks.length} en progreso</div>
-          </div>
-        </div>
-
-        {/* Financial Summary */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="text-[15px] font-semibold mb-3">Resumen Financiero</div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[13px]">Facturado</span></div>
-              <span className="text-[13px] font-semibold">{fmtCOP(totalInvoiced)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-400" /><span className="text-[13px]">Cobrado</span></div>
-              <span className="text-[13px] font-semibold text-emerald-400">{fmtCOP(totalPaid)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[13px]">Gastado</span></div>
-              <span className="text-[13px] font-semibold text-red-400">{fmtCOP(totalExpenses)}</span>
-            </div>
-            <div className="border-t border-[var(--border)] pt-2 flex items-center justify-between">
-              <span className="text-[12px] text-[var(--muted-foreground)]">Balance</span>
+          {/* Balance bar */}
+          <div className="mt-3 pt-3 border-t border-[var(--border)]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-[var(--muted-foreground)]">Balance neto</span>
               <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
             </div>
+            {totalInvoiced > 0 && (
+              <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden flex">
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: (totalPaid / totalInvoiced * 100) + '%' }} />
+                <div className="h-full bg-[var(--af-accent)] transition-all" style={{ width: ((totalInvoiced - totalPaid) / totalInvoiced * 100) + '%' }} />
+                <div className="h-full bg-red-400 transition-all" style={{ width: Math.min(totalExpenses / totalInvoiced * 100, 100 - totalInvoiced / totalInvoiced * 100) + '%' }} />
+              </div>
+            )}
+            <div className="flex justify-between mt-1">
+              <span className="text-[8px] text-emerald-400">Cobrado</span>
+              <span className="text-[8px] text-[var(--af-accent)]">Pendiente</span>
+              <span className="text-[8px] text-red-400">Gastado</span>
+            </div>
           </div>
-          <button className="w-full mt-3 text-xs text-[var(--af-accent)] cursor-pointer hover:underline text-center" onClick={() => navigateTo('invoices')}>Ver facturas →</button>
+          <button className="w-full mt-3 text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline text-center" onClick={() => navigateTo('invoices')}>Ver facturas y presupuesto →</button>
         </div>
 
-        {/* Notifications */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+        {/* Team quick view */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-semibold">Notificaciones</div>
-            {unreadCount > 0 && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            <div className="text-[14px] font-semibold flex items-center gap-2">
+              <Users size={14} className="text-purple-400" /> Equipo
+            </div>
+            <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('team')}>
+              Equipo <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
           </div>
-          <div className="flex flex-col gap-2 max-h-[130px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-            {notifHistory.length === 0 ? <div className="text-center py-4 text-[var(--af-text3)] text-[12px]">Sin notificaciones</div> :
-            notifHistory.slice(0, 5).map((n: any) => (
-              <div key={n.id} className={`flex items-start gap-2 p-2 rounded-lg ${!n.read ? 'bg-[var(--af-accent)]/5' : ''}`}>
-                <span className="text-[14px] mt-0.5 flex-shrink-0">{n.icon || '🔔'}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-medium truncate">{n.title}</div>
-                  <div className="text-[10px] text-[var(--muted-foreground)] truncate">{n.body}</div>
-                </div>
-                {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)] mt-2 flex-shrink-0" />}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Task Distribution Pie */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="text-[15px] font-semibold mb-3">Distribución Tareas</div>
-          {taskStatusData.length === 0 ? (
-            <div className="text-center py-6 text-[var(--af-text3)] text-[12px]">Sin datos</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={100}>
-              <PieChart>
-                <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={3} dataKey="value" stroke="none">
-                  {taskStatusData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-            {taskStatusData.map((d: any, i: number) => (
-              <div key={i} className="flex items-center gap-1 text-[10px]">
-                <div className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                <span className="text-[var(--muted-foreground)]">{d.name}</span>
-                <span className="font-semibold">{d.value}</span>
-              </div>
-            ))}
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+            {teamWorkload.length === 0 ? (
+              <div className="text-center py-6 text-[var(--af-text3)] text-[11px]">Sin tareas asignadas</div>
+            ) : (
+              teamWorkload.map((w, i) => {
+                const total = w.activas + w.completadas + w.pendientes;
+                const pct = total > 0 ? Math.round((w.completadas / total) * 100) : 0;
+                return (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-[10px] font-bold text-purple-400 flex-shrink-0">{w.name.charAt(0)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] font-medium">{w.name}</span>
+                        <span className="text-[9px] text-[var(--af-text3)]">{w.completadas}/{total}</span>
+                      </div>
+                      <div className="h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500/60 transition-all" style={{ width: pct + '%' }} />
+                      </div>
+                    </div>
+                    {w.activas > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 flex-shrink-0">{w.activas}</span>}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
 
-      {/* ─── Row 4: Charts v2.0 ─── */}
+      {/* ════════════ ROW 4: Charts ════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Revenue Trend (NEW in v2.0) */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[15px] font-semibold flex items-center gap-2"><Zap size={16} className="text-[var(--af-accent)]" /> Tendencia de Ingresos</div>
-            <span className="text-[10px] text-[var(--af-text3)]">Últimos 6 meses</span>
+        {/* Revenue Trend */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-semibold flex items-center gap-2">
+              <TrendingUp size={14} className="text-[var(--af-accent)]" /> Tendencia de Ingresos
+            </div>
+            <span className="text-[9px] text-[var(--af-text3)] px-2 py-0.5 rounded-full bg-[var(--af-bg4)]">6 meses</span>
           </div>
           {revenueTrend.some(d => d.facturado > 0 || d.cobrado > 0) ? (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={170}>
               <AreaChart data={revenueTrend} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000000 ? `${(v/1000000).toFixed(0)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Area type="monotone" dataKey="facturado" name="Facturado" stroke="#c8a96e" fill="rgba(200,169,110,0.1)" strokeWidth={2} />
@@ -433,70 +529,105 @@ export default function DashboardScreen() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos de facturación</div>
+            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos de facturación aún</div>
           )}
         </div>
 
-        {/* Burndown Chart */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="text-[15px] font-semibold mb-4">Burndown Semanal</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={burndownData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
-              <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[4, 4, 0, 0]} barSize={20} />
-              <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Team Workload Chart */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-semibold flex items-center gap-2">
+              <Users size={14} className="text-purple-400" /> Carga de Trabajo
+            </div>
+            <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('reports')}>
+              Reportes <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+          </div>
+          {teamWorkload.length === 0 ? (
+            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin tareas asignadas al equipo</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={170}>
+              <BarChart data={teamWorkload} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="activas" name="Activas" fill="#3b82f6" radius={[2, 2, 0, 0]} stackId="a" barSize={14} />
+                <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" barSize={14} />
+                <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[2, 2, 0, 0]} stackId="a" barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      {/* ─── Row 5: Team Workload + Expense Categories (NEW v2.0) ─── */}
+      {/* ════════════ ROW 5: Activity + Notifications ════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Team Workload */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[15px] font-semibold">Carga de Trabajo</div>
-            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('reports')}>Reporte completo →</button>
+        {/* Recent Activity */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-semibold flex items-center gap-2">
+              <TrendingUp size={14} className="text-emerald-400" /> Actividad Reciente
+            </div>
           </div>
-          {teamWorkload.length === 0 ? (
-            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin tareas asignadas</div>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin actividad reciente</div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={teamWorkload} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="activas" name="Activas" fill="#3b82f6" radius={[2, 2, 0, 0]} stackId="a" barSize={16} />
-                <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" barSize={16} />
-                <Bar dataKey="pendientes" name="Pendientes" fill="rgba(200,169,110,0.4)" radius={[2, 2, 0, 0]} stackId="a" barSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+              {recentActivity.map(item => (
+                <div key={item.id + item.type} className="flex items-start gap-2.5 group cursor-pointer hover:bg-[var(--af-bg3)] rounded-lg p-2 -mx-1 transition-colors" onClick={() => {
+                  if (item.type === 'rfi') navigateTo('rfis');
+                  else if (item.type === 'submittal') navigateTo('submittals');
+                  else if (item.type === 'punch') navigateTo('punchList');
+                  else if (item.type === 'task') navigateTo('tasks');
+                }}>
+                  <div className={`w-6 h-6 rounded-lg ${item.color} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 mt-0.5`}>{item.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-medium truncate">{item.title}</div>
+                    <div className="text-[10px] text-[var(--af-text3)] truncate">{item.subtitle}</div>
+                  </div>
+                  <span className="text-[9px] text-[var(--af-text3)] flex-shrink-0 mt-0.5">{fmtDate(item.time)}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Expense by Category */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[15px] font-semibold">Gastos por Categoría</div>
-            <button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => navigateTo('budget')}>Ver presupuesto →</button>
+        {/* Notifications */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-semibold flex items-center gap-2">
+              <span className="text-sm">🔔</span> Notificaciones
+            </div>
+            {unreadCount > 0 && <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-medium">{unreadCount} sin leer</span>}
           </div>
-          {expenseByCategory.length === 0 ? (
-            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin gastos registrados</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={expenseByCategory} layout="vertical" margin={{ top: 0, right: 20, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} width={55} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="value" name="Gasto" fill="#c8a96e" radius={[0, 4, 4, 0]} barSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+            {unreadNotifs.length === 0 && readNotifs.length === 0 ? (
+              <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin notificaciones</div>
+            ) : (
+              <>
+                {unreadNotifs.map((n: any) => (
+                  <div key={n.id} className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--af-accent)]/5 border border-[var(--af-accent)]/10 cursor-pointer hover:bg-[var(--af-accent)]/8 transition-colors">
+                    <span className="text-[13px] mt-0.5 flex-shrink-0">{n.icon || '🔔'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-medium truncate">{n.title}</div>
+                      <div className="text-[10px] text-[var(--af-text3)] truncate">{n.body}</div>
+                    </div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)] mt-2 flex-shrink-0" />
+                  </div>
+                ))}
+                {readNotifs.map((n: any) => (
+                  <div key={n.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors cursor-pointer">
+                    <span className="text-[13px] mt-0.5 flex-shrink-0 opacity-60">{n.icon || '🔔'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] text-[var(--muted-foreground)] truncate">{n.title}</div>
+                      <div className="text-[10px] text-[var(--af-text3)] truncate">{n.body}</div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
