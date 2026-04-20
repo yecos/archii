@@ -333,6 +333,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [showTenantSelector, setShowTenantSelector] = useState(false);
   const [activeTenantMembers, setActiveTenantMembers] = useState<string[]>([]); // UIDs of tenant members
 
+  // Ref for activeTenantRole — used inside onSnapshot callbacks to avoid stale closure + minification issues
+  const activeTenantRoleRef = React.useRef(activeTenantRole);
+  React.useEffect(() => { activeTenantRoleRef.current = activeTenantRole; }, [activeTenantRole]);
+
   // Restore tenant selection from localStorage (will be validated against server after auth)
   useEffect(() => {
     try {
@@ -824,8 +828,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const isCreator = data?.createdBy === authUser.uid;
         const isSuperAdmin = isCreator || (data?.superAdmins || []).includes(authUser.uid);
         const correctRole = isSuperAdmin ? 'Super Admin' : 'Miembro';
-        if (correctRole !== activeTenantRole) {
-          console.log('[ArchiFlow Team] Auto-fixing role:', activeTenantRole, '→', correctRole);
+        const currentRole = activeTenantRoleRef.current;
+        if (correctRole !== currentRole) {
+          console.log('[ArchiFlow Team] Auto-fixing role:', currentRole, '→', correctRole);
           setActiveTenantRole(correctRole);
           // Also fix localStorage so it doesn't happen again
           try {
@@ -840,7 +845,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       console.error('[ArchiFlow Team] ERROR loading tenant document:', err.code, err.message);
     });
     return () => unsub();
-  }, [ready, authUser, activeTenantId, activeTenantRole]);
+  }, [ready, authUser, activeTenantId]);
 
   // Derive teamUsers from allUsersCache + activeTenantMembers
   // This REACTS immediately when members change — no race condition
