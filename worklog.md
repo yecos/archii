@@ -335,3 +335,33 @@ Stage Summary:
 - Function calling funciona: 17 herramientas (crear tareas, proyectos, gastos, proveedores, reuniones, RFIs, consultar datos, etc.)
 - Commit: 8bf46f4
 - Deploy automático a Vercel en curso (https://archii-theta.vercel.app)
+
+---
+Task ID: 5
+Agent: Fix Agent
+Task: Replace z-ai-web-dev-sdk with Google Gemini API for Vercel compatibility
+
+Work Log:
+- Created src/lib/gemini-helper.ts with OpenAI-compatible Gemini wrapper
+  - chatCompletion() for simple chat (used by ai-assistant)
+  - chatCompletionWithTools() for function calling (used by ai-agent)
+  - Full message format conversion (OpenAI ↔ Gemini)
+  - Full tool format conversion (OpenAI ↔ Gemini)
+  - Response conversion with proper finish_reason handling
+  - Function call ID generation (Gemini doesn't provide one)
+- Updated src/app/api/ai-agent/route.ts to use Gemini
+  - Replaced import from z-ai-helper to gemini-helper
+  - Updated JSDoc to reference Google Gemini
+  - Replaced zai.chat.completions.create() calls with chatCompletionWithTools()
+- Updated src/app/api/ai-assistant/route.ts to use Gemini
+  - Replaced import from z-ai-helper to gemini-helper
+  - Updated JSDoc to reference Google Gemini
+  - Replaced zai.chat.completions.create() with chatCompletion()
+- Replaced src/lib/z-ai-helper.ts with backwards-compatible re-export
+- Verified TypeScript compilation: 0 errors in modified files
+
+Stage Summary:
+- z-ai-web-dev-sdk replaced with Google Gemini API (gemini-2.0-flash, free tier)
+- User must set GEMINI_API_KEY in Vercel environment variables
+- Both AI endpoints (/api/ai-agent and /api/ai-assistant) now work from Vercel
+- No changes to tool definitions, system prompts, or tool execution logic

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
-import { getZAI } from "@/lib/z-ai-helper";
+import { chatCompletion } from "@/lib/gemini-helper";
 
 /**
  * POST /api/ai-assistant
  *
  * Asistente IA real para ArchiFlow.
- * Usa z-ai-web-dev-sdk (GLM) — Sin API keys externas necesarias.
+ * Usa Google Gemini API — requiere GEMINI_API_KEY como variable de entorno.
  *
- * Powered by GLM (z-ai-web-dev-sdk)
+ * Powered by Google Gemini (gemini-2.0-flash)
  */
 
 const SYSTEM_PROMPT = `Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Tu tono es profesional pero cercano, y siempre respondes en español.
@@ -52,9 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize z-ai-web-dev-sdk (GLM)
-    const zai = await getZAI();
-
     // Construir mensajes para la API
     const apiMessages = [
       { role: "system" as const, content: SYSTEM_PROMPT },
@@ -76,9 +73,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Llamar a la API de GLM via z-ai-web-dev-sdk
-    const data = await zai.chat.completions.create({
-      messages: apiMessages,
+    // Llamar a la API de Gemini
+    const data = await chatCompletion(apiMessages, {
       max_tokens: 1024,
       temperature: 0.7,
     });

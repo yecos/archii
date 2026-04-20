@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
-import { getZAI } from "@/lib/z-ai-helper";
+import { chatCompletionWithTools } from "@/lib/gemini-helper";
 
 /**
  * POST /api/ai-agent
  *
  * Super IA Agent para ArchiFlow.
- * Usa z-ai-web-dev-sdk (GLM) con function calling para ejecutar acciones reales en la app:
+ * Usa Google Gemini API con function calling para ejecutar acciones reales en la app:
  * - Crear/editar tareas, proyectos, gastos, proveedores, reuniones
  * - Consultar datos del proyecto, equipo, presupuesto
  * - Gestionar fases de obra, aprobaciones, inventario
  *
- * Powered by GLM (z-ai-web-dev-sdk) — Sin API keys externas necesarias
+ * Powered by Google Gemini (gemini-2.0-flash)
  */
 
 // ─── TOOL DEFINITIONS ────────────────────────────────────────────────
@@ -1058,9 +1058,6 @@ export async function POST(request: NextRequest) {
     const db = getAdminDb();
     const actions: ExecutedAction[] = [];
 
-    // Initialize z-ai-web-dev-sdk (GLM)
-    const zai = await getZAI();
-
     // Build messages
     const apiMessages: any[] = [
       { role: "system", content: SYSTEM_PROMPT },
@@ -1081,13 +1078,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // First call: with tools (using z-ai-web-dev-sdk)
+    // First call: with tools (using Gemini API)
     let data;
     try {
-      data = await zai.chat.completions.create({
-        messages: apiMessages,
-        tools: TOOLS,
-        tool_choice: "auto",
+      data = await chatCompletionWithTools(apiMessages, TOOLS, {
         max_tokens: 2048,
         temperature: 0.7,
       });
@@ -1137,10 +1131,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Second call: get final response with tool results (using z-ai-web-dev-sdk)
+      // Second call: get final response with tool results (using Gemini API)
       try {
-        const followUpData = await zai.chat.completions.create({
-          messages: apiMessages,
+        const followUpData = await chatCompletionWithTools(apiMessages, undefined, {
           max_tokens: 2048,
           temperature: 0.7,
         });
