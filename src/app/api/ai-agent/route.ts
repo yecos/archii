@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
-import ZAI from "z-ai-web-dev-sdk";
+import { getZAI } from "@/lib/z-ai-helper";
 
 /**
  * POST /api/ai-agent
@@ -1059,7 +1059,7 @@ export async function POST(request: NextRequest) {
     const actions: ExecutedAction[] = [];
 
     // Initialize z-ai-web-dev-sdk (GLM)
-    const zai = await ZAI.create();
+    const zai = await getZAI();
 
     // Build messages
     const apiMessages: any[] = [

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
-import ZAI from "z-ai-web-dev-sdk";
+import { getZAI } from "@/lib/z-ai-helper";
 
 /**
  * POST /api/ai-assistant
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize z-ai-web-dev-sdk (GLM)
-    const zai = await ZAI.create();
+    const zai = await getZAI();
 
     // Construir mensajes para la API
     const apiMessages = [
