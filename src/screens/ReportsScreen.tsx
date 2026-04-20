@@ -161,7 +161,7 @@ export default function ReportsScreen() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
             {['General', 'Financiero', 'Tiempo', 'Equipo', 'Obra'].map(tab => (
-              <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${(!forms.reportTab || forms.reportTab === 'General') === (tab === 'General') ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
+              <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${(forms.reportTab || 'General') === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
             ))}
           </div>
           <div className="flex items-center gap-2 flex-wrap">

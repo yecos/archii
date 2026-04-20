@@ -121,9 +121,11 @@ function useTenantOneDrive(tenantId: string | null) {
         if (data.code === 'TOKEN_EXPIRED') {
           // Try refreshing
           await refreshTenantToken(tenantId);
-          // Retry once
+          // Get fresh token for retry
+          const newToken = await getFirebaseIdToken();
+          if (!newToken) return;
           const retryRes = await fetch(`/api/tenants/onedrive/files?${params}`, {
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: { 'Authorization': `Bearer ${newToken}` },
           });
           if (retryRes.ok) {
             const data2 = await retryRes.json();

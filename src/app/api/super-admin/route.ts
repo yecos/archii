@@ -677,6 +677,15 @@ export async function POST(request: NextRequest) {
             results.push({ uid, success: false, error: e.message });
           }
         }
+      } else if (type === "bulk-delete") {
+        for (const uid of targetIds) {
+          try {
+            await db.collection("users").doc(uid).delete();
+            results.push({ uid, success: true });
+          } catch (e: any) {
+            results.push({ uid, success: false, error: e.message });
+          }
+        }
       } else if (type === "delete-tenants") {
         for (const tid of targetIds) {
           try {

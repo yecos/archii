@@ -454,8 +454,8 @@ export default function ProfileScreen() {
                   });
                 }
 
-                // Meetings today or this week
-                meetings.forEach(m => {
+                // Meetings today or this week (only my meetings)
+                myCalMeetings.forEach(m => {
                   if (m.data.date && (m.data.date === todayStr || (m.data.date > todayStr && m.data.date <= weekLater.toISOString().split('T')[0]))) {
                     const proj = projects.find(p => p.id === m.data.projectId);
                     const isToday = m.data.date === todayStr;

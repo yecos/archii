@@ -603,8 +603,8 @@ function UsersTab({ handleAction, showToast, setLoading }: { handleAction: any; 
     const targetIds = Array.from(selectedUsers);
 
     if (bulkAction === 'delete') {
-      if (!confirm(`¿Eliminar ${targetIds.length} usuarios?`)) return;
-      await handleAction('bulk-action', { type: 'change-roles', targetIds, newRole: 'Miembro' }, `${targetIds.length} usuarios cambiados a Miembro`);
+      if (!confirm(`¿Eliminar ${targetIds.length} usuarios? Esta acción no se puede deshacer.`)) return;
+      await handleAction('bulk-action', { type: 'bulk-delete', targetIds }, `${targetIds.length} usuarios eliminados`);
     } else {
       await handleAction('bulk-action', { type: 'change-roles', targetIds, newRole: bulkAction }, `${targetIds.length} roles cambiados a ${bulkAction}`);
     }
