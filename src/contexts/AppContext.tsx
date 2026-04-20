@@ -2381,10 +2381,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
     const text = textOverride || forms.chatInput || '';
     if (!text && !audioData && !fileData) return;
-    if (!chatProjectId) return;
+    if (!chatProjectId || !authUser) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = { text, uid: authUser?.uid, userName: authUser?.displayName || (authUser?.email || '').split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() };
+      const msgData: any = scrubUndefined({ text, uid: authUser.uid, userName: authUser.displayName || (authUser.email || '').split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -2402,7 +2402,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       else { await db.collection('projects').doc(chatProjectId).collection('messages').add(msgData); }
       setForms(p => ({ ...p, chatInput: '' }));
       setChatReplyingTo(null);
-    } catch { showToast('Error al enviar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] sendMessage error:', err); showToast('Error al enviar', 'error'); }
   };
 
   // Voice recording functions
@@ -2611,9 +2611,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
     const amount = Number(forms.expAmount) || 0;
-    const data = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const raw = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid };
+    const data = scrubUndefined(raw);
     try {
       await db.collection('expenses').add(data);
       showToast('Gasto registrado');
@@ -2622,7 +2624,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (forms.expProject) {
         const proj = projects.find(p => p.id === forms.expProject);
         const projName = proj?.data.name || 'Proyecto';
-        notifyWhatsApp.expenseCreated(authUser?.uid || '', concept, amount, projName, forms.expCategory || undefined).catch(() => {});
+        notifyWhatsApp.expenseCreated(authUser.uid, concept, amount, projName, forms.expCategory || undefined).catch(() => {});
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
@@ -2632,8 +2634,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveSupplier = async () => {
     const name = forms.supName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
-    const data = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+    const raw = { name, category: forms.supCategory || 'Otro', phone: forms.supPhone || '', email: forms.supEmail || '', address: forms.supAddress || '', website: forms.supWebsite || '', notes: forms.supNotes || '', rating: Number(forms.supRating) || 5, tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid };
+    const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
@@ -2647,13 +2651,15 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveCompany = async () => {
     const name = forms.compName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
-      const data = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid };
+      const raw = { name, nit: forms.compNit || '', legalName: forms.compLegal || '', address: forms.compAddress || '', phone: forms.compPhone || '', email: forms.compEmail || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid };
+      const data = scrubUndefined(raw);
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveCompany error:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteCompany = async (id: string) => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error("[ArchiFlow]", err); showToast('Error', 'error'); } };
@@ -2669,13 +2675,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const uploadFile = async (e: any) => {
     const file = e.target?.files?.[0];
-    if (!file || !selectedProjectId) return;
+    if (!file || !selectedProjectId || !authUser) return;
     if (file.size > 10 * 1024 * 1024) { showToast('El archivo no puede superar 10 MB', 'error'); return; }
     showToast('Subiendo archivo...');
     try {
       const base64 = await fileToBase64(file);
       const db = getFirebase().firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser?.uid });
+      await db.collection('projects').doc(selectedProjectId).collection('files').add(scrubUndefined({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser.uid }));
       showToast('Archivo subido');
     } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
     e.target.value = '';
@@ -2686,17 +2692,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete();
       showToast('Archivo eliminado');
-    } catch { showToast('Error al eliminar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] deleteFile error:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const initDefaultPhases = async () => {
-    if (workPhases.length > 0) return;
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    for (let i = 0; i < DEFAULT_PHASES.length; i++) {
-      await db.collection('projects').doc(selectedProjectId!).collection('workPhases').add({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
-    }
-    showToast('Fases inicializadas');
+    if (workPhases.length > 0 || !selectedProjectId) return;
+    try {
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      for (let i = 0; i < DEFAULT_PHASES.length; i++) {
+        await db.collection('projects').doc(selectedProjectId).collection('workPhases').add(scrubUndefined({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts }));
+      }
+      showToast('Fases inicializadas');
+    } catch (err) { console.error('[ArchiFlow] initDefaultPhases error:', err); }
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
@@ -2706,12 +2714,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveApproval = async () => {
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser?.uid });
+      await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add(scrubUndefined({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid }));
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
-      // Notificar por WhatsApp (broadcast a admins)
       const projName = currentProject?.data.name || 'Proyecto';
-      notifyWhatsApp.approvalPending(authUser?.uid || '', title, projName, authUser?.displayName || authUser?.email || 'Usuario').catch(() => {});
+      notifyWhatsApp.approvalPending(authUser.uid, title, projName, authUser.displayName || authUser.email || 'Usuario').catch(() => {});
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
@@ -2747,8 +2755,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       materials: (lf.materials || ['']).filter((m: string) => m.trim()),
       observations: lf.observations || '',
       photos: lf.photos || [],
-      supervisor: lf.supervisor || authUser?.displayName || authUser?.email?.split('@')[0] || '',
-      createdBy: authUser?.uid,
+      supervisor: lf.supervisor || (authUser ? authUser.displayName || authUser.email?.split('@')[0] || '' : ''),
+      createdBy: authUser ? authUser.uid : '',
       updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
     };
     try {
@@ -2775,7 +2783,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         setDailyLogTab('list');
         setSelectedLogId(null);
       }
-    } catch { showToast('Error al eliminar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] deleteDailyLog error:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const openEditLog = (log: any) => {
@@ -2842,20 +2850,22 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveInvProduct = async () => {
     const name = forms.invProdName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
       const warehouseStock: Record<string, number> = {};
       INV_WAREHOUSES.forEach(w => { warehouseStock[w] = Number(forms[`invProdWS_${w.replace(/\s/g, '_')}`]) || 0; });
       const totalStock = Object.values(warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-      const data = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser?.uid };
+      const raw = { name, sku: forms.invProdSku || '', categoryId: forms.invProdCat || '', unit: forms.invProdUnit || 'Unidad', price: Number(forms.invProdPrice) || 0, stock: totalStock, minStock: Number(forms.invProdMinStock) || 0, description: forms.invProdDesc || '', imageData: forms.invProdImage || '', warehouse: forms.invProdWarehouse || 'Almacén Principal', warehouseStock, updatedAt: ts, updatedBy: authUser.uid };
+      const data = scrubUndefined(raw);
       if (editingId) { await db.collection('invProducts').doc(editingId).update(data); showToast('Producto actualizado'); }
-      else { await db.collection('invProducts').add({ ...data, tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser?.uid }); showToast('Producto creado'); }
+      else { await db.collection('invProducts').add(scrubUndefined({ ...raw, tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser.uid })); showToast('Producto creado'); }
       closeModal('invProduct'); setEditingId(null);
       const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
       setForms(p => ({ ...p, ...resetForms }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveInvProduct error:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -2875,11 +2885,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      const data = { name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', createdAt: ts };
+      const data = scrubUndefined({ name, color: forms.invCatColor || CAT_COLORS[invCategories.length % CAT_COLORS.length], description: forms.invCatDesc || '', tenantId: activeTenantId || '', createdAt: ts });
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
       closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
-    } catch { showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveInvCategory error:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -2890,6 +2900,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const qty = Number(forms.invMovQty) || 0;
     const warehouse = forms.invMovWarehouse || 'Almacén Principal';
     if (!productId || qty <= 0) { showToast('Selecciona producto, almacén y cantidad', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
@@ -2905,7 +2916,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         transaction.update(productDocRef, { stock: newTotal, warehouseStock: ws, updatedAt: ts });
       });
       // Record the movement after successful stock update
-      await db.collection('invMovements').add({ productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], createdAt: ts, createdBy: authUser?.uid });
+      await db.collection('invMovements').add(scrubUndefined({ productId, type, quantity: qty, warehouse, reason: forms.invMovReason || '', reference: forms.invMovRef || '', date: forms.invMovDate || new Date().toISOString().split('T')[0], tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser.uid }));
       showToast(`${type === 'Entrada' ? 'Entrada' : 'Salida'} registrada en ${warehouse}: ${qty} uds`);
       closeModal('invMovement'); setForms(p => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' }));
     } catch (err: any) { showToast(err.message || 'Error al registrar movimiento', 'error'); }
@@ -2919,6 +2930,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const from = forms.invTrFrom || '';
     const to = forms.invTrTo || '';
     if (!productId || !from || !to || from === to || qty <= 0) { showToast('Completa todos los campos y asegúrate que los almacenes sean diferentes', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
@@ -2937,11 +2949,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       });
       // Save transfer record after successful stock update
       const product = invProducts.find(p => p.id === productId);
-      await db.collection('invTransfers').add({
+      await db.collection('invTransfers').add(scrubUndefined({
         productId, productName: product?.data.name || '', fromWarehouse: from, toWarehouse: to, quantity: qty,
         status: 'Completada', date: forms.invTrDate || new Date().toISOString().split('T')[0],
-        notes: forms.invTrNotes || '', createdAt: ts, createdBy: authUser?.uid, completedAt: ts
-      });
+        notes: forms.invTrNotes || '', tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser.uid, completedAt: ts
+      }));
       showToast(`Transferencia completada: ${qty} uds de ${from} → ${to}`);
       closeModal('invTransfer'); setForms(p => ({ ...p, invTrProduct: '', invTrFrom: '', invTrTo: '', invTrQty: '', invTrDate: '', invTrNotes: '' }));
     } catch (err: any) { showToast(err.message || 'Error en transferencia', 'error'); }
@@ -3123,14 +3135,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveGalleryPhoto = async () => {
     const imageData = forms.galleryImageData || '';
     if (!imageData) { showToast('Selecciona una foto', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      const data = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, createdAt: ts, createdBy: authUser?.uid };
+      const raw = { projectId: forms.galleryProject || '', categoryName: forms.galleryCategory || 'Otro', caption: forms.galleryCaption || '', imageData, tenantId: activeTenantId || '', createdAt: ts, createdBy: authUser.uid };
+      const data = scrubUndefined(raw);
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
       closeModal('gallery'); setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' }));
-    } catch { showToast('Error al guardar foto', 'error'); }
+    } catch (err) { console.error('[ArchiFlow] saveGalleryPhoto error:', err); showToast('Error al guardar foto', 'error'); }
   };
 
   const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
