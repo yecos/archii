@@ -614,22 +614,33 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
     const unsubscribe = auth.onAuthStateChanged(async (user: any) => {
       try {
-        setAuthUser(user || null);
+        // FIX: Force-refresh auth user to get latest photoURL from identity provider.
+        // Firebase Auth persistence sometimes returns null/empty photoURL on reload
+        // (stored in IndexedDB), which would overwrite valid Firestore photoURL.
+        if (user) {
+          try { await user.reload(); } catch (_e) { /* ignore if offline */ }
+          setAuthUser({ ...user, photoURL: user.photoURL || null });
+        } else {
+          setAuthUser(null);
+        }
         if (user) {
           const db = fb.firestore();
           // Save user profile
           const ref = db.collection('users').doc(user.uid);
           const snap = await ref.get();
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new' });
+          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new', photoURL: user.photoURL });
           if (!snap.exists) {
             await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
           } else {
             // Existing user: sync photoURL and name from auth provider on every login
             const updates: Record<string, any> = {};
             const existing = snap.data() || {};
-            if ((user.photoURL || '') !== (existing.photoURL || '')) {
-              updates.photoURL = user.photoURL || '';
+            // FIX: Only sync photoURL FROM auth TO Firestore when auth has a NON-EMPTY value.
+            // Never overwrite a valid Firestore photoURL with null/empty from auth persistence.
+            // This prevents the cycle: reload -> auth photoURL=null -> overwrites Firestore -> photos disappear
+            if (user.photoURL && user.photoURL !== (existing.photoURL || '')) {
+              updates.photoURL = user.photoURL;
             }
             if ((user.displayName || '') && (user.displayName || '') !== (existing.name || '')) {
               updates.name = user.displayName;
@@ -1589,9 +1600,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           try {
             result = await authInstance.signInWithPopup(basicProvider);
           } catch (basicErr: any) {
-            // If basic popup also fails (e.g. popup blocked), try redirect
-            if (basicErr.code === 'auth/popup-blocked') {
-              console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
+            // If basic popup also fails, try redirect as last resort
+            if (basicErr.code === 'auth/popup-blocked' || basicErr.code === 'auth/internal-error') {
+              console.log('[ArchiFlow Auth] Microsoft popup failed (' + basicErr.code + '), trying redirect fallback...');
               const redirectProvider = new authNS.OAuthProvider('microsoft.com');
               redirectProvider.setCustomParameters({ prompt: 'select_account' });
               await authInstance.signInWithRedirect(redirectProvider);
@@ -1599,7 +1610,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             }
             throw basicErr;
           }
-        } else if (popupErr.code === 'auth/popup-blocked') {
+        } else if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/internal-error') {
           // Popup blocked — try redirect immediately
           console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
           const redirectProvider = new authNS.OAuthProvider('microsoft.com');

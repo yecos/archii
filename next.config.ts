@@ -24,18 +24,23 @@ const nextConfig: NextConfig = {
             value: [
               // default-src: fuentes permitidas por defecto
               "default-src 'self';",
-              // script-src: scripts del SDK Firebase, Google Identity Services, Google Maps, y UUID CDN
+              // script-src: scripts del SDK Firebase, Google Identity Services, Google Maps, UUID CDN, y Microsoft Auth
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "  https://www.gstatic.com",
               "  https://*.googleapis.com",
               "  https://apis.google.com",
-              "  https://cdn.jsdelivr.net;",
+              "  https://cdn.jsdelivr.net",
+              "  https://aadcdn.msauth.net",
+              "  https://aadcdn.msftauth.net",
+              "  https://logincdn.msauth.net",
+              "  https://*.msauth.net",
+              "  https://*.msftauth.net;",
               // style-src: fuentes de Google y estilos inline de Firebase
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
               // font-src: fuentes de Google
               "font-src 'self' https://fonts.gstatic.com;",
-              // img-src: imágenes de perfiles, storage, y favicons
-              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://*.graph.facebook.com https://*.googleapis.com;",
+              // img-src: imágenes de perfiles, storage, favicons, Microsoft Graph y Microsoft Auth avatars
+              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://*.graph.facebook.com https://*.googleapis.com https://graph.microsoft.com https://aadcdn.msauth.net https://aadcdn.msftauth.net https://*.msauth.net https://*.msftauth.net;",
               // connect-src: endpoints de Firebase Auth, Firestore, Google Identity Services, Microsoft OAuth
               "connect-src 'self'",
               "  https://*.firebaseio.com",
@@ -52,6 +57,10 @@ const nextConfig: NextConfig = {
               "  https://id.live.com",
               "  https://aadcdn.msauth.net",
               "  https://aadcdn.msftauth.net",
+              "  https://*.msauth.net",
+              "  https://*.msftauth.net",
+              "  https://logincdn.msauth.net",
+              "  https://browser.pipe.aria.microsoft.com",
               "  wss://*.firebaseio.com",
               "  https://firestore.googleapis.com",
               "  https://graph.microsoft.com;",
@@ -61,9 +70,17 @@ const nextConfig: NextConfig = {
               "  https://accounts.google.com",
               "  https://login.microsoftonline.com",
               "  https://login.live.com",
+              "  https://id.live.com",
+              "  https://aadcdn.msauth.net",
+              "  https://aadcdn.msftauth.net",
+              "  https://*.msauth.net",
+              "  https://*.msftauth.net",
+              "  https://logincdn.msauth.net",
               "  https://*.google.com",
               "  https://*.firebaseapp.com",
               "  https://*.firebaseio.com;",
+              // form-action: permitido para redirects OAuth de Microsoft
+              "form-action 'self' https://login.microsoftonline.com https://login.live.com https://accounts.google.com;",
             ].join(' '),
           },
         ],
