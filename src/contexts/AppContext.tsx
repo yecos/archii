@@ -2201,13 +2201,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const saveProject = async () => {
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const data = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
     try {
       if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
       else {
-        await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser?.uid, progress: 0 });
+        await db.collection('projects').add({ ...data, createdAt: ts, createdBy: authUser.uid, progress: 0 });
         showToast('Proyecto creado');
         // Si hay sesion de OneDrive activa, crear carpeta del proyecto
         if (msConnected && msAccessToken) {
@@ -2236,16 +2237,17 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (isSavingTask) return;
     const title = forms.taskTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     setIsSavingTask(true);
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()) : [];
-    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser?.uid };
+    const data: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
       else {
-        await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser?.uid });
+        await db.collection('tasks').add({ ...data, createdAt: ts, createdBy: authUser.uid });
         showToast('Tarea creada');
         if (assignees.length > 0 && forms.taskProject) {
           const proj = projects.find((p: any) => p.id === forms.taskProject);

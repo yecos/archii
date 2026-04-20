@@ -41,14 +41,14 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
       companyId: data.projCompany || '',
       progress: 0,
       updatedAt: ts,
-      updatedBy: authUser?.uid,
+      updatedBy: authUser?.uid || '',
     };
     if (editingId) {
       await db.collection('projects').doc(editingId).update(projData);
       showToast('Proyecto actualizado');
     } else {
       projData.createdAt = ts;
-      projData.createdBy = authUser?.uid;
+      projData.createdBy = authUser?.uid || '';
       projData.tenantId = tenantId || '';
       const ref = await db.collection('projects').add(projData);
       // Init default phases
