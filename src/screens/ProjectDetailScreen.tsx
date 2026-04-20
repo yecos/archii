@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 
@@ -11,10 +11,10 @@ export default function ProjectDetailScreen() {
     downloadOneDriveFile, formatFileSize, forms, galleryLoading, getFileIcon,
     getUserName, handleDroppedFiles, handleFileUpload, initDefaultPhases, loadGalleryPhotos,
     loadOneDriveFiles, loading, msAccessToken, msConnected, msLoading,
-    navigateToFolder, odBreadcrumbs, odCurrentFolder, odDragOver, odGalleryPhotos,
+    navigateToFolder, navigateTo, odBreadcrumbs, odCurrentFolder, odDragOver, odGalleryPhotos,
     odProjectFolder, odRenameName, odRenaming, odSearchQuery, odSearchResults,
     odSearching, odTab, odUploadFile, odUploadProgress, odUploading,
-    odViewMode, oneDriveFiles, openEditTask, openModal, openOneDriveForProject,
+    odViewMode, oneDriveFiles, openEditProject, openEditTask, openModal, openOneDriveForProject,
     projectBudget, projectExpenses, projectFiles, projectSpent, projectTasks,
     renameOneDriveFile, searchOneDriveFiles, selectedProjectId, setForms, setLightboxIndex,
     setLightboxPhoto, setOdBreadcrumbs, setOdCurrentFolder, setOdDragOver, setOdRenameName,
@@ -26,206 +26,368 @@ export default function ProjectDetailScreen() {
     rfis, submittals, punchItems,
   } = useApp();
 
+  // Computed values
+  const today = new Date().toISOString().split('T')[0];
+  const pendingTasks = projectTasks.filter((t: any) => t.data.status !== 'Completado');
+  const overdueCount = pendingTasks.filter((t: any) => t.data.dueDate && t.data.dueDate < today).length;
+  const pendingCount = pendingTasks.length;
+  const projRFIs = rfis.filter((r: any) => r.data.projectId === selectedProjectId);
+  const projSubs = submittals.filter((s: any) => s.data.projectId === selectedProjectId);
+  const projPunch = punchItems.filter((p: any) => p.data.projectId === selectedProjectId);
+  const openRFIs = projRFIs.filter((r: any) => r.data.status === 'Abierto').length;
+  const budgetPct = projectBudget > 0 ? Math.min(100, Math.round((projectSpent / projectBudget) * 100)) : 0;
+  const budgetExceeded = projectSpent > projectBudget && projectBudget > 0;
+
+  // Progress edit state
+  const [editingProgress, setEditingProgress] = useState(false);
+
   if (!currentProject) return null;
 
   return (
 <div className="animate-fadeIn space-y-4">
+            {/* 1. HEADER */}
             <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5 md:p-6 relative overflow-hidden">
               <div className="absolute -right-8 -top-8 w-44 h-44 border-[40px] border-[var(--af-accent)]/5 rounded-full" />
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span>
+                  </div>
                   <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl mt-2">{currentProject.data.name}</div>
                   <div className="text-sm text-[var(--muted-foreground)] mt-1">{currentProject.data.location && '📍 ' + currentProject.data.location}{currentProject.data.client ? ' · ' + currentProject.data.client : ''}</div>
                   {currentProject.data.description && <div className="text-sm text-[var(--muted-foreground)] mt-3 max-w-xl">{currentProject.data.description}</div>}
                 </div>
-                <div className="flex gap-3">
-                  <div className="text-center"><div className="text-lg font-semibold text-[var(--af-accent)]">{fmtCOP(currentProject.data.budget)}</div><div className="text-[10px] text-[var(--af-text3)]">Presupuesto</div></div>
-                  <div className="text-center"><div className="text-lg font-semibold text-emerald-400">{fmtCOP(projectSpent)}</div><div className="text-[10px] text-[var(--af-text3)]">Gastado</div></div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => navigateTo('projects')}>
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Volver
+                  </button>
+                  <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity" onClick={() => openEditProject(currentProject)}>
+                    ✏️ Editar proyecto
+                  </button>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
                 <div className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${(currentProject.data.progress || 0) >= 80 ? 'bg-emerald-500' : (currentProject.data.progress || 0) >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: (currentProject.data.progress || 0) + '%' }} /></div>
-                <input type="number" min="0" max="100" className="w-14 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-sm text-[var(--foreground)] outline-none text-center focus:border-[var(--af-accent)]" value={currentProject.data.progress || 0} onChange={e => { const v = Math.min(100, Math.max(0, Number(e.target.value) || 0)); updateProjectProgress(v); }} />
-                <span className="text-sm font-medium text-[var(--muted-foreground)]">%</span>
+                {editingProgress ? (
+                  <input
+                    autoFocus
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-14 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-sm text-[var(--foreground)] outline-none text-center focus:border-[var(--af-accent)]"
+                    value={currentProject.data.progress || 0}
+                    onChange={e => { const v = Math.min(100, Math.max(0, Number(e.target.value) || 0)); updateProjectProgress(v); }}
+                    onBlur={() => setEditingProgress(false)}
+                    onKeyDown={e => { if (e.key === 'Enter') setEditingProgress(false); }}
+                  />
+                ) : (
+                  <button className="flex items-center gap-1 text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer bg-transparent border-none" onClick={() => setEditingProgress(true)}>
+                    {currentProject.data.progress || 0}%
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                )}
               </div>
-              {projectBudget > 0 && <div className="mt-3 text-xs text-[var(--muted-foreground)]">{projectSpent > projectBudget ? <span className="text-red-400 font-medium">⚠️ Excedido por {fmtCOP(projectSpent - projectBudget)}</span> : `Restante: ${fmtCOP(projectBudget - projectSpent)} (${Math.round((projectSpent / projectBudget) * 100)}% del presupuesto)`}</div>}
             </div>
 
-            {/* Tabs */}
+            {/* 2. KPI CARDS */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Card 1: Tareas pendientes */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                <div className="text-lg font-bold">{pendingCount}</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">Tareas pendientes</div>
+              </div>
+              {/* Card 2: Tareas vencidas */}
+              <div className={`border rounded-xl p-3 ${overdueCount > 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--card)] border-[var(--border)]'}`}>
+                <div className={`text-lg font-bold ${overdueCount > 0 ? 'text-red-400' : ''}`}>{overdueCount}</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">Tareas vencidas</div>
+              </div>
+              {/* Card 3: RFIs abiertos */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                <div className="text-lg font-bold text-blue-400">{openRFIs}</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">RFIs abiertos</div>
+              </div>
+              {/* Card 4: Presupuesto */}
+              <div className={`border rounded-xl p-3 ${budgetExceeded ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--card)] border-[var(--border)]'}`}>
+                <div className={`text-lg font-bold ${budgetExceeded ? 'text-red-400' : 'text-[var(--af-accent)]'}`}>{budgetPct}%</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">
+                  {budgetExceeded ? `Excedido` : `Presupuesto`}
+                  <span className="block text-[10px]">{fmtCOP(projectSpent)} / {fmtCOP(projectBudget)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. TAB BAR (5 tabs) */}
             <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
-              {['Resumen', 'Tareas', 'Calidad', 'Presupuesto', 'Archivos', 'Obra', 'Portal'].map(tab => (
+              {['Resumen', 'Tareas', 'Calidad', 'Archivos', 'Obra'].map(tab => (
                 <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${forms.detailTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab }))}>{tab}</button>
               ))}
             </div>
 
-            {/* Tab: Resumen */}
-            {forms.detailTab === 'Resumen' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="text-[15px] font-semibold mb-4">Información</div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Cliente</span><span>{currentProject.data.client || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Ubicación</span><span>{currentProject.data.location || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Inicio</span><span>{currentProject.data.startDate || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Entrega</span><span>{currentProject.data.endDate || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Presupuesto</span><span className="text-[var(--af-accent)] font-semibold">{fmtCOP(currentProject.data.budget)}</span></div>
+            {/* 4. TAB: Resumen (enriched) */}
+            {forms.detailTab === 'Resumen' && (
+            <div className="space-y-4">
+              {/* Quick info grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className="text-[10px] text-[var(--muted-foreground)] mb-1">Cliente</div>
+                  <div className="text-sm font-medium truncate">{currentProject.data.client || '—'}</div>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className="text-[10px] text-[var(--muted-foreground)] mb-1">Ubicación</div>
+                  <div className="text-sm font-medium truncate">{currentProject.data.location || '—'}</div>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className="text-[10px] text-[var(--muted-foreground)] mb-1">Inicio</div>
+                  <div className="text-sm font-medium">{currentProject.data.startDate || '—'}</div>
+                </div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className="text-[10px] text-[var(--muted-foreground)] mb-1">Entrega</div>
+                  <div className="text-sm font-medium">{currentProject.data.endDate || '—'}</div>
                 </div>
               </div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="text-[15px] font-semibold mb-4">Actividad reciente</div>
-                {projectTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 5).map((t: any) => (
-                  <div key={t.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-                    <div className={`w-2 h-2 rounded-full ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                    <div className="flex-1 text-sm truncate">{t.data.title}</div>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                  </div>
-                ))}
-                {projectTasks.filter((t: any) => t.data.status !== 'Completado').length === 0 && <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>}
-              </div>
-            </div>)}
 
-            {/* Tab: Tareas */}
-            {forms.detailTab === 'Tareas' && (<div>
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">{projectTasks.length} tareas en este proyecto</div>
-                <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>+ Nueva tarea</button>
+              {/* Description */}
+              {currentProject.data.description && (
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[13px] font-semibold mb-2">Descripción</div>
+                  <div className="text-sm text-[var(--muted-foreground)] leading-relaxed">{currentProject.data.description}</div>
+                </div>
+              )}
+
+              {/* Work phases timeline (compact) */}
+              {workPhases.length > 0 && (
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[13px] font-semibold mb-3">Fases del proyecto</div>
+                  <div className="relative pl-5">
+                    <div className="absolute left-[7px] top-1 bottom-1 w-px bg-[var(--input)]" />
+                    {workPhases.map((phase: any) => {
+                      const isActive = phase.data.status === 'En progreso';
+                      const isDone = phase.data.status === 'Completado';
+                      return (
+                        <div key={phase.id} className="relative mb-3 last:mb-0">
+                          <div className={`absolute -left-5 top-1.5 w-3 h-3 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">{phase.data.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDone ? 'bg-emerald-500/10 text-emerald-400' : isActive ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{phase.data.status}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent tasks (overdue first, then by due date) */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                <div className="text-[13px] font-semibold mb-3">Tareas pendientes ({pendingCount})</div>
+                {pendingTasks.length === 0 ? (
+                  <div className="text-center py-4 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>
+                ) : (
+                  <div className="space-y-2">
+                    {[...pendingTasks].sort((a: any, b: any) => {
+                      const aOverdue = a.data.dueDate && a.data.dueDate < today;
+                      const bOverdue = b.data.dueDate && b.data.dueDate < today;
+                      if (aOverdue && !bOverdue) return -1;
+                      if (!aOverdue && bOverdue) return 1;
+                      return 0;
+                    }).slice(0, 8).map((t: any) => (
+                      <div key={t.id} className="flex items-center gap-3 py-1.5">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                        <div className="flex-1 text-sm truncate">{t.data.title}</div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {t.data.dueDate && (
+                            <span className={`text-[10px] ${t.data.dueDate < today ? 'text-red-400 font-medium' : 'text-[var(--af-text3)]'}`}>
+                              {fmtDate(t.data.dueDate)}
+                            </span>
+                          )}
+                          {t.data.assigneeId && <span className="text-[10px] text-[var(--af-text3)]">{getUserName(t.data.assigneeId)}</span>}
+                        </div>
+                      </div>
+                    ))}
+                    {pendingTasks.length > 8 && (
+                      <button className="text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, detailTab: 'Tareas' }))}>Ver todas las tareas →</button>
+                    )}
+                  </div>
+                )}
               </div>
-              {projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
-              projectTasks.map((t: any) => (
-                <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                  <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
-                    <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
-                      {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
-                      {t.data.assigneeId && <span>👤 {getUserName(t.data.assigneeId)}</span>}
+            </div>
+            )}
+
+            {/* 5. TAB: Tareas (with status filters) */}
+            {forms.detailTab === 'Tareas' && (() => {
+              const taskFilters = [
+                { k: 'Todas', v: '' },
+                { k: 'Pendientes', v: 'Pendiente' },
+                { k: 'En progreso', v: 'En progreso' },
+                { k: 'Completadas', v: 'Completado' },
+              ];
+              const filteredTasks = forms.taskStatusFilter
+                ? projectTasks.filter((t: any) => t.data.status === forms.taskStatusFilter)
+                : projectTasks;
+
+              return (
+                <div>
+                  {/* Header row */}
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    {/* Status filter pills */}
+                    <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
+                      {taskFilters.map(tf => (
+                        <button key={tf.k} className={`px-2.5 py-1 rounded-md text-[12px] cursor-pointer transition-all ${(!forms.taskStatusFilter || '') === tf.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, taskStatusFilter: tf.v }))}>
+                          {tf.k}
+                        </button>
+                      ))}
                     </div>
+                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0] })); openModal('task'); }}>+ Nueva tarea</button>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
-                  <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
-                  <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>✕</button>
+                  <div className="text-sm text-[var(--muted-foreground)] mb-3">{filteredTasks.length} tarea{filteredTasks.length !== 1 ? 's' : ''}</div>
+                  {filteredTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
+                  filteredTasks.map((t: any) => (
+                    <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                      <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
+                        <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                          {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
+                          {t.data.assigneeId && <span>👤 {getUserName(t.data.assigneeId)}</span>}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                      <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>✎</button>
+                      <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>✕</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>)}
+              );
+            })()}
 
-            {/* Tab: Calidad (RFIs, Submittals, Punch) */}
+            {/* 6. TAB: Calidad (with Calidad | Finanzas sub-tabs) */}
             {forms.detailTab === 'Calidad' && (() => {
-              const projRFIs = rfis.filter((r: any) => r.data.projectId === selectedProjectId);
-              const projSubs = submittals.filter((s: any) => s.data.projectId === selectedProjectId);
-              const projPunch = punchItems.filter((p: any) => p.data.projectId === selectedProjectId);
               const punchDone = projPunch.filter((p: any) => p.data.status === 'Completado').length;
               const punchPct = projPunch.length > 0 ? Math.round((punchDone / projPunch.length) * 100) : 0;
-              return (<div className="space-y-5">
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-blue-500/10 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-blue-400">{projRFIs.length}</div>
-                    <div className="text-[10px] text-blue-400/70">RFIs</div>
-                    <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: any) => r.data.status === 'Abierto').length} abiertos</div>
-                  </div>
-                  <div className="bg-purple-500/10 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-purple-400">{projSubs.length}</div>
-                    <div className="text-[10px] text-purple-400/70">Submittals</div>
-                    <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: any) => s.data.status === 'Aprobado').length} aprobados</div>
-                  </div>
-                  <div className="bg-teal-500/10 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-teal-400">{punchPct}%</div>
-                    <div className="text-[10px] text-teal-400/70">Punch List</div>
-                    <div className="text-[9px] text-[var(--muted-foreground)]">{punchDone}/{projPunch.length} items</div>
-                  </div>
+              return (<div>
+                {/* Sub-tab switcher */}
+                <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 mb-4 w-fit">
+                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${(!forms.cfTab || forms.cfTab === 'calidad') ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, cfTab: 'calidad' }))}>Calidad</button>
+                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.cfTab === 'finanzas' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, cfTab: 'finanzas' }))}>
+                    Finanzas
+                    {budgetExceeded && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />}
+                  </button>
                 </div>
 
-                {/* RFIs section */}
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[14px] font-semibold">❓ RFIs del proyecto</div>
-                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 cursor-pointer border border-blue-500/20" onClick={() => { setForms(p => ({ ...p, rfiProject: selectedProjectId, rfiSubject: '', rfiQuestion: '', rfiPriority: 'Media' })); openModal('rfi'); }}>+ Nuevo</button>
-                  </div>
-                  {projRFIs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin RFIs</div> : (
-                    <div className="space-y-2">
-                      {projRFIs.slice(0, 5).map((r: any) => (
-                        <div key={r.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">{r.data.number}</span>
-                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{r.data.subject}</div>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${r.data.status === 'Abierto' ? 'bg-blue-500/15 text-blue-400' : r.data.status === 'Respondido' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{r.data.status}</span>
-                        </div>
-                      ))}
-                      {projRFIs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline" onClick={() => { /* navigate to RFIs filtered */ }}>+{projRFIs.length - 5} más...</div>}
+                {/* Sub: Calidad */}
+                {(!forms.cfTab || forms.cfTab === 'calidad') && (<div className="space-y-5">
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-blue-500/10 rounded-xl p-3 text-center">
+                      <div className="text-lg font-bold text-blue-400">{projRFIs.length}</div>
+                      <div className="text-[10px] text-blue-400/70">RFIs</div>
+                      <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: any) => r.data.status === 'Abierto').length} abiertos</div>
                     </div>
-                  )}
-                </div>
+                    <div className="bg-purple-500/10 rounded-xl p-3 text-center">
+                      <div className="text-lg font-bold text-purple-400">{projSubs.length}</div>
+                      <div className="text-[10px] text-purple-400/70">Submittals</div>
+                      <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: any) => s.data.status === 'Aprobado').length} aprobados</div>
+                    </div>
+                    <div className="bg-teal-500/10 rounded-xl p-3 text-center">
+                      <div className="text-lg font-bold text-teal-400">{punchPct}%</div>
+                      <div className="text-[10px] text-teal-400/70">Punch List</div>
+                      <div className="text-[9px] text-[var(--muted-foreground)]">{punchDone}/{projPunch.length} items</div>
+                    </div>
+                  </div>
 
-                {/* Submittals section */}
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[14px] font-semibold">📋 Submittals del proyecto</div>
-                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20" onClick={() => { setForms(p => ({ ...p, subProject: selectedProjectId, subTitle: '', subDescription: '', subSpecification: '' })); openModal('submittal'); }}>+ Nuevo</button>
-                  </div>
-                  {projSubs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin submittals</div> : (
-                    <div className="space-y-2">
-                      {projSubs.slice(0, 5).map((s: any) => (
-                        <div key={s.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">{s.data.number}</span>
-                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{s.data.title}</div>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${s.data.status === 'Aprobado' ? 'bg-emerald-500/15 text-emerald-400' : s.data.status === 'Rechazado' ? 'bg-red-500/15 text-red-400' : s.data.status === 'En revisión' ? 'bg-amber-500/15 text-amber-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{s.data.status}</span>
-                        </div>
-                      ))}
-                      {projSubs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projSubs.length - 5} más...</div>}
+                  {/* RFIs section */}
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[14px] font-semibold">❓ RFIs del proyecto</div>
+                      <button className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 cursor-pointer border border-blue-500/20" onClick={() => { setForms(p => ({ ...p, rfiProject: selectedProjectId, rfiSubject: '', rfiQuestion: '', rfiPriority: 'Media' })); openModal('rfi'); }}>+ Nuevo</button>
                     </div>
-                  )}
-                </div>
+                    {projRFIs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin RFIs</div> : (
+                      <div className="space-y-2">
+                        {projRFIs.slice(0, 5).map((r: any) => (
+                          <div key={r.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">{r.data.number}</span>
+                            <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{r.data.subject}</div>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${r.data.status === 'Abierto' ? 'bg-blue-500/15 text-blue-400' : r.data.status === 'Respondido' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{r.data.status}</span>
+                          </div>
+                        ))}
+                        {projRFIs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline" onClick={() => { /* navigate to RFIs filtered */ }}>+{projRFIs.length - 5} más...</div>}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Punch List section */}
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-[14px] font-semibold">✅ Punch List del proyecto</div>
-                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 cursor-pointer border border-teal-500/20" onClick={() => { setForms(p => ({ ...p, punchProject: selectedProjectId, punchTitle: '', punchLocation: 'Otro', punchPriority: 'Media' })); openModal('punchItem'); }}>+ Nuevo</button>
-                  </div>
-                  <div className="relative h-2 bg-[var(--af-bg3)] rounded-full overflow-hidden mb-3">
-                    <div className="absolute h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all" style={{ width: `${punchPct}%` }} />
-                  </div>
-                  <div className="text-[11px] text-[var(--muted-foreground)] mb-3 text-right">{punchPct}% completado ({punchDone}/{projPunch.length})</div>
-                  {projPunch.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin items de punch list</div> : (
-                    <div className="space-y-2">
-                      {projPunch.slice(0, 5).map((p: any) => (
-                        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${p.data.status === 'Completado' ? 'bg-emerald-500/15 text-emerald-400' : p.data.status === 'En progreso' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>{p.data.status}</span>
-                          <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{p.data.title}</div>
-                          <span className="text-[10px] text-[var(--af-text3)]">{p.data.location}</span>
-                        </div>
-                      ))}
-                      {projPunch.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projPunch.length - 5} más...</div>}
+                  {/* Submittals section */}
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[14px] font-semibold">📋 Submittals del proyecto</div>
+                      <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20" onClick={() => { setForms(p => ({ ...p, subProject: selectedProjectId, subTitle: '', subDescription: '', subSpecification: '' })); openModal('submittal'); }}>+ Nuevo</button>
                     </div>
-                  )}
-                </div>
+                    {projSubs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin submittals</div> : (
+                      <div className="space-y-2">
+                        {projSubs.slice(0, 5).map((s: any) => (
+                          <div key={s.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">{s.data.number}</span>
+                            <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{s.data.title}</div>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${s.data.status === 'Aprobado' ? 'bg-emerald-500/15 text-emerald-400' : s.data.status === 'Rechazado' ? 'bg-red-500/15 text-red-400' : s.data.status === 'En revisión' ? 'bg-amber-500/15 text-amber-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{s.data.status}</span>
+                          </div>
+                        ))}
+                        {projSubs.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projSubs.length - 5} más...</div>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Punch List section */}
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[14px] font-semibold">✅ Punch List del proyecto</div>
+                      <button className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 cursor-pointer border border-teal-500/20" onClick={() => { setForms(p => ({ ...p, punchProject: selectedProjectId, punchTitle: '', punchLocation: 'Otro', punchPriority: 'Media' })); openModal('punchItem'); }}>+ Nuevo</button>
+                    </div>
+                    <div className="relative h-2 bg-[var(--af-bg3)] rounded-full overflow-hidden mb-3">
+                      <div className="absolute h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all" style={{ width: `${punchPct}%` }} />
+                    </div>
+                    <div className="text-[11px] text-[var(--muted-foreground)] mb-3 text-right">{punchPct}% completado ({punchDone}/{projPunch.length})</div>
+                    {projPunch.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin items de punch list</div> : (
+                      <div className="space-y-2">
+                        {projPunch.slice(0, 5).map((p: any) => (
+                          <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${p.data.status === 'Completado' ? 'bg-emerald-500/15 text-emerald-400' : p.data.status === 'En progreso' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>{p.data.status}</span>
+                            <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{p.data.title}</div>
+                            <span className="text-[10px] text-[var(--af-text3)]">{p.data.location}</span>
+                          </div>
+                        ))}
+                        {projPunch.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projPunch.length - 5} más...</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>)}
+
+                {/* Sub: Finanzas */}
+                {forms.cfTab === 'finanzas' && (<div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm text-[var(--muted-foreground)]">{projectExpenses.length} gastos · Total: <span className="text-[var(--af-accent)] font-semibold">{fmtCOP(projectSpent)}</span> {projectBudget > 0 && <span>de {fmtCOP(projectBudget)}</span>}</div>
+                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, expConcept: '', expProject: selectedProjectId, expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); openModal('expense'); }}>+ Registrar gasto</button>
+                  </div>
+                  {projectBudget > 0 && <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
+                    <div className="flex justify-between text-sm mb-2"><span className="text-[var(--muted-foreground)]">Presupuesto utilizado</span><span className="font-semibold">{Math.min(100, Math.round((projectSpent / projectBudget) * 100))}%</span></div>
+                    <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${projectSpent > projectBudget ? 'bg-red-500' : projectSpent > projectBudget * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: Math.min(100, (projectSpent / projectBudget) * 100) + '%' }} /></div>
+                  </div>}
+                  {projectExpenses.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">💰</div><div className="text-sm">Sin gastos registrados</div></div> :
+                  <div className="space-y-2">
+                    {projectExpenses.map((e: any) => (
+                      <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 bg-[var(--card)] border border-[var(--border)] rounded-lg">
+                        <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div></div>
+                        <div className="text-sm font-semibold text-[var(--af-accent)]">{fmtCOP(e.data.amount)}</div>
+                        <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteExpense(e.id)}>✕</button>
+                      </div>
+                    ))}
+                  </div>}
+                </div>)}
               </div>);
             })()}
 
-            {/* Tab: Presupuesto */}
-            {forms.detailTab === 'Presupuesto' && (<div>
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">{projectExpenses.length} gastos · Total: <span className="text-[var(--af-accent)] font-semibold">{fmtCOP(projectSpent)}</span> {projectBudget > 0 && <span>de {fmtCOP(projectBudget)}</span>}</div>
-                <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, expConcept: '', expProject: selectedProjectId, expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); openModal('expense'); }}>+ Registrar gasto</button>
-              </div>
-              {projectBudget > 0 && <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
-                <div className="flex justify-between text-sm mb-2"><span className="text-[var(--muted-foreground)]">Presupuesto utilizado</span><span className="font-semibold">{Math.min(100, Math.round((projectSpent / projectBudget) * 100))}%</span></div>
-                <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${projectSpent > projectBudget ? 'bg-red-500' : projectSpent > projectBudget * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: Math.min(100, (projectSpent / projectBudget) * 100) + '%' }} /></div>
-              </div>}
-              {projectExpenses.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">💰</div><div className="text-sm">Sin gastos registrados</div></div> :
-              <div className="space-y-2">
-                {projectExpenses.map((e: any) => (
-                  <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 bg-[var(--card)] border border-[var(--border)] rounded-lg">
-                    <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div></div>
-                    <div className="text-sm font-semibold text-[var(--af-accent)]">{fmtCOP(e.data.amount)}</div>
-                    <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteExpense(e.id)}>✕</button>
-                  </div>
-                ))}
-              </div>}
-            </div>)}
-
-            {/* Tab: Archivos */}
+            {/* 7. TAB: Archivos (OneDrive + Local + Approvals) */}
             {forms.detailTab === 'Archivos' && (<div>
               {/* OneDrive Section */}
               {!msConnected ? (
@@ -469,6 +631,7 @@ export default function ProjectDetailScreen() {
                 </div>
               )}
 
+              {/* Local Files Section */}
               <div className="flex justify-between items-center mb-4">
                 <div className="text-sm text-[var(--muted-foreground)]">{projectFiles.length} archivos locales</div>
                 <div>
@@ -495,9 +658,37 @@ export default function ProjectDetailScreen() {
                   </div>
                 ))}
               </div>}
+
+              {/* Approvals section (from Portal) */}
+              <div className="mt-4 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[14px] font-semibold">Aprobaciones</div>
+                  <button className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer border border-[var(--af-accent)]/20" onClick={() => { setForms(p => ({ ...p, appTitle: '', appDesc: '' })); openModal('approval'); }}>+ Nueva</button>
+                </div>
+                {approvals.length === 0 ? (
+                  <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin solicitudes de aprobación</div>
+                ) : (
+                  approvals.map(a => (
+                    <div key={a.id} className="border border-[var(--border)] rounded-lg p-3 mb-2 last:mb-0">
+                      <div className="flex items-start justify-between mb-1">
+                        <div className="text-sm font-semibold">{a.data.title}</div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${a.data.status === 'Aprobado' ? 'bg-emerald-500/10 text-emerald-400' : a.data.status === 'Rechazado' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>{a.data.status}</span>
+                      </div>
+                      {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{a.data.description}</div>}
+                      {a.data.status === 'Pendiente' && (
+                        <div className="flex gap-2 mt-2">
+                          <button className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-emerald-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Aprobado')}>✓ Aprobar</button>
+                          <button className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-red-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Rechazado')}>✕ Rechazar</button>
+                          <button className="ml-auto text-xs text-[var(--af-text3)] cursor-pointer hover:text-red-400" onClick={() => deleteApproval(a.id)}>Eliminar</button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>)}
 
-            {/* Tab: Obra */}
+            {/* 8. TAB: Obra (unchanged - Timeline + Gantt + Bitácora) */}
             {forms.detailTab === 'Obra' && (<div>
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
@@ -908,64 +1099,6 @@ export default function ProjectDetailScreen() {
                 )}
               </div>
               )}
-            </div>)}
-
-            {/* Tab: Portal */}
-            {forms.detailTab === 'Portal' && (<div>
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">Vista del cliente</div>
-                <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, appTitle: '', appDesc: '' })); openModal('approval'); }}>+ Nueva aprobación</button>
-              </div>
-              {/* Client summary */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
-                <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-xl mb-2">{currentProject.data.name}</div>
-                <div className="text-sm text-[var(--muted-foreground)] mb-3">{currentProject.data.description || 'Sin descripción'}</div>
-                <div className="flex items-center gap-3 mb-2"><span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span><span className="text-sm font-medium">{currentProject.data.progress || 0}% completado</span></div>
-                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[var(--af-accent)]" style={{ width: (currentProject.data.progress || 0) + '%' }} /></div>
-              </div>
-              {/* Work phases for client */}
-              {workPhases.length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
-                <div className="text-[15px] font-semibold mb-3">Fases del proyecto</div>
-                <div className="space-y-2">
-                  {workPhases.map((ph: any) => (
-                    <div key={ph.id} className="flex items-center gap-3 py-1.5">
-                      <div className={`w-3 h-3 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
-                      <span className="text-sm flex-1">{ph.data.name}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ph.data.status === 'Completado' ? 'bg-emerald-500/10 text-emerald-400' : ph.data.status === 'En progreso' ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{ph.data.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>)}
-              {/* Files gallery */}
-              {projectFiles.filter((f: any) => f.type?.startsWith('image/')).length > 0 && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-4">
-                <div className="text-[15px] font-semibold mb-3">Galería</div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {projectFiles.filter((f: any) => f.type?.startsWith('image/')).map((f: any) => (
-                    <a key={f.id} href={f.data} download={f.name}><img src={f.data} alt={f.name} className="w-full aspect-square object-cover rounded-lg border border-[var(--border)] hover:border-[var(--af-accent)] transition-all" loading="lazy" /></a>
-                  ))}
-                </div>
-              </div>)}
-              {/* Approvals */}
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
-                <div className="text-[15px] font-semibold mb-3">Aprobaciones</div>
-                {approvals.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin solicitudes de aprobación</div> :
-                approvals.map(a => (
-                  <div key={a.id} className="border border-[var(--border)] rounded-lg p-3 mb-2">
-                    <div className="flex items-start justify-between mb-1">
-                      <div className="text-sm font-semibold">{a.data.title}</div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${a.data.status === 'Aprobado' ? 'bg-emerald-500/10 text-emerald-400' : a.data.status === 'Rechazado' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>{a.data.status}</span>
-                    </div>
-                    {a.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{a.data.description}</div>}
-                    {a.data.status === 'Pendiente' && (
-                      <div className="flex gap-2 mt-2">
-                        <button className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-emerald-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Aprobado')}>✓ Aprobar</button>
-                        <button className="bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1 rounded-md text-xs font-medium cursor-pointer hover:bg-red-500 hover:text-white transition-all" onClick={() => updateApproval(a.id, 'Rechazado')}>✕ Rechazar</button>
-                        <button className="ml-auto text-xs text-[var(--af-text3)] cursor-pointer hover:text-red-400" onClick={() => deleteApproval(a.id)}>Eliminar</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>)}
           </div>
   );
