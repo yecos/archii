@@ -634,7 +634,44 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
           console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new', photoURL: user.photoURL });
           if (!snap.exists) {
-            await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+            // ANTI-DUP: Check if another user doc already exists with this email
+            // (happens when same person logs in with different providers)
+            try {
+              const existingByMail = await db.collection('users')
+                .where('email', '==', (user.email || '').toLowerCase())
+                .limit(1).get();
+              if (!existingByMail.empty) {
+                const existingDoc = existingByMail.docs[0];
+                const existingData = existingDoc.data();
+                console.log('[ArchiFlow Auth] Duplicate detected! Existing user doc:', existingDoc.id, 'for email:', user.email, '— linking to current UID:', user.uid);
+                // The existing doc has better data (from previous login), don't create new one.
+                // Instead, update the current doc with existing data so future lookups work
+                await ref.set({
+                  name: existingData.name || user.displayName || (user.email || '').split('@')[0],
+                  email: user.email,
+                  photoURL: user.photoURL || existingData.photoURL || '',
+                  role: existingData.role || (isAdminEmail ? 'Admin' : 'Miembro'),
+                  createdAt: existingData.createdAt || fb.firestore.FieldValue.serverTimestamp(),
+                });
+                // Now migrate tenant memberships from old UID to new UID
+                const allTenants = await db.collection('tenants').get();
+                for (const tenantDoc of allTenants.docs) {
+                  const tData = tenantDoc.data();
+                  const members: string[] = tData.members || [];
+                  if (members.includes(existingDoc.id) && !members.includes(user.uid)) {
+                    await db.collection('tenants').doc(tenantDoc.id).update({
+                      members: fb.firestore.FieldValue.arrayUnion(user.uid),
+                    });
+                    console.log('[ArchiFlow Auth] Added UID', user.uid, 'to tenant', tenantDoc.id);
+                  }
+                }
+              } else {
+                await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+              }
+            } catch (dupErr) {
+              console.warn('[ArchiFlow Auth] Duplicate check failed, creating user doc anyway:', dupErr);
+              await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+            }
           } else {
             // Existing user: sync photoURL and name from auth provider on every login
             const updates: Record<string, any> = {};
