@@ -643,17 +643,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ===== FIX MY ROLE — forces Super Admin on all tenants =====
+    // ===== FIX MY ROLE — forces Super Admin on ALL tenants (by UID in members + by email match) =====
     if (action === "fix-my-role") {
       const targetTenantId = tenantId; // optional — if provided, only fix this tenant
-      const allTenants = await db.collection("tenants")
+      const fixed: string[] = [];
+      const already: string[] = [];
+      const addedToMembers: string[] = [];
+
+      // 1) Tenants where current UID is in members
+      const memberTenants = await db.collection("tenants")
         .where("members", "array-contains", user.uid)
         .get();
 
-      const fixed: string[] = [];
-      const already: string[] = [];
-
-      for (const doc of allTenants.docs) {
+      for (const doc of memberTenants.docs) {
         if (targetTenantId && doc.id !== targetTenantId) continue;
         const t = doc.data();
         const isSA = t.createdBy === user.uid || (t.superAdmins || []).includes(user.uid);
@@ -669,7 +671,44 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Also fix defaultTenantRole in user doc
+      // 2) Also check ALL tenants (not just where current UID is member)
+      // This catches the case where UID changed and old UID is in createdBy/members
+      if (!targetTenantId) {
+        const allTenants = await db.collection("tenants").get();
+        for (const doc of allTenants.docs) {
+          const t = doc.data();
+          const members: string[] = t.members || [];
+          const superAdmins: string[] = t.superAdmins || [];
+
+          // Skip if already handled above or already SA
+          if (members.includes(user.uid)) continue;
+          if (t.createdBy === user.uid || superAdmins.includes(user.uid)) continue;
+
+          // Check if ANY user doc with this email has a UID that matches createdBy or is in members/superAdmins
+          // If so, the current user is the same person but with a new UID — migrate them
+          const sameEmailUsers = await db.collection("users").where("email", "==", user.email).get();
+          const relatedUids = sameEmailUsers.docs.map(d => d.id);
+
+          const isRelatedCreator = relatedUids.includes(t.createdBy);
+          const isRelatedSA = relatedUids.some(uid => superAdmins.includes(uid));
+          const isRelatedMember = relatedUids.some(uid => members.includes(uid));
+
+          if (isRelatedCreator || isRelatedSA || isRelatedMember) {
+            console.log(`[Tenants fix-my-role] Found orphaned tenant "${t.name}" — related by email. Adding current UID ${user.uid}`);
+            // Add current UID to members and superAdmins
+            const updates: Record<string, any> = {
+              members: FieldValue.arrayUnion(user.uid),
+            };
+            if (isRelatedCreator || isRelatedSA) {
+              updates.superAdmins = FieldValue.arrayUnion(user.uid);
+            }
+            await db.collection("tenants").doc(doc.id).update(updates);
+            addedToMembers.push(`${t.name} (${isRelatedCreator ? 'era creador' : isRelatedSA ? 'era SA' : 'era miembro'} con UID anterior)`);
+          }
+        }
+      }
+
+      // Fix defaultTenantRole in user doc
       const userDoc = await db.collection("users").doc(user.uid).get();
       if (userDoc.exists) {
         await db.collection("users").doc(user.uid).update({
@@ -690,10 +729,11 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({
-        message: `Rol corregido. UIDs con Super Admin: ${user.uid}`,
+        message: `Rol corregido. UID: ${user.uid}, Email: ${user.email}`,
         fixed,
         already,
-        allTenantsChecked: allTenants.docs.map(d => d.data().name),
+        addedToMembers,
+        allTenantsChecked: true,
       });
     }
 

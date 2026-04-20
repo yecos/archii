@@ -811,6 +811,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
     const db = getFirebase().firestore();
+    const uid = authUser.uid;
     console.log('[ArchiFlow Team] Listening to tenant members:', activeTenantId);
     const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
       if (snap.exists) {
@@ -819,18 +820,45 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         console.log('[ArchiFlow Team] Tenant members loaded:', members.length, '— UIDs:', members);
         setActiveTenantMembers(members);
         // VERIFY ROLE: Always re-derive the real role from tenant document
-        const isCreator = data?.createdBy === authUser.uid;
+        const isCreator = data?.createdBy === uid;
         const superAdmins: string[] = data?.superAdmins || [];
-        const isSuperAdmin = isCreator || superAdmins.includes(authUser.uid);
+        const isSuperAdmin = isCreator || superAdmins.includes(uid);
         const realRole = isSuperAdmin ? 'Super Admin' : 'Miembro';
-        if (realRole !== activeTenantRole) {
-          console.log('[ArchiFlow Team] Role corrected:', activeTenantRole, '→', realRole, '(createdBy:', data?.createdBy, '=== uid:', authUser.uid, '=', isCreator, '| superAdmins:', superAdmins, ')');
-          setActiveTenantRole(realRole);
-          // Persist corrected role
-          try {
-            localStorage.setItem('archiflow-active-tenant-role', realRole);
-            db.collection('users').doc(authUser.uid).update({ defaultTenantRole: realRole });
-          } catch (_) { /* ignore */ }
+        console.log('[ArchiFlow Team] Role check — isCreator:', isCreator, '(createdBy:', data?.createdBy, 'uid:', uid, ') superAdmins:', superAdmins, '→ realRole:', realRole);
+
+        // ALWAYS update role state from tenant doc (no stale closure comparison)
+        setActiveTenantRole(prev => {
+          if (prev !== realRole) {
+            console.log('[ArchiFlow Team] Role corrected:', prev, '→', realRole);
+            // Persist corrected role
+            try {
+              localStorage.setItem('archiflow-active-tenant-role', realRole);
+              db.collection('users').doc(uid).update({ defaultTenantRole: realRole });
+            } catch (_) { /* ignore */ }
+          }
+          return realRole;
+        });
+
+        // AUTO-FIX: If user was previously Super Admin (stored in user doc) but tenant doesn't reflect it,
+        // automatically add to superAdmins array. This handles UID changes from auth provider switches.
+        if (!isSuperAdmin) {
+          db.collection('users').doc(uid).get().then(userDoc => {
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              if (userData?.defaultTenantRole === 'Super Admin' || userData?.defaultTenantId === activeTenantId) {
+                console.log('[ArchiFlow Team] AUTO-FIX: Adding UID', uid, 'to superAdmins for tenant', activeTenantId, '(was SA in user doc but missing from tenant doc)');
+                db.collection('tenants').doc(activeTenantId).update({
+                  superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
+                }).then(() => {
+                  console.log('[ArchiFlow Team] AUTO-FIX completed — UID added to superAdmins');
+                  localStorage.setItem('archiflow-active-tenant-role', 'Super Admin');
+                  db.collection('users').doc(uid).update({ defaultTenantRole: 'Super Admin' });
+                }).catch(err => {
+                  console.error('[ArchiFlow Team] AUTO-FIX failed:', err);
+                });
+              }
+            }
+          }).catch(() => {});
         }
       } else {
         console.warn('[ArchiFlow Team] Tenant document does NOT exist:', activeTenantId);

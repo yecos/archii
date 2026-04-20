@@ -48,6 +48,31 @@ export default function TenantSelectionScreen() {
       const data = await res.json();
       if (data.tenants) {
         setTenants(data.tenants);
+        // AUTO-FIX: If user appears as Miembro in any tenant they should own,
+        // force the role fix from the server side
+        const anyMemberRole = data.tenants.some((t: any) => t.role === 'Miembro');
+        if (anyMemberRole) {
+          console.log('[TenantSelection] Detected Miembro role — calling fix-my-role');
+          fetch('/api/tenants', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'fix-my-role' }),
+          }).then(fixRes => fixRes.json()).then(fixData => {
+            if (fixData && (fixData.fixed?.length > 0 || fixData.already?.length > 0)) {
+              console.log('[TenantSelection] fix-my-role result:', fixData);
+              // Reload tenants to get corrected roles
+              if (fixData.fixed?.length > 0) {
+                fetch('/api/tenants', {
+                  method: 'POST',
+                  headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'list' }),
+                }).then(r => r.json()).then(d => {
+                  if (d.tenants) setTenants(d.tenants);
+                });
+              }
+            }
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       console.error('[TenantSelection] Error loading tenants:', err);
