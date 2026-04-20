@@ -658,11 +658,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 for (const tenantDoc of allTenants.docs) {
                   const tData = tenantDoc.data();
                   const members: string[] = tData.members || [];
+                  const superAdmins: string[] = tData.superAdmins || [];
+                  const tenantUpdates: Record<string, any> = {};
                   if (members.includes(existingDoc.id) && !members.includes(user.uid)) {
-                    await db.collection('tenants').doc(tenantDoc.id).update({
-                      members: fb.firestore.FieldValue.arrayUnion(user.uid),
-                    });
-                    console.log('[ArchiFlow Auth] Added UID', user.uid, 'to tenant', tenantDoc.id);
+                    tenantUpdates.members = fb.firestore.FieldValue.arrayUnion(user.uid);
+                  }
+                  // Also migrate Super Admin role if the old UID was Super Admin
+                  if (superAdmins.includes(existingDoc.id) && !superAdmins.includes(user.uid)) {
+                    tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
+                    console.log('[ArchiFlow Auth] Migrating Super Admin role to UID', user.uid, 'in tenant', tenantDoc.id);
+                  }
+                  if (Object.keys(tenantUpdates).length > 0) {
+                    await db.collection('tenants').doc(tenantDoc.id).update(tenantUpdates);
+                    console.log('[ArchiFlow Auth] Migrated UID', user.uid, 'to tenant', tenantDoc.id, Object.keys(tenantUpdates));
                   }
                 }
               } else {
@@ -692,6 +700,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             if (Object.keys(updates).length > 0) {
               await ref.update(updates);
             }
+            // Always save current UID as lastUid for UID change detection
+            if (existing.lastUid !== user.uid) {
+              await ref.update({ lastUid: user.uid });
+            }
           }
           // RESTORE TENANT FROM FIRESTORE (survives cache clearing)
           // If localStorage was cleared, check if user has a saved tenant in Firestore
@@ -706,14 +718,38 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 if (tenantDoc.exists) {
                   const tData = tenantDoc.data();
                   const members: string[] = tData.members || [];
-                  if (members.includes(user.uid)) {
-                    // Determine role
+                  // Check if user is member by ANY UID (current or stored in user doc)
+                  const isMember = members.includes(user.uid);
+                  const wasMemberWithOldUid = userData?.lastUid && members.includes(userData.lastUid) && userData.lastUid !== user.uid;
+                  if (isMember || wasMemberWithOldUid) {
+                    // If user has a new UID but was member with old UID, add new UID
+                    if (wasMemberWithOldUid && !isMember) {
+                      const tenantUpdates: Record<string, any> = { members: fb.firestore.FieldValue.arrayUnion(user.uid) };
+                      // Also migrate Super Admin
+                      const superAdmins: string[] = tData.superAdmins || [];
+                      if (superAdmins.includes(userData.lastUid) && !superAdmins.includes(user.uid)) {
+                        tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
+                      }
+                      await db.collection('tenants').doc(fsDefaultTenantId).update(tenantUpdates);
+                      console.log('[ArchiFlow Auth] Migrated new UID', user.uid, 'to restored tenant', fsDefaultTenantId);
+                    }
+                    // Determine role — trust saved defaultTenantRole first, then verify on tenant doc
                     let role = 'Miembro';
-                    if (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid)) {
+                    if (userData.defaultTenantRole === 'Super Admin') {
+                      role = 'Super Admin';
+                      // Ensure the Super Admin role is in the tenant doc too
+                      const superAdmins: string[] = tData.superAdmins || [];
+                      if (!superAdmins.includes(user.uid)) {
+                        await db.collection('tenants').doc(fsDefaultTenantId).update({
+                          superAdmins: fb.firestore.FieldValue.arrayUnion(user.uid),
+                        });
+                        console.log('[ArchiFlow Auth] Restored Super Admin role for UID', user.uid);
+                      }
+                    } else if (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid)) {
                       role = 'Super Admin';
                     }
                     const tenantName = userData.defaultTenantName || tData.name || fsDefaultTenantId;
-                    console.log('[ArchiFlow Auth] Restoring tenant from Firestore:', tenantName, '— cache was cleared');
+                    console.log('[ArchiFlow Auth] Restoring tenant from Firestore:', tenantName, 'as', role, '— cache was cleared');
                     setActiveTenantId(fsDefaultTenantId);
                     setActiveTenantName(tenantName);
                     setActiveTenantRole(role);
