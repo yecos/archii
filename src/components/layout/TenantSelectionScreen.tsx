@@ -175,7 +175,7 @@ export default function TenantSelectionScreen() {
           <h1 className="text-2xl font-bold af-heading">Bienvenido, {userName.split(' ')[0]}</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-2">
             {tenants.length === 0
-              ? 'Crea tu primer espacio de trabajo para comenzar'
+              ? 'Crea tu espacio o únete con un código de invitación'
               : 'Selecciona o crea un espacio de trabajo'
             }
           </p>
@@ -247,15 +247,13 @@ export default function TenantSelectionScreen() {
               <Plus size={18} className="stroke-current" strokeWidth={2.5} />
               {tenants.length === 0 ? 'Crear mi espacio de trabajo' : 'Crear nuevo espacio'}
             </button>
-            {tenants.length > 0 && (
-              <button
-                onClick={() => setShowJoin(true)}
-                className="w-full af-btn-secondary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-              >
-                <Sparkles size={16} className="stroke-current" />
-                Unirme con un código
-              </button>
-            )}
+            <button
+              onClick={() => setShowJoin(true)}
+              className="w-full af-btn-secondary flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
+            >
+              <Sparkles size={16} className="stroke-current" />
+              Unirme con un código
+            </button>
           </div>
         )}
 
