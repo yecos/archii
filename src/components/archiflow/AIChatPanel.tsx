@@ -15,6 +15,11 @@ interface ExecutedAction {
   error?: string;
 }
 
+interface MessageImage {
+  url: string;
+  mimeType: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -26,6 +31,7 @@ interface Message {
   helpText?: boolean;
   isTyping?: boolean;
   actions?: ExecutedAction[];
+  images?: MessageImage[];
 }
 
 interface AIChatPanelProps {
@@ -41,7 +47,7 @@ const QUICK_PROMPTS = [
   { text: 'Optimiza mi presupuesto', icon: '📊' },
   { text: 'Agrega un proveedor', icon: '🤝' },
   { text: '¿Qué tareas tengo?', icon: '✅' },
-  { text: 'Planifica las fases de obra', icon: '📐' },
+  { text: 'Analiza esta imagen', icon: '📸' },
 ];
 
 /** Sanitiza HTML generado por la IA */
@@ -159,16 +165,18 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n\n¿En qué te ayudo hoy?',
-      displayContent: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n\n¿En qué te ayudo hoy?',
+      content: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n• 📸 **Analizar imágenes** de planos, obras y documentos\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n"Analiza esta imagen de la obra" (adjunta imagen)\n\n¿En qué te ayudo hoy?',
+      displayContent: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n• 📸 **Analizar imágenes** de planos, obras y documentos\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n"Analiza esta imagen de la obra" (adjunta imagen)\n\n¿En qué te ayudo hoy?',
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [executingTools, setExecutingTools] = useState(false);
+  const [pendingImages, setPendingImages] = useState<{ url: string; mimeType: string; base64: string; name: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const projectContext = useUIStore((s) => s.aiProjectContext);
   const { activeTenantId } = useApp();
 
@@ -190,34 +198,101 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     }
   }, [isOpen]);
 
+  /* ─── Image Processing ─── */
+  const processImage = (file: File): Promise<{ url: string; mimeType: string; base64: string; name: string } | null> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve(null);
+        return;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_DIM = 1024;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = (height / width) * MAX_DIM;
+              width = MAX_DIM;
+            } else {
+              width = (width / height) * MAX_DIM;
+              height = MAX_DIM;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL(file.type, 0.8);
+          const base64 = dataUrl.split(',')[1];
+          resolve({ url: dataUrl, mimeType: file.type, base64, name: file.name });
+        };
+        img.onerror = () => resolve(null);
+        img.src = URL.createObjectURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const base64 = dataUrl.split(',')[1];
+          resolve({ url: dataUrl, mimeType: file.type, base64, name: file.name });
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
   const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if ((!content.trim() && pendingImages.length === 0) || isLoading) return;
+
+    const userImages = pendingImages.length > 0
+      ? pendingImages.map(img => ({ url: img.url, mimeType: img.mimeType }))
+      : undefined;
 
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: content.trim(),
+      content: content.trim() || 'Analiza esta imagen',
       timestamp: new Date(),
+      images: userImages,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setPendingImages([]);
     setIsLoading(true);
     setExecutingTools(true);
 
     try {
       const authHeaders = await getAuthHeaders();
+
+      const apiMessages = [
+        ...messages
+          .filter((m) => m.id !== 'welcome' && !m.isError)
+          .slice(-20)
+          .map((m) => {
+            const msg: any = { role: m.role, content: m.content };
+            if (m.images && m.images.length > 0) {
+              // For history messages, we don't have base64 — skip images in history
+            }
+            return msg;
+          }),
+      ];
+
+      // Build the last user message with images
+      const lastMsg: any = { role: userMessage.role, content: userMessage.content };
+      if (pendingImages.length > 0) {
+        lastMsg.images = pendingImages.map(img => ({ mimeType: img.mimeType, data: img.base64 }));
+      }
+      apiMessages.push(lastMsg);
+
       const response = await fetch('/api/ai-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          messages: [
-            ...messages
-              .filter((m) => m.id !== 'welcome' && !m.isError)
-              .slice(-20)
-              .map((m) => ({ role: m.role, content: m.content })),
-            { role: userMessage.role, content: userMessage.content },
-          ],
+          messages: apiMessages,
           projectContext: projectContext || undefined,
           tenantId: activeTenantId || undefined,
         }),
@@ -283,6 +358,36 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       e.preventDefault();
       sendMessage(input);
     }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processImage(file).then((result) => {
+            if (result) {
+              setPendingImages(prev => [...prev, result]);
+            }
+          });
+        }
+      }
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (let i = 0; i < files.length; i++) {
+      const result = await processImage(files[i]);
+      if (result) {
+        setPendingImages(prev => [...prev, result]);
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   if (!isOpen) return null;
@@ -370,7 +475,17 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
                     )}
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div>
+                    {/* User images */}
+                    {msg.role === 'user' && msg.images && msg.images.length > 0 && (
+                      <div className="flex gap-1.5 flex-wrap mb-1.5">
+                        {msg.images.map((img, i) => (
+                          <img key={i} src={img.url} alt="" className="max-w-[200px] max-h-[150px] rounded-lg object-cover" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  </div>
                 )}
               </div>
             </div>
@@ -422,14 +537,40 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
 
         {/* Input */}
         <div className="px-5 py-4 border-t border-[var(--af-bg4)]">
-          <div className="flex items-end gap-3">
+          {/* Pending images preview */}
+          {pendingImages.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 px-1" style={{ scrollbarWidth: 'none' }}>
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-[var(--af-bg4)]">
+                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/60 text-white rounded-full text-[10px] flex items-center justify-center leading-none cursor-pointer border-none"
+                    onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-end gap-2">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Dime qué necesitas... ej: crea una tarea, consulta presupuesto"
+                onPaste={handlePaste}
+                placeholder="Dime qué necesitas... puedes adjuntar imágenes"
                 rows={1}
                 className={cn(
                   'w-full resize-none rounded-xl bg-[var(--af-bg3)] border border-[var(--af-bg4)]',
@@ -441,12 +582,27 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
                 style={{ minHeight: '44px' }}
               />
             </div>
+
+            {/* Image upload button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-[var(--af-bg4)] active:bg-[var(--af-bg4)] transition-all duration-200 shrink-0 text-muted-foreground hover:text-foreground"
+              title="Subir imagen"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                <circle cx="9" cy="9" r="2"/>
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+              </svg>
+            </button>
+
+            {/* Send button */}
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && pendingImages.length === 0) || isLoading}
               className={cn(
                 'w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shrink-0',
-                input.trim() && !isLoading
+                (input.trim() || pendingImages.length > 0) && !isLoading
                   ? 'bg-gradient-to-br from-[var(--af-accent)] to-amber-600 text-black hover:opacity-90 shadow-lg shadow-[var(--af-accent)]/20'
                   : 'bg-[var(--af-bg4)] text-muted-foreground cursor-not-allowed'
               )}
@@ -465,7 +621,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
             </button>
           </div>
           <p className="text-[10px] text-muted-foreground/50 mt-1 text-center pb-[env(safe-area-inset-bottom,0px)]">
-            Super IA puede ejecutar acciones reales en tu proyecto. Verifica los resultados.
+            Super IA puede ejecutar acciones reales y analizar imágenes.
           </p>
         </div>
       </div>

@@ -397,6 +397,7 @@ CAPACIDADES:
 - ANALIZAR presupuestos y dar recomendaciones
 - PLANIFICAR cronogramas y fases de obra
 - OPTIMIZAR recursos y dar consejos profesionales
+- ANALIZAR imágenes de planos, obras, materiales, cotizaciones y documentos
 
 REGLAS IMPORTANTES:
 1. Siempre respondes en ESPAÑOL
@@ -408,6 +409,7 @@ REGLAS IMPORTANTES:
 7. Sé proactivo: si ves una oportunidad de ayudar, ofrécela
 8. No inventes datos que no existan — consulta primero si es necesario
 9. Cuando crees algo, describe qué creaste con emoji (✅ 📋 💰 🤝 📅)
+10. Cuando el usuario envíe una imagen, analízala detalladamente y proporciona información útil sobre lo que ves
 
 ESTRUCTURA DE RESPUESTA:
 - Primero ejecuta las acciones necesarias
@@ -1074,7 +1076,11 @@ export async function POST(request: NextRequest) {
     const recentMessages = messages.slice(-20);
     for (const msg of recentMessages) {
       if (msg.role === "user" || msg.role === "assistant") {
-        apiMessages.push({ role: msg.role, content: msg.content });
+        const apiMsg: any = { role: msg.role, content: msg.content };
+        if (msg.images && msg.images.length > 0) {
+          apiMsg.images = msg.images;
+        }
+        apiMessages.push(apiMsg);
       }
     }
 

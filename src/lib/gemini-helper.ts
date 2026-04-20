@@ -6,14 +6,26 @@
  * existing route handlers need minimal changes.
  *
  * Requires: GEMINI_API_KEY environment variable (set in Vercel dashboard).
- * Model: gemini-2.0-flash (free tier, supports function calling).
+ *
+ * AUTO-DISCOVERY: On first call (or every 4 hours), queries the Gemini API
+ * model list to find the best available flash model. This means when Google
+ * deprecates or releases new models, the system adapts automatically
+ * without any code changes.
+ *
+ * MULTIMODAL: Supports inline images via `inlineData` parts.
  */
 
 // ── Types (OpenAI-compatible subset used by routes) ──────────────────
 
+export interface ImageData {
+  mimeType: string;
+  data: string;
+}
+
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
+  images?: ImageData[];
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
@@ -64,13 +76,106 @@ function getApiKey(): string {
   return key;
 }
 
-const MODEL = "gemini-2.0-flash";
-const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+
+/**
+ * Hardcoded fallback models — used ONLY if the auto-discovery API call fails.
+ * Ordered by preference (newest first).
+ */
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash-preview-05-20",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+];
+
+// ── Auto-discovery ──────────────────────────────────────────────────
+
+/** Cached list of discovered models + timestamp */
+let cachedModels: string[] | null = null;
+let cachedAt = 0;
+const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
+/**
+ * Query the Gemini API to discover available flash models.
+ * Returns models sorted by version (newest first).
+ */
+async function discoverModels(): Promise<string[]> {
+  const apiKey = getApiKey();
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(`${BASE_URL}/models?key=${apiKey}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      console.error(`[Gemini Discovery] HTTP ${res.status} — using fallback models`);
+      return FALLBACK_MODELS;
+    }
+
+    const data = await res.json();
+    const models: string[] = (data.models || [])
+      .filter((m: any) => {
+        const name: string = m.name || "";
+        const methods: string[] = m.supportedGenerationMethods || [];
+        return (
+          name.includes("gemini") &&
+          name.includes("flash") &&
+          methods.includes("generateContent")
+        );
+      })
+      .map((m: any) => {
+        const name: string = m.name || "";
+        return name.replace(/^models\//, "");
+      });
+
+    if (models.length === 0) {
+      console.warn("[Gemini Discovery] No flash models found — using fallback");
+      return FALLBACK_MODELS;
+    }
+
+    models.sort((a, b) => {
+      const va = a.match(/(\d+\.\d+)/)?.[0] || "0";
+      const vb = b.match(/(\d+\.\d+)/)?.[0] || "0";
+      if (va !== vb) return vb.localeCompare(va, undefined, { numeric: true });
+      const aPreview = a.includes("preview");
+      const bPreview = b.includes("preview");
+      if (aPreview && !bPreview) return 1;
+      if (!aPreview && bPreview) return -1;
+      return b.localeCompare(a);
+    });
+
+    console.log(`[Gemini Discovery] Found ${models.length} flash models: ${models.slice(0, 5).join(", ")}`);
+    return models;
+  } catch (err: any) {
+    console.error("[Gemini Discovery] Failed:", err?.message, "— using fallback models");
+    return FALLBACK_MODELS;
+  }
+}
+
+async function getModels(): Promise<string[]> {
+  const now = Date.now();
+  if (cachedModels && now - cachedAt < CACHE_TTL) {
+    return cachedModels;
+  }
+  cachedModels = await discoverModels();
+  cachedAt = now;
+  return cachedModels;
+}
+
+export async function refreshGeminiModels(): Promise<string[]> {
+  cachedModels = null;
+  cachedAt = 0;
+  return getModels();
+}
 
 // ── Message / Tool conversion (OpenAI → Gemini) ─────────────────────
 
 interface GeminiPart {
   text?: string;
+  inlineData?: { mimeType: string; data: string };
   functionCall?: { name: string; args: Record<string, unknown> };
   functionResponse?: {
     name: string;
@@ -96,7 +201,6 @@ function convertMessages(
     }
 
     if (msg.role === "tool") {
-      // tool message → Gemini functionResponse (sent as user role)
       contents.push({
         role: "user",
         parts: [
@@ -113,8 +217,18 @@ function convertMessages(
 
     const geminiRole = msg.role === "assistant" ? "model" : "user";
 
+    // User messages can have images
+    if (msg.role === "user" && msg.images && msg.images.length > 0) {
+      const parts: GeminiPart[] = [];
+      if (msg.content) parts.push({ text: msg.content });
+      for (const img of msg.images) {
+        parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+      }
+      contents.push({ role: "user", parts });
+      continue;
+    }
+
     if (msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0) {
-      // Assistant message with tool calls → parts with functionCall entries
       const parts: GeminiPart[] = [];
       if (msg.content) {
         parts.push({ text: msg.content });
@@ -178,7 +292,6 @@ interface GeminiResponse {
 }
 
 function convertResponse(geminiRes: GeminiResponse): OpenAIResponse {
-  // Handle API-level errors
   if (geminiRes.error) {
     throw new Error(
       `Gemini API error ${geminiRes.error.code}: ${geminiRes.error.message}`
@@ -194,7 +307,6 @@ function convertResponse(geminiRes: GeminiResponse): OpenAIResponse {
   const textParts = parts.filter((p) => p.text);
   const functionCallParts = parts.filter((p) => p.functionCall);
 
-  // If there are function calls, return tool_calls format
   if (functionCallParts.length > 0) {
     const tool_calls: ToolCall[] = functionCallParts.map((p, i) => ({
       id: `call_${Date.now()}_${i}`,
@@ -218,7 +330,6 @@ function convertResponse(geminiRes: GeminiResponse): OpenAIResponse {
     };
   }
 
-  // Simple text response
   return {
     choices: [
       {
@@ -235,22 +346,55 @@ function convertResponse(geminiRes: GeminiResponse): OpenAIResponse {
 
 async function callGemini(body: Record<string, unknown>): Promise<GeminiResponse> {
   const apiKey = getApiKey();
-  const url = `${BASE_URL}/${MODEL}:generateContent?key=${apiKey}`;
+  const models = await getModels();
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let lastError: Error | null = null;
+  for (const model of models) {
+    const url = `${BASE_URL}/models/${model}:generateContent?key=${apiKey}`;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(
-      `Gemini API HTTP ${res.status}: ${text.slice(0, 300)}`
-    );
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const text = await res.text();
+        const errMsg = `Gemini API HTTP ${res.status} (model=${model}): ${text.slice(0, 300)}`;
+        console.error(`[Gemini] ${errMsg}`);
+        lastError = new Error(errMsg);
+        continue;
+      }
+
+      const data = await res.json();
+      if (data.error) {
+        const errMsg = `Gemini API error (model=${model}): ${data.error.message}`;
+        console.error(`[Gemini] ${errMsg}`);
+        lastError = new Error(errMsg);
+        continue;
+      }
+
+      console.log(`[Gemini] Success with model: ${model}`);
+      return data;
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        console.error(`[Gemini] Timeout (model=${model})`);
+        lastError = new Error(`Gemini API timeout (model=${model})`);
+      } else {
+        console.error(`[Gemini] Error (model=${model}):`, err?.message);
+        lastError = err;
+      }
+      continue;
+    }
   }
 
-  return res.json();
+  throw lastError || new Error("All Gemini models failed");
 }
 
 // ── Public API ───────────────────────────────────────────────────────
