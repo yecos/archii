@@ -807,7 +807,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser]);
 
-  // Listen to active tenant document for members array
+  // Listen to active tenant document for members array + auto-fix role
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
     const db = getFirebase().firestore();
@@ -818,6 +818,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const members = data?.members || [];
         console.log('[ArchiFlow Team] Tenant members loaded:', members.length, '— UIDs:', members);
         setActiveTenantMembers(members);
+
+        // AUTO-FIX ROLE: Verify role from tenant doc (source of truth)
+        // This fixes the case where localStorage had stale "Miembro" role
+        const isCreator = data?.createdBy === authUser.uid;
+        const isSuperAdmin = isCreator || (data?.superAdmins || []).includes(authUser.uid);
+        const correctRole = isSuperAdmin ? 'Super Admin' : 'Miembro';
+        if (correctRole !== activeTenantRole) {
+          console.log('[ArchiFlow Team] Auto-fixing role:', activeTenantRole, '→', correctRole);
+          setActiveTenantRole(correctRole);
+          // Also fix localStorage so it doesn't happen again
+          try {
+            localStorage.setItem('archiflow-active-tenant-role', correctRole);
+          } catch (_e) { /* silent */ }
+        }
       } else {
         console.warn('[ArchiFlow Team] Tenant document does NOT exist:', activeTenantId);
         setActiveTenantMembers([]);
