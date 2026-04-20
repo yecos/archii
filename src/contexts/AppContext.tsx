@@ -3200,6 +3200,40 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
 
+  /* ===== AUTO DEDUP — runs silently on app open for Super Admins ===== */
+  useEffect(() => {
+    if (!ready || !authUser || !tenantReady || !activeTenantId || activeTenantRole !== 'Super Admin') return;
+
+    // Run at most once per session
+    const dedupDone = sessionStorage.getItem('archiflow-dedup-done');
+    if (dedupDone) return;
+
+    // Debounce: run 10 seconds after app loads (don't block startup)
+    const timer = setTimeout(async () => {
+      try {
+        const idToken = await authUser.getIdToken();
+        const res = await fetch('/api/dedup-users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+          body: JSON.stringify({ action: 'dedup-tenant', tenantId: activeTenantId }),
+        });
+        const result = await res.json();
+        if (result.duplicatesRemoved && result.duplicatesRemoved > 0) {
+          console.log('[ArchiFlow AutoDedup] Removed', result.duplicatesRemoved, 'duplicates from', result.tenantName, result.details);
+          showToast(`Limpieza automática: ${result.duplicatesRemoved} duplicados eliminados`);
+        } else {
+          console.log('[ArchiFlow AutoDedup] No duplicates found — all clean');
+        }
+      } catch (err) {
+        // Silent fail — this is a background task
+        console.warn('[ArchiFlow AutoDedup] Silent fail:', err);
+      }
+      sessionStorage.setItem('archiflow-dedup-done', 'true');
+    }, 10000); // 10 seconds after app loads
+
+    return () => clearTimeout(timer);
+  }, [ready, authUser, tenantReady, activeTenantId, activeTenantRole]);
+
   // ===== TENANT MANAGEMENT =====
   const switchTenant = useCallback((tenantId: string, tenantName: string, role: string = 'Miembro') => {
     setActiveTenantId(tenantId);
