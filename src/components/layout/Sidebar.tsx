@@ -23,12 +23,16 @@ interface SidebarProps {
   galleryPhotos: any[];
   invLowStock: any[];
   isAdmin: boolean;
+  activeTenantName: string | null;
+  activeTenantRole: string;
+  onSwitchTenant: () => void;
 }
 
 export default function Sidebar({
   screen, navigateTo, sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed,
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
+  activeTenantName, activeTenantRole, onSwitchTenant,
 }: SidebarProps) {
   const calendarBadge = useMemo(() => {
     const count = tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length;
@@ -139,13 +143,34 @@ export default function Sidebar({
           </div>
 
           {/* User profile at bottom */}
-          <div className="border-t border-[var(--border)] mt-4 pt-3 flex items-center gap-3 px-1" onClick={() => handleNavClick('profile')}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>
-              {authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[14px] font-medium truncate">{userName}</div>
-              <div className="text-[11px] text-[var(--muted-foreground)]">{ROLE_ICONS[displayRole] || '👤'} {displayRole}</div>
+          <div className="border-t border-[var(--border)] mt-4 pt-3">
+            {/* Tenant switch button */}
+            <button
+              onClick={() => { setSidebarOpen(false); setTimeout(() => onSwitchTenant(), 200); }}
+              className="w-full flex items-center gap-3 px-1 py-2 rounded-xl cursor-pointer hover:bg-[var(--af-bg3)] active:bg-[var(--af-bg4)] transition-all bg-transparent border-none text-left mb-2"
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[var(--af-accent)]/20 to-[var(--af-accent2)]/10">
+                <Building2 size={16} className="stroke-[var(--af-accent)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-medium truncate flex items-center gap-1.5">
+                  {activeTenantName || 'Espacio'}
+                  {activeTenantRole === 'Super Admin' && (
+                    <span className="inline-flex items-center text-[9px] font-bold bg-gradient-to-r from-[var(--af-accent)] to-amber-500 text-background px-1 py-0.5 rounded-md">ADMIN</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[var(--af-accent)]">Cambiar espacio</div>
+              </div>
+              <ChevronLeft size={14} className="stroke-[var(--muted-foreground)] rotate-180" />
+            </button>
+            <div className="flex items-center gap-3 px-1 cursor-pointer" onClick={() => handleNavClick('profile')}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>
+                {authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-medium truncate">{userName}</div>
+                <div className="text-[11px] text-[var(--muted-foreground)]">{ROLE_ICONS[displayRole] || '👤'} {displayRole}</div>
+              </div>
             </div>
           </div>
         </BottomSheet>

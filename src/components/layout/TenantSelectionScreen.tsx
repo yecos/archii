@@ -153,7 +153,7 @@ export default function TenantSelectionScreen() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-[var(--background)] z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-[var(--background)] z-[200] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-[var(--muted-foreground)]">Cargando espacios...</span>
@@ -163,7 +163,7 @@ export default function TenantSelectionScreen() {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--af-bg3)] z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--af-bg3)] z-[200] flex items-center justify-center p-4 overflow-y-auto">
       <div className="af-ambient-bg" />
 
       <div className="relative w-full max-w-[480px] my-auto">

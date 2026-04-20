@@ -180,6 +180,9 @@ function AppContent() {
         galleryPhotos={galleryPhotos}
         invLowStock={invLowStock}
         isAdmin={isAdmin}
+        activeTenantName={activeTenantName}
+        activeTenantRole={activeTenantRole}
+        onSwitchTenant={() => setShowTenantSelector(true)}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
