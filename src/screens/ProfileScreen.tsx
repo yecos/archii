@@ -1,19 +1,93 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
+import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA } from '@/lib/types';
 
 export default function ProfileScreen() {
   const {
     approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
     expenses, initials, meetings, msConnected, myRole,
     navigateTo, openOneDriveForProject, projects, tasks, teamUsers, userName,
+    rfis, submittals, punchItems, timeEntries, getUserName,
   } = useApp();
+
+  // Personal calendar state (independent from global CalendarScreen)
+  const today = new Date();
+  const [pcMonth, setPcMonth] = useState(today.getMonth());
+  const [pcYear, setPcYear] = useState(today.getFullYear());
+  const [pcSelected, setPcSelected] = useState<string | null>(today.toISOString().split('T')[0]);
 
   return (
 (() => {
-            const myTasks = tasks.filter(t => t.data.assigneeId === authUser?.uid || !t.data.assigneeId);
+            const uid = authUser?.uid;
+            const myTasks = tasks.filter(t => t.data.assigneeId === uid || !t.data.assigneeId);
+
+            // Personal calendar: filter ALL items belonging to this user
+            const myCalTasks = tasks.filter(t => t.data.assigneeId === uid && t.data.dueDate && t.data.status !== 'Completado');
+            const myCalRFIs = rfis.filter(r => r.data.assignedTo === uid && r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido');
+            const myCalSubs = submittals.filter(s => (s.data.reviewer === uid || s.data.createdBy === uid) && s.data.dueDate && s.data.status !== 'Aprobado' && s.data.status !== 'Rechazado');
+            const myCalPunch = punchItems.filter(p => p.data.assignedTo === uid && p.data.dueDate && p.data.status !== 'Completado');
+            const myCalMeetings = meetings.filter(m => m.data.date && (m.data.createdBy === uid || m.data.createdByUid === uid || (Array.isArray(m.data.attendees) && m.data.attendees.some((a: string) => a === userName))));
+            const myCalTimeEntries = timeEntries.filter(t => t.data.userId === uid && t.data.date);
+
+            // Calendar helpers
+            const pcFirstDay = new Date(pcYear, pcMonth, 1);
+            const pcLastDay = new Date(pcYear, pcMonth + 1, 0);
+            const pcStartDow = (pcFirstDay.getDay() + 6) % 7;
+            const pcDaysInMonth = pcLastDay.getDate();
+            const pcDateStr = (day: number) => `${pcYear}-${String(pcMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const pcTodayStr = today.toISOString().split('T')[0];
+            const pcTodayOnly = new Date(new Date().toDateString());
+
+            // Build grid cells
+            const pcCells: (number | null)[] = [];
+            for (let i = 0; i < pcStartDow; i++) pcCells.push(null);
+            for (let d = 1; d <= pcDaysInMonth; d++) pcCells.push(d);
+            while (pcCells.length % 7 !== 0) pcCells.push(null);
+
+            // Count items for a day
+            const countForDay = (day: number) => {
+              const ds = pcDateStr(day);
+              return myCalTasks.filter(t => t.data.dueDate === ds).length
+                + myCalRFIs.filter(r => r.data.dueDate === ds).length
+                + myCalSubs.filter(s => s.data.dueDate === ds).length
+                + myCalPunch.filter(p => p.data.dueDate === ds).length
+                + myCalMeetings.filter(m => m.data.date === ds).length
+                + myCalTimeEntries.filter(t => t.data.date === ds).length;
+            };
+
+            // Selected day items
+            const selTasks = pcSelected ? myCalTasks.filter(t => t.data.dueDate === pcSelected) : [];
+            const selRFIs = pcSelected ? myCalRFIs.filter(r => r.data.dueDate === pcSelected) : [];
+            const selSubs = pcSelected ? myCalSubs.filter(s => s.data.dueDate === pcSelected) : [];
+            const selPunch = pcSelected ? myCalPunch.filter(p => p.data.dueDate === pcSelected) : [];
+            const selMeetings = pcSelected ? myCalMeetings.filter(m => m.data.date === pcSelected) : [];
+            const selTime = pcSelected ? myCalTimeEntries.filter(t => t.data.date === pcSelected) : [];
+            const selTotal = selTasks.length + selRFIs.length + selSubs.length + selPunch.length + selMeetings.length + selTime.length;
+
+            // Personal calendar stats
+            const pcUrgent = myCalTasks.filter(t => t.data.priority === 'Alta').length;
+            const pcOverdue = myCalTasks.filter(t => t.data.dueDate && new Date(t.data.dueDate) < pcTodayOnly).length;
+            const pcThisWeek = myCalTasks.filter(t => { const d = t.data.dueDate; if (!d) return false; const diff = Math.ceil((new Date(d).getTime() - today.getTime()) / 86400000); return diff >= 0 && diff <= 7; }).length;
+            const pcMonthMeetings = myCalMeetings.filter(m => m.data.date && m.data.date.startsWith(`${pcYear}-${String(pcMonth + 1).padStart(2, '0')}`)).length;
+
+            const pcPrevMonth = () => { if (pcMonth === 0) { setPcMonth(11); setPcYear(y => y - 1); } else { setPcMonth(m => m - 1); } setPcSelected(null); };
+            const pcNextMonth = () => { if (pcMonth === 11) { setPcMonth(0); setPcYear(y => y + 1); } else { setPcMonth(m => m + 1); } setPcSelected(null); };
+            const pcGoToday = () => { setPcMonth(today.getMonth()); setPcYear(today.getFullYear()); setPcSelected(pcTodayStr); };
+
+            // Get items for day cell display
+            const getItemsForDay = (day: number) => {
+              const ds = pcDateStr(day);
+              const items: { type: string; label: string; color: string; priority?: string }[] = [];
+              myCalTasks.filter(t => t.data.dueDate === ds).slice(0, 2).forEach(t => items.push({ type: 'task', label: t.data.title, color: t.data.priority === 'Alta' ? 'bg-red-500/15 text-red-400' : t.data.priority === 'Media' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400', priority: t.data.priority }));
+              myCalRFIs.filter(r => r.data.dueDate === ds).slice(0, 1).forEach(r => items.push({ type: 'rfi', label: `❓ ${r.data.number}`, color: 'bg-blue-500/15 text-blue-400' }));
+              myCalMeetings.filter(m => m.data.date === ds).slice(0, 1).forEach(m => items.push({ type: 'meeting', label: `📅 ${m.data.time || '09:00'}`, color: 'bg-purple-500/15 text-purple-400' }));
+              myCalPunch.filter(p => p.data.dueDate === ds).slice(0, 1).forEach(p => items.push({ type: 'punch', label: `✅ ${p.data.title}`, color: 'bg-teal-500/15 text-teal-400' }));
+              myCalSubs.filter(s => s.data.dueDate === ds).slice(0, 1).forEach(s => items.push({ type: 'sub', label: `📋 ${s.data.number}`, color: 'bg-fuchsia-500/15 text-fuchsia-400' }));
+              return items;
+            };
+
             const myPending = myTasks.filter(t => t.data.status !== 'Completado');
             const myCompleted = myTasks.filter(t => t.data.status === 'Completado');
             const myInProgress = myTasks.filter(t => t.data.status === 'En progreso');
@@ -85,6 +159,277 @@ export default function ProfileScreen() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Calendario Personal */}
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-3.5 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--af-accent)]/10 flex items-center justify-center text-base">📅</div>
+                    <div className="text-[13px] sm:text-[15px] font-semibold">Mi Calendario Personal</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer border border-[var(--af-accent)]/20 hover:bg-[var(--af-accent)]/20 transition-colors" onClick={() => navigateTo('calendar')}>
+                      Ver calendario completo →
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[11px] text-[var(--muted-foreground)] mb-3">Solo se muestran tus tareas, RFIs, reuniones y pendientes asignados a ti.</div>
+
+                {/* Calendar Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <button className="w-7 h-7 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcPrevMonth}>
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <div className="text-[13px] sm:text-[14px] font-semibold min-w-[110px] sm:min-w-[140px] text-center">{MESES[pcMonth]} {pcYear}</div>
+                    <button className="w-7 h-7 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcNextMonth}>
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
+                  <button className="text-[10px] px-2 py-1 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcGoToday}>Hoy</button>
+                </div>
+
+                {/* Mini stats */}
+                <div className="grid grid-cols-4 gap-1.5 mb-3">
+                  <div className="bg-red-500/10 rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-red-400">{pcUrgent}</div>
+                    <div className="text-[8px] text-red-400/70">Urgentes</div>
+                  </div>
+                  <div className="bg-amber-500/10 rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-amber-400">{pcOverdue}</div>
+                    <div className="text-[8px] text-amber-400/70">Vencidas</div>
+                  </div>
+                  <div className="bg-blue-500/10 rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-blue-400">{pcThisWeek}</div>
+                    <div className="text-[8px] text-blue-400/70">Esta semana</div>
+                  </div>
+                  <div className="bg-purple-500/10 rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-purple-400">{pcMonthMeetings}</div>
+                    <div className="text-[8px] text-purple-400/70">Reuniones</div>
+                  </div>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="rounded-xl overflow-hidden border border-[var(--border)]">
+                  <div className="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--af-bg3)]/50">
+                    {DIAS_SEMANA.map(d => (
+                      <div key={d} className="py-1.5 text-center text-[9px] sm:text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7">
+                    {pcCells.map((day, idx) => {
+                      if (day === null) return <div key={`e-${idx}`} className="min-h-[52px] sm:min-h-[72px] border-b border-r border-[var(--border)] bg-[var(--af-bg3)]/20" />;
+                      const ds = pcDateStr(day);
+                      const isToday = ds === pcTodayStr;
+                      const isSelected = ds === pcSelected;
+                      const isPast = ds < pcTodayStr && !isToday;
+                      const cnt = countForDay(day);
+                      const dayItems = getItemsForDay(day);
+                      return (
+                        <div key={day} className={`min-h-[52px] sm:min-h-[72px] border-b border-r border-[var(--border)] p-0.5 sm:p-1 cursor-pointer transition-colors ${isSelected ? 'bg-[var(--af-accent)]/10 ring-1 ring-inset ring-[var(--af-accent)]/30' : 'hover:bg-[var(--af-bg3)]'} ${isPast ? 'opacity-60' : ''}`} onClick={() => setPcSelected(ds)}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className={`text-[10px] sm:text-[12px] font-medium ${isToday ? 'w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--af-accent)] text-background flex items-center justify-center' : 'text-[var(--foreground)]'}`}>
+                              {day}
+                            </div>
+                            {cnt > 0 && !isToday && (
+                              <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[7px] sm:text-[8px] font-bold ${cnt > 4 ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>{cnt}</div>
+                            )}
+                            {isToday && cnt > 0 && <div className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)] animate-pulse" />}
+                          </div>
+                          <div className="space-y-px">
+                            {dayItems.slice(0, 2).map((item, i) => (
+                              <div key={i} className={`text-[7px] sm:text-[8px] leading-tight px-0.5 py-px rounded truncate ${item.color}`} title={item.label}>
+                                {item.label}
+                              </div>
+                            ))}
+                            {cnt > 2 && <div className="text-[7px] text-[var(--muted-foreground)]">+{cnt - 2}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5 px-1">
+                  {[{ label: 'Tareas', color: 'bg-emerald-500/15 text-emerald-400' }, { label: 'RFIs', color: 'bg-blue-500/15 text-blue-400' }, { label: 'Reuniones', color: 'bg-purple-500/15 text-purple-400' }, { label: 'Punch', color: 'bg-teal-500/15 text-teal-400' }, { label: 'Submittals', color: 'bg-fuchsia-500/15 text-fuchsia-400' }].map((l, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-sm ${l.color}`} />
+                      <span className="text-[9px] text-[var(--muted-foreground)]">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Selected Day Detail */}
+                {pcSelected && (
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[13px] font-semibold">
+                        {(() => { const parts = pcSelected.split('-'); return `${parseInt(parts[2])} de ${MESES[parseInt(parts[1]) - 1]} ${parts[0]}`; })()}
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${selTotal > 0 ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                        {selTotal} actividad{selTotal !== 1 ? 'es' : ''}
+                      </span>
+                    </div>
+
+                    {selTotal === 0 ? (
+                      <div className="text-center py-6 text-[var(--af-text3)]">
+                        <div className="text-2xl mb-1">🏖️</div>
+                        <div className="text-[12px]">Sin actividades para este día</div>
+                        <div className="text-[10px] text-[var(--muted-foreground)] mt-1">Disfruta tu día libre</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                        {/* Meetings first */}
+                        {selMeetings.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-purple-400 mb-1.5 flex items-center gap-1">📅 Reuniones ({selMeetings.length})</div>
+                            <div className="space-y-1.5">
+                              {selMeetings.sort((a, b) => (a.data.time || '').localeCompare(b.data.time || '')).map(m => {
+                                const proj = projects.find(p => p.id === m.data.projectId);
+                                return (
+                                  <div key={m.id} className="border border-purple-500/20 rounded-lg p-2.5 bg-purple-500/5">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="text-[12px] font-medium">{m.data.title}</div>
+                                      <span className="text-[10px] text-purple-400 flex-shrink-0">{m.data.time || '09:00'} · {m.data.duration || 60}min</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      {m.data.description && <span className="truncate max-w-[200px]">{m.data.description}</span>}
+                                    </div>
+                                    {m.data.attendees && Array.isArray(m.data.attendees) && m.data.attendees.length > 0 && (
+                                      <div className="text-[9px] text-[var(--af-text3)] mt-1">👥 {m.data.attendees.join(', ')}</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tasks */}
+                        {selTasks.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-[var(--foreground)] mb-1.5 flex items-center gap-1">✅ Tareas ({selTasks.length})</div>
+                            <div className="space-y-1.5">
+                              {selTasks.sort((a, b) => {
+                                const pOrder: Record<string, number> = { Alta: 0, Media: 1, Baja: 2 };
+                                return (pOrder[a.data.priority] || 1) - (pOrder[b.data.priority] || 1);
+                              }).map(t => {
+                                const proj = projects.find(p => p.id === t.data.projectId);
+                                const isOverdue = new Date(t.data.dueDate) < pcTodayOnly;
+                                return (
+                                  <div key={t.id} className={`border rounded-lg p-2.5 transition-all ${isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-[var(--border)] bg-[var(--af-bg3)]'}`}>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="text-[12px] font-medium leading-snug">{isOverdue ? '⚡ ' : ''}{t.data.title}</div>
+                                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      <span className={`px-1.5 py-0.5 rounded-full ${taskStColor(t.data.status)}`}>{t.data.status}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* RFIs */}
+                        {selRFIs.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-blue-400 mb-1.5 flex items-center gap-1">❓ RFIs ({selRFIs.length})</div>
+                            <div className="space-y-1.5">
+                              {selRFIs.map(r => {
+                                const proj = projects.find(p => p.id === r.data.projectId);
+                                const isOverdue = new Date(r.data.dueDate) < pcTodayOnly;
+                                return (
+                                  <div key={r.id} className={`border rounded-lg p-2.5 ${isOverdue ? 'border-red-500/20 bg-red-500/5' : 'border-blue-500/20 bg-blue-500/5'}`}>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="text-[12px] font-medium">{r.data.number}: {r.data.subject}</div>
+                                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${prioColor(r.data.priority)}`}>{r.data.priority}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      <span className="text-blue-400">{r.data.status}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Submittals */}
+                        {selSubs.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-fuchsia-400 mb-1.5 flex items-center gap-1">📋 Submittals ({selSubs.length})</div>
+                            <div className="space-y-1.5">
+                              {selSubs.map(s => {
+                                const proj = projects.find(p => p.id === s.data.projectId);
+                                return (
+                                  <div key={s.id} className="border border-fuchsia-500/20 rounded-lg p-2.5 bg-fuchsia-500/5">
+                                    <div className="text-[12px] font-medium">{s.data.number}: {s.data.title}</div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      <span className="text-fuchsia-400">{s.data.status}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Punch Items */}
+                        {selPunch.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-teal-400 mb-1.5 flex items-center gap-1">✅ Punch List ({selPunch.length})</div>
+                            <div className="space-y-1.5">
+                              {selPunch.map(p => {
+                                const proj = projects.find(pr => pr.id === p.data.projectId);
+                                return (
+                                  <div key={p.id} className="border border-teal-500/20 rounded-lg p-2.5 bg-teal-500/5">
+                                    <div className="text-[12px] font-medium">{p.data.title}</div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      <span className="text-teal-400">{p.data.status}</span>
+                                      {p.data.location && <span>📍 {p.data.location}</span>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Time Entries */}
+                        {selTime.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-semibold text-cyan-400 mb-1.5 flex items-center gap-1">⏱️ Tiempo registrado ({selTime.length})</div>
+                            <div className="space-y-1.5">
+                              {selTime.map(te => {
+                                const proj = projects.find(p => p.id === te.data.projectId);
+                                return (
+                                  <div key={te.id} className="border border-cyan-500/20 rounded-lg p-2.5 bg-cyan-500/5">
+                                    <div className="text-[12px] font-medium">{te.data.description || te.data.phaseName}</div>
+                                    <div className="flex items-center gap-2 text-[10px] text-[var(--af-text3)] mt-1">
+                                      {proj && <span>📁 {proj.data.name}</span>}
+                                      <span>🕐 {te.data.startTime} - {te.data.endTime}</span>
+                                      <span className="text-cyan-400">{te.data.duration}min</span>
+                                      {te.data.billable && <span className="text-emerald-400">Facturable</span>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Notificaciones */}
