@@ -340,6 +340,20 @@ export default function TasksScreen() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
+                        {(() => {
+                          const sts = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks as { text: string; done: boolean }[] : [];
+                          if (sts.length === 0) return null;
+                          const done = sts.filter(s => s.done).length;
+                          const pct = Math.round((done / sts.length) * 100);
+                          return (
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex-1 h-1 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-emerald-500' : 'bg-[var(--af-accent)]'}`} style={{ width: pct + '%' }} />
+                              </div>
+                              <span className="text-[9px] text-[var(--af-text3)] flex-shrink-0">{done}/{sts.length} subtareas</span>
+                            </div>
+                          );
+                        })()}
                         <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
                           {proj && <span>{proj.data.name}</span>}
                           {t.data.dueDate && (
@@ -492,6 +506,18 @@ export default function TasksScreen() {
                                 </span>
                               )}
                             </div>
+                            {/* Subtask progress pill */}
+                            {(() => {
+                              const sts = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks as { text: string; done: boolean }[] : [];
+                              if (sts.length === 0) return null;
+                              const done = sts.filter(s => s.done).length;
+                              const pct = Math.round((done / sts.length) * 100);
+                              return (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${pct === 100 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]'}`}>
+                                  {done}/{sts.length}
+                                </span>
+                              );
+                            })()}
                           </div>
 
                           {/* Footer: assignees */}

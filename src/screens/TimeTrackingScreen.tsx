@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, fmtTimer, getWeekStart } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
@@ -10,8 +10,39 @@ export default function TimeTrackingScreen() {
     forms, openModal, projects, setForms, setTimeFilterDate,
     setTimeFilterProject, setTimeTab, showToast, startTimeTracking, stopTimeTracking,
     timeEntries, timeFilterDate, timeFilterProject, timeSession, timeTab,
-    timeTimerMs, userName, activeTenantId,
+    timeTimerMs, userName, activeTenantId, authUser,
   } = useApp();
+
+  // Quick entry state
+  const [quickProject, setQuickProject] = useState('');
+  const [quickDate, setQuickDate] = useState(new Date().toISOString().split('T')[0]);
+  const [quickHours, setQuickHours] = useState('');
+  const [quickDesc, setQuickDesc] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+
+  const handleQuickSave = async () => {
+    if (!quickProject || !quickHours) { showToast('Proyecto y horas son requeridos', 'error'); return; }
+    const mins = Number(quickHours) * 60;
+    setQuickSaving(true);
+    try {
+      await fbActions.saveTimeEntry({
+        teProject: quickProject,
+        teDate: quickDate,
+        teStartTime: '',
+        teEndTime: '',
+        teDescription: quickDesc,
+        teDuration: mins,
+        teBillable: true,
+        teRate: 50000,
+      }, null, showToast, authUser, activeTenantId);
+      setQuickProject('');
+      setQuickHours('');
+      setQuickDesc('');
+    } catch {
+      showToast('Error al guardar', 'error');
+    }
+    setQuickSaving(false);
+  };
 
   return (
 <div className="animate-fadeIn space-y-4">
@@ -22,6 +53,53 @@ export default function TimeTrackingScreen() {
         </div>
 
         {timeTab === 'tracker' && (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Quick Entry */}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 lg:col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[14px] font-semibold">Entrada rapida</span>
+              <span className="text-[10px] text-[var(--af-text3)]">— Registra tiempo sin abrir el cronometro</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none cursor-pointer flex-1 min-w-[160px]"
+                value={quickProject}
+                onChange={e => setQuickProject(e.target.value)}
+              >
+                <option value="">Proyecto...</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+              </select>
+              <input
+                type="date"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-[130px]"
+                value={quickDate}
+                onChange={e => setQuickDate(e.target.value)}
+              />
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                placeholder="Horas"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-[80px]"
+                value={quickHours}
+                onChange={e => setQuickHours(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Descripcion (opcional)"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none flex-1 min-w-[140px]"
+                value={quickDesc}
+                onChange={e => setQuickDesc(e.target.value)}
+              />
+              <button
+                className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-4 py-2 rounded-lg text-[12px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors flex-shrink-0"
+                onClick={handleQuickSave}
+                disabled={quickSaving}
+              >
+                {quickSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+
           {/* Timer Card */}
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
             <h3 className="text-[15px] font-semibold mb-4">Cronometro</h3>

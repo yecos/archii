@@ -1,5 +1,6 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { startOfWeek, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
@@ -34,21 +35,63 @@ export default function DashboardScreen() {
     rfis, submittals, punchItems, overdueTasks, userName,
   } = useApp();
 
+  // ─── Date Range State ───
+  const [dateRange, setDateRange] = useState<'week' | 'month' | 'quarter' | 'year' | 'custom'>('month');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    let start: Date, end: Date = now;
+    switch (dateRange) {
+      case 'week':
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        start = startOfMonth(now);
+        break;
+      case 'quarter':
+        start = startOfQuarter(now);
+        break;
+      case 'year':
+        start = startOfYear(now);
+        break;
+      case 'custom':
+        start = customStart ? new Date(customStart + 'T00:00:00') : startOfMonth(now);
+        end = customEnd ? new Date(customEnd + 'T23:59:59') : now;
+        break;
+    }
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0],
+    };
+  }, [dateRange, customStart, customEnd]);
+
+  // Helper: check if a date string falls within the selected range
+  const inRange = (dateStr: string | undefined | null) => {
+    if (!dateStr) return false;
+    return dateStr >= startDate && dateStr <= endDate;
+  };
+
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const todayOnly = new Date(new Date().toDateString());
 
-  // ─── Computed data ───
-  const totalExpenses = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
-  const totalInvoiced = useMemo(() => invoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [invoices]);
-  const totalPaid = useMemo(() => invoices.filter((i: any) => i.data.status === 'Pagada').reduce((s: number, i: any) => s + (Number(i.data.total) || 0), 0), [invoices]);
-  const overdueCount = overdueTasks.length;
+  // ─── Computed data (filtered by date range) ───
+  const rangeTasks = useMemo(() => tasks.filter((t: any) => inRange(t.data.dueDate) || (t.data.status === 'Completado' && inRange(t.data.updatedAt?.toDate?.().toISOString().split('T')[0])) || (t.data.createdAt && inRange(t.data.createdAt?.toDate?.().toISOString().split('T')[0]))), [tasks, startDate, endDate]);
+  const rangeExpenses = useMemo(() => expenses.filter((e: any) => inRange(e.data.date)), [expenses, startDate, endDate]);
+  const rangeInvoices = useMemo(() => invoices.filter((inv: any) => inRange(inv.data.issueDate)), [invoices, startDate, endDate]);
+  const rangeTimeEntries = useMemo(() => timeEntries.filter((te: any) => inRange(te.data.date)), [timeEntries, startDate, endDate]);
+  const totalExpenses = useMemo(() => rangeExpenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [rangeExpenses]);
+  const totalInvoiced = useMemo(() => rangeInvoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [rangeInvoices]);
+  const totalPaid = useMemo(() => rangeInvoices.filter((i: any) => i.data.status === 'Pagada').reduce((s: number, i: any) => s + (Number(i.data.total) || 0), 0), [rangeInvoices]);
+  const overdueCount = overdueTasks.filter((t: any) => inRange(t.data.dueDate)).length;
 
   // Quick access metrics
-  const openRFIs = useMemo(() => rfis.filter((r: any) => r.data.status === 'Abierto' || r.data.status === 'En revisión').length, [rfis]);
-  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión').length, [submittals]);
-  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente').length, [punchItems]);
-  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date()).length, [rfis]);
+  const openRFIs = useMemo(() => rfis.filter((r: any) => (r.data.status === 'Abierto' || r.data.status === 'En revisión') && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
+  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión' && inRange(s.data.createdAt?.toDate?.().toISOString().split('T')[0])).length, [submittals, startDate, endDate]);
+  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente' && inRange(p.data.createdAt?.toDate?.().toISOString().split('T')[0])).length, [punchItems, startDate, endDate]);
+  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date() && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
   const execProjects = useMemo(() => projects.filter((p: any) => p.data.status === 'Ejecucion').length, [projects]);
 
   // Today's meetings
@@ -56,6 +99,11 @@ export default function DashboardScreen() {
 
   // Tasks due today (not completed)
   const todayDueTasks = useMemo(() => tasks.filter((t: any) => t.data.dueDate === todayStr && t.data.status !== 'Completado'), [tasks, todayStr]);
+
+  // Range-filtered KPI counts
+  const rangeCompletedTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'Completado').length, [rangeTasks]);
+  const rangeActiveTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'En progreso' || t.data.status === 'Revision').length, [rangeTasks]);
+  const rangeTotalTime = useMemo(() => rangeTimeEntries.reduce((s: number, te: any) => s + (te.data.duration || 0), 0), [rangeTimeEntries]);
 
   // Tasks due this week (within 7 days, not completed, not overdue)
   const weekTasks = useMemo(() => tasks.filter((t: any) => {
@@ -80,11 +128,11 @@ export default function DashboardScreen() {
     return data;
   }, [invoices]);
 
-  // Team workload
+  // Team workload (filtered by range)
   const teamWorkload = useMemo(() => {
     const byUser: Record<string, { total: number; active: number; done: number }> = {};
     teamUsers.forEach(u => { byUser[u.id] = { total: 0, active: 0, done: 0 }; });
-    tasks.forEach((t: any) => {
+    rangeTasks.forEach((t: any) => {
       if (t.data.assigneeId && byUser[t.data.assigneeId]) {
         byUser[t.data.assigneeId].total++;
         if (t.data.status === 'En progreso' || t.data.status === 'Revision') byUser[t.data.assigneeId].active++;
@@ -95,14 +143,14 @@ export default function DashboardScreen() {
       const user = teamUsers.find((u: any) => u.id === uid);
       return { name: (user?.data.name || 'Sin nombre').split(' ')[0], activas: data.active, completadas: data.done, pendientes: data.total - data.active - data.done };
     });
-  }, [tasks, teamUsers]);
+  }, [rangeTasks, teamUsers]);
 
-  // Task status distribution (for donut)
+  // Task status distribution (for donut, filtered by range)
   const taskStatusData = useMemo(() => {
     const statuses: Record<string, number> = {};
-    tasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
+    rangeTasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
     return Object.entries(statuses).map(([name, value]) => ({ name, value }));
-  }, [tasks]);
+  }, [rangeTasks]);
 
   // Recent activity
   const recentActivity = useMemo(() => {
@@ -149,6 +197,54 @@ export default function DashboardScreen() {
     <div className="animate-fadeIn space-y-4">
       {loading && <SkeletonDashboard />}
       {!loading && (<>
+
+      {/* ════════════ Date Range Selector ════════════ */}
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mr-1">Periodo:</span>
+          {([['week', 'Esta semana'], ['month', 'Este mes'], ['quarter', 'Este trimestre'], ['year', 'Este año']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all border ${
+                dateRange === key
+                  ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30'
+                  : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/20'
+              }`}
+              onClick={() => setDateRange(key)}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all border ${
+              dateRange === 'custom'
+                ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30'
+                : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/20'
+            }`}
+            onClick={() => setDateRange('custom')}
+          >
+            Personalizado
+          </button>
+          {dateRange === 'custom' && (
+            <div className="flex items-center gap-2 ml-1 animate-fadeIn">
+              <input
+                type="date"
+                className="text-[11px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50"
+                value={customStart}
+                onChange={e => setCustomStart(e.target.value)}
+              />
+              <span className="text-[11px] text-[var(--af-text3)]">a</span>
+              <input
+                type="date"
+                className="text-[11px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2 py-1 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50"
+                value={customEnd}
+                onChange={e => setCustomEnd(e.target.value)}
+              />
+            </div>
+          )}
+          <span className="text-[10px] text-[var(--af-text3)] ml-auto hidden sm:inline">{startDate} — {endDate}</span>
+        </div>
+      </div>
 
       {/* ════════════ ROW 0: Personalized Header ════════════ */}
       <div className="bg-gradient-to-br from-[var(--card)] via-[var(--af-bg3)] to-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
@@ -222,7 +318,7 @@ export default function DashboardScreen() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { val: projects.length, lbl: 'Proyectos', icon: <FolderKanban size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${execProjects} en ejecución`, click: 'projects' },
-          { val: pendingCount, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${activeTasks.length} activas`, click: 'tasks' },
+          { val: rangeTasks.filter((t: any) => t.data.status !== 'Completado').length, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${rangeActiveTasks} activas`, click: 'tasks' },
           { val: overdueCount, lbl: 'Vencidas', icon: <AlertTriangle size={15} />, bg: overdueCount > 0 ? 'bg-red-500/10' : 'bg-[var(--af-bg4)]', iconC: overdueCount > 0 ? 'text-red-400' : 'text-emerald-400', sub: overdueCount > 0 ? 'Requieren atención' : 'Sin vencidas', click: 'tasks', alert: overdueCount > 0 },
           { val: todayMeetings.length, lbl: 'Reuniones hoy', icon: <CalendarDays size={15} />, bg: 'bg-purple-500/10', iconC: 'text-purple-400', sub: weekTasks.length > 0 ? `${weekTasks.length} tareas esta semana` : '', click: 'calendar' },
           { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Subs', icon: <CircleHelp size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} subs`, click: 'rfis', alert: overdueRFIs > 0 },
@@ -395,19 +491,19 @@ export default function DashboardScreen() {
             <div className="relative w-[90px] h-[90px]">
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--af-bg4)" strokeWidth="2.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={tasks.length > 0 ? (completedTasks.length / tasks.length) >= 0.8 ? '#10b981' : (completedTasks.length / tasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${tasks.length > 0 ? ((completedTasks.length / tasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" style={{ filter: 'drop-shadow(0 0 6px rgba(200,169,110,0.3))' }} />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={rangeTasks.length > 0 ? (rangeCompletedTasks / rangeTasks.length) >= 0.8 ? '#10b981' : (rangeCompletedTasks / rangeTasks.length) >= 0.4 ? '#c8a96e' : '#f59e0b' : 'var(--af-bg4)'} strokeWidth="2.5" strokeDasharray={`${rangeTasks.length > 0 ? ((rangeCompletedTasks / rangeTasks.length) * 100).toFixed(1) : 0}, 100`} strokeLinecap="round" className="transition-all duration-700" style={{ filter: 'drop-shadow(0 0 6px rgba(200,169,110,0.3))' }} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[18px] font-bold">{tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%</span>
+                <span className="text-[18px] font-bold">{rangeTasks.length > 0 ? Math.round((rangeCompletedTasks / rangeTasks.length) * 100) : 0}%</span>
               </div>
             </div>
           </div>
           <div className="mt-2 text-center">
-            <div className="text-[11px] text-[var(--muted-foreground)]">{completedTasks.length} de {tasks.length} tareas</div>
+            <div className="text-[11px] text-[var(--muted-foreground)]">{rangeCompletedTasks} de {rangeTasks.length} tareas</div>
             <div className="flex items-center justify-center gap-3 mt-1.5">
-              <span className="text-[10px] text-blue-400">{activeTasks.length} activas</span>
+              <span className="text-[10px] text-blue-400">{rangeActiveTasks} activas</span>
               <span className="text-[10px] text-[var(--af-text3)]">·</span>
-              <span className="text-[10px] text-emerald-400">{completedTasks.length} completadas</span>
+              <span className="text-[10px] text-emerald-400">{rangeCompletedTasks} completadas</span>
             </div>
           </div>
           {/* Task distribution legend */}

@@ -3,12 +3,13 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
-import { X, Users } from 'lucide-react';
+import { X, Users, Plus, Trash2 } from 'lucide-react';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser } = useApp();
 
   const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : [];
+  const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
 
   const toggleAssignee = (uid: string) => {
     setForms((p: any) => {
@@ -25,6 +26,30 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
       return { ...p, taskAssignees: updated, taskAssignee: updated[0] || '' };
     });
   };
+
+  const addSubtask = () => {
+    setForms((p: any) => ({
+      ...p,
+      taskSubtasks: [...(Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []), { text: '', done: false }],
+    }));
+  };
+
+  const updateSubtask = (index: number, field: 'text' | 'done', value: string | boolean) => {
+    setForms((p: any) => {
+      const current = Array.isArray(p.taskSubtasks) ? [...p.taskSubtasks] : [];
+      current[index] = { ...current[index], [field]: value };
+      return { ...p, taskSubtasks: current };
+    });
+  };
+
+  const removeSubtask = (index: number) => {
+    setForms((p: any) => ({
+      ...p,
+      taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).filter((_: any, i: number) => i !== index),
+    }));
+  };
+
+  const doneSubtasks = subtasks.filter(s => s.done).length;
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={520}>
@@ -153,6 +178,43 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             value={forms.taskDue || ''}
             onChange={(e) => setForms((p: any) => ({ ...p, taskDue: e.target.value }))}
           />
+        </FormField>
+
+        {/* Subtareas */}
+        <FormField label={`Subtareas ${subtasks.length > 0 ? `(${doneSubtasks}/${subtasks.length})` : ''}`}>
+          <div className="space-y-2">
+            {subtasks.map((st: { text: string; done: boolean }, idx: number) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={st.done}
+                  onChange={e => updateSubtask(idx, 'done', e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-[var(--input)] text-[var(--af-accent)] cursor-pointer accent-[var(--af-accent)] flex-shrink-0"
+                />
+                <input
+                  type="text"
+                  value={st.text}
+                  onChange={e => updateSubtask(idx, 'text', e.target.value)}
+                  placeholder={`Subtarea ${idx + 1}`}
+                  className={`flex-1 text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 ${st.done ? 'line-through text-[var(--af-text3)]' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="text-[var(--af-text3)] hover:text-red-400 cursor-pointer bg-transparent border-none p-0 flex-shrink-0"
+                  onClick={() => removeSubtask(idx)}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline bg-transparent border-none p-0 font-medium"
+              onClick={addSubtask}
+            >
+              <Plus size={13} /> Agregar subtarea
+            </button>
+          </div>
         </FormField>
       </div>
 
