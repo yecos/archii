@@ -5107,3 +5107,105 @@ SI NO HAS LEIDO LAS PARTES 3, 5 Y 6, NO ESTAS AUTORIZADO/A PARA TRABAJAR.
   8. PROTEGE DATOS: Nunca elimines datos de Firestore sin backup + confirmacion
   9. BUILD ANTES DE PUSH: Verifica que el build pasa localmente
   10. DOCUMENTA TODO: Bitacora + worklog.md en cada sesion, sin excepcion
+
+================================================================================
+PARTE 8: SESIONES POSTERIORES (registro cronologico)
+================================================================================
+
+2026-04-21 01:00 | SESION — Fixes criticos: Super Admin role, mobile UX, Firestore writes
+  Estado: EN CURSO
+  Commits: 1d51a93, f5be7a0, 4f056fa, bec4786, 002eb43, 5edb900, 717a9a0,
+           084ae1e, 76c9968, 8883dbd, 61e4833, 79fce4a, db9b200, 5bfd536,
+           35de2f0, 33d9781, d2dae1a, 318b59a
+
+  Contexto: Sesion continua enfocada en estabilizar el sistema multi-tenant,
+    corregir bugs criticos que rompian la app en produccion y mejorar la
+    experiencia de usuario en movil.
+
+  Tarea 1 — Sistema Super Admin (feat: commits 1d51a93, f5be7a0, 4f056fa):
+    * Agregada accion set-super-admin a /api/tenants/route.ts
+      - Permite designar multiples Super Admins por tenant
+      - Acepta email o UID, busca duplicados automaticamente
+      - Verifica si el solicitante es SA en CUALQUIER tenant (cross-tenant check)
+    * Array superAdmins[] en documentos de tenant (ademas de createdBy)
+    * Regla: es SA si createdBy === uid OR uid in superAdmins[]
+
+  Tarea 2 — Deduplicacion de usuarios (feat: commit b451372):
+    * Prevencion: en onAuthStateChanged, antes de crear user doc se busca
+      si existe otro usuario con el mismo email
+    * Migracion automatica: si hay duplicado, migra members[] y superAdmins[]
+      del UID viejo al nuevo UID
+    * Tracking lastUid: se guarda el UID anterior en el user doc para detectar
+      cambios de UID entre sesiones
+    * Endpoint /api/dedup-users con acciones: list, dedup-tenant, full
+
+  Tarea 3 — Persistencia de tenant al borrar cache (fix: commits 002eb43, 5edb900):
+    * Problema: al borrar cache del navegador, la app no reconocia al usuario
+      ni su tenant. Aparecia el selector de tenant en vez de ir directo.
+    * Solucion: guardar defaultTenantId, defaultTenantRole, defaultTenantName
+      y lastUid en el documento del usuario en Firestore
+    * Al iniciar sesion con localStorage vacio, leer estos valores de Firestore
+      y verificar que el usuario sigue siendo miembro del tenant
+    * Migrar UID nuevo si cambio (lastUid tracking)
+
+  Tarea 4 — Debug y fix de rol Super Admin (fix: commits 717a9a0, 084ae1e):
+    * Agregadas acciones debug-me y fix-my-role a /api/tenants
+    * debug-me: retorna authUid, authEmail, userDoc, allUsersWithEmail,
+      todos los tenants con estado de membresia
+    * fix-my-role: fuerza Super Admin en tenant especifico, actualiza
+      defaultTenantRole en user doc
+    * Intento de auto-fix desde onSnapshot del tenant doc (causo error,
+      revertido despues — ver Tarea 6)
+
+  Tarea 5 — Upload de imagenes en chat IA (feat: commit 76c9968):
+    * AIChatPanel ahora soporta subir imagenes como contexto para la IA
+    * Auto-discovery de modelos disponibles en Gemini
+    * Fallback a modelo por defecto si el seleccionado no funciona
+    * Timeout de 30 segundos para respuestas de IA
+
+  Tarea 6 — Fix activetTenantRole ReferenceError [CRITICA] (fix: commits 33d9781, d2dae1a):
+    * Problema: ReferenceError: activeTenantRole is not defined en el bundle
+      minificado de produccion. Error en el callback onSnapshot del tenant doc.
+    * Causa: el auto-fix del rol dentro del callback onSnapshot referenciaba
+      activeTenantRole, pero el minificador no la encontraba en el closure scope
+    * Intento 1: usar useRef (activeTenantRoleRef) — NO funciono
+    * Intento 2: agregar a dependency array del useEffect — NO funciono
+    * Solucion final: eliminar completamente el auto-fix del onSnapshot. Ya no
+      es necesario porque el rol se establece correctamente en:
+      a) selectTenant() al seleccionar tenant
+      b) Restauracion desde Firestore al borrar cache
+    * Archivo: src/contexts/AppContext.tsx (-20 lineas)
+
+  Tarea 7 — Mobile UX: tenant selector (fix: commits 8883dbd, 61e4833):
+    * Problema: en movil, el selector de tenant quedaba detras de todos los
+      elementos y no se podia presionar "Cambiar espacio"
+    * Solucion 1: z-index de TenantSelectionScreen de z-50 a z-[200]
+    * Solucion 2: boton "Cambiar Espacio" en BottomSheet del Sidebar movil
+    * Solucion 3: TopBar — boton de tenant visible en movil (icono sin texto)
+    * Archivos: TenantSelectionScreen.tsx, Sidebar.tsx, TopBar.tsx
+
+  Tarea 8 — Fix authUser?.uid undefined en Firestore writes (fix: commit 318b59a):
+    * Problema: FirebaseError "Unsupported field value: undefined" al guardar
+      tareas. El campo updatedBy recibia undefined porque authUser?.uid
+      devolvia undefined cuando authUser era null.
+    * Solucion: guard `if (!authUser)` antes de guardar, usar `authUser.uid`
+      (sin optional chaining) despues del guard.
+    * firestore-actions.ts: fallback `|| ''` para updatedBy y createdBy
+    * Archivos: AppContext.tsx (saveTask, saveProject), firestore-actions.ts
+
+  Pendiente para proximas sesiones:
+    * Error de conexion con IA (AI connection error)
+    * Kanban duplicado en ProjectDetailScreen
+    * Automatizar dedup al abrir la app (ya existe, necesita verificacion)
+
+  Archivos modificados en esta sesion:
+    src/contexts/AppContext.tsx (multiples fixes + features)
+    src/app/api/tenants/route.ts (set-super-admin, debug-me, fix-my-role)
+    src/components/layout/TopBar.tsx (mobile tenant button)
+    src/components/layout/Sidebar.tsx (mobile "Cambiar Espacio")
+    src/components/layout/TenantSelectionScreen.tsx (z-index)
+    src/app/HomeContent.tsx (props al Sidebar)
+    src/lib/firestore-actions.ts (uid fallbacks)
+    src/app/dedup-users/route.ts (nuevo)
+
+--- FIN DE SESION 2026-04-21 ----------------------------------------------

@@ -387,3 +387,27 @@ Stage Summary:
 - Commit: 7739a68
 - Deploy automático a Vercel en curso
 - Ahora los usuarios nuevos ven AMBAS opciones: Crear espacio y Unirme con código
+---
+Task ID: 7
+Agent: Super Z (Main)
+Task: Fixes criticos: Super Admin role, mobile UX, Firestore writes, tenant persistence
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Implementado sistema Super Admin multiple (set-super-admin action, superAdmins[] array, cross-tenant check)
+- Implementada deduplicacion de usuarios (prevencion en onAuthStateChanged, migracion automatica de UIDs, lastUid tracking)
+- Implementada persistencia de tenant en Firestore (defaultTenantId/Role/Name en user doc, restauracion automatica al borrar cache)
+- Agregadas acciones debug-me y fix-my-role a /api/tenants para diagnostico
+- Fix critical: ReferenceError activeTenantRole is not defined — eliminado auto-fix del onSnapshot callback (minifier no encontraba la variable en closure scope). Solucion: eliminar el auto-fix completo, el rol ya se establece correctamente en selectTenant() y restauracion Firestore
+- Fix mobile: tenant selector detras de otros elementos — z-index z-50 a z-[200], boton "Cambiar Espacio" en Sidebar movil, TopBar visible en movil
+- Fix Firestore: authUser?.uid undefined en updatedBy/createdBy — guard if (!authUser) + fallback || '' en firestore-actions.ts
+- Agregado upload de imagenes en chat IA con auto-discovery de modelos y fallback
+- Todos los cambios pusheados a GitHub (18 commits en esta sesion)
+
+Stage Summary:
+- 18 commits: 1d51a93, f5be7a0, 4f056fa, bec4786, 002eb43, 5edb900, 717a9a0, 084ae1e, 76c9968, 8883dbd, 61e4833, 79fce4a, db9b200, 5bfd536, 35de2f0, 33d9781, d2dae1a, 318b59a
+- Archivos clave modificados: AppContext.tsx, tenants/route.ts, TopBar.tsx, Sidebar.tsx, TenantSelectionScreen.tsx, firestore-actions.ts, HomeContent.tsx
+- Nuevo archivo: dedup-users/route.ts
+- Deploy autom via Vercel en curso
+- Pendiente: AI connection error, Kanban duplicado, verificar dedup automatico
