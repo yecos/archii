@@ -193,7 +193,7 @@ export default function TasksScreen() {
           </select>
 
           {/* Search - hidden on very small screens */}
-          <div className="hidden sm:block relative">
+          <div className="relative flex-1 max-w-[160px] sm:max-w-none sm:flex-none">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--af-text3)]" />
             <input
               type="text"
@@ -497,7 +497,7 @@ export default function TasksScreen() {
                           {/* Footer: assignees */}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
                             <AssigneeAvatars task={t} getUserName={getUserName} size="md" />
-                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
+                            <button className="text-[10px] text-[var(--af-text3)] hover:text-red-400 cursor-pointer md:opacity-0 md:group-hover/card:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); deleteTask(t.id); }}>
                               <X size={12} />
                             </button>
                           </div>

@@ -200,7 +200,7 @@ export default function BudgetScreen() {
                       <div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div>
                     </div>
                     <div className="text-sm font-semibold">{fmtCOP(Number(e.data.amount))}</div>
-                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteExpense(e.id)}>✕</button>
+                    <button className="text-xs px-1.5 py-1 rounded bg-red-500/10 text-red-400 cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => deleteExpense(e.id)}>✕</button>
                   </div>
                 ))}
               </div>

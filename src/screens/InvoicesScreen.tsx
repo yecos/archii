@@ -105,11 +105,11 @@ export default function InvoicesScreen() {
             <div className="flex items-center justify-between"><span className="text-[13px] font-medium">Items</span><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={addInvoiceItem}>+ Agregar item</button></div>
             <div className="bg-[var(--af-bg3)] rounded-lg p-3 space-y-2">
               <div className="grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
-                <div className="col-span-4">Concepto</div><div className="col-span-3">Fase</div><div className="col-span-2">Horas</div><div className="col-span-2">Tarifa</div><div className="col-span-1"></div>
+                <div className="col-span-5 sm:col-span-4">Concepto</div><div className="col-span-3 sm:col-span-3">Fase</div><div className="col-span-2 sm:col-span-2">Horas</div><div className="col-span-2 sm:col-span-2">Tarifa</div><div className="col-span-1"></div>
               </div>
               {invoiceItems.map((item: any, idx: any) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                  <input className="col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
+                  <input className="col-span-5 sm:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
                   <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
                     <option value="">Fase</option>
                     {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}

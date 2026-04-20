@@ -812,7 +812,7 @@ function FileBrowser({
               ) : (
                 <>
                   <div className="text-[9px] text-[var(--af-text3)] text-center mt-0.5">{fmtSize(item.size || 0)}</div>
-                  <div className="flex justify-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-center gap-1 mt-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); od.downloadFile(item.id); }}
                       className="p-1 rounded bg-[var(--af-bg4)] hover:bg-[var(--af-accent)]/20 text-[var(--muted-foreground)] hover:text-[var(--af-accent)] transition-colors"
@@ -923,7 +923,7 @@ function FileBrowser({
                   </div>
                   {/* Actions (hover) */}
                   {!item.folder && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={e => { e.stopPropagation(); od.downloadFile(item.id); }}
                         className="p-1.5 rounded-lg hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] hover:text-[var(--af-accent)] transition-colors"

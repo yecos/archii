@@ -118,8 +118,8 @@ export default function TimeTrackingScreen() {
                   <span>Total: <b className="text-[var(--foreground)]">{fmtDuration(totalHrs)}</b></span>
                   <span>Facturable: <b className="text-emerald-400">{fmtDuration(billableHrs)}</b></span>
                 </div>
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
+                    <table className="w-full text-sm min-w-[600px]">
                       <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)]">
                         <th className="text-left px-4 py-3 font-medium">Fecha</th>
                         <th className="text-left px-4 py-3 font-medium">Proyecto</th>

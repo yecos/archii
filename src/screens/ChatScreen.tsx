@@ -437,7 +437,7 @@ export default function ChatScreen() {
 
                       {/* Action button (3 dots) */}
                       <button
-                        className={`absolute -top-2 ${isMe ? '-left-8' : '-right-8'} w-7 h-7 rounded-full flex items-center justify-center bg-[var(--af-bg4)] hover:bg-[var(--af-bg3)] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none`}
+                        className={`absolute -top-2 ${isMe ? '-left-8' : '-right-8'} w-7 h-7 rounded-full flex items-center justify-center bg-[var(--af-bg4)] hover:bg-[var(--af-bg3)] md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer border-none`}
                         style={{ top: -4, [isMe ? 'left' : 'right']: -32 }}
                         onClick={(e) => { e.stopPropagation(); setChatMenuMsg(chatMenuMsg === m.id ? null : m.id); setShowReactionPicker(null); }}
                       >
