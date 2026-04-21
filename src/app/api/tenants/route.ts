@@ -406,12 +406,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
       }
 
+      console.log(`[Tenants] remove-member: tenantId=${tenantId}, memberUid=${memberUid}, callerUid=${user.uid}`);
+
       const tenantDoc = await db.collection("tenants").doc(tenantId).get();
       if (!tenantDoc.exists) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      const isSuperAdmin = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      const isCreatorCheck = tenantData.createdBy === user.uid;
+      const isInSuperAdmins = (tenantData.superAdmins || []).includes(user.uid);
+      const isSuperAdmin = isCreatorCheck || isInSuperAdmins;
+      console.log(`[Tenants] remove-member: createdBy=${tenantData.createdBy}, isCreator=${isCreatorCheck}, superAdmins=${JSON.stringify(tenantData.superAdmins || [])}, isSuperAdmin=${isSuperAdmin}, isMemberCreator=${tenantData.createdBy === memberUid}`);
       if (!isSuperAdmin) {
         return NextResponse.json({ error: "Solo el creador o Super Admin puede eliminar miembros" }, { status: 403 });
       }
@@ -423,10 +428,33 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "No puedes eliminar al creador del tenant" }, { status: 400 });
       }
 
+      // Check that member is actually in the members array
+      const currentMembers: string[] = tenantData.members || [];
+      if (!currentMembers.includes(memberUid)) {
+        // Maybe they're a super admin but not in members — just skip silently
+        console.log(`[Tenants] remove-member: ${memberUid} not in members array (${JSON.stringify(currentMembers)}). Trying to remove from superAdmins too.`);
+        // Also remove from superAdmins if present
+        const updates: any = {};
+        if ((tenantData.superAdmins || []).includes(memberUid)) {
+          updates.superAdmins = FieldValue.arrayRemove(memberUid);
+        }
+        if (Object.keys(updates).length > 0) {
+          await db.collection("tenants").doc(tenantId).update(updates);
+          console.log(`[Tenants] remove-member: removed from superAdmins`);
+        }
+        return NextResponse.json({
+          tenantName: tenantData.name,
+          removed: memberUid,
+          totalMembers: currentMembers.length,
+          note: 'Usuario no estaba en members, removido de superAdmins si aplicaba',
+        });
+      }
+
       await db.collection("tenants").doc(tenantId).update({
         members: FieldValue.arrayRemove(memberUid),
       });
 
+      console.log(`[Tenants] remove-member: OK — removed ${memberUid} from ${tenantId}`);
       return NextResponse.json({
         tenantName: tenantData.name,
         removed: memberUid,
