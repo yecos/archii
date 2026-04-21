@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
-import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks, Columns3 } from 'lucide-react';
+import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
 interface SidebarProps {
@@ -44,7 +44,6 @@ export default function Sidebar({
     { id: 'profile', label: 'Mi Perfil', icon: <User size={18} className="stroke-current" /> },
     { id: 'projects', label: 'Proyectos', icon: <Folder size={18} className="stroke-current" />, badge: projects.length },
     { id: 'tasks', label: 'Tareas', icon: <ClipboardCheck size={18} className="stroke-current" />, badge: pendingCount > 0 ? pendingCount : undefined },
-    { id: 'kanban', label: 'Tablero Kanban', icon: <Columns3 size={18} className="stroke-current" /> },
     { id: 'chat', label: 'Chat', icon: <MessageCircle size={18} className="stroke-current" /> },
     { divider: true },
     { id: 'timeTracking', label: 'Time Tracking', icon: <Timer size={18} className="stroke-current" /> },
