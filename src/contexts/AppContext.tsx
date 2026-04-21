@@ -18,6 +18,7 @@ import * as fbActions from '@/lib/firestore-actions';
 // import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
+import { notifyExternal } from '@/lib/notify-unified';
 
 /* ===== APP CONTEXT ===== */
 type FormData = Record<string, string | number | boolean | undefined>;
@@ -1291,6 +1292,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             { type: 'task', screen: 'tasks', itemId: t.id }
           );
         }
+        // External notification to assignee (if different from current user)
+        if (t.data.assigneeId && t.data.assigneeId !== authUser?.uid) {
+          const proj = projects.find(p => p.id === t.data.projectId);
+          notifyExternal.taskAssigned(
+            t.data.assigneeId,
+            t.data.title,
+            proj?.data?.name || 'Proyecto',
+            t.data.priority,
+            t.data.dueDate,
+            authUser?.displayName || authUser?.email || 'Alguien'
+          ).catch(() => {});
+        }
       });
 
       // Task status changes
@@ -1304,6 +1317,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `task-${t.id}`,
             { type: 'task', screen: 'tasks', itemId: t.id }
           );
+        }
+        // External notification to assignee on status change (if different from current user)
+        if (t.data.assigneeId && t.data.assigneeId !== authUser?.uid) {
+          notifyExternal.taskUpdated(
+            t.data.assigneeId,
+            t.data.title,
+            t.data.status
+          ).catch(() => {});
         }
       });
     }
@@ -1327,10 +1348,27 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           `meeting-${m.id}`,
           { type: 'meeting', screen: 'calendar', itemId: m.id }
         );
+        // External push notification for meeting
+        if (proj) {
+          const meetingData = m.data;
+          // Notify all team members via push about the new meeting
+          const teamMemberIds = teamUsers
+            .filter(u => u.id !== authUser?.uid)
+            .map(u => u.id);
+          teamMemberIds.forEach(uid => {
+            notifyExternal.meetingReminder(
+              uid,
+              meetingData.title,
+              meetingData.date ? fmtDate(meetingData.date) : '',
+              meetingData.time || '',
+              proj.data.name
+            ).catch(() => {});
+          });
+        }
       });
     }
     prevMeetingsRef.current = meetings;
-  }, [meetings, notifPrefs.meetings, projects, sendBrowserNotif]);
+  }, [meetings, notifPrefs.meetings, projects, teamUsers, authUser, sendBrowserNotif]);
 
   // Detect new approvals
   useEffect(() => {
@@ -1352,6 +1390,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           `approval-${a.id}`,
           { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId }
         );
+        // External notification to the person who needs to approve (if different from current user)
+        const aData = a.data as any;
+        const reviewerId = aData.assignedTo || aData.reviewerId || aData.reviewer;
+        if (reviewerId && reviewerId !== authUser?.uid) {
+          const proj = projects.find(p => p.id === (aData.projectId || selectedProjectId));
+          notifyExternal.approvalPending(
+            reviewerId,
+            a.data.title,
+            proj?.data?.name || 'Proyecto',
+            authUser?.displayName || authUser?.email || 'Alguien'
+          ).catch(() => {});
+        }
       });
       changedApprovals.forEach(a => {
         sendBrowserNotif(
@@ -1361,6 +1411,28 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           `approval-${a.id}`,
           { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId }
         );
+        // External notification when approval is resolved
+        if (a.data.status && a.data.status !== 'Pendiente') {
+          const aData = a.data as any;
+          const creatorId = aData.createdBy || aData.requestedBy;
+          const reviewerId = aData.assignedTo || aData.reviewerId || aData.reviewer;
+          if (creatorId && creatorId !== authUser?.uid) {
+            notifyExternal.approvalResolved(
+              creatorId,
+              a.data.title,
+              a.data.status,
+              authUser?.displayName || authUser?.email || 'Alguien'
+            ).catch(() => {});
+          }
+          if (reviewerId && reviewerId !== authUser?.uid && reviewerId !== creatorId) {
+            notifyExternal.approvalResolved(
+              reviewerId,
+              a.data.title,
+              a.data.status,
+              authUser?.displayName || authUser?.email || 'Alguien'
+            ).catch(() => {});
+          }
+        }
       });
     }
     prevApprovalsRef.current = approvals;
@@ -1561,6 +1633,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           `rfi-${r.id}`,
           { type: 'rfi', screen: 'rfis', itemId: r.id }
         );
+        // External notification to assigned person
+        if (r.data.assignedTo && r.data.assignedTo !== authUser?.uid) {
+          notifyExternal.custom(
+            r.data.assignedTo,
+            `❓ Nuevo RFI: "${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}`
+          ).catch(() => {});
+        }
       });
       changedRfis.forEach(r => {
         const proj = projects.find(p => p.id === r.data.projectId);
@@ -1572,6 +1651,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `rfi-${r.id}`,
             { type: 'rfi', screen: 'rfis', itemId: r.id }
           );
+          // External: notify the creator that their RFI was answered
+          if (r.data.createdBy && r.data.createdBy !== authUser?.uid) {
+            notifyExternal.custom(
+              r.data.createdBy,
+              `✅ RFI respondido: "${r.data.subject || r.data.number}"`
+            ).catch(() => {});
+          }
         } else if (r.data.status === 'Cerrado' && r.data.createdBy === authUser?.uid) {
           sendNotif(
             '🔒 RFI cerrado',
@@ -1609,6 +1695,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             { type: 'submittal', screen: 'submittals', itemId: s.id }
           );
         }
+        // External notification to reviewer
+        if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
+          const proj = projects.find(p => p.id === s.data.projectId);
+          notifyExternal.custom(
+            s.data.reviewer,
+            `📋 Nuevo submittal para revisión: "${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}`
+          ).catch(() => {});
+        }
       });
       changedSubs.forEach(s => {
         const proj = projects.find(p => p.id === s.data.projectId);
@@ -1620,6 +1714,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `sub-${s.id}`,
             { type: 'submittal', screen: 'submittals', itemId: s.id }
           );
+          // External: notify creator
+          if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
+            notifyExternal.custom(
+              s.data.reviewer,
+              `✅ Submittal aprobado: "${s.data.title || s.data.number}"`
+            ).catch(() => {});
+          }
         } else if ((s.data.status === 'Rechazado' || s.data.status === 'Devuelto') && s.data.createdBy === authUser?.uid) {
           sendNotif(
             s.data.status === 'Rechazado' ? '❌ Submittal rechazado' : '↩️ Submittal devuelto',
@@ -1628,6 +1729,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `sub-${s.id}`,
             { type: 'submittal', screen: 'submittals', itemId: s.id }
           );
+          // External: notify reviewer
+          if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
+            notifyExternal.custom(
+              s.data.reviewer,
+              `${s.data.status === 'Rechazado' ? '❌' : '↩️'} Submittal ${s.data.status.toLowerCase()}: "${s.data.title || s.data.number}"`
+            ).catch(() => {});
+          }
         } else if (s.data.status === 'En revisión' && s.data.reviewer === authUser?.uid) {
           sendNotif(
             '⚖️ Submittal listo para revisión',
@@ -1636,6 +1744,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `sub-${s.id}`,
             { type: 'submittal', screen: 'submittals', itemId: s.id }
           );
+          // External: notify reviewer
+          if (s.data.createdBy && s.data.createdBy !== authUser?.uid) {
+            notifyExternal.custom(
+              s.data.reviewer,
+              `⚖️ Submittal listo para revisión: "${s.data.title || s.data.number}"`
+            ).catch(() => {});
+          }
         }
       });
     }
@@ -1665,6 +1780,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             { type: 'punchList', screen: 'punchList', itemId: p.id }
           );
         }
+        // External notification to assigned person
+        if (p.data.assignedTo && p.data.assignedTo !== authUser?.uid) {
+          const proj = projects.find(pr => pr.id === p.data.projectId);
+          notifyExternal.custom(
+            p.data.assignedTo,
+            `✅ Nuevo Punch List: "${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}`
+          ).catch(() => {});
+        }
       });
       changedPunch.forEach(p => {
         const proj = projects.find(pr => pr.id === p.data.projectId);
@@ -1676,6 +1799,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             `punch-${p.id}`,
             { type: 'punchList', screen: 'punchList', itemId: p.id }
           );
+        }
+        // External: notify assigned person when completed
+        if (p.data.status === 'Completado' && p.data.assignedTo && p.data.assignedTo !== authUser?.uid) {
+          notifyExternal.custom(
+            p.data.assignedTo,
+            `✅ Punch item completado: "${p.data.title}" — ${p.data.location || ''}`
+          ).catch(() => {});
         }
       });
     }
