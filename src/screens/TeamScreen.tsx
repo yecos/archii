@@ -138,7 +138,7 @@ export default function TeamScreen() {
           tenantId={activeTenantId}
           tenantName={activeTenantName || ''}
           onClose={() => setShowManageMembers(false)}
-          isCreator={activeTenantRole === 'Super Admin'}
+          canRemove={canManage}
         />
       )}
     </div>

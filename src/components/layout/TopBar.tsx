@@ -164,7 +164,7 @@ export default function TopBar() {
                   tenantId={activeTenantId}
                   tenantName={activeTenantName || ''}
                   onClose={() => setShowManageMembers(false)}
-                  isCreator={activeTenantRole === 'Super Admin'}
+                  canRemove={activeTenantRole === 'Super Admin' || activeTenantRole === 'Admin' || activeTenantRole === 'Director'}
                 />
               )}
             </>

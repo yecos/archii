@@ -7,10 +7,10 @@ interface ManageMembersModalProps {
   tenantId: string;
   tenantName: string;
   onClose: () => void;
-  isCreator: boolean;
+  canRemove: boolean;  // true if current user can remove members
 }
 
-export default function ManageMembersModal({ tenantId, tenantName, onClose, isCreator }: ManageMembersModalProps) {
+export default function ManageMembersModal({ tenantId, tenantName, onClose, canRemove }: ManageMembersModalProps) {
   const [members, setMembers] = useState<any[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,7 +217,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                         ADMIN
                       </span>
                     )}
-                    {isCreator && !m.isCreator && (
+                    {canRemove && !m.isCreator && (
                       <button
                         onClick={() => handleRemoveMember(m.uid, m.name)}
                         disabled={actionLoading}
@@ -231,7 +231,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                   </div>
                 ))
               )}
-              {isCreator && availableUsers.length > 0 && (
+              {canRemove && availableUsers.length > 0 && (
                 <button
                   onClick={handleAddAllUsers}
                   disabled={actionLoading}
