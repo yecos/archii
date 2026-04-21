@@ -9,7 +9,7 @@ export default function ProfileScreen() {
     approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
     expenses, initials, meetings, msConnected, myRole,
     navigateTo, openOneDriveForProject, projects, tasks, teamUsers, userName,
-    rfis, submittals, punchItems, timeEntries, getUserName,
+    rfis, submittals, punchItems, timeEntries, getUserName, setForms,
   } = useApp();
 
   // Personal calendar state (independent from global CalendarScreen)
@@ -148,12 +148,16 @@ export default function ProfileScreen() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 mt-3">
                   {[
-                    { val: myPending.length, lbl: 'Pendientes', c: 'text-amber-400', bg: 'bg-amber-500/10' },
-                    { val: myInProgress.length, lbl: 'En progreso', c: 'text-blue-400', bg: 'bg-blue-500/10' },
-                    { val: myCompleted.length, lbl: 'Listas', c: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                    { val: totalRate + '%', lbl: 'Cumplimiento', c: 'text-[var(--af-accent)]', bg: 'bg-[var(--af-accent)]/10' },
+                    { val: myPending.length, lbl: 'Pendientes', c: 'text-amber-400', bg: 'bg-amber-500/10', filter: '' },
+                    { val: myInProgress.length, lbl: 'En progreso', c: 'text-blue-400', bg: 'bg-blue-500/10', filter: 'En progreso' },
+                    { val: myCompleted.length, lbl: 'Listas', c: 'text-emerald-400', bg: 'bg-emerald-500/10', filter: 'Completado' },
+                    { val: totalRate + '%', lbl: 'Cumplimiento', c: 'text-[var(--af-accent)]', bg: 'bg-[var(--af-accent)]/10', filter: null },
                   ].map((s, i) => (
-                    <div key={i} className={`${s.bg} rounded-lg p-2 text-center`}>
+                    <div key={i} className={`${s.bg} rounded-lg p-2 text-center ${s.filter !== null ? 'cursor-pointer hover:ring-2 hover:ring-[var(--af-accent)]/20 transition-all' : ''}`} onClick={() => {
+                      if (s.filter === null) return;
+                      setForms((p: any) => ({ ...p, taskFilterStatus: s.filter, taskFilterAssignee: uid || '' }));
+                      navigateTo('tasks');
+                    }}>
                       <div className={`text-base sm:text-xl font-bold ${s.c}`}>{s.val}</div>
                       <div className="text-[8px] sm:text-[11px] text-[var(--muted-foreground)] leading-tight">{s.lbl}</div>
                     </div>

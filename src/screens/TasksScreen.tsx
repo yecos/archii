@@ -70,7 +70,16 @@ export default function TasksScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pick up incoming status/assignee filter set by navigation (e.g. from ProfileScreen)
+  React.useEffect(() => {
+    const incoming = forms.taskFilterStatus;
+    if (incoming) { setFilterStatus(incoming); setForms((p: any) => ({ ...p, taskFilterStatus: '' })); }
+    const incomingAssignee = forms.taskFilterAssignee;
+    if (incomingAssignee) { setFilterAssignee(incomingAssignee); setForms((p: any) => ({ ...p, taskFilterAssignee: '' })); }
+  }, []);
   const dragCounterRef = useRef<Record<string, number>>({});
 
   const taskFilterProject = forms.taskFilterProject || '';
@@ -134,6 +143,7 @@ export default function TasksScreen() {
   // Multi-filter
   const filteredTasks = useMemo(() => {
     let result = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
+    if (filterStatus) result = result.filter((t: any) => t.data.status === filterStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((t: any) => t.data.title.toLowerCase().includes(q));
@@ -141,7 +151,7 @@ export default function TasksScreen() {
     if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
     if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
     return result;
-  }, [tasks, taskFilterProject, searchQuery, filterPriority, filterAssignee]);
+  }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee]);
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
@@ -222,7 +232,7 @@ export default function TasksScreen() {
           >
             <Filter size={14} />
             Filtros
-            {(filterPriority || filterAssignee) && <span className="w-2 h-2 rounded-full bg-[var(--af-accent)]" />}
+            {(filterPriority || filterAssignee || filterStatus) && <span className="w-2 h-2 rounded-full bg-[var(--af-accent)]" />}
           </button>
         </div>
 
@@ -258,6 +268,17 @@ export default function TasksScreen() {
           </div>
           <select
             className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            <option value="Por hacer">Por hacer</option>
+            <option value="En progreso">En progreso</option>
+            <option value="Revision">En revision</option>
+            <option value="Completado">Completado</option>
+          </select>
+          <select
+            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
             value={filterPriority}
             onChange={e => setFilterPriority(e.target.value)}
           >
@@ -274,8 +295,8 @@ export default function TasksScreen() {
             <option value="">Todos los asignados</option>
             {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          {(filterPriority || filterAssignee) && (
-            <button className="text-[11px] text-red-400 cursor-pointer hover:underline" onClick={() => { setFilterPriority(''); setFilterAssignee(''); }}>
+          {(filterPriority || filterAssignee || filterStatus) && (
+            <button className="text-[11px] text-red-400 cursor-pointer hover:underline" onClick={() => { setFilterPriority(''); setFilterAssignee(''); setFilterStatus(''); }}>
               Limpiar filtros
             </button>
           )}
