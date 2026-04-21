@@ -1906,6 +1906,99 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       // IMPORTANT: OAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
       const authNS = fb.auth;
       const authInstance = fb.auth();
+      const currentUser = authInstance.currentUser;
+
+      // If user is already logged in (e.g. with Google), LINK Microsoft to existing account
+      if (currentUser) {
+        console.log('[ArchiFlow Auth] User already logged in, linking Microsoft...');
+        try {
+          // First get the Microsoft credential via popup
+          const provider = new authNS.OAuthProvider('microsoft.com');
+          provider.addScope('Files.ReadWrite.All');
+          provider.addScope('Sites.ReadWrite.All');
+          provider.addScope('User.Read');
+          provider.setCustomParameters({ prompt: 'consent' });
+
+          const linkResult = await currentUser.linkWithPopup(provider);
+          console.log('[ArchiFlow Auth] Microsoft linked successfully');
+          const credential = linkResult.credential as any;
+          if (credential?.accessToken) {
+            setMsAccessToken(credential.accessToken);
+            setMsConnected(true);
+            setMsRefreshToken(credential.refreshToken || null);
+            setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+            localStorage.setItem('msAccessToken', credential.accessToken);
+            localStorage.setItem('msConnected', 'true');
+            if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
+            showToast('Microsoft vinculado a tu cuenta. OneDrive conectado!');
+          } else {
+            showToast('Microsoft vinculado, pero sin acceso a OneDrive', 'warning');
+          }
+          return;
+        } catch (linkErr: any) {
+          if (linkErr.code === 'auth/popup-closed-by-user') return;
+          if (linkErr.code === 'auth/credential-already-in-use') {
+            // Microsoft already linked to this account — try re-auth to get fresh token
+            console.log('[ArchiFlow Auth] Microsoft already linked, re-authenticating...');
+            try {
+              const provider = new authNS.OAuthProvider('microsoft.com');
+              provider.addScope('Files.ReadWrite.All');
+              provider.addScope('Sites.ReadWrite.All');
+              provider.addScope('User.Read');
+              provider.setCustomParameters({ prompt: 'consent' });
+              const reauthResult = await currentUser.reauthenticateWithPopup(provider);
+              const credential = reauthResult.credential as any;
+              if (credential?.accessToken) {
+                setMsAccessToken(credential.accessToken);
+                setMsConnected(true);
+                setMsRefreshToken(credential.refreshToken || null);
+                setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+                localStorage.setItem('msAccessToken', credential.accessToken);
+                localStorage.setItem('msConnected', 'true');
+                if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
+                showToast('Token de Microsoft renovado. OneDrive conectado!');
+                return;
+              }
+            } catch (reauthErr: any) {
+              console.warn('[ArchiFlow Auth] Microsoft reauth failed:', reauthErr.code);
+            }
+          }
+          if (linkErr.code === 'auth/popup-blocked') {
+            showToast('Ventana emergente bloqueada. Permite popups para este sitio.', 'error');
+            return;
+          }
+          // If link with scopes fails, try without scopes
+          if (linkErr.code === 'auth/internal-error' || linkErr.code === 'auth/oauth_error') {
+            console.warn('[ArchiFlow Auth] Microsoft link with scopes failed, trying basic...');
+            try {
+              const basicProvider = new authNS.OAuthProvider('microsoft.com');
+              basicProvider.setCustomParameters({ prompt: 'consent' });
+              const linkBasic = await currentUser.linkWithPopup(basicProvider);
+              const credential = linkBasic.credential as any;
+              if (credential?.accessToken) {
+                setMsAccessToken(credential.accessToken);
+                setMsConnected(true);
+                setMsRefreshToken(credential.refreshToken || null);
+                setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
+                localStorage.setItem('msAccessToken', credential.accessToken);
+                localStorage.setItem('msConnected', 'true');
+                if (credential.refreshToken) localStorage.setItem('msRefreshToken', credential.refreshToken);
+                showToast('Microsoft vinculado (sin scopes OneDrive). Los permisos pueden ser limitados.');
+                return;
+              }
+            } catch (basicLinkErr: any) {
+              if (basicLinkErr.code === 'auth/credential-already-in-use') {
+                showToast('Microsoft ya está vinculado a tu cuenta. OneDrive debería funcionar.', 'warning');
+                return;
+              }
+              console.error('[ArchiFlow Auth] Basic Microsoft link also failed:', basicLinkErr.code);
+            }
+          }
+          throw linkErr;
+        }
+      }
+
+      // No user logged in — normal sign-in flow
       const provider = new authNS.OAuthProvider('microsoft.com');
       // Permisos para OneDrive y Microsoft Graph
       provider.addScope('Files.ReadWrite.All');
@@ -1925,7 +2018,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           try {
             result = await authInstance.signInWithPopup(basicProvider);
           } catch (basicErr: any) {
-            // If basic popup also fails, try redirect as last resort
             if (basicErr.code === 'auth/popup-blocked' || basicErr.code === 'auth/internal-error') {
               console.log('[ArchiFlow Auth] Microsoft popup failed (' + basicErr.code + '), trying redirect fallback...');
               const redirectProvider = new authNS.OAuthProvider('microsoft.com');
@@ -1936,7 +2028,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             throw basicErr;
           }
         } else if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/internal-error') {
-          // Popup blocked — try redirect immediately
           console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
           const redirectProvider = new authNS.OAuthProvider('microsoft.com');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
@@ -1948,7 +2039,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
 
       console.log('[ArchiFlow Auth] Microsoft login successful');
-      // Get OAuth access token for Microsoft Graph
       const credential = result.credential as any;
       if (credential?.accessToken) {
         setMsAccessToken(credential.accessToken);
@@ -1971,8 +2061,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         'auth/invalid-credential': 'Credenciales de Microsoft inválidas.',
         'auth/unauthorized-domain': 'Dominio no autorizado en Firebase Console > Authentication > Settings > Authorized domains. Agrega archii-theta.vercel.app.',
         'auth/internal-error': 'Error de autenticación Microsoft. Verifica Azure Portal > API permissions.',
-        'auth/account-exists-with-different-credential': 'Este correo ya está registrado con otro método (Google o Email). Intenta con ese método.',
+        'auth/account-exists-with-different-credential': 'Este correo ya está registrado con Google. Intenta de nuevo — lo vincularemos automáticamente.',
         'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+        'auth/credential-already-in-use': 'Microsoft ya está vinculado a otra cuenta.',
       };
       showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
     }
