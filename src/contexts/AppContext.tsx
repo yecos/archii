@@ -2704,14 +2704,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   const initDefaultPhases = async () => {
-    if (workPhases.length > 0 || !selectedProjectId) return;
+    if (!selectedProjectId) return;
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      const projType = currentProject?.data?.projectType || 'Ejecución';
-      await fbActions.initPhasesForProject(db, selectedProjectId, projType, [], ts, activeTenantId);
-      showToast('Fases inicializadas');
-    } catch (err) { console.error('[ArchiFlow] initDefaultPhases error:', err); }
+      // Always use 'Ambos' (all phases) and force recreate
+      await fbActions.initPhasesForProject(db, selectedProjectId, 'Ambos', [], ts, activeTenantId);
+      // Update projectType on the project doc too
+      await db.collection('projects').doc(selectedProjectId).update({ projectType: 'Ambos' });
+      showToast('✅ Fases inicializadas (Diseño + Ejecución)');
+    } catch (err) { console.error('[ArchiFlow] initDefaultPhases error:', err); showToast('Error al inicializar fases', 'error'); }
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
