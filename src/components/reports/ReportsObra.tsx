@@ -2,9 +2,12 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { COLORS, ChartTooltip, ChartLegend } from './ChartComponents';
+import { FileText, Download } from 'lucide-react';
+import { exportObraExcel } from '@/lib/export-excel';
+import { exportObraPDF } from '@/lib/export-pdf';
 import type { ReportsTabProps } from './types';
 
-export default function ReportsObra({ projects, rfis, submittals, punchItems, dailyLogs }: ReportsTabProps) {
+export default function ReportsObra({ projects, rfis, submittals, punchItems, dailyLogs, showToast }: ReportsTabProps) {
   const {
     rfiOpen, rfiReview, rfiResponded, rfiClosed, rfiOverdue,
     rfiStatusData, rfiProjectData,
@@ -71,6 +74,16 @@ export default function ReportsObra({ projects, rfis, submittals, punchItems, da
   }, [rfis, submittals, punchItems, projects]);
 
   return (<>
+    {/* Export buttons */}
+    <div className="flex items-center gap-2 justify-end">
+      <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => { try { exportObraPDF({ rfis, submittals, punchItems, dailyLogs, projects }); showToast('Reporte PDF descargado'); } catch { showToast('Error al generar PDF', 'error'); } }}>
+        <FileText size={12} /> PDF
+      </button>
+      <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => { try { exportObraExcel({ rfis, submittals, punchItems, dailyLogs, projects }); showToast('Reporte Excel descargado'); } catch { showToast('Error al generar Excel', 'error'); } }}>
+        <Download size={12} /> Excel
+      </button>
+    </div>
+
     {/* RFIs Overview */}
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
       <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">RFIs (Request for Information)</h3>

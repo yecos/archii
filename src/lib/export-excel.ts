@@ -299,3 +299,134 @@ export function exportProjectsExcel(projects: any[], tasks: any[], expenses: any
 
   downloadWorkbook(wb, 'archiflow-proyectos');
 }
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR EQUIPO A EXCEL
+   ═══════════════════════════════════════════════ */
+
+export function exportTeamExcel(teamUsers: any[], tasks: any[], timeEntries: any[]) {
+  const wb = XLSX.utils.book_new();
+
+  // Per-member data
+  const memberData = teamUsers.map(u => {
+    const userTasks = tasks.filter(t => t.data.assigneeId === u.id);
+    const done = userTasks.filter(t => t.data.status === 'Completado').length;
+    const overdue = userTasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+    const mins = timeEntries.filter(e => e.data.userId === u.id).reduce((s, e) => s + (e.data.duration || 0), 0);
+    const role = u.data.role || 'Miembro';
+    return {
+      Miembro: u.data.name || '-',
+      Rol: role,
+      'Tareas Totales': userTasks.length,
+      Completadas: done,
+      'Pendientes': userTasks.length - done,
+      Vencidas: overdue,
+      '% Cumplimiento': userTasks.length > 0 ? Math.round((done / userTasks.length) * 100) + '%' : '0%',
+      'Horas Registradas': fmtDurationMinutes(mins),
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(memberData);
+  ws['!cols'] = [
+    { wch: 25 }, { wch: 15 }, { wch: 14 }, { wch: 12 },
+    { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Productividad');
+
+  // Role distribution summary
+  const roleDist: Record<string, number> = {};
+  teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; roleDist[r] = (roleDist[r] || 0) + 1; });
+  const roleRows = Object.entries(roleDist).sort((a, b) => b[1] - a[1]).map(([role, count]) => ({
+    Rol: role,
+    'Cantidad': count,
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(roleRows);
+  ws2['!cols'] = [{ wch: 20 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Roles');
+
+  downloadWorkbook(wb, 'archiflow-equipo');
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR OBRA A EXCEL
+   ═══════════════════════════════════════════════ */
+
+export function exportObraExcel(data: { rfis: any[]; submittals: any[]; punchItems: any[]; dailyLogs: any[]; projects: any[] }) {
+  const wb = XLSX.utils.book_new();
+
+  // RFIs sheet
+  const rfiData = data.rfis.map(r => {
+    const proj = data.projects.find(p => p.id === r.data.projectId);
+    return {
+      Numero: r.data.number || '-',
+      Asunto: r.data.subject || '-',
+      Estado: r.data.status || '-',
+      Prioridad: r.data.priority || '-',
+      Proyecto: proj?.data.name || '-',
+      'Fecha Limite': r.data.dueDate || '-',
+      'Asignado A': r.data.assignedTo || '-',
+    };
+  });
+  if (rfiData.length > 0) {
+    const ws = XLSX.utils.json_to_sheet(rfiData);
+    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 25 }, { wch: 14 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'RFIs');
+  }
+
+  // Submittals sheet
+  const subData = data.submittals.map(s => {
+    const proj = data.projects.find(p => p.id === s.data.projectId);
+    return {
+      Numero: s.data.number || '-',
+      Titulo: s.data.title || '-',
+      Estado: s.data.status || '-',
+      Proyecto: proj?.data.name || '-',
+      Especificacion: s.data.specification || '-',
+      'Enviado Por': s.data.submittedBy || '-',
+      'Revisor': s.data.reviewer || '-',
+    };
+  });
+  if (subData.length > 0) {
+    const ws2 = XLSX.utils.json_to_sheet(subData);
+    ws2['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 25 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Submittals');
+  }
+
+  // Punch List sheet
+  const punchData = data.punchItems.map(p => {
+    const proj = data.projects.find(pr => pr.id === p.data.projectId);
+    return {
+      Titulo: p.data.title || '-',
+      Estado: p.data.status || '-',
+      Prioridad: p.data.priority || '-',
+      Ubicacion: p.data.location || '-',
+      'Asignado A': p.data.assignedTo || '-',
+      Proyecto: proj?.data.name || '-',
+      'Fecha Limite': p.data.dueDate || '-',
+    };
+  });
+  if (punchData.length > 0) {
+    const ws3 = XLSX.utils.json_to_sheet(punchData);
+    ws3['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 25 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Punch List');
+  }
+
+  // Summary sheet
+  const rfiResolved = data.rfis.filter(r => r.data.status === 'Respondido' || r.data.status === 'Cerrado').length;
+  const subApproved = data.submittals.filter(s => s.data.status === 'Aprobado').length;
+  const punchDone = data.punchItems.filter(p => p.data.status === 'Completado').length;
+  const summaryRows = [
+    { Modulo: 'RFIs', 'Total': data.rfis.length, 'Resueltos': rfiResolved, 'Pendientes': data.rfis.length - rfiResolved },
+    { Modulo: 'Submittals', 'Total': data.submittals.length, 'Aprobados': subApproved, 'Pendientes': data.submittals.length - subApproved },
+    { Modulo: 'Punch List', 'Total': data.punchItems.length, 'Completados': punchDone, 'Pendientes': data.punchItems.length - punchDone },
+    { Modulo: 'Bitacoras', 'Total': data.dailyLogs.length, 'Resueltos': '-', 'Pendientes': '-' },
+  ];
+  const ws4 = XLSX.utils.json_to_sheet(summaryRows);
+  ws4['!cols'] = [{ wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Resumen');
+
+  // Move summary first
+  wb.SheetNames = ['Resumen', 'RFIs', 'Submittals', 'Punch List'];
+
+  downloadWorkbook(wb, 'archiflow-obra');
+}

@@ -162,6 +162,104 @@ export default function ReportsOverview({ projects, tasks, expenses, timeEntries
         </div>}
         {Object.keys(tasksPerMember).length > 0 && <div className="space-y-2"><div className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Tareas asignadas por miembro</div>{Object.entries(tasksPerMember).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([uid, cnt]) => {const member = teamUsers.find(u => u.id === uid); return (<div key={uid} className="flex items-center gap-2"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: avatarColor(uid) }}>{member ? getInitials(member.data.name) : '?'}</div><span className="text-sm text-[var(--foreground)] flex-1 truncate">{member ? member.data.name : uid}</span><span className="text-sm font-semibold text-[var(--foreground)]">{cnt}</span></div>);})}</div>}
       </div>
+      {/* Burndown Chart */}
+      <BurndownChart projects={projects} tasks={tasks} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   BURNDOWN CHART COMPONENT
+   ═══════════════════════════════════════════════ */
+
+function BurndownChart({ projects, tasks }: { projects: any[]; tasks: any[] }) {
+  const { data, projectNames } = useMemo(() => {
+    if (projects.length === 0) return { data: [], projectNames: [] };
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const now = new Date();
+    const startMonth = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Build month labels
+    const labels: string[] = [];
+    const cursor = new Date(startMonth);
+    while (cursor <= endMonth) {
+      labels.push(`${monthNames[cursor.getMonth()]} ${cursor.getFullYear()}`);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    // Per project: total tasks created by month, total tasks completed by month
+    const projData: Record<string, { total: number[]; done: number[] }> = {};
+    projects.forEach(p => { projData[p.id] = { total: [], done: [] }; });
+
+    // Also compute overall
+    const overallTotal: number[] = [];
+    const overallDone: number[] = [];
+
+    labels.forEach((_, mi) => {
+      const mStart = new Date(startMonth.getFullYear(), startMonth.getMonth() + mi, 1);
+      const mEnd = new Date(startMonth.getFullYear(), startMonth.getMonth() + mi + 1, 1);
+
+      let allCreated = 0;
+      let allCompleted = 0;
+
+      projects.forEach(p => {
+        const projTasks = tasks.filter(t => t.data.projectId === p.id);
+        const created = projTasks.filter(t => {
+          const d = t.data.createdAt;
+          if (!d) return false;
+          const date = d.toDate ? d.toDate() : new Date(d);
+          return date >= mStart && date < mEnd;
+        }).length;
+        const completed = projTasks.filter(t => {
+          const d = t.data.updatedAt;
+          if (!d) return false;
+          const date = d.toDate ? d.toDate() : new Date(d);
+          return date >= mStart && date < mEnd && t.data.status === 'Completado';
+        }).length;
+
+        projData[p.id].total.push(created);
+        projData[p.id].done.push(completed);
+        allCreated += created;
+        allCompleted += completed;
+      });
+
+      overallTotal.push(allCreated);
+      overallDone.push(allCompleted);
+    });
+
+    return {
+      projectNames: projects.slice(0, 6).map(p => ({ id: p.id, name: p.data.name })),
+      data: labels.map((label, i) => ({
+        name: label,
+        Creadas: overallTotal[i],
+        Completadas: overallDone[i],
+      })),
+    };
+  }, [projects, tasks]);
+
+  if (data.length === 0 || tasks.length === 0) return null;
+
+  return (
+    <div className="bg-[var(--af-bg2)] border border-[var(--border)] rounded-xl p-5">
+      <h3 className="text-lg font-semibold text-[var(--foreground)] mb-1 flex items-center gap-2">Burndown</h3>
+      <p className="text-xs text-[var(--muted-foreground)] mb-4">Tareas creadas vs completadas por mes (ultimos 6 meses)</p>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+          <Tooltip content={<ChartTooltip />} />
+          <Line type="monotone" dataKey="Creadas" name="Creadas" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="Completadas" name="Completadas" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
+      {projectNames.length > 0 && (
+        <div className="mt-3 text-[10px] text-[var(--muted-foreground)]">
+          {projectNames.length < projects.length && `Mostrando ${projectNames.length} de ${projects.length} proyectos · `}
+          {projectNames.map(p => p.name).join(' · ')}
+        </div>
+      )}
     </div>
   );
 }

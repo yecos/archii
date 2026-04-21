@@ -730,3 +730,227 @@ export function exportTimeReportPDF(data: {
   addFooter(doc);
   doc.save(`reporte-tiempo-${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR REPORTE DE EQUIPO A PDF
+   ═══════════════════════════════════════════════ */
+
+export function exportTeamPDF(data: { teamUsers: any[]; tasks: any[]; timeEntries: any[] }) {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  addHeader(doc, 'Reporte de Equipo', 'Productividad y distribucion por roles');
+
+  let y = 40;
+
+  // Summary stats
+  const totalTasks = data.tasks.length;
+  const completedTasks = data.tasks.filter(t => t.data.status === 'Completado').length;
+  const totalMins = data.timeEntries.reduce((s, e) => s + (e.data.duration || 0), 0);
+  const overdueTasks = data.tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+
+  const stats = [
+    { label: 'Miembros', value: String(data.teamUsers.length), color: BRAND.blue },
+    { label: 'Tareas Totales', value: String(totalTasks), color: BRAND.primary },
+    { label: 'Completadas', value: `${completedTasks} (${totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0}%)`, color: BRAND.green },
+    { label: 'Vencidas', value: String(overdueTasks), color: overdueTasks > 0 ? BRAND.red : BRAND.green },
+  ];
+
+  const boxW = (pageW - 28 - 9) / 4;
+  stats.forEach((stat, i) => {
+    const x = 14 + i * (boxW + 3);
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(x, y, boxW, 14, 1.5, 1.5, 'F');
+    doc.setFillColor(...stat.color);
+    doc.rect(x, y, 1.5, 14, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...stat.color);
+    doc.text(stat.value, x + 5, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(stat.label, x + 5, y + 12);
+  });
+
+  y += 22;
+
+  // Role distribution
+  const roleDist: Record<string, number> = {};
+  data.teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; roleDist[r] = (roleDist[r] || 0) + 1; });
+  const roles = Object.entries(roleDist).sort((a, b) => b[1] - a[1]);
+
+  y = checkAddPage(doc, y, 30);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Distribucion por Roles', 14, y);
+  y += 4;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Rol', 'Miembros']],
+    body: roles.map(([role, count]) => [role, String(count)]),
+    theme: 'striped',
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 9, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 9, textColor: BRAND.text },
+    alternateRowStyles: { fillColor: BRAND.bg },
+    columnStyles: { 1: { halign: 'center' } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 12;
+
+  // Per-member productivity table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Productividad por Miembro', 14, y);
+  y += 4;
+
+  const memberRows = data.teamUsers.map(u => {
+    const userTasks = data.tasks.filter(t => t.data.assigneeId === u.id);
+    const done = userTasks.filter(t => t.data.status === 'Completado').length;
+    const overdue = userTasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+    const mins = data.timeEntries.filter(e => e.data.userId === u.id).reduce((s, e) => s + (e.data.duration || 0), 0);
+    return [u.data.name, u.data.role || 'Miembro', String(userTasks.length), String(done), String(overdue), fmtDuration(mins)];
+  });
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Miembro', 'Rol', 'Tareas', 'Completadas', 'Vencidas', 'Horas']],
+    body: memberRows,
+    theme: 'striped',
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8, textColor: BRAND.text },
+    alternateRowStyles: { fillColor: BRAND.bg },
+    columnStyles: { 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' } },
+    margin: { left: 14, right: 14 },
+  });
+
+  addFooter(doc);
+  doc.save(`archiflow-equipo-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORTAR REPORTE DE OBRA A PDF
+   ═══════════════════════════════════════════════ */
+
+export function exportObraPDF(data: { rfis: any[]; submittals: any[]; punchItems: any[]; dailyLogs: any[]; projects: any[] }) {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+
+  addHeader(doc, 'Reporte de Obra', 'RFIs, Submittals, Punch List y Bitacoras');
+
+  let y = 40;
+  const pageW = doc.internal.pageSize.getWidth();
+
+  // Summary KPIs
+  const rfiResolved = data.rfis.filter(r => r.data.status === 'Respondido' || r.data.status === 'Cerrado').length;
+  const subApproved = data.submittals.filter(s => s.data.status === 'Aprobado').length;
+  const punchDone = data.punchItems.filter(p => p.data.status === 'Completado').length;
+  const punchPct = data.punchItems.length > 0 ? Math.round((punchDone / data.punchItems.length) * 100) : 0;
+
+  const stats = [
+    { label: 'RFIs', value: `${data.rfis.length} (${rfiResolved} resueltos)`, color: BRAND.blue },
+    { label: 'Submittals', value: `${data.submittals.length}`, color: BRAND.primary },
+    { label: 'Punch List', value: `${punchPct}% completado`, color: BRAND.green },
+    { label: 'Bitacoras', value: String(data.dailyLogs.length), color: [99, 102, 241] as [number, number, number] },
+  ];
+
+  const boxW = (pageW - 28 - 9) / 4;
+  stats.forEach((stat, i) => {
+    const x = 14 + i * (boxW + 3);
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(x, y, boxW, 14, 1.5, 1.5, 'F');
+    doc.setFillColor(...stat.color);
+    doc.rect(x, y, 1.5, 14, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...stat.color);
+    doc.text(stat.value, x + 5, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(stat.label, x + 5, y + 12);
+  });
+
+  y += 22;
+
+  // RFIs table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('RFIs', 14, y);
+  y += 4;
+
+  if (data.rfis.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Numero', 'Asunto', 'Estado', 'Prioridad', 'Proyecto', 'Fecha Limite']],
+      body: data.rfis.map(r => {
+        const proj = data.projects.find(p => p.id === r.data.projectId);
+        return [r.data.number, r.data.subject, r.data.status, r.data.priority, proj?.data.name || '-', r.data.dueDate || '-'];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 5: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+  // Submittals table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Submittals', 14, y);
+  y += 4;
+
+  if (data.submittals.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Numero', 'Titulo', 'Estado', 'Proyecto']],
+      body: data.submittals.map(s => {
+        const proj = data.projects.find(p => p.id === s.data.projectId);
+        return [s.data.number, s.data.title, s.data.status, proj?.data.name || '-'];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+  // Punch List table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Punch List', 14, y);
+  y += 4;
+
+  if (data.punchItems.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Titulo', 'Estado', 'Prioridad', 'Ubicacion', 'Proyecto']],
+      body: data.punchItems.map(p => {
+        const proj = data.projects.find(pr => pr.id === p.data.projectId);
+        return [p.data.title, p.data.status, p.data.priority, p.data.location, proj?.data.name || '-'];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  addFooter(doc);
+  doc.save(`archiflow-obra-${new Date().toISOString().split('T')[0]}.pdf`);
+}

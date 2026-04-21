@@ -3,9 +3,12 @@ import React, { useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { getInitials, avatarColor, fmtDuration } from '@/lib/helpers';
 import { COLORS, ChartTooltip, ChartLegend } from './ChartComponents';
+import { FileText, Download } from 'lucide-react';
+import { exportTeamExcel } from '@/lib/export-excel';
+import { exportTeamPDF } from '@/lib/export-pdf';
 import type { ReportsTabProps } from './types';
 
-export default function ReportsEquipo({ teamUsers, tasks, timeEntries }: ReportsTabProps) {
+export default function ReportsEquipo({ teamUsers, tasks, timeEntries, showToast }: ReportsTabProps) {
   const roleDistData = useMemo(() => {
     const roles: Record<string, number> = {};
     teamUsers.forEach(u => { const r = u.data.role || 'Miembro'; roles[r] = (roles[r] || 0) + 1; });
@@ -21,6 +24,16 @@ export default function ReportsEquipo({ teamUsers, tasks, timeEntries }: Reports
   timeEntries.forEach(e => { hoursPerMember[e.data.userId] = (hoursPerMember[e.data.userId] || 0) + (e.data.duration || 0); });
 
   return (<>
+    {/* Export buttons */}
+    <div className="flex items-center gap-2 justify-end">
+      <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => { try { exportTeamPDF({ teamUsers, tasks, timeEntries }); showToast('Reporte PDF descargado'); } catch { showToast('Error al generar PDF', 'error'); } }}>
+        <FileText size={12} /> PDF
+      </button>
+      <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors" onClick={() => { try { exportTeamExcel(teamUsers, tasks, timeEntries); showToast('Reporte Excel descargado'); } catch { showToast('Error al generar Excel', 'error'); } }}>
+        <Download size={12} /> Excel
+      </button>
+    </div>
+
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
       <h3 className="text-[15px] font-semibold mb-4">Distribucion por Roles</h3>
       {roleDistData.length === 0 ? <div className="text-sm text-[var(--muted-foreground)]">Sin miembros</div> : (

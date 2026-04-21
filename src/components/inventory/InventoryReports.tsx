@@ -2,6 +2,7 @@
 import React from 'react';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
+import { exportInventoryExcel } from '@/lib/export-excel';
 
 interface InventoryReportsProps {
   invProducts: any[];
@@ -28,8 +29,11 @@ export default function InventoryReports({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">📊 Reportes</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]" onClick={() => {
+            try { exportInventoryExcel(invProducts, invCategories, invMovements); showToast('Excel de inventario exportado'); } catch { showToast('Error al generar Excel', 'error'); }
+          }}>📥 Exportar Excel</button>
+          <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--af-bg4)]" onClick={() => {
             // Export products CSV
             const headers = ['Nombre', 'SKU', 'Categoría', 'Unidad', 'Precio', 'Stock Total', 'Mín Stock', 'Valor Total'];
             const rows = invProducts.map(p => [p.data.name, p.data.sku || '', getInvCategoryName(p.data.categoryId), p.data.unit, Number(p.data.price) || 0, getTotalStock(p), Number(p.data.minStock) || 0, (Number(p.data.price) || 0) * getTotalStock(p)]);

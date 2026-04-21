@@ -2,11 +2,13 @@
 import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
-import { DollarSign, Download, Plus, TrendingDown, Receipt, Trash2 } from 'lucide-react';
+import { DollarSign, Download, Plus, TrendingDown, Receipt, Trash2, FileText } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { exportBudgetPDF } from '@/lib/export-pdf';
+import { exportExpensesExcel } from '@/lib/export-excel';
 
 const CAT_COLORS: Record<string, string> = {
   'Materiales': '#c8a96e',
@@ -88,10 +90,22 @@ export default function BudgetScreen() {
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            onClick={() => { try { exportBudgetPDF({ expenses, projects }); showToast('Presupuesto PDF descargado'); } catch { showToast('Error al generar PDF', 'error'); } }}
+          >
+            <FileText size={14} /> PDF
+          </button>
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            onClick={() => { try { exportExpensesExcel(expenses, projects); showToast('Presupuesto Excel descargado'); } catch { showToast('Error al generar Excel', 'error'); } }}
+          >
+            <Download size={14} /> Excel
+          </button>
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
             onClick={exportCSV}
           >
-            <Download size={14} /> Exportar CSV
+            <Download size={14} /> CSV
           </button>
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
