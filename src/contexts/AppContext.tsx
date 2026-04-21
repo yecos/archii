@@ -2735,6 +2735,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
+  const updatePhaseDates = async (phaseId: string, field: 'startDate' | 'endDate', value: string) => {
+    if (!selectedProjectId) return;
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('workPhases').doc(phaseId).update({ [field]: value }); } catch (err) { console.error("[ArchiFlow] updatePhaseDates:", err); }
+  };
+
   const doTogglePhaseEnabled = async (phaseId: string, enabled: boolean) => {
     if (!selectedProjectId) return;
     await fbActions.togglePhaseEnabled(selectedProjectId, phaseId, enabled, showToast, activeTenantId);
@@ -3868,6 +3873,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     deleteFile,
     initDefaultPhases,
     updatePhaseStatus,
+    updatePhaseDates,
     doTogglePhaseEnabled,
     initPhasesByType,
     saveApproval,

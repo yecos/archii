@@ -24,7 +24,7 @@ export default function ProjectDetailScreen() {
     setLightboxPhoto, setOdBreadcrumbs, setOdCurrentFolder, setOdDragOver, setOdRenameName,
     setOdRenaming, setOdSearchQuery, setOdSearchResults, setOdTab, setOdViewMode,
     setOneDriveFiles, setShowOneDrive, showOneDrive, timeAgo, toggleTask,
-    updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
+    updateApproval, updatePhaseStatus, updatePhaseDates, updateProjectProgress, uploadFile, workPhases,
     doTogglePhaseEnabled,
     initPhasesByType, isMigratingPhases,
     setEditingId, saveTask,
@@ -814,13 +814,17 @@ export default function ProjectDetailScreen() {
                                       <button className="mt-2 text-[10px] px-2 py-1 rounded-md bg-violet-500/10 text-violet-400 cursor-pointer border-none hover:bg-violet-500/20 transition-colors" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskPhase: phase.id, taskPriority: 'Media', taskStatus: 'Por hacer', taskDueDate: '', taskAssignee: '', taskDescription: '' })); setEditingId(null); openModal('task'); }}>
                                         + Agregar tarea
                                       </button>
-                                      {/* Dates */}
-                                      {(phase.data.startDate || phase.data.endDate) && (
-                                        <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)] mt-2">
-                                          {phase.data.startDate && <span>📅 {phase.data.startDate}</span>}
-                                          {phase.data.endDate && <span>🏁 {phase.data.endDate}</span>}
+                                      {/* Dates — editable inputs */}
+                                      <div className="flex items-center gap-3 mt-2.5">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-[var(--af-text3)]">📅</span>
+                                          <input type="date" className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer w-[130px]" value={phase.data.startDate || ''} onChange={e => updatePhaseDates(phase.id, 'startDate', e.target.value)} />
                                         </div>
-                                      )}
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-[var(--af-text3)]">🏁</span>
+                                          <input type="date" className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer w-[130px]" value={phase.data.endDate || ''} onChange={e => updatePhaseDates(phase.id, 'endDate', e.target.value)} />
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -892,12 +896,17 @@ export default function ProjectDetailScreen() {
                                       <button className="mt-2 text-[10px] px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 cursor-pointer border-none hover:bg-amber-500/20 transition-colors" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskPhase: phase.id, taskPriority: 'Media', taskStatus: 'Por hacer', taskDueDate: '', taskAssignee: '', taskDescription: '' })); setEditingId(null); openModal('task'); }}>
                                         + Agregar tarea
                                       </button>
-                                      {(phase.data.startDate || phase.data.endDate) && (
-                                        <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)] mt-2">
-                                          {phase.data.startDate && <span>📅 {phase.data.startDate}</span>}
-                                          {phase.data.endDate && <span>🏁 {phase.data.endDate}</span>}
+                                      {/* Dates — editable inputs */}
+                                      <div className="flex items-center gap-3 mt-2.5">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-[var(--af-text3)]">📅</span>
+                                          <input type="date" className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer w-[130px]" value={phase.data.startDate || ''} onChange={e => updatePhaseDates(phase.id, 'startDate', e.target.value)} />
                                         </div>
-                                      )}
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-[var(--af-text3)]">🏁</span>
+                                          <input type="date" className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-[10px] text-[var(--foreground)] outline-none cursor-pointer w-[130px]" value={phase.data.endDate || ''} onChange={e => updatePhaseDates(phase.id, 'endDate', e.target.value)} />
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
