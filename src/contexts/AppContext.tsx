@@ -3354,15 +3354,87 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      const raw = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', date: forms.meetDate || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdAt: ts, createdBy: authUser.uid, tenantId: activeTenantId || '' };
-      const data = scrubUndefined(raw);
-      if (editingId) { await db.collection('meetings').doc(editingId).update(data); showToast('Reunión actualizada'); }
-      else { await db.collection('meetings').add(data); showToast('Reunión creada'); }
-      closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' }));
+      const baseFields = { title, description: forms.meetDesc || '', projectId: forms.meetProject || '', time: forms.meetTime || '09:00', duration: Number(forms.meetDuration) || 60, attendees: forms.meetAttendees ? forms.meetAttendees.split(',').map((s: string) => s.trim()).filter(Boolean) : [], createdBy: authUser.uid, tenantId: activeTenantId || '' };
+      const isRecurring = forms.meetRecurring === 'weekly';
+      const recurringDay = Number(forms.meetRecurringDayOfWeek);
+      const recurringEndDate = forms.meetRecurringEndDate || '';
+      const groupId = editingId && forms._meetRecurringGroupId ? forms._meetRecurringGroupId : db.collection('_').doc().id;
+
+      if (editingId) {
+        // Edit single instance
+        const raw = { ...baseFields, date: forms.meetDate || '', recurring: isRecurring ? 'weekly' : 'none', recurringDayOfWeek: isRecurring ? recurringDay : undefined, recurringEndDate: isRecurring ? recurringEndDate : undefined, recurringGroupId: isRecurring ? groupId : undefined };
+        await db.collection('meetings').doc(editingId).update(scrubUndefined(raw));
+        showToast('Reunión actualizada');
+      } else if (isRecurring) {
+        // Create recurring instances
+        const startDate = new Date((forms.meetDate || '') + 'T12:00:00');
+        const endDate = recurringEndDate ? new Date(recurringEndDate + 'T12:00:00') : new Date(startDate.getTime() + 52 * 7 * 86400000);
+        const recurringFields = { recurring: 'weekly' as const, recurringDayOfWeek: recurringDay, recurringEndDate: recurringEndDate || undefined, recurringGroupId: groupId };
+        let count = 0;
+        const current = new Date(startDate);
+        // Set current day to the target day of week
+        current.setDate(current.getDate() + ((recurringDay - current.getDay() + 7) % 7));
+        // If the first occurrence would be before the start date, move to next week
+        if (current < startDate) current.setDate(current.getDate() + 7);
+        while (current <= endDate && count < 104) {
+          const dateStr = current.toISOString().split('T')[0];
+          const raw = { ...baseFields, date: dateStr, ...recurringFields, createdAt: ts };
+          await db.collection('meetings').add(scrubUndefined(raw));
+          current.setDate(current.getDate() + 7);
+          count++;
+        }
+        showToast(`Reunión recurrente creada (${count} instancias)`);
+      } else {
+        // Single meeting
+        const raw = { ...baseFields, date: forms.meetDate || '', createdAt: ts };
+        await db.collection('meetings').add(scrubUndefined(raw));
+        showToast('Reunión creada');
+      }
+      closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '', _meetRecurringGroupId: undefined }));
     } catch (err) { console.error('[ArchiFlow] saveMeeting error:', err); showToast('Error al guardar reunión', 'error'); }
   };
-  const deleteMeeting = async (id: string) => { if (!confirm('¿Eliminar reunión?')) return; try { await getFirebase().firestore().collection('meetings').doc(id).delete(); showToast('Reunión eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-  const openEditMeeting = (m: any) => { setEditingId(m.id); setForms(f => ({ ...f, meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '', meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60), meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', ') })); openModal('meeting'); };
+  const deleteMeeting = async (id: string, meetingData?: any) => {
+    const isRecurring = meetingData?.data?.recurring === 'weekly' && meetingData?.data?.recurringGroupId;
+    const groupId = meetingData?.data?.recurringGroupId;
+    const meetingDate = meetingData?.data?.date;
+    let deleteFuture = false;
+    if (isRecurring) {
+      deleteFuture = confirm('¿Esta reunión es recurrente. ¿Eliminar solo esta instancia o todas las futuras?\n\nAceptar = Eliminar todas las futuras\nCancelar = Eliminar solo esta');
+    } else {
+      if (!confirm('¿Eliminar reunión?')) return;
+    }
+    try {
+      const db = getFirebase().firestore();
+      if (deleteFuture && groupId) {
+        // Delete all future instances in the series (including this one)
+        const snap = await db.collection('meetings')
+          .where('tenantId', '==', activeTenantId)
+          .where('recurringGroupId', '==', groupId)
+          .where('date', '>=', meetingDate || '')
+          .get();
+        const batch = db.batch();
+        snap.docs.forEach((d: any) => batch.delete(d.ref));
+        await batch.commit();
+        showToast(`${snap.size} reuniones recurrentes eliminadas`);
+      } else {
+        await db.collection('meetings').doc(id).delete();
+        showToast('Reunión eliminada');
+      }
+    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al eliminar reunión', 'error'); }
+  };
+  const openEditMeeting = (m: any) => {
+    setEditingId(m.id);
+    setForms(f => ({ ...f,
+      meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '',
+      meetTime: m.data.time || '09:00', meetDuration: String(m.data.duration || 60),
+      meetDesc: m.data.description || '', meetAttendees: (m.data.attendees || []).join(', '),
+      meetRecurring: m.data.recurring || 'none',
+      meetRecurringDayOfWeek: m.data.recurringDayOfWeek !== undefined ? String(m.data.recurringDayOfWeek) : undefined,
+      meetRecurringEndDate: m.data.recurringEndDate || '',
+      _meetRecurringGroupId: m.data.recurringGroupId || undefined,
+    }));
+    openModal('meeting');
+  };
   const openProject = (id: string) => { setSelectedProjectId(id); setScreen('projectDetail'); useUIStore.getState().setCurrentScreen('projectDetail'); };
 
   // Gallery functions

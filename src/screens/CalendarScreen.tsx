@@ -77,7 +77,7 @@ export default function CalendarScreen() {
 
               {/* Stats row */}
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{meetings.filter(m => m.data.date && m.data.date.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} este mes</span></div>
+                <div className="flex items-center gap-2"><button className="flex items-center gap-1.5 bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-purple-500/20" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || new Date().toISOString().split('T')[0], meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '', _meetRecurringGroupId: undefined })); openModal('meeting'); }}>+ Reunión</button><span className="text-[11px] text-purple-400/70">{meetings.filter(m => m.data.date && m.data.date.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} este mes</span></div>
                 <button className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); setCalSelectedDate(today.toISOString().split('T')[0]); }}>Hoy</button>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -131,7 +131,7 @@ export default function CalendarScreen() {
                           {getRFIsForDay(day).slice(0, 2).map(r => <div key={r.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-blue-500/15 text-blue-400" title={`❓ ${r.data.subject}`}>❓ {r.data.number}</div>)}
                           {getSubsForDay(day).slice(0, 1).map(s => <div key={s.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📋 ${s.data.title}`}>📋 {s.data.number}</div>)}
                           {getPunchForDay(day).slice(0, 1).map(p => <div key={p.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-teal-500/15 text-teal-400" title={`✅ ${p.data.title}`}>✅ {p.data.title}</div>)}
-                          {meetings.filter(m => m.data.date === dateStr).map(m => <div key={m.id} className="text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate bg-purple-500/15 text-purple-400" title={`📅 ${m.data.title} (${m.data.time})`}>📅 {m.data.time}</div>)}
+                          {meetings.filter(m => m.data.date === dateStr).map(m => <div key={m.id} className={`text-[8px] sm:text-[9px] leading-tight px-1 py-0.5 rounded truncate ${m.data.recurring === 'weekly' ? 'bg-violet-500/20 text-violet-300' : 'bg-purple-500/15 text-purple-400'}`} title={`${m.data.recurring === 'weekly' ? '🔄' : '📅'} ${m.data.title} (${m.data.time})`}>{m.data.recurring === 'weekly' ? '🔄' : '📅'} {m.data.time}</div>)}
                         </div>
                       </div>
                     );
@@ -254,7 +254,7 @@ export default function CalendarScreen() {
                       <div className="mt-3 pt-3 border-t border-[var(--border)]">
                         <div className="flex items-center justify-between mb-2">
                           <div className="text-[12px] font-semibold text-purple-400">📅 Reuniones ({dayMeetings.length})</div>
-                          <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '' })); openModal('meeting'); }}>+ Nueva</button>
+                          <button className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 cursor-pointer border border-purple-500/20 hover:bg-purple-500/20 transition-colors" onClick={() => { setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: calSelectedDate || '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '', _meetRecurringGroupId: undefined })); openModal('meeting'); }}>+ Nueva</button>
                         </div>
                         <div className="space-y-2">
                           {dayMeetings.sort((a, b) => (a.data.time || '').localeCompare(b.data.time || '')).map(m => {
@@ -262,10 +262,13 @@ export default function CalendarScreen() {
                             return (
                               <div key={m.id} className="border border-purple-500/20 rounded-lg p-3 bg-purple-500/5">
                                 <div className="flex items-start justify-between gap-2 mb-1">
-                                  <div className="text-[13px] font-medium">{m.data.title}</div>
+                                  <div className="text-[13px] font-medium flex items-center gap-1.5">
+                                    {m.data.recurring === 'weekly' && <span className="text-[10px]" title="Reunión recurrente semanal">🔄</span>}
+                                    {m.data.title}
+                                  </div>
                                   <div className="flex gap-1 flex-shrink-0">
                                     <button className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)]" onClick={() => openEditMeeting(m)}>✏️</button>
-                                    <button className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteMeeting(m.id)}>✕</button>
+                                    <button className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteMeeting(m.id, m)}>✕</button>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)]">

@@ -3,10 +3,25 @@ import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Repeat } from 'lucide-react';
+
+const DIAS_SEMANA_RECURRENTE = [
+  { value: 0, label: 'Domingo', short: 'Dom' },
+  { value: 1, label: 'Lunes', short: 'Lun' },
+  { value: 2, label: 'Martes', short: 'Mar' },
+  { value: 3, label: 'Miércoles', short: 'Mié' },
+  { value: 4, label: 'Jueves', short: 'Jue' },
+  { value: 5, label: 'Viernes', short: 'Vie' },
+  { value: 6, label: 'Sábado', short: 'Sáb' },
+];
 
 export default function MeetingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveMeeting, projects, teamUsers, authUser } = useApp();
+  const { forms, setForms, editingId, editingMeeting, closeModal, saveMeeting, projects, teamUsers, authUser } = useApp();
+
+  const isRecurring = forms.meetRecurring === 'weekly';
+  const selectedDate = forms.meetDate || '';
+  const dateDayOfWeek = selectedDate ? new Date(selectedDate + 'T12:00:00').getDay() : 1;
+  const recurringDay = forms.meetRecurringDayOfWeek !== undefined ? Number(forms.meetRecurringDayOfWeek) : dateDayOfWeek;
 
   const toggleAttendee = (name: string) => {
     const current = (forms.meetAttendees || '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -25,6 +40,14 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
   };
 
   const quickAddUsers = teamUsers.slice(0, 8);
+
+  const handleRecurringToggle = () => {
+    if (isRecurring) {
+      setForms(p => ({ ...p, meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '' }));
+    } else {
+      setForms(p => ({ ...p, meetRecurring: 'weekly', meetRecurringDayOfWeek: String(dateDayOfWeek), meetRecurringEndDate: '' }));
+    }
+  };
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>
@@ -82,6 +105,75 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
             <option value="120">120 min</option>
           </FormSelect>
         </FormField>
+
+        {/* Recurrence Section */}
+        <div className="border border-[var(--border)] rounded-lg p-3">
+          <button
+            type="button"
+            className="flex items-center gap-2 w-full cursor-pointer"
+            onClick={handleRecurringToggle}
+          >
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isRecurring ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--input)]'}`}>
+              {isRecurring && (
+                <svg className="w-3 h-3 text-background" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+            </div>
+            <Repeat size={16} className={`transition-colors ${isRecurring ? 'text-[var(--af-accent)]' : 'text-[var(--muted-foreground)]'}`} />
+            <span className="text-sm font-medium">Repetir semanalmente</span>
+          </button>
+
+          {isRecurring && (
+            <div className="mt-3 space-y-3 pl-7">
+              {/* Day of week selector */}
+              <div>
+                <label className="text-[11px] text-[var(--muted-foreground)] mb-1.5 block">Día de la semana</label>
+                <div className="flex gap-1">
+                  {DIAS_SEMANA_RECURRENTE.map(d => (
+                    <button
+                      key={d.value}
+                      type="button"
+                      onClick={() => setForms(p => ({ ...p, meetRecurringDayOfWeek: String(d.value) }))}
+                      className={`flex-1 text-[10px] py-1.5 rounded-md border cursor-pointer transition-all font-medium ${
+                        recurringDay === d.value
+                          ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]'
+                          : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border-[var(--input)] hover:border-[var(--af-accent)]/40'
+                      }`}
+                    >
+                      {d.short}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* End date */}
+              <div>
+                <label className="text-[11px] text-[var(--muted-foreground)] mb-1.5 block">
+                  Fecha de fin (opcional — si no se indica, se repite por 52 semanas)
+                </label>
+                <FormInput
+                  type="date"
+                  value={forms.meetRecurringEndDate || ''}
+                  onChange={(e) => setForms(p => ({ ...p, meetRecurringEndDate: e.target.value }))}
+                  min={forms.meetDate || undefined}
+                />
+              </div>
+
+              {/* Preview */}
+              {selectedDate && (
+                <div className="text-[10px] text-[var(--muted-foreground)] bg-[var(--af-bg3)] rounded-md px-2.5 py-2">
+                  Se crearán reuniones cada <span className="font-medium text-[var(--foreground)]">{DIAS_SEMANA_RECURRENTE[recurringDay].label}</span>
+                  {forms.meetRecurringEndDate ? (
+                    <> hasta el <span className="font-medium text-[var(--foreground)]">{forms.meetRecurringEndDate}</span></>
+                  ) : (
+                    <> por 52 semanas</>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <FormField label="Participantes">
           <FormInput

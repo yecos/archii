@@ -186,6 +186,11 @@ export interface MeetingData {
   tenantId: string;
   createdAt: string | { toDate: () => Date };
   createdBy?: string;
+  /* Recurrence fields */
+  recurring?: 'weekly' | 'none';
+  recurringDayOfWeek?: number; // 0=Dom, 1=Lun, ..., 6=Sab
+  recurringEndDate?: string; // YYYY-MM-DD
+  recurringGroupId?: string; // shared by all instances in a series
 }
 
 /* ===== USER / TENANT ENTITIES ===== */
