@@ -60,13 +60,33 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
       allow delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
 
-      // Project subcollections (messages, workPhases, files, approvals)
+      // Project subcollections (messages, workPhases, files, approvals, etc.)
       // These docs have tenantId field set by the client
       match /{subcollection}/{subdocId} {
-        allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
-        allow create: if isAuthenticated() && isMemberOfTenant(request.resource.data.tenantId);
-        allow update: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
-        allow delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+        allow read: if isAuthenticated() && isMemberOfTenant(
+          // For existing docs, check tenantId field
+          (resource.data.tenantId != null && resource.data.tenantId != '')
+            ? resource.data.tenantId
+            // Fallback: check parent project's tenantId
+            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+        );
+        allow create: if isAuthenticated() && (
+          // If doc has tenantId, validate it
+          (request.resource.data.tenantId != null && request.resource.data.tenantId != '' && isMemberOfTenant(request.resource.data.tenantId))
+          ||
+          // Fallback: check parent project's tenantId
+          isMemberOfTenant(get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId)
+        );
+        allow update: if isAuthenticated() && isMemberOfTenant(
+          (resource.data.tenantId != null && resource.data.tenantId != '')
+            ? resource.data.tenantId
+            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+        );
+        allow delete: if isAuthenticated() && isMemberOfTenant(
+          (resource.data.tenantId != null && resource.data.tenantId != '')
+            ? resource.data.tenantId
+            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+        );
       }
     }
 
