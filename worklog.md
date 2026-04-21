@@ -411,3 +411,62 @@ Stage Summary:
 - Nuevo archivo: dedup-users/route.ts
 - Deploy autom via Vercel en curso
 - Pendiente: AI connection error, Kanban duplicado, verificar dedup automatico
+---
+Task ID: 8
+Agent: Super Z (Main)
+Task: Sistema de notificaciones externas (Email + Push + WhatsApp unificado)
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-external-notifs-v2-20260421
+
+Work Log:
+- Audit completo del sistema de notificaciones existente:
+  - In-app: toasts, sonido, vibracion, historial en memoria (useNotifications.ts)
+  - Browser/OS: Web Notification API con service worker handlers
+  - WhatsApp: Completo con 12+ tipos de eventos, bot commands, account linking
+  - Service Worker: push + notificationclick handlers listos pero sin server-side
+- Identificados gaps: sin email, sin push server-side, sin persistencia, sin unificacion
+
+Tarea 1 — Email (Resend):
+  - Creado src/lib/email-service.ts: HTTP client puro para Resend API
+  - Creado src/lib/email-notifications.ts: 12 funciones de notificacion con templates HTML profesionales
+  - Creado src/app/api/notifications/email/route.ts: endpoint con auth, preferencias, broadcast
+  - Templates con branding ArchiFlow, gradient header, CTA button, inline styles
+
+Tarea 2 — Push (Web Push con VAPID):
+  - Creado src/lib/push-service.ts: registro de suscripcion via Push API + VAPID
+  - Creado src/lib/push-notifications.ts: 8 funciones de notificacion push tipadas
+  - Creado src/app/api/notifications/push/subscribe/route.ts: POST guarda, DELETE elimina
+  - Creado src/app/api/notifications/push/send/route.ts: envio via web-push library con broadcast
+  - Actualizado layout.tsx: SW message listener para navegacion desde push clicks
+
+Tarea 3 — Servicio unificado:
+  - Creado src/lib/notify-unified.ts: notifyExternal con 12 funciones que envian a 3 canales en paralelo
+  - Cada funcion verifica preferencias de canal (localStorage) antes de enviar
+  - Errores silenciosos: si un canal falla, los demas continuan
+  - Exporta getExternalChannelPrefs() y setExternalChannelPref() para UI
+
+Tarea 4 — UI actualizada:
+  - Actualizado NotifPanel.tsx: seccion "Canales externos" colapsable
+  - 3 botones toggle: WhatsApp (verde), Email (azul), Push (purpura)
+  - Push requiere registro de suscripcion al activar (VAPID)
+  - Indicador de soporte push cuando VAPID keys no estan configuradas
+
+Dependencias instaladas:
+  - resend (v6.12.2)
+  - web-push (v3.6.7)
+  - @types/web-push
+
+TypeScript check: 0 errores en archivos nuevos (3 errores pre-existentes en AppContext)
+
+Stage Summary:
+- 8 archivos nuevos, 3 archivos modificados, 1960 lineas agregadas
+- Commit: 0951bfb, push a main completado
+- Deploy automatico a Vercel en curso
+- Variables requeridas en Vercel:
+  - RESEND_API_KEY (para email)
+  - RESEND_FROM_EMAIL (opcional, default: notificaciones@archiflow.app)
+  - NEXT_PUBLIC_VAPID_PUBLIC_KEY (para push)
+  - VAPID_PRIVATE_KEY (para push)
+  - VAPID_SUBJECT (opcional, default: mailto:admin@archiflow.app)
+- Uso: import { notifyExternal } from '@/lib/notify-unified'
