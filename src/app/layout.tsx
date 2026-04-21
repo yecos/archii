@@ -162,6 +162,20 @@ export default function RootLayout({
             });
           }
         ` }} />
+
+        {/* Listen for navigation messages from the service worker (notification click) */}
+        <Script id="sw-message-listener" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', function(event) {
+              if (event.data && event.data.type === 'NAVIGATE') {
+                // Dispatch a custom event that React components can listen to
+                window.dispatchEvent(new CustomEvent('sw-navigate', {
+                  detail: event.data
+                }));
+              }
+            });
+          }
+        ` }} />
         <ClientProviders>
           {children}
           <AIFloatingWrapper />

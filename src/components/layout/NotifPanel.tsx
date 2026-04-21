@@ -1,7 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle, CircleHelp, FileCheck, ListChecks } from 'lucide-react';
+import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle, CircleHelp, FileCheck, ListChecks, Mail, Smartphone, Radio, Settings } from 'lucide-react';
+import { getExternalChannelPrefs, setExternalChannelPref } from '@/lib/notify-unified';
+import { registerPushSubscription, unregisterPushSubscription, isPushSupported } from '@/lib/push-service';
 
 export default function NotifPanel() {
   const {
@@ -10,6 +12,34 @@ export default function NotifPanel() {
     notifPermission, requestNotifPermission, markNotifRead, markAllNotifRead,
     clearNotifHistory, unreadCount, navigateTo,
   } = useApp();
+
+  // Canales externos
+  const [channelPrefs, setChannelPrefs] = useState({ whatsapp: true, email: true, push: true });
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushRegistering, setPushRegistering] = useState(false);
+  const [showChannels, setShowChannels] = useState(false);
+
+  useEffect(() => {
+    setChannelPrefs(getExternalChannelPrefs());
+    setPushSupported(isPushSupported());
+  }, []);
+
+  const toggleChannel = useCallback((channel: 'whatsapp' | 'email' | 'push') => {
+    const newPrefs = { ...channelPrefs, [channel]: !channelPrefs[channel] };
+    setChannelPrefs(newPrefs);
+    setExternalChannelPref(channel, newPrefs[channel]);
+  }, [channelPrefs]);
+
+  const togglePush = useCallback(async () => {
+    setPushRegistering(true);
+    try {
+      const registered = await registerPushSubscription();
+      if (registered) {
+        toggleChannel('push');
+      }
+    } catch {}
+    setPushRegistering(false);
+  }, [toggleChannel]);
 
   if (!showNotifPanel) return null;
 
@@ -122,7 +152,62 @@ export default function NotifPanel() {
 
         {/* Settings footer */}
         <div className="p-3 border-t border-[var(--border)] bg-[var(--af-bg3)] flex-shrink-0">
-          <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Configurar alertas</div>
+          {/* Toggle external channels */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Configurar alertas</div>
+            <button
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] hover:bg-[var(--af-bg4)] transition-all"
+              onClick={() => setShowChannels(!showChannels)}
+            >
+              <Settings size={10} /> Canales externos
+            </button>
+          </div>
+
+          {/* External channels panel (collapsible) */}
+          {showChannels && (
+            <div className="mb-2 p-2.5 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+              <div className="text-[10px] text-[var(--muted-foreground)] mb-2">Recibir notificaciones fuera de la app:</div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${channelPrefs.whatsapp ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                  onClick={() => toggleChannel('whatsapp')}
+                >
+                  <MessageCircle size={11} /> WhatsApp
+                  {channelPrefs.whatsapp && <Check size={10} className="stroke-current" strokeWidth={3} />}
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${channelPrefs.email ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                  onClick={() => toggleChannel('email')}
+                >
+                  <Mail size={11} /> Email
+                  {channelPrefs.email && <Check size={10} className="stroke-current" strokeWidth={3} />}
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] cursor-pointer transition-all ${channelPrefs.push ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] border border-[var(--border)]'}`}
+                  onClick={() => {
+                    if (!channelPrefs.push) {
+                      togglePush();
+                    } else {
+                      unregisterPushSubscription().catch(() => {});
+                      toggleChannel('push');
+                    }
+                  }}
+                  disabled={pushRegistering}
+                >
+                  {pushRegistering ? <Loader size={11} className="animate-spin" /> : <Smartphone size={11} />}
+                  {pushRegistering ? '...' : 'Push'}
+                  {channelPrefs.push && !pushRegistering && <Check size={10} className="stroke-current" strokeWidth={3} />}
+                </button>
+              </div>
+              {!pushSupported && (
+                <div className="text-[9px] text-[var(--af-text3)] mt-1.5 flex items-center gap-1">
+                  <Radio size={9} /> Push requiere configuración del servidor (VAPID keys)
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Category toggles */}
           <div className="grid grid-cols-3 gap-1.5">
             {[
               { key: 'chat', label: 'Chat', Icon: MessageCircle },
