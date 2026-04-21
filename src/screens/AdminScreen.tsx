@@ -6,6 +6,15 @@ import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase, getAuthHeaders } from '@/lib/firebase-service';
 
 export default function AdminScreen() {
+  // Track deleting state per user ID (outside of .map to avoid hooks violation)
+  const [deletingIds, setDeletingIds] = React.useState<Set<string>>(new Set());
+  const setDeleting = (uid: string, val: boolean) => {
+    setDeletingIds(prev => {
+      const next = new Set(prev);
+      if (val) next.add(uid); else next.delete(uid);
+      return next;
+    });
+  };
   const {
     GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG, activeTasks,
     activeTenantId,
@@ -349,11 +358,11 @@ export default function AdminScreen() {
                 const mTasks = activeTasks.filter((t: any) => t.data.assigneeId === m.id);
                 const mOverdue = mTasks.filter((t: any) => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
                 const isSelf = m.id === authUser?.uid;
-                const [deleting, setDeleting] = React.useState(false);
+                const deleting = deletingIds.has(m.id);
                 const handleDeleteMember = async () => {
                   if (!confirm(`¿Eliminar a ${m.data?.name || m.data?.email} del equipo? Esta acción no se puede deshacer.`)) return;
                   if (!activeTenantId) { showToast('No hay tenant activo', 'error'); return; }
-                  setDeleting(true);
+                  setDeleting(m.id, true);
                   try {
                     const authHeaders = await getAuthHeaders();
                     const res = await fetch('/api/tenants', {
@@ -362,10 +371,10 @@ export default function AdminScreen() {
                       body: JSON.stringify({ action: 'delete-member', tenantId: activeTenantId, memberUid: m.id }),
                     });
                     const data = await res.json();
-                    if (!res.ok) { showToast(data.error || 'Error al eliminar', 'error'); return; }
+                    if (!res.ok) { showToast(data.error || 'Error al eliminar', 'error'); setDeleting(m.id, false); return; }
                     showToast(`${m.data?.name || m.data?.email} eliminado del equipo`);
-                  } catch (err) { showToast('Error de conexión al eliminar', 'error'); }
-                  finally { setDeleting(false); }
+                    setDeleting(m.id, false);
+                  } catch (err) { showToast('Error de conexión al eliminar', 'error'); setDeleting(m.id, false); }
                 };
                 return (<div key={m.id} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)] relative group">
                   {/* Delete button — visible for Admin/Director users */}
