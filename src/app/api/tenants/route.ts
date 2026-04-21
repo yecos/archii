@@ -411,11 +411,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      if (tenantData.createdBy !== user.uid) {
-        return NextResponse.json({ error: "Solo el creador puede eliminar miembros" }, { status: 403 });
+      const isSuperAdmin = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isSuperAdmin) {
+        return NextResponse.json({ error: "Solo el creador o Super Admin puede eliminar miembros" }, { status: 403 });
       }
       if (memberUid === user.uid) {
         return NextResponse.json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+      }
+      // Un Super Admin no puede eliminar al creador
+      if (tenantData.createdBy === memberUid) {
+        return NextResponse.json({ error: "No puedes eliminar al creador del tenant" }, { status: 400 });
       }
 
       await db.collection("tenants").doc(tenantId).update({

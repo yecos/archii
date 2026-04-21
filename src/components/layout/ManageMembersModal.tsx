@@ -219,10 +219,11 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, isCr
                       <button
                         onClick={() => handleRemoveMember(m.uid, m.name)}
                         disabled={actionLoading}
-                        className="text-[var(--af-text3)] hover:text-red-400 text-sm p-1 flex-shrink-0 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-400 hover:bg-red-500/15 border border-red-500/20 transition-colors cursor-pointer flex-shrink-0"
                         title="Eliminar del tenant"
                       >
-                        ✕
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        Quitar
                       </button>
                     )}
                   </div>
