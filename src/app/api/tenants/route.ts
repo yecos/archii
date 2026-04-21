@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
 
   const { action, name, code, tenantId, emails, memberUid, email } = body;
 
-  if (!action || !["create", "join", "list", "add-members", "remove-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role", "debug-me"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, get-members, add-all-users, set-super-admin, fix-my-role, debug-me" }, { status: 400 });
+  if (!action || !["create", "join", "list", "add-members", "remove-member", "delete-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role", "debug-me"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, delete-member, get-members, add-all-users, set-super-admin, fix-my-role, debug-me" }, { status: 400 });
   }
 
   try {
@@ -455,6 +455,91 @@ export async function POST(request: NextRequest) {
       });
 
       console.log(`[Tenants] remove-member: OK — removed ${memberUid} from ${tenantId}`);
+      return NextResponse.json({
+        tenantName: tenantData.name,
+        removed: memberUid,
+        totalMembers: (tenantData.members || []).length - 1,
+      });
+    }
+
+    // ===== DELETE MEMBER (remove from tenant + delete user doc) =====
+    if (action === "delete-member") {
+      if (!tenantId || !memberUid) {
+        return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
+      }
+
+      console.log(`[Tenants] delete-member: tenantId=${tenantId}, memberUid=${memberUid}, callerUid=${user.uid}`);
+
+      const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+      if (!tenantDoc.exists) {
+        return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      }
+      const tenantData = tenantDoc.data()!;
+
+      // Permission check: must be creator, Super Admin, or Admin/Director role
+      const isCreatorCheck = tenantData.createdBy === user.uid;
+      const isInSuperAdmins = (tenantData.superAdmins || []).includes(user.uid);
+      const isSuperAdmin = isCreatorCheck || isInSuperAdmins;
+
+      // Also check if caller has Admin or Director role in the users collection
+      const callerDoc = await db.collection("users").doc(user.uid).get();
+      const callerRole = callerDoc.exists ? callerDoc.data()?.role || 'Miembro' : 'Miembro';
+      const callerIsAdminOrDirector = callerRole === 'Admin' || callerRole === 'Director';
+
+      if (!isSuperAdmin && !callerIsAdminOrDirector) {
+        return NextResponse.json({ error: "Solo Admin, Director o Super Admin pueden eliminar miembros" }, { status: 403 });
+      }
+      if (memberUid === user.uid) {
+        return NextResponse.json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+      }
+      if (tenantData.createdBy === memberUid) {
+        return NextResponse.json({ error: "No puedes eliminar al creador del tenant" }, { status: 400 });
+      }
+
+      const currentMembers: string[] = tenantData.members || [];
+
+      // 1. Remove from tenant members array
+      const tenantUpdates: any = {};
+      if (currentMembers.includes(memberUid)) {
+        tenantUpdates.members = FieldValue.arrayRemove(memberUid);
+      }
+      // Also remove from superAdmins if present
+      if ((tenantData.superAdmins || []).includes(memberUid)) {
+        tenantUpdates.superAdmins = FieldValue.arrayRemove(memberUid);
+      }
+
+      if (Object.keys(tenantUpdates).length > 0) {
+        await db.collection("tenants").doc(tenantId).update(tenantUpdates);
+      }
+
+      // 2. Delete the user document from Firestore (Admin SDK bypasses rules)
+      try {
+        const memberDoc = await db.collection("users").doc(memberUid).get();
+        if (memberDoc.exists) {
+          await db.collection("users").doc(memberUid).delete();
+          console.log(`[Tenants] delete-member: deleted user doc ${memberUid}`);
+        }
+      } catch (err: any) {
+        console.warn(`[Tenants] delete-member: could not delete user doc ${memberUid}:`, err.message);
+        // Non-critical — member was removed from tenant, user doc deletion is best-effort
+      }
+
+      // 3. Unassign tasks that were assigned to this user
+      try {
+        const tasksSnap = await db.collection("tasks").where("assigneeId", "==", memberUid).where("tenantId", "==", tenantId).limit(500).get();
+        if (!tasksSnap.empty) {
+          const batch = db.batch();
+          for (const doc of tasksSnap.docs) {
+            batch.update(doc.ref, { assigneeId: null });
+          }
+          await batch.commit();
+          console.log(`[Tenants] delete-member: unassigned ${tasksSnap.size} tasks from ${memberUid}`);
+        }
+      } catch (err: any) {
+        console.warn(`[Tenants] delete-member: could not unassign tasks:`, err.message);
+      }
+
+      console.log(`[Tenants] delete-member: OK — removed ${memberUid} from tenant ${tenantId}`);
       return NextResponse.json({
         tenantName: tenantData.name,
         removed: memberUid,

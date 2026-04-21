@@ -8,6 +8,7 @@ import { getFirebase } from '@/lib/firebase-service';
 export default function AdminScreen() {
   const {
     GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG, activeTasks,
+    activeTenantId,
     adminPermSection, adminTab, adminTooltipPos, adminTooltipTask, authUser,
     buildGanttRows, completedTasks, findOverlaps, getGanttDays, getProjectColor,
     getProjectColorLight, getTaskBar, getUserName, isAdmin, overdueTasks,
@@ -348,23 +349,37 @@ export default function AdminScreen() {
                 const mTasks = activeTasks.filter((t: any) => t.data.assigneeId === m.id);
                 const mOverdue = mTasks.filter((t: any) => t.data.dueDate && new Date(t.data.dueDate) < new Date(new Date().toDateString()));
                 const isSelf = m.id === authUser?.uid;
-                const isAdminMember = (m.data?.role === 'Admin') || ADMIN_EMAILS.includes(m.data?.email || '');
+                const [deleting, setDeleting] = React.useState(false);
+                const handleDeleteMember = async () => {
+                  if (!confirm(`¿Eliminar a ${m.data?.name || m.data?.email} del equipo? Esta acción no se puede deshacer.`)) return;
+                  if (!activeTenantId) { showToast('No hay tenant activo', 'error'); return; }
+                  setDeleting(true);
+                  try {
+                    const res = await fetch('/api/tenants', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'delete-member', tenantId: activeTenantId, memberUid: m.id }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { showToast(data.error || 'Error al eliminar', 'error'); return; }
+                    showToast(`${m.data?.name || m.data?.email} eliminado del equipo`);
+                  } catch (err) { showToast('Error de conexión al eliminar', 'error'); }
+                  finally { setDeleting(false); }
+                };
                 return (<div key={m.id} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)] relative group">
-                  {/* Delete button */}
-                  {isAdminMember && !isSelf && (
+                  {/* Delete button — visible for Admin/Director users */}
+                  {isAdmin && !isSelf && (
                     <button
-                      onClick={async () => {
-                        if (!confirm(`¿Eliminar a ${m.data?.name || m.data?.email}? Esta acción no se puede deshacer.`)) return;
-                        try {
-                          const db = getFirebase().firestore();
-                          await db.collection('users').doc(m.id).delete();
-                          showToast(`${m.data?.name || m.data?.email} eliminado del equipo`);
-                        } catch (err) { showToast('Error al eliminar usuario', 'error'); }
-                      }}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
+                      onClick={handleDeleteMember}
+                      disabled={deleting}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Eliminar del equipo"
                     >
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                      {deleting ? (
+                        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83" /></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                      )}
                     </button>
                   )}
                   {isSelf && (
