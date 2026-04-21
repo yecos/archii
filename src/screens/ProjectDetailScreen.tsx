@@ -27,6 +27,7 @@ export default function ProjectDetailScreen() {
     updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
     doTogglePhaseEnabled,
     initPhasesByType, isMigratingPhases,
+    setEditingId, saveTask,
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
     rfis, submittals, punchItems, changeTaskStatus, showToast,
