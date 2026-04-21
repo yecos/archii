@@ -16,7 +16,7 @@ export default function PunchItemModal({ open, onClose }: { open: boolean; onClo
           <FormField label="Proyecto" required>
             <FormSelect value={forms.punchProject || ''} onChange={(e) => setForms(p => ({ ...p, punchProject: e.target.value }))}>
               <option value="">Seleccionar proyecto</option>
-              {projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+              {projects.filter((p: any) => p.data.status !== 'Terminado').map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
             </FormSelect>
           </FormField>
         )}

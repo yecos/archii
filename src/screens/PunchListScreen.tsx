@@ -110,7 +110,7 @@ export default function PunchListScreen() {
         projectFilter={{
           value: punchFilterProject,
           onChange: setPunchFilterProject,
-          projects: projects.filter((p: any) => p.data.status === 'Ejecucion').map((p: any) => ({ id: p.id, name: p.data.name })),
+          projects: projects.filter((p: any) => p.data.status !== 'Terminado').map((p: any) => ({ id: p.id, name: p.data.name })),
         }}
         filters={[{
           key: 'location',
