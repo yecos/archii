@@ -120,11 +120,15 @@ export async function GET(request: NextRequest) {
       return (a.name || '').localeCompare(b.name || '');
     });
 
+    const folderName = folderId === 'root'
+      ? `ArchiFlow/${(tenantData.name || tenantId).replace(/[/\\:*?"<>|]/g, '-')}`
+      : undefined;
+
     return NextResponse.json({
       items,
       count: items.length,
       folderId: actualFolderId,
-      folderName: folderId === 'root' ? 'ArchiFlow' : undefined,
+      folderName,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';

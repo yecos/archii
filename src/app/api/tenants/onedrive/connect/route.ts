@@ -106,28 +106,30 @@ export async function POST(request: NextRequest) {
         msEmail = user.email; // fallback
       }
 
-      // Try to find or create ArchiFlow/TeamFiles folder
+      // Try to find or create ArchiFlow/<tenantName> folder
+      // Each tenant gets its own subfolder to isolate files
       let rootFolderId: string | null = null;
+      const tenantName = (tenantData.name || tenantId).replace(/[/\\:*?"<>|]/g, '-').substring(0, 50);
+      const tenantFolderName = `ArchiFlow_${tenantName}`;
+
       try {
-        const searchUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'ArchiFlow'&$select=id,name`;
-        const searchRes = await fetch(searchUrl, {
+        // First ensure the ArchiFlow parent folder exists
+        let archiFlowFolderId: string | null = null;
+        const searchParentUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'ArchiFlow'&$select=id,name`;
+        const searchParentRes = await fetch(searchParentUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
+        if (searchParentRes.ok) {
+          const searchData = await searchParentRes.json();
           if (searchData.value && searchData.value.length > 0) {
-            rootFolderId = searchData.value[0].id;
+            archiFlowFolderId = searchData.value[0].id;
           }
         }
-      } catch {
-        // Ignore search errors
-      }
 
-      if (!rootFolderId) {
-        // Create ArchiFlow root folder
-        try {
-          const createRes = await fetch(`${GRAPH_BASE}/me/drive/root/children`, {
+        if (!archiFlowFolderId) {
+          // Create ArchiFlow parent folder
+          const createParentRes = await fetch(`${GRAPH_BASE}/me/drive/root/children`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -139,14 +141,49 @@ export async function POST(request: NextRequest) {
               '@microsoft.graph.conflictBehavior': 'fail',
             }),
           });
-
-          if (createRes.ok) {
-            const data = await createRes.json();
-            rootFolderId = data.id;
+          if (createParentRes.ok) {
+            const parentData = await createParentRes.json();
+            archiFlowFolderId = parentData.id;
           }
-        } catch {
-          // Ignore creation errors
         }
+
+        // Now find or create the tenant-specific subfolder
+        if (archiFlowFolderId) {
+          const searchTenantUrl = `${GRAPH_BASE}/me/drive/items/${archiFlowFolderId}/children?$filter=name eq '${encodeURIComponent(tenantFolderName)}'&$select=id,name`;
+          const searchTenantRes = await fetch(searchTenantUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (searchTenantRes.ok) {
+            const searchData = await searchTenantRes.json();
+            if (searchData.value && searchData.value.length > 0) {
+              rootFolderId = searchData.value[0].id;
+            }
+          }
+
+          if (!rootFolderId) {
+            // Create tenant-specific folder inside ArchiFlow
+            const createTenantRes = await fetch(`${GRAPH_BASE}/me/drive/items/${archiFlowFolderId}/children`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                name: tenantFolderName,
+                folder: {},
+                '@microsoft.graph.conflictBehavior': 'fail',
+              }),
+            });
+
+            if (createTenantRes.ok) {
+              const data = await createTenantRes.json();
+              rootFolderId = data.id;
+            }
+          }
+        }
+      } catch {
+        // Ignore search errors
       }
 
       // Store tokens in tenant document
