@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { Plus } from 'lucide-react';
+import { PROJECT_TYPE_COLORS } from '@/lib/types';
 
 
 
@@ -24,6 +25,7 @@ export default function ProjectDetailScreen() {
     setOdRenaming, setOdSearchQuery, setOdSearchResults, setOdTab, setOdViewMode,
     setOneDriveFiles, setShowOneDrive, showOneDrive, timeAgo, toggleTask,
     updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
+    doTogglePhaseEnabled,
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
     rfis, submittals, punchItems, changeTaskStatus, showToast,
@@ -57,6 +59,11 @@ export default function ProjectDetailScreen() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span>
+                    {currentProject.data.projectType && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PROJECT_TYPE_COLORS[currentProject.data.projectType] || PROJECT_TYPE_COLORS['Ejecución']}`}>
+                        {currentProject.data.projectType}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl mt-2">{currentProject.data.name}</div>
                   <div className="text-sm text-[var(--muted-foreground)] mt-1">{currentProject.data.location && '📍 ' + currentProject.data.location}{currentProject.data.client ? ' · ' + currentProject.data.client : ''}</div>
@@ -670,11 +677,12 @@ export default function ProjectDetailScreen() {
               </div>
             </div>)}
 
-            {/* 8. TAB: Obra (unchanged - Timeline + Gantt + Bitácora) */}
+            {/* 8. TAB: Obra — Fases por tipo (Diseño/Ejecución) + Timeline + Gantt + Bitácora */}
             {forms.detailTab === 'Obra' && (<div>
+              {/* View tabs */}
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
-                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'timeline' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'timeline' }))}>Timeline</button>
+                  <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'timeline' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'timeline' }))}>Fases</button>
                   <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'gantt' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'gantt' }))}>Gantt</button>
                   <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'bitacora' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'bitacora' }))}>📝 Bitácora</button>
                 </div>
@@ -683,80 +691,283 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>
 
-              {/* Sub-tab: Timeline */}
-              {forms.workView === 'timeline' && (workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> : (
-              <div className="relative pl-6">
-                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--input)]" />
-                {workPhases.map((phase: any) => {
-                  const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
-                  return (<div key={phase.id} className="relative mb-5">
-                    <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)] shadow-[0_0_0_3px_rgba(200,169,110,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
-                    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all">
-                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <div className="text-sm font-semibold">{phase.data.name}</div>
-                        <select className="bg-[var(--af-bg3)] border border-[var(--input)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none cursor-pointer" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
-                          <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
-                        </select>
+              {/* Helper: calculate phase progress from tasks */}
+              {(() => {
+                const getPhaseProgress = (phaseId: string) => {
+                  const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phaseId);
+                  if (phaseTasks.length === 0) return null;
+                  const completed = phaseTasks.filter((t: any) => t.data.status === 'Completado').length;
+                  return Math.round((completed / phaseTasks.length) * 100);
+                };
+
+                // Group phases by type
+                const enabledPhases = workPhases.filter((p: any) => p.data.enabled !== false);
+                const designPhases = enabledPhases.filter((p: any) => p.data.type === 'Diseño');
+                const executionPhases = enabledPhases.filter((p: any) => p.data.type === 'Ejecución');
+                const otherPhases = enabledPhases.filter((p: any) => !p.data.type || p.data.type === 'Otro');
+                // Legacy phases without type — assign to Ejecución
+                const legacyPhases = enabledPhases.filter((p: any) => !p.data.type);
+                const effectiveExecPhases = [...executionPhases, ...legacyPhases];
+                const allPhases = [...designPhases, ...effectiveExecPhases];
+
+                // Overall progress from phases
+                const phasePcts = allPhases.map((p: any) => {
+                  const manual = p.data.status === 'Completado' ? 100 : p.data.status === 'En progreso' ? 50 : 0;
+                  const fromTasks = getPhaseProgress(p.id);
+                  return fromTasks !== null ? fromTasks : manual;
+                });
+                const overallPct = phasePcts.length > 0 ? Math.round(phasePcts.reduce((a: number, b: number) => a + b, 0) / phasePcts.length) : 0;
+                const completedPhases = allPhases.filter((p: any) => p.data.status === 'Completado').length;
+
+                return (
+                  <>
+                    {/* Progress summary */}
+                    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-semibold">Progreso por fases</div>
+                        <div className="text-lg font-bold text-[var(--af-accent)]">{overallPct}%</div>
                       </div>
-                      {phase.data.description && <div className="text-xs text-[var(--muted-foreground)] mb-2">{phase.data.description}</div>}
-                      <div className="flex items-center gap-3 text-[11px] text-[var(--af-text3)]">
-                        {phase.data.startDate && <span>Inicio: {phase.data.startDate}</span>}
-                        {phase.data.endDate && <span>Fin: {phase.data.endDate}</span>}
+                      <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden mb-2">
+                        <div className={`h-full rounded-full transition-all duration-500 ${overallPct >= 80 ? 'bg-emerald-500' : overallPct >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: `${overallPct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
+                        <span>{completedPhases} de {allPhases.length} fases completadas</span>
+                        <span>{allPhases.filter((p: any) => p.data.status === 'En progreso').length} en progreso</span>
                       </div>
                     </div>
-                  </div>);
-                })}
-              </div>
-              ))}
 
-              {/* Sub-tab: Gantt */}
-              {forms.workView === 'gantt' && (workPhases.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div> : (
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 overflow-x-auto">
-                  {(() => {
-                    const phasesWithDates = workPhases.filter((ph: any) => ph.data.startDate || ph.data.endDate);
-                    const allDates = workPhases.filter((ph: any) => ph.data.startDate).map((ph: any) => new Date(ph.data.startDate).getTime()).concat(workPhases.filter((ph: any) => ph.data.endDate).map((ph: any) => new Date(ph.data.endDate).getTime()));
-                    const timelineStart = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
-                    const timelineEnd = allDates.length > 0 ? new Date(Math.max(...allDates)) : new Date(timelineStart.getTime() + 30 * 86400000);
-                    const totalDays = Math.max(1, Math.ceil((timelineEnd.getTime() - timelineStart.getTime()) / 86400000) + 7);
-                    const dayWidth = Math.max(24, Math.min(50, 700 / totalDays));
-                    const ganttColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
-                    return phasesWithDates.length === 0 ? (
-                      <div className="text-center py-8 text-[var(--muted-foreground)] text-sm">Las fases necesitan fechas de inicio/fin para mostrar el Gantt. Edita las fases para agregar fechas.</div>
+                    {/* Sub-tab: Fases (Timeline con acordeones por tipo) */}
+                    {forms.workView === 'timeline' && (allPhases.length === 0 ? (
+                      <div className="text-center py-12 text-[var(--af-text3)]">
+                        <div className="text-3xl mb-2">🏗️</div>
+                        <div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div>
+                      </div>
                     ) : (
-                      <div>
-                        <div className="flex text-[10px] text-[var(--muted-foreground)] mb-2 ml-[140px]" style={{ width: totalDays * dayWidth }}>
-                          {Array.from({ length: Math.min(totalDays, 30) }, (_, i) => {
-                            const d = new Date(timelineStart.getTime() + i * 86400000);
-                            return <div key={i} className="flex-shrink-0 text-center" style={{ width: dayWidth }}>{d.getDate()}/{d.getMonth() + 1}</div>;
-                          })}
-                        </div>
-                        {workPhases.map((phase: any, idx: any) => {
-                          const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
-                          const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
-                          const color = ganttColors[idx % ganttColors.length];
-                          const isDone = phase.data.status === 'Completado';
-                          const isActive = phase.data.status === 'En progreso';
-                          return (
-                            <div key={phase.id} className="flex items-center mb-1.5">
-                              <div className="w-[130px] text-[11px] font-medium truncate pr-2 shrink-0 flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${isDone ? 'bg-emerald-500' : isActive ? 'bg-[var(--af-accent)]' : 'bg-[var(--af-bg4)]'}`} />
-                                {phase.data.name}
-                              </div>
-                              <div className="relative h-6" style={{ width: totalDays * dayWidth }}>
-                                <div className={`absolute h-6 rounded-md flex items-center px-2 text-[10px] font-medium text-white ${isDone ? 'opacity-70' : ''}`} style={{ left: offset * dayWidth, width: Math.max(days * dayWidth, 20), backgroundColor: color }}>
-                                  {days > 2 && phase.data.name.substring(0, 12)}
-                                </div>
+                      <div className="space-y-4">
+                        {/* Accordion: Diseño */}
+                        {designPhases.length > 0 && (
+                          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                            <div className="flex items-center gap-3 px-4 py-3 bg-violet-500/5 border-b border-[var(--border)]">
+                              <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-sm">📐</div>
+                              <div className="flex-1">
+                                <div className="text-[13px] font-semibold text-violet-400">Diseño</div>
+                                <div className="text-[10px] text-[var(--muted-foreground)]">{designPhases.length} fases · {designPhases.filter((p: any) => p.data.status === 'Completado').length} completadas</div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ))}
+                            <div className="relative pl-6 pr-4 py-3">
+                              <div className="absolute left-[7px] top-3 bottom-3 w-px bg-[var(--input)]" />
+                              {designPhases.map((phase: any) => {
+                                const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
+                                const pct = getPhaseProgress(phase.id);
+                                const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phase.id);
+                                const enabled = phase.data.enabled !== false;
+                                return (
+                                  <div key={phase.id} className={`relative mb-4 last:mb-0 ${!enabled ? 'opacity-40' : ''}`}>
+                                    <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
+                                    <div className="bg-[var(--af-bg3)]/50 border border-[var(--border)] rounded-xl p-3.5 hover:border-[var(--input)] transition-all">
+                                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold">{phase.data.name}</span>
+                                          {!enabled && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">OFF</span>}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <select className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none cursor-pointer" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
+                                            <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
+                                          </select>
+                                          <button className="text-[10px] px-2 py-0.5 rounded-full border cursor-pointer transition-colors border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--af-bg4)] bg-transparent" onClick={() => doTogglePhaseEnabled(phase.id, !enabled)} title={enabled ? 'Desactivar fase' : 'Activar fase'}>
+                                            {enabled ? 'ON' : 'OFF'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {phase.data.description && <div className="text-[11px] text-[var(--muted-foreground)] mb-2">{phase.data.description}</div>}
+                                      {/* Progress bar */}
+                                      {pct !== null && (
+                                        <div className="mb-2">
+                                          <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+                                            <span>{phaseTasks.filter((t: any) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
+                                            <span>{pct}%</span>
+                                          </div>
+                                          <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                                            <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Tasks preview */}
+                                      {phaseTasks.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 3).map((t: any) => (
+                                            <div key={t.id} className="flex items-center gap-2 text-[11px] text-[var(--muted-foreground)]">
+                                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-violet-400'}`} />
+                                              {t.data.title}
+                                            </div>
+                                          ))}
+                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').length > 3 && (
+                                            <div className="text-[10px] text-violet-400">+{phaseTasks.filter((t: any) => t.data.status !== 'Completado').length - 3} más</div>
+                                          )}
+                                        </div>
+                                      )}
+                                      {/* Add task from phase */}
+                                      <button className="mt-2 text-[10px] px-2 py-1 rounded-md bg-violet-500/10 text-violet-400 cursor-pointer border-none hover:bg-violet-500/20 transition-colors" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskPhase: phase.id, taskPriority: 'Media', taskStatus: 'Por hacer', taskDueDate: '', taskAssignee: '', taskDescription: '' })); setEditingId(null); openModal('task'); }}>
+                                        + Agregar tarea
+                                      </button>
+                                      {/* Dates */}
+                                      {(phase.data.startDate || phase.data.endDate) && (
+                                        <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)] mt-2">
+                                          {phase.data.startDate && <span>📅 {phase.data.startDate}</span>}
+                                          {phase.data.endDate && <span>🏁 {phase.data.endDate}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
-              {/* Sub-tab: Bitácora */}
+                        {/* Accordion: Ejecución */}
+                        {effectiveExecPhases.length > 0 && (
+                          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                            <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/5 border-b border-[var(--border)]">
+                              <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-sm">🔨</div>
+                              <div className="flex-1">
+                                <div className="text-[13px] font-semibold text-amber-400">Ejecución</div>
+                                <div className="text-[10px] text-[var(--muted-foreground)]">{effectiveExecPhases.length} fases · {effectiveExecPhases.filter((p: any) => p.data.status === 'Completado').length} completadas</div>
+                              </div>
+                            </div>
+                            <div className="relative pl-6 pr-4 py-3">
+                              <div className="absolute left-[7px] top-3 bottom-3 w-px bg-[var(--input)]" />
+                              {effectiveExecPhases.map((phase: any) => {
+                                const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
+                                const pct = getPhaseProgress(phase.id);
+                                const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phase.id);
+                                const enabled = phase.data.enabled !== false;
+                                return (
+                                  <div key={phase.id} className={`relative mb-4 last:mb-0 ${!enabled ? 'opacity-40' : ''}`}>
+                                    <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[var(--card)] ${isDone ? 'bg-emerald-500' : isActive ? 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.2)]' : 'bg-[var(--af-bg4)] border-[var(--input)]'}`} />
+                                    <div className="bg-[var(--af-bg3)]/50 border border-[var(--border)] rounded-xl p-3.5 hover:border-[var(--input)] transition-all">
+                                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold">{phase.data.name}</span>
+                                          {!enabled && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">OFF</span>}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <select className="bg-[var(--card)] border border-[var(--input)] rounded-md px-2 py-1 text-xs text-[var(--foreground)] outline-none cursor-pointer" value={phase.data.status} onChange={e => updatePhaseStatus(phase.id, e.target.value)}>
+                                            <option value="Pendiente">Pendiente</option><option value="En progreso">En progreso</option><option value="Completado">Completado</option>
+                                          </select>
+                                          <button className="text-[10px] px-2 py-0.5 rounded-full border cursor-pointer transition-colors border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--af-bg4)] bg-transparent" onClick={() => doTogglePhaseEnabled(phase.id, !enabled)} title={enabled ? 'Desactivar fase' : 'Activar fase'}>
+                                            {enabled ? 'ON' : 'OFF'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {phase.data.description && <div className="text-[11px] text-[var(--muted-foreground)] mb-2">{phase.data.description}</div>}
+                                      {pct !== null && (
+                                        <div className="mb-2">
+                                          <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+                                            <span>{phaseTasks.filter((t: any) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
+                                            <span>{pct}%</span>
+                                          </div>
+                                          <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                                            <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                          </div>
+                                        </div>
+                                      )}
+                                      {phaseTasks.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 3).map((t: any) => (
+                                            <div key={t.id} className="flex items-center gap-2 text-[11px] text-[var(--muted-foreground)]">
+                                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                                              {t.data.title}
+                                            </div>
+                                          ))}
+                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').length > 3 && (
+                                            <div className="text-[10px] text-amber-400">+{phaseTasks.filter((t: any) => t.data.status !== 'Completado').length - 3} más</div>
+                                          )}
+                                        </div>
+                                      )}
+                                      <button className="mt-2 text-[10px] px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 cursor-pointer border-none hover:bg-amber-500/20 transition-colors" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskPhase: phase.id, taskPriority: 'Media', taskStatus: 'Por hacer', taskDueDate: '', taskAssignee: '', taskDescription: '' })); setEditingId(null); openModal('task'); }}>
+                                        + Agregar tarea
+                                      </button>
+                                      {(phase.data.startDate || phase.data.endDate) && (
+                                        <div className="flex items-center gap-3 text-[10px] text-[var(--af-text3)] mt-2">
+                                          {phase.data.startDate && <span>📅 {phase.data.startDate}</span>}
+                                          {phase.data.endDate && <span>🏁 {phase.data.endDate}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Sub-tab: Gantt (same but only enabled phases) */}
+                    {forms.workView === 'gantt' && (allPhases.length === 0 ? (
+                      <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">🏗️</div><div className="text-sm">Haz clic en &quot;Inicializar fases&quot; para comenzar el seguimiento</div></div>
+                    ) : (
+                      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 overflow-x-auto">
+                        {(() => {
+                          const phasesWithDates = allPhases.filter((ph: any) => ph.data.startDate || ph.data.endDate);
+                          const allDates = allPhases.filter((ph: any) => ph.data.startDate).map((ph: any) => new Date(ph.data.startDate).getTime()).concat(allPhases.filter((ph: any) => ph.data.endDate).map((ph: any) => new Date(ph.data.endDate).getTime()));
+                          const timelineStart = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
+                          const timelineEnd = allDates.length > 0 ? new Date(Math.max(...allDates)) : new Date(timelineStart.getTime() + 30 * 86400000);
+                          const totalDays = Math.max(1, Math.ceil((timelineEnd.getTime() - timelineStart.getTime()) / 86400000) + 7);
+                          const dayWidth = Math.max(24, Math.min(50, 700 / totalDays));
+                          const ganttColors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#fbbf24', '#f97316', '#ef4444'];
+                          return phasesWithDates.length === 0 ? (
+                            <div className="text-center py-8 text-[var(--muted-foreground)] text-sm">Las fases necesitan fechas de inicio/fin para mostrar el Gantt. Edita las fases para agregar fechas.</div>
+                          ) : (
+                            <div>
+                              {/* Group headers */}
+                              {designPhases.some((p: any) => p.data.startDate || p.data.endDate) && effectiveExecPhases.some((p: any) => p.data.startDate || p.data.endDate) && (
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-[130px] flex items-center gap-1.5 text-[10px] font-semibold text-violet-400">
+                                    <div className="w-2 h-2 rounded-full bg-violet-500" /> DISEÑO
+                                  </div>
+                                  <div className="flex-1 border-b border-dashed border-violet-500/20" />
+                                  <div className="w-[130px] flex items-center justify-end gap-1.5 text-[10px] font-semibold text-amber-400">
+                                    EJECUCIÓN <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                  </div>
+                                  <div className="flex-1 border-b border-dashed border-amber-500/20" />
+                                </div>
+                              )}
+                              <div className="flex text-[10px] text-[var(--muted-foreground)] mb-2 ml-[140px]" style={{ width: totalDays * dayWidth }}>
+                                {Array.from({ length: Math.min(totalDays, 30) }, (_, i) => {
+                                  const d = new Date(timelineStart.getTime() + i * 86400000);
+                                  return <div key={i} className="flex-shrink-0 text-center" style={{ width: dayWidth }}>{d.getDate()}/{d.getMonth() + 1}</div>;
+                                })}
+                              </div>
+                              {allPhases.map((phase: any, idx: any) => {
+                                const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
+                                const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
+                                const isDesign = phase.data.type === 'Diseño';
+                                const color = isDesign ? ganttColors[idx % 3] : ganttColors[3 + (idx % 4)];
+                                const isDone = phase.data.status === 'Completado';
+                                const isActive = phase.data.status === 'En progreso';
+                                return (
+                                  <div key={phase.id} className="flex items-center mb-1.5">
+                                    <div className="w-[130px] text-[11px] font-medium truncate pr-2 shrink-0 flex items-center gap-1.5">
+                                      <div className={`w-2 h-2 rounded-full shrink-0 ${isDone ? 'bg-emerald-500' : isActive ? (isDesign ? 'bg-violet-500' : 'bg-amber-500') : 'bg-[var(--af-bg4)]'}`} />
+                                      {phase.data.name}
+                                    </div>
+                                    <div className="relative h-6" style={{ width: totalDays * dayWidth }}>
+                                      <div className={`absolute h-6 rounded-md flex items-center px-2 text-[10px] font-medium text-white ${isDone ? 'opacity-70' : ''}`} style={{ left: offset * dayWidth, width: Math.max(days * dayWidth, 20), backgroundColor: color }}>
+                                        {days > 2 && phase.data.name.substring(0, 12)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
+
+                    {/* Sub-tab: Bitácora (unchanged) */}
               {forms.workView === 'bitacora' && (
               <div>
                 {/* Bitácora header */}
@@ -1081,6 +1292,9 @@ export default function ProjectDetailScreen() {
                 )}
               </div>
               )}
+                  </>
+                );
+              })()}
             </div>)}
           </div>
   );

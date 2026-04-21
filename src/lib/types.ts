@@ -52,6 +52,7 @@ export interface Task {
     priority: string;
     status: string;
     dueDate: string;
+    phaseId?: string;
     createdAt: any;
     createdBy?: string;
   };
@@ -100,11 +101,14 @@ export interface WorkPhase {
   data: {
     name: string;
     description: string;
-    status: string;
+    status: string; // 'Pendiente' | 'En progreso' | 'Completado'
     order: number;
     startDate: string;
     endDate: string;
     createdAt: any;
+    type: 'Diseño' | 'Ejecución' | 'Otro';
+    enabled: boolean;
+    phaseKey: string; // clave única: 'conceptualizacion', 'anteproyecto', 'obra_gris', etc.
   };
 }
 
@@ -484,7 +488,42 @@ export const KANBAN_DEFAULT_COLUMNS: Record<string, KanbanColumn[]> = {
 
 /* ===== CONSTANTES ===== */
 
-export const DEFAULT_PHASES = ['Planos', 'Cimentación', 'Estructura', 'Instalaciones', 'Acabados', 'Entrega'];
+/* ===== PLANTILLAS DE FASES POR TIPO DE PROYECTO ===== */
+
+export interface PhaseTemplate {
+  key: string;
+  name: string;
+  description: string;
+  order: number;
+}
+
+export const PROJECT_TYPE_PHASES: Record<string, PhaseTemplate[]> = {
+  'Diseño': [
+    { key: 'conceptualizacion', name: 'Conceptualización', description: 'Definición del concepto arquitectónico y necesidades del cliente', order: 1 },
+    { key: 'idea_basica', name: 'Idea Básica', description: 'Bocetos iniciales y esquemas de distribución', order: 2 },
+    { key: 'anteproyecto', name: 'Anteproyecto', description: 'Desarrollo del esquema con plantas, cortes y fachadas preliminares', order: 3 },
+    { key: 'proyecto', name: 'Proyecto', description: 'Planos ejecutivos, memorias técnicas y especificaciones', order: 4 },
+    { key: 'detalles', name: 'Detalles', description: 'Detalles constructivos, cartel structural e instalaciones', order: 5 },
+  ],
+  'Ejecución': [
+    { key: 'preliminares', name: 'Preliminares', description: 'Localización, replanteo, campamentos, vías de acceso', order: 1 },
+    { key: 'excavaciones', name: 'Excavaciones', description: 'Movimiento de tierras, zapatas y cimentaciones', order: 2 },
+    { key: 'obra_gris', name: 'Obra Gris', description: 'Estructura, muros, losas, columnas y vigas', order: 3 },
+    { key: 'obra_blanca', name: 'Obra Blanca', description: 'Enlucidos, pisos, aplanados, pintura', order: 4 },
+    { key: 'carpinteria', name: 'Carpintería', description: 'Carpintería en madera, muebles a medida, puertas', order: 5 },
+    { key: 'interiorismo', name: 'Interiorismo', description: 'Acabados finales, decoración, iluminación y entrega', order: 6 },
+  ],
+};
+
+export const PROJECT_TYPES = ['Diseño', 'Ejecución', 'Ambos'] as const;
+export const PROJECT_TYPE_COLORS: Record<string, string> = {
+  'Diseño': 'bg-violet-500/10 text-violet-400 border-violet-500/30',
+  'Ejecución': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  'Ambos': 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+};
+
+// Mantener compatibilidad con fases existentes
+export const DEFAULT_PHASES = PROJECT_TYPE_PHASES['Ejecución'].map(p => p.name);
 
 export const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos'];
 

@@ -6,7 +6,7 @@ import CenterModal from '@/components/common/CenterModal';
 import { X, Users, Plus, Trash2 } from 'lucide-react';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser } = useApp();
+  const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser, workPhases } = useApp();
 
   const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : [];
   const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
@@ -76,7 +76,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Proyecto">
           <FormSelect
             value={forms.taskProject || ''}
-            onChange={(e) => setForms((p: any) => ({ ...p, taskProject: e.target.value }))}
+            onChange={(e) => setForms((p: any) => ({ ...p, taskProject: e.target.value, taskPhase: '' }))}
           >
             <option value="">— Sin proyecto —</option>
             {projects.map((p: any) => (
@@ -84,6 +84,23 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             ))}
           </FormSelect>
         </FormField>
+
+        {/* Fase (solo si hay proyecto seleccionado con fases) */}
+        {forms.taskProject && workPhases.length > 0 && (
+          <FormField label="Fase">
+            <FormSelect
+              value={forms.taskPhase || ''}
+              onChange={(e) => setForms((p: any) => ({ ...p, taskPhase: e.target.value }))}
+            >
+              <option value="">— Sin fase —</option>
+              {workPhases
+                .filter((ph: any) => ph.data.enabled !== false)
+                .map((ph: any) => (
+                  <option key={ph.id} value={ph.id}>{ph.data.type ? `[${ph.data.type}] ` : ''}{ph.data.name}</option>
+                ))}
+            </FormSelect>
+          </FormField>
+        )}
 
         {/* Responsables multiples */}
         <FormField label="Responsables">

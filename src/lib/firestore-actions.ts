@@ -7,7 +7,7 @@
 
 import { getFirebase } from '@/lib/firebase-service';
 import { fileToBase64 } from '@/lib/helpers';
-import { DEFAULT_PHASES } from '@/lib/types';
+import { DEFAULT_PHASES, PROJECT_TYPE_PHASES, PhaseTemplate } from '@/lib/types';
 
 type ToastFn = (msg: string, type?: string) => void;
 
@@ -52,25 +52,25 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
       startDate: data.projStart || '',
       endDate: data.projEnd || '',
       companyId: data.projCompany || '',
+      projectType: data.projType || 'Ejecución',
       progress: 0,
       updatedAt: ts,
       updatedBy: authUser?.uid || '',
     });
     if (editingId) {
       await db.collection('projects').doc(editingId).update(projData);
+      // Si cambió el tipo de proyecto, reiniciar fases
+      if (data.projType && data._prevType && data.projType !== data._prevType) {
+        await initPhasesForProject(db, editingId, data.projType, data.enabledPhases || [], ts, tenantId);
+      }
       showToast('Proyecto actualizado');
     } else {
       projData.createdAt = ts;
       projData.createdBy = authUser?.uid || '';
       projData.tenantId = tenantId || '';
       const ref = await db.collection('projects').add(projData);
-      // Init default phases
-      const batch = db.batch();
-      DEFAULT_PHASES.forEach((name, i) => {
-        const phaseRef = db.collection('projects').doc(ref.id).collection('workPhases').doc();
-        batch.set(phaseRef, { name, description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts });
-      });
-      await batch.commit();
+      // Init phases based on project type
+      await initPhasesForProject(db, ref.id, data.projType || 'Ejecución', data.enabledPhases || [], ts, tenantId);
       showToast('✅ Proyecto creado');
     }
   }, showToast);
@@ -319,6 +319,73 @@ export async function deleteProjectFile(projectId: string, fileId: string, showT
   return fbAction('eliminar archivo', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('files').doc(fileId).delete();
     showToast('Archivo eliminado');
+  }, showToast);
+}
+
+/* ===== INIT PHASES FOR PROJECT (by type) ===== */
+
+/**
+ * Crea las fases según el tipo de proyecto (Diseño, Ejecución o Ambos).
+ * enabledPhases: array de phaseKeys que están prendidos.
+ * Si enabledPhases está vacío, se prenden todas.
+ */
+export async function initPhasesForProject(
+  db: any,
+  projectId: string,
+  projectType: string,
+  enabledPhases: string[],
+  ts: any,
+  tenantId: string | null,
+) {
+  const types = projectType === 'Ambos' ? ['Diseño', 'Ejecución'] : [projectType];
+  
+  // Borrar fases existentes
+  const existing = await db.collection('projects').doc(projectId).collection('workPhases').get();
+  const batch = db.batch();
+  existing.docs.forEach((doc: any) => batch.delete(doc.ref));
+  
+  // Crear nuevas fases
+  let globalOrder = 0;
+  for (const type of types) {
+    const templates = PROJECT_TYPE_PHASES[type] || [];
+    for (const tpl of templates) {
+      const isEnabled = enabledPhases.length === 0 || enabledPhases.includes(tpl.key);
+      const phaseRef = db.collection('projects').doc(projectId).collection('workPhases').doc();
+      batch.set(phaseRef, {
+        name: tpl.name,
+        description: tpl.description,
+        status: 'Pendiente',
+        order: globalOrder,
+        startDate: '',
+        endDate: '',
+        createdAt: ts,
+        tenantId: tenantId || '',
+        type,
+        enabled: isEnabled,
+        phaseKey: tpl.key,
+      });
+      globalOrder++;
+    }
+  }
+  await batch.commit();
+}
+
+/**
+ * Toggle una fase (prendido/apagado) sin borrar las demás.
+ */
+export async function togglePhaseEnabled(
+  projectId: string,
+  phaseId: string,
+  enabled: boolean,
+  showToast: ToastFn,
+  tenantId: string | null,
+) {
+  return fbAction('actualizar fase', async () => {
+    await getFirebase().firestore()
+      .collection('projects').doc(projectId)
+      .collection('workPhases').doc(phaseId)
+      .update({ enabled });
+    showToast(enabled ? '✅ Fase activada' : 'Fase desactivada');
   }, showToast);
 }
 

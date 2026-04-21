@@ -2288,26 +2288,34 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const raw = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const projType = forms.projType || 'Ejecución';
+    const raw = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid, projectType: projType };
     const data = scrubUndefined(raw);
     try {
-      if (editingId) { await db.collection('projects').doc(editingId).update(data); showToast('Proyecto actualizado'); }
+      if (editingId) {
+        const prevType = currentProject?.data?.projectType || 'Ejecución';
+        await db.collection('projects').doc(editingId).update(data);
+        // Si cambió el tipo de proyecto, reiniciar fases
+        if (projType !== prevType) {
+          await fbActions.initPhasesForProject(db, editingId, projType, forms.enabledPhases || [], ts, activeTenantId);
+        }
+        showToast('Proyecto actualizado');
+      }
       else {
         const createData = scrubUndefined({ ...raw, createdAt: ts, createdBy: authUser.uid, progress: 0 });
-        await db.collection('projects').add(createData);
+        const ref = await db.collection('projects').add(createData);
+        // Init phases based on project type
+        await fbActions.initPhasesForProject(db, ref.id, projType, forms.enabledPhases || [], ts, activeTenantId);
         showToast('Proyecto creado');
         // Si hay sesion de OneDrive activa, crear carpeta del proyecto
         if (msConnected && msAccessToken) {
           ensureProjectFolder(name).then(folderId => {
-            if (folderId) {
-              console.log('[ArchiFlow] Carpeta OneDrive creada para:', name);
-            } else {
-              console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name);
-            }
+            if (folderId) { console.log('[ArchiFlow] Carpeta OneDrive creada para:', name); }
+            else { console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name); }
           });
         }
       }
-      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '' }));
+      closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projType: 'Ejecución', enabledPhases: [] }));
     } catch (err) { console.error('[ArchiFlow] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
   };
 
@@ -2315,7 +2323,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const openEditProject = (p: Project) => {
     setEditingId(p.id);
-    setForms(f => ({ ...f, projName: p.data.name, projStatus: p.data.status, projClient: p.data.client, projLocation: p.data.location, projBudget: p.data.budget, projDesc: p.data.description, projStart: p.data.startDate, projEnd: p.data.endDate, projCompany: p.data.companyId || '' }));
+    setForms(f => ({ ...f, projName: p.data.name, projStatus: p.data.status, projClient: p.data.client, projLocation: p.data.location, projBudget: p.data.budget, projDesc: p.data.description, projStart: p.data.startDate, projEnd: p.data.endDate, projCompany: p.data.companyId || '', projType: p.data.projectType || 'Ejecución', _prevType: p.data.projectType || 'Ejecución' }));
     openModal('project');
   };
 
@@ -2329,7 +2337,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const subtasks = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()).map((s: any) => ({ text: String(s.text || ''), done: Boolean(s.done) })) : [];
-    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', phaseId: forms.taskPhase || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
     const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
@@ -2345,7 +2353,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           });
         }
       }
-      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
+      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
     } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
     finally { setIsSavingTask(false); }
   };
@@ -2353,7 +2361,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const openEditTask = (t: Task) => {
     setEditingId(t.id);
     const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: t.data.projectId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [] }));
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: t.data.projectId || '', taskPhase: (t.data as any).phaseId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [] }));
     openModal('task');
   };
 
@@ -2700,15 +2708,31 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       const db = getFirebase().firestore();
       const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-      for (let i = 0; i < DEFAULT_PHASES.length; i++) {
-        await db.collection('projects').doc(selectedProjectId).collection('workPhases').add(scrubUndefined({ name: DEFAULT_PHASES[i], description: '', status: 'Pendiente', order: i, startDate: '', endDate: '', createdAt: ts }));
-      }
+      const projType = currentProject?.data?.projectType || 'Ejecución';
+      await fbActions.initPhasesForProject(db, selectedProjectId, projType, [], ts, activeTenantId);
       showToast('Fases inicializadas');
     } catch (err) { console.error('[ArchiFlow] initDefaultPhases error:', err); }
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
+  };
+
+  const doTogglePhaseEnabled = async (phaseId: string, enabled: boolean) => {
+    if (!selectedProjectId) return;
+    await fbActions.togglePhaseEnabled(selectedProjectId, phaseId, enabled, showToast, activeTenantId);
+  };
+
+  const initPhasesByType = async (projType: string) => {
+    if (!selectedProjectId) return;
+    try {
+      const db = getFirebase().firestore();
+      const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+      await fbActions.initPhasesForProject(db, selectedProjectId, projType, [], ts, activeTenantId);
+      // Also update project document
+      await db.collection('projects').doc(selectedProjectId).update({ projectType: projType });
+      showToast('Fases reinicializadas');
+    } catch (err) { console.error('[ArchiFlow] initPhasesByType error:', err); }
   };
 
   const saveApproval = async () => {
@@ -3769,6 +3793,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     deleteFile,
     initDefaultPhases,
     updatePhaseStatus,
+    doTogglePhaseEnabled,
+    initPhasesByType,
     saveApproval,
     updateApproval,
     deleteApproval,
