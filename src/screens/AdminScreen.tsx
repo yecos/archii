@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
-import { getFirebase } from '@/lib/firebase-service';
+import { getFirebase, getAuthHeaders } from '@/lib/firebase-service';
 
 export default function AdminScreen() {
   const {
@@ -355,9 +355,10 @@ export default function AdminScreen() {
                   if (!activeTenantId) { showToast('No hay tenant activo', 'error'); return; }
                   setDeleting(true);
                   try {
+                    const authHeaders = await getAuthHeaders();
                     const res = await fetch('/api/tenants', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: { 'Content-Type': 'application/json', ...authHeaders },
                       body: JSON.stringify({ action: 'delete-member', tenantId: activeTenantId, memberUid: m.id }),
                     });
                     const data = await res.json();
