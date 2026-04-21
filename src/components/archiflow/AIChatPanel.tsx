@@ -43,9 +43,9 @@ const QUICK_PROMPTS = [
   { text: 'Crea una tarea', icon: '📋' },
   { text: 'Resume mi proyecto', icon: '🏗️' },
   { text: 'Registra un gasto', icon: '💰' },
-  { text: 'Programa una reunión', icon: '📅' },
-  { text: 'Optimiza mi presupuesto', icon: '📊' },
-  { text: 'Agrega un proveedor', icon: '🤝' },
+  { text: 'Agrega al inventario', icon: '📦' },
+  { text: 'Crea una factura', icon: '🧾' },
+  { text: 'Registra tiempo de trabajo', icon: '⏱️' },
   { text: '¿Qué tareas tengo?', icon: '✅' },
   { text: 'Analiza esta imagen', icon: '📸' },
 ];
@@ -165,8 +165,8 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n• 📸 **Analizar imágenes** de planos, obras y documentos\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n"Analiza esta imagen de la obra" (adjunta imagen)\n\n¿En qué te ayudo hoy?',
-      displayContent: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **hacer cosas reales** por ti:\n\n• ✅ **Crear tareas** y asignarlas a tu equipo\n• 🏗️ **Crear proyectos** con fases de obra automáticas\n• 💰 **Registrar gastos** y analizar presupuestos\n• 🤝 **Agregar proveedores** al directorio\n• 📅 **Programar reuniones** para tu equipo\n• 📊 **Consultar datos** de tus proyectos y equipo\n• 🔄 **Actualizar estados** de tareas\n• 📸 **Analizar imágenes** de planos, obras y documentos\n\n**Ejemplos:**\n"Crea una tarea para revisar los planos eléctricos"\n"¿Cuánto he gastado en materiales?"\n"Programa una reunión de obra para mañana a las 9am"\n"Agrega el proveedor Cementos Argos"\n"Analiza esta imagen de la obra" (adjunta imagen)\n\n¿En qué te ayudo hoy?',
+      content: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **gestionar toda tu app** desde aquí:\n\n**Proyectos y Tareas**\n• ✅ Crear tareas, proyectos y actualizar estados\n• 📊 Consultar presupuestos y gastos\n• 🏗️ Gestionar fases de obra\n\n**Finanzas y Compras**\n• 💰 Registrar gastos y crear facturas\n• 🤝 Agregar proveedores y empresas\n• 🧾 Gestionar facturas (borrador → pagada)\n\n**Obra e Inventario**\n• 📦 Gestionar inventario y movimientos\n• 📓 Registrar bitácoras de obra diarias\n• 🔧 Crear punch items y submittals\n• ❓ Gestionar RFIs\n\n**Equipo y Tiempos**\n• 👥 Consultar equipo y asignar tareas\n• ⏱️ Registrar tiempos de trabajo\n• 📅 Programar reuniones\n\n**Análisis Visual**\n• 📸 Analizar imágenes (planos, obras, cotizaciones)\n\n**Ejemplos:**\n"Crea una tarea para revisar planos eléctricos"\n"¿Cuánto he gastado en materiales este mes?"\n"Agrega cemento Portland al inventario"\n"Crea una factura para el proyecto Torre 3"\n"Registra el tiempo de hoy: 4h en estructura"\n"Analiza esta imagen" (adjunta imagen 📸)\n\n¿En qué te ayudo hoy?',
+      displayContent: '',
       timestamp: new Date(),
     },
   ]);
@@ -423,7 +423,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
                 <h3 className="text-sm font-bold text-foreground">Super IA</h3>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--af-accent)]/15 text-[var(--af-accent)] font-semibold">AGENT</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">Puedo crear, editar y gestionar tu proyecto</p>
+              <p className="text-[11px] text-muted-foreground">Gestiono toda tu app: proyectos, inventario, finanzas y más</p>
             </div>
           </div>
           <button

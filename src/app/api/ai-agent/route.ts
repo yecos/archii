@@ -385,6 +385,392 @@ const TOOLS = [
       },
     },
   },
+
+  // ── INVENTORY MODULE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "get_inventory_products",
+      description: "Obtener lista de productos del inventario, opcionalmente filtrados por categoría o bodega/almacén.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "Filtrar por categoría del producto" },
+          warehouse: { type: "string", description: "Filtrar por bodega o almacén" },
+          search: { type: "string", description: "Buscar por nombre o SKU del producto" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_inventory_product",
+      description: "Crear un nuevo producto en el inventario.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nombre del producto" },
+          sku: { type: "string", description: "Código SKU del producto" },
+          category: { type: "string", description: "Categoría del producto" },
+          unit: { type: "string", description: "Unidad de medida (ej: unidades, mts, kg, litros)" },
+          price: { type: "number", description: "Precio unitario en COP" },
+          stock: { type: "number", description: "Cantidad en stock inicial" },
+          min_stock: { type: "number", description: "Stock mínimo para alerta" },
+          warehouse: { type: "string", description: "Bodega o almacén donde se encuentra" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_inventory_movements",
+      description: "Obtener lista de movimientos de inventario (entradas y salidas), opcionalmente filtrados por producto o bodega.",
+      parameters: {
+        type: "object",
+        properties: {
+          product_id: { type: "string", description: "Filtrar por ID de producto" },
+          warehouse: { type: "string", description: "Filtrar por bodega" },
+          movement_type: {
+            type: "string",
+            description: "Tipo de movimiento",
+            enum: ["Entrada", "Salida"],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_inventory_movement",
+      description: "Registrar un movimiento de inventario (entrada o salida de productos). Actualiza el stock del producto automáticamente.",
+      parameters: {
+        type: "object",
+        properties: {
+          product_id: { type: "string", description: "ID del producto (obtenerlo con get_inventory_products)" },
+          product_name: { type: "string", description: "Nombre del producto (para búsqueda si no hay ID)" },
+          type: {
+            type: "string",
+            description: "Tipo de movimiento",
+            enum: ["Entrada", "Salida"],
+          },
+          quantity: { type: "number", description: "Cantidad del movimiento" },
+          reason: { type: "string", description: "Motivo del movimiento" },
+          reference: { type: "string", description: "Referencia (ej: número de factura, orden de compra)" },
+          warehouse: { type: "string", description: "Bodega o almacén" },
+        },
+        required: ["type", "quantity"],
+      },
+    },
+  },
+
+  // ── INVOICES MODULE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "get_invoices",
+      description: "Obtener lista de facturas, opcionalmente filtradas por proyecto o estado.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Filtrar por nombre de proyecto" },
+          project_id: { type: "string", description: "Filtrar por ID de proyecto" },
+          status_filter: {
+            type: "string",
+            description: "Filtrar por estado",
+            enum: ["Borrador", "Enviada", "Pagada", "Vencida", "Cancelada"],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_invoice",
+      description: "Crear una nueva factura para un proyecto. Se asigna numeración automática INV-001, INV-002, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          client_name: { type: "string", description: "Nombre del cliente" },
+          description: { type: "string", description: "Descripción o concepto general de la factura" },
+          items: {
+            type: "array",
+            description: "Items de la factura. Cada item debe tener description, quantity, unitPrice.",
+            items: {
+              type: "object",
+              properties: {
+                description: { type: "string", description: "Descripción del item" },
+                quantity: { type: "number", description: "Cantidad" },
+                unitPrice: { type: "number", description: "Precio unitario en COP" },
+              },
+              required: ["description", "quantity", "unitPrice"],
+            },
+          },
+          tax_percent: { type: "number", description: "Porcentaje de IVA (por defecto 19)" },
+          issue_date: { type: "string", description: "Fecha de emisión en YYYY-MM-DD" },
+          due_date: { type: "string", description: "Fecha de vencimiento en YYYY-MM-DD" },
+        },
+        required: ["project_name", "items"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_invoice_status",
+      description: "Cambiar el estado de una factura existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          invoice_id: { type: "string", description: "ID de la factura" },
+          invoice_number: { type: "string", description: "Número de factura (ej: INV-001). Opcional si se provee ID." },
+          new_status: {
+            type: "string",
+            description: "Nuevo estado",
+            enum: ["Borrador", "Enviada", "Pagada", "Vencida", "Cancelada"],
+          },
+        },
+        required: ["new_status"],
+      },
+    },
+  },
+
+  // ── TIME TRACKING MODULE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "get_time_entries",
+      description: "Obtener lista de registros de tiempo (time entries), opcionalmente filtrados por proyecto, usuario o fecha.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Filtrar por nombre de proyecto" },
+          project_id: { type: "string", description: "Filtrar por ID de proyecto" },
+          user_name: { type: "string", description: "Filtrar por nombre de usuario" },
+          date_from: { type: "string", description: "Fecha desde YYYY-MM-DD" },
+          date_to: { type: "string", description: "Fecha hasta YYYY-MM-DD" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_time_entry",
+      description: "Registrar una nueva entrada de tiempo de trabajo.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          phase_name: { type: "string", description: "Nombre de la fase de obra" },
+          description: { type: "string", description: "Descripción del trabajo realizado" },
+          hours: { type: "number", description: "Cantidad de horas trabajadas" },
+          date: { type: "string", description: "Fecha del trabajo en YYYY-MM-DD" },
+          billable: { type: "boolean", description: "Si es facturable (por defecto true)" },
+          rate: { type: "number", description: "Tarifa por hora en COP" },
+        },
+        required: ["hours"],
+      },
+    },
+  },
+
+  // ── SUBMITTALS CREATE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "create_submittal",
+      description: "Crear un nuevo submittal (entregable para revisión/aprobación). Numeración automática SUB-001, SUB-002, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Título del submittal" },
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          description: { type: "string", description: "Descripción del submittal" },
+          specification: { type: "string", description: "Especificación técnica referenciada" },
+          reviewer_name: { type: "string", description: "Nombre del revisor asignado" },
+          due_date: { type: "string", description: "Fecha límite en YYYY-MM-DD" },
+        },
+        required: ["title"],
+      },
+    },
+  },
+
+  // ── PUNCH ITEMS CREATE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "create_punch_item",
+      description: "Crear un nuevo item de punch list (verificación de obra).",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Título del item" },
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          description: { type: "string", description: "Descripción detallada" },
+          location: {
+            type: "string",
+            description: "Ubicación en la obra",
+            enum: ["Fachada", "Interior", "Estructura", "Instalaciones", "Acabados", "Terraza", "Zonas comunes", "Otro"],
+          },
+          priority: {
+            type: "string",
+            description: "Prioridad",
+            enum: ["Alta", "Media", "Baja"],
+          },
+          assigned_to_name: { type: "string", description: "Nombre de la persona asignada" },
+          due_date: { type: "string", description: "Fecha límite en YYYY-MM-DD" },
+        },
+        required: ["title"],
+      },
+    },
+  },
+
+  // ── COMPANIES MODULE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "get_companies",
+      description: "Obtener lista de empresas/compañías registradas en el sistema.",
+      parameters: {
+        type: "object",
+        properties: {
+          search: { type: "string", description: "Buscar por nombre o NIT" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_company",
+      description: "Registrar una nueva empresa/compañía en el sistema.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nombre de la empresa" },
+          legal_name: { type: "string", description: "Razón social" },
+          nit: { type: "string", description: "NIT de la empresa" },
+          email: { type: "string", description: "Correo de contacto" },
+          phone: { type: "string", description: "Teléfono de contacto" },
+          address: { type: "string", description: "Dirección" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+
+  // ── DAILY LOGS MODULE ──
+  {
+    type: "function" as const,
+    function: {
+      name: "get_daily_logs",
+      description: "Obtener bitácoras de obra (daily logs) de un proyecto. Registros diarios de actividades, clima y personal.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          date_from: { type: "string", description: "Fecha desde YYYY-MM-DD" },
+          date_to: { type: "string", description: "Fecha hasta YYYY-MM-DD" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_daily_log",
+      description: "Crear una nueva bitácora de obra (daily log) para un proyecto. Registro diario de lo ocurrido en la obra.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          date: { type: "string", description: "Fecha del registro en YYYY-MM-DD" },
+          weather: { type: "string", description: "Condición climática (ej: Soleado, Lluvioso, Nublado)" },
+          activities: {
+            type: "array",
+            description: "Lista de actividades realizadas",
+            items: { type: "string" },
+          },
+          labor_count: { type: "number", description: "Número de trabajadores en obra" },
+          supervisor: { type: "string", description: "Nombre del supervisor a cargo" },
+          notes: { type: "string", description: "Notas adicionales u observaciones" },
+        },
+        required: ["project_name", "date"],
+      },
+    },
+  },
+
+  // ── PROJECT UPDATES ──
+  {
+    type: "function" as const,
+    function: {
+      name: "update_project_status",
+      description: "Cambiar el estado de un proyecto existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          new_status: {
+            type: "string",
+            description: "Nuevo estado del proyecto",
+            enum: ["Concepto", "Diseño", "Ejecución", "Entregado", "Pausado"],
+          },
+        },
+        required: ["new_status"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_project_progress",
+      description: "Actualizar el porcentaje de progreso de un proyecto.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nombre del proyecto" },
+          project_id: { type: "string", description: "ID del proyecto" },
+          progress: { type: "number", description: "Nuevo porcentaje de progreso (0-100)" },
+        },
+        required: ["progress"],
+      },
+    },
+  },
+
+  // ── DELETE OPERATIONS ──
+  {
+    type: "function" as const,
+    function: {
+      name: "delete_task",
+      description: "Eliminar una tarea existente. Esta acción no se puede deshacer.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_title: { type: "string", description: "Título de la tarea (búsqueda parcial)" },
+          task_id: { type: "string", description: "ID de la tarea (si se conoce)" },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ─── SYSTEM PROMPT ───────────────────────────────────────────────────
@@ -393,11 +779,19 @@ const SYSTEM_PROMPT = `Eres ArchiFlow AI Agent, un asistente inteligente SUPERIO
 
 CAPACIDADES:
 - CREAR y EDITAR tareas, proyectos, gastos, proveedores, reuniones, RFIs
-- CONSULTAR datos de proyectos, equipo, presupuestos, inventario, RFIs, Submittals, Punch List
+- CREAR y GESTIONAR inventario (productos, movimientos, transferencias de bodega)
+- CREAR y CONSULTAR facturas con numeración automática (INV-001)
+- REGISTRAR tiempos de trabajo (time tracking)
+- CREAR submittals y punch items
+- GESTIONAR empresas y compañías
+- REGISTRAR bitácoras de obra (daily logs)
+- ACTUALIZAR estados de proyectos y facturas
+- CONSULTAR datos de proyectos, equipo, presupuestos, inventario, RFIs, Submittals, Punch List, Facturas, Tiempos
 - ANALIZAR presupuestos y dar recomendaciones
 - PLANIFICAR cronogramas y fases de obra
 - OPTIMIZAR recursos y dar consejos profesionales
 - ANALIZAR imágenes de planos, obras, materiales, cotizaciones y documentos
+- ELIMINAR tareas (con confirmación)
 
 REGLAS IMPORTANTES:
 1. Siempre respondes en ESPAÑOL
@@ -1008,6 +1402,640 @@ async function executeToolCall(
         if (allPunch.length === 0) return "No se encontraron items de punch list con esos filtros.";
         const lines = allPunch.map((p: any) => `- **${p.data.title}**: ${p.data.status} | ${p.data.priority || "Media"} | ${p.data.location || "Otro"}${p.data.dueDate ? ` | Vence: ${p.data.dueDate}` : ""}`);
         return `Items de Punch List (${allPunch.length}):\n${lines.join("\n")}`;
+      }
+
+      // ── INVENTORY OPERATIONS ──
+      case "get_inventory_products": {
+        const invSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allProducts = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.category) {
+          allProducts = allProducts.filter((p: any) => p.data.category === args.category);
+        }
+        if (args.warehouse) {
+          allProducts = allProducts.filter((p: any) => p.data.warehouse === args.warehouse);
+        }
+        if (args.search) {
+          const searchLower = args.search.toLowerCase();
+          allProducts = allProducts.filter((p: any) =>
+            p.data.name?.toLowerCase().includes(searchLower) ||
+            p.data.sku?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        if (allProducts.length === 0) return "No se encontraron productos en el inventario.";
+
+        const lines = allProducts.map(
+          (p: any) =>
+            `- **${p.data.name}**: SKU: ${p.data.sku || "N/A"} | ${p.data.unit || "und"} | Precio: ${formatCOP(p.data.price || 0)} | Stock: ${p.data.stock || 0}${p.data.minStock ? ` (Mín: ${p.data.minStock})` : ""} | Bodega: ${p.data.warehouse || "N/A"} [ID: ${p.id}]`
+        );
+        return `Productos del inventario (${allProducts.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_inventory_product": {
+        const docRef = await db.collection("invProducts").add({
+          name: args.name,
+          sku: args.sku || "",
+          category: args.category || "",
+          unit: args.unit || "unidades",
+          price: args.price || 0,
+          stock: args.stock || 0,
+          minStock: args.min_stock || 0,
+          warehouse: args.warehouse || "",
+          warehouseStock: args.warehouse ? { [args.warehouse]: args.stock || 0 } : {},
+          imageData: "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "inventory_product_created",
+          label: "Producto creado",
+          icon: "📦",
+          details: args.name,
+          success: true,
+        });
+
+        return `Producto "${args.name}" creado exitosamente en el inventario [ID: ${docRef.id}]. SKU: ${args.sku || "N/A"}, Categoría: ${args.category || "N/A"}, Precio: ${formatCOP(args.price || 0)}, Stock inicial: ${args.stock || 0} ${args.unit || "unidades"}`;
+      }
+
+      case "get_inventory_movements": {
+        const movSnap = await db.collection("invMovements").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allMovements = movSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.product_id) {
+          allMovements = allMovements.filter((m: any) => m.data.productId === args.product_id);
+        }
+        if (args.warehouse) {
+          allMovements = allMovements.filter((m: any) => m.data.warehouse === args.warehouse);
+        }
+        if (args.movement_type) {
+          allMovements = allMovements.filter((m: any) => m.data.type === args.movement_type);
+        }
+
+        if (allMovements.length === 0) return "No se encontraron movimientos de inventario.";
+
+        const lines = allMovements.map(
+          (m: any) =>
+            `- **${m.data.type === "Entrada" ? "📥" : "📤"} ${m.data.type}**: ${m.data.quantity} und${m.data.reason ? ` | Motivo: ${m.data.reason}` : ""}${m.data.reference ? ` | Ref: ${m.data.reference}` : ""} | Bodega: ${m.data.warehouse || "N/A"} | Fecha: ${m.data.date || "N/A"} [ID: ${m.id}]`
+        );
+        return `Movimientos de inventario (${allMovements.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_inventory_movement": {
+        let productId = args.product_id;
+        if (!productId && args.product_name) {
+          const prodSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).limit(50).get();
+          const products = prodSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const searchLower = args.product_name.toLowerCase();
+          const found = products.find((p: any) => p.data.name?.toLowerCase() === searchLower || p.data.name?.toLowerCase().includes(searchLower));
+          if (found) productId = found.id;
+          else return `No encontré el producto "${args.product_name}" en el inventario.`;
+        }
+        if (!productId) {
+          return "Debes proporcionar el ID del producto o el nombre del producto para registrar el movimiento.";
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+        const docRef = await db.collection("invMovements").add({
+          productId,
+          type: args.type || "Entrada",
+          quantity: args.quantity || 0,
+          reason: args.reason || "",
+          reference: args.reference || "",
+          date: today,
+          warehouse: args.warehouse || "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        // Update product stock
+        const productDoc = await db.collection("invProducts").doc(productId).get();
+        if (productDoc.exists) {
+          const currentStock = productDoc.data()?.stock || 0;
+          const newStock = args.type === "Entrada" ? currentStock + (args.quantity || 0) : Math.max(0, currentStock - (args.quantity || 0));
+          await db.collection("invProducts").doc(productId).update({ stock: newStock });
+        }
+
+        actions.push({
+          type: "inventory_movement_created",
+          label: `${args.type === "Entrada" ? "📥 Entrada" : "📤 Salida"} registrada`,
+          icon: args.type === "Entrada" ? "📥" : "📤",
+          details: `${args.quantity} unidades`,
+          success: true,
+        });
+
+        return `${args.type === "Entrada" ? "📥 Entrada" : "📤 Salida"} de ${args.quantity} unidades registrada exitosamente [ID: ${docRef.id}].${args.reason ? ` Motivo: ${args.reason}` : ""}${args.reference ? ` | Ref: ${args.reference}` : ""}`;
+      }
+
+      // ── INVOICES OPERATIONS ──
+      case "get_invoices": {
+        const invSnap = await db.collection("invoices").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allInvoices = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.project_id) {
+          allInvoices = allInvoices.filter((i: any) => i.data.projectId === args.project_id);
+        } else if (args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) allInvoices = allInvoices.filter((i: any) => i.data.projectId === proj.id);
+        }
+        if (args.status_filter) {
+          allInvoices = allInvoices.filter((i: any) => i.data.status === args.status_filter);
+        }
+
+        if (allInvoices.length === 0) return "No se encontraron facturas con esos filtros.";
+
+        const lines = allInvoices.map(
+          (i: any) =>
+            `- **${i.data.number || "Sin número"}**: ${i.data.projectName || "N/A"} | Cliente: ${i.data.clientName || "N/A"} | Total: ${formatCOP(i.data.total || 0)} | Estado: ${i.data.status || "Borrador"} | Emisión: ${i.data.issueDate || "N/A"} [ID: ${i.id}]`
+        );
+        return `Facturas encontradas (${allInvoices.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_invoice": {
+        let projectId = args.project_id;
+        let projectName = args.project_name || "";
+        let clientName = args.client_name || "";
+
+        if (!projectId && projectName) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, projectName);
+          if (proj) {
+            projectId = proj.id;
+            if (!clientName) clientName = proj.data.client || "";
+          }
+        }
+
+        const items = (args.items || []).map((item: any) => ({
+          description: item.description || "",
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0,
+          total: (item.quantity || 1) * (item.unitPrice || 0),
+        }));
+        const subtotal = items.reduce((sum: number, item: any) => sum + item.total, 0);
+        const taxPercent = args.tax_percent ?? 19;
+        const tax = Math.round(subtotal * (taxPercent / 100));
+        const total = subtotal + tax;
+
+        const countSnap = await db.collection("invoices").where("tenantId", "==", tenantId).get();
+        const number = `INV-${String(countSnap.size + 1).padStart(3, "0")}`;
+
+        const docRef = await db.collection("invoices").add({
+          number,
+          projectId: projectId || "",
+          projectName,
+          clientName,
+          description: args.description || "",
+          items,
+          subtotal,
+          tax,
+          taxPercent,
+          total,
+          status: "Borrador",
+          issueDate: args.issue_date || new Date().toISOString().split("T")[0],
+          dueDate: args.due_date || "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "invoice_created",
+          label: "Factura creada",
+          icon: "🧾",
+          details: `${number}: ${formatCOP(total)}`,
+          success: true,
+        });
+
+        return `Factura "${number}" creada exitosamente [ID: ${docRef.id}]. Proyecto: ${projectName || "N/A"}, Cliente: ${clientName || "N/A"}, Subtotal: ${formatCOP(subtotal)}, IVA (${taxPercent}%): ${formatCOP(tax)}, Total: ${formatCOP(total)}`;
+      }
+
+      case "update_invoice_status": {
+        let invoice: any = null;
+        if (args.invoice_id) {
+          const doc = await db.collection("invoices").doc(args.invoice_id).get();
+          if (doc.exists) invoice = { id: doc.id, data: doc.data() };
+        } else if (args.invoice_number) {
+          const invSnap = await db.collection("invoices").where("tenantId", "==", tenantId).limit(50).get();
+          const allInvoices = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          invoice = allInvoices.find((i: any) => i.data.number === args.invoice_number);
+        }
+
+        if (!invoice) {
+          const error = `No encontré la factura "${args.invoice_number || args.invoice_id}".`;
+          actions.push({ type: "invoice_update_failed", label: "Error al actualizar factura", icon: "❌", details: error, success: false, error });
+          return error;
+        }
+
+        await db.collection("invoices").doc(invoice.id).update({
+          status: args.new_status,
+          updatedAt: ts,
+        });
+
+        actions.push({
+          type: "invoice_updated",
+          label: "Factura actualizada",
+          icon: "🔄",
+          details: `${invoice.data.number || invoice.id} → ${args.new_status}`,
+          success: true,
+        });
+
+        return `Factura "${invoice.data.number || invoice.id}" actualizada a estado "${args.new_status}" exitosamente.`;
+      }
+
+      // ── TIME TRACKING OPERATIONS ──
+      case "get_time_entries": {
+        const teSnap = await db.collection("timeEntries").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allEntries = teSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.project_id) {
+          allEntries = allEntries.filter((e: any) => e.data.projectId === args.project_id);
+        } else if (args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) allEntries = allEntries.filter((e: any) => e.data.projectId === proj.id);
+        }
+
+        if (args.user_name) {
+          const searchLower = args.user_name.toLowerCase();
+          allEntries = allEntries.filter((e: any) => e.data.userName?.toLowerCase().includes(searchLower));
+        }
+        if (args.date_from) {
+          allEntries = allEntries.filter((e: any) => e.data.date >= args.date_from);
+        }
+        if (args.date_to) {
+          allEntries = allEntries.filter((e: any) => e.data.date <= args.date_to);
+        }
+
+        if (allEntries.length === 0) return "No se encontraron registros de tiempo.";
+
+        const totalHours = allEntries.reduce((sum: number, e: any) => sum + (e.data.hours || 0), 0);
+        const lines = allEntries.map(
+          (e: any) =>
+            `- **${e.data.description || "Sin descripción"}**: ${e.data.hours || 0}h | Usuario: ${e.data.userName || "N/A"} | Fase: ${e.data.phaseName || "N/A"} | ${e.data.billable ? "💰 Facturable" : "📝 No facturable"} | Fecha: ${e.data.date || "N/A"} [ID: ${e.id}]`
+        );
+        return `Registros de tiempo (${allEntries.length}), Total: ${totalHours}h:\n${lines.join("\n")}`;
+      }
+
+      case "create_time_entry": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+        }
+
+        // Get user name
+        const userDoc = await db.collection("users").doc(userUid).get();
+        const userName = userDoc.exists ? (userDoc.data()?.name || "") : "";
+
+        const docRef = await db.collection("timeEntries").add({
+          userId: userUid,
+          userName,
+          projectId: projectId || "",
+          phaseName: args.phase_name || "",
+          description: args.description || "",
+          hours: args.hours || 0,
+          startTime: "",
+          endTime: "",
+          duration: "",
+          billable: args.billable !== false,
+          rate: args.rate || 0,
+          date: args.date || new Date().toISOString().split("T")[0],
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        const totalAmount = (args.hours || 0) * (args.rate || 0);
+        actions.push({
+          type: "time_entry_created",
+          label: "Tiempo registrado",
+          icon: "⏱️",
+          details: `${args.hours || 0}h ${args.description ? `— ${args.description}` : ""}`,
+          success: true,
+        });
+
+        return `Registro de tiempo creado exitosamente [ID: ${docRef.id}]. Horas: ${args.hours || 0}, Proyecto: ${projectId || "N/A"}${args.description ? `, Descripción: ${args.description}` : ""}${totalAmount > 0 ? `, Valor: ${formatCOP(totalAmount)}` : ""}, Facturable: ${args.billable !== false ? "Sí" : "No"}`;
+      }
+
+      // ── SUBMITTAL CREATE ──
+      case "create_submittal": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+        }
+
+        let reviewerId: string | undefined;
+        if (args.reviewer_name) {
+          const usersSnap = await db.collection("users").limit(50).get();
+          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const lower = args.reviewer_name.toLowerCase();
+          const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
+          if (found) reviewerId = found.id;
+        }
+
+        const countSnap = await db.collection("submittals").where("tenantId", "==", tenantId).get();
+        const number = `SUB-${String(countSnap.size + 1).padStart(3, "0")}`;
+
+        const docRef = await db.collection("submittals").add({
+          number,
+          title: args.title,
+          projectId: projectId || "",
+          description: args.description || "",
+          specification: args.specification || "",
+          status: "Borrador",
+          reviewer: reviewerId || "",
+          submittedBy: userUid,
+          dueDate: args.due_date || "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "submittal_created",
+          label: "Submittal creado",
+          icon: "📋",
+          details: `${number}: ${args.title}`,
+          success: true,
+        });
+
+        return `Submittal "${number}" creado exitosamente [ID: ${docRef.id}]. Título: ${args.title}${args.specification ? `, Spec: ${args.specification}` : ""}, Proyecto: ${projectId || "Sin asignar"}${args.reviewer_name ? `, Revisor: ${args.reviewer_name}` : ""}`;
+      }
+
+      // ── PUNCH ITEM CREATE ──
+      case "create_punch_item": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+        }
+
+        let assignedToId: string | undefined;
+        if (args.assigned_to_name) {
+          const usersSnap = await db.collection("users").limit(50).get();
+          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const lower = args.assigned_to_name.toLowerCase();
+          const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
+          if (found) assignedToId = found.id;
+        }
+
+        const docRef = await db.collection("punchItems").add({
+          title: args.title,
+          projectId: projectId || "",
+          description: args.description || "",
+          location: args.location || "Otro",
+          status: "Pendiente",
+          priority: args.priority || "Media",
+          assignedTo: assignedToId || "",
+          dueDate: args.due_date || "",
+          photos: [],
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "punch_item_created",
+          label: "Punch item creado",
+          icon: "🔧",
+          details: args.title,
+          success: true,
+        });
+
+        return `Item de Punch List "${args.title}" creado exitosamente [ID: ${docRef.id}]. Ubicación: ${args.location || "Otro"}, Prioridad: ${args.priority || "Media"}, Proyecto: ${projectId || "Sin asignar"}`;
+      }
+
+      // ── COMPANIES OPERATIONS ──
+      case "get_companies": {
+        const compSnap = await db.collection("companies").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
+        let allCompanies = compSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.search) {
+          const searchLower = args.search.toLowerCase();
+          allCompanies = allCompanies.filter((c: any) =>
+            c.data.name?.toLowerCase().includes(searchLower) ||
+            c.data.nit?.toLowerCase().includes(searchLower) ||
+            c.data.legalName?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        if (allCompanies.length === 0) return "No se encontraron empresas.";
+
+        const lines = allCompanies.map(
+          (c: any) =>
+            `- **${c.data.name}**: NIT: ${c.data.nit || "N/A"} | Razón social: ${c.data.legalName || "N/A"} | ${c.data.email || "Sin email"} | ${c.data.phone || "Sin teléfono"} | ${c.data.address || "Sin dirección"} [ID: ${c.id}]`
+        );
+        return `Empresas encontradas (${allCompanies.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_company": {
+        const docRef = await db.collection("companies").add({
+          name: args.name,
+          nit: args.nit || "",
+          address: args.address || "",
+          phone: args.phone || "",
+          email: args.email || "",
+          legalName: args.legal_name || "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "company_created",
+          label: "Empresa registrada",
+          icon: "🏢",
+          details: args.name,
+          success: true,
+        });
+
+        return `Empresa "${args.name}" registrada exitosamente [ID: ${docRef.id}]. NIT: ${args.nit || "N/A"}, Razón social: ${args.legal_name || args.name}, Email: ${args.email || "N/A"}, Teléfono: ${args.phone || "N/A"}`;
+      }
+
+      // ── DAILY LOGS OPERATIONS ──
+      case "get_daily_logs": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+          else return `No encontré el proyecto "${args.project_name}".`;
+        }
+        if (!projectId) {
+          return "Debes especificar un proyecto para consultar las bitácoras de obra.";
+        }
+
+        const dlSnap = await db.collection("projects").doc(projectId).collection("dailyLogs").orderBy("date", "desc").limit(30).get();
+        let allLogs = dlSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        if (args.date_from) {
+          allLogs = allLogs.filter((l: any) => l.data.date >= args.date_from);
+        }
+        if (args.date_to) {
+          allLogs = allLogs.filter((l: any) => l.data.date <= args.date_to);
+        }
+
+        if (allLogs.length === 0) return "No se encontraron bitácoras de obra para ese proyecto.";
+
+        const lines = allLogs.map(
+          (l: any) =>
+            `- **${l.data.date || "Sin fecha"}**: ${l.data.weather || "N/A"} | Personal: ${l.data.laborCount || 0} | Supervisor: ${l.data.supervisor || "N/A"} | Actividades: ${(l.data.activities || []).join(", ") || "N/A"} [ID: ${l.id}]`
+        );
+        return `Bitácoras de obra (${allLogs.length}):\n${lines.join("\n")}`;
+      }
+
+      case "create_daily_log": {
+        let projectId = args.project_id;
+        if (!projectId && args.project_name) {
+          const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+          const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const proj = findProjectByName(projects, args.project_name);
+          if (proj) projectId = proj.id;
+          else return `No encontré el proyecto "${args.project_name}".`;
+        }
+        if (!projectId) {
+          return "Debes especificar un proyecto para crear la bitácora de obra.";
+        }
+
+        const docRef = await db.collection("projects").doc(projectId).collection("dailyLogs").add({
+          projectId,
+          date: args.date || new Date().toISOString().split("T")[0],
+          weather: args.weather || "",
+          activities: args.activities || [],
+          laborCount: args.labor_count || 0,
+          photos: [],
+          supervisor: args.supervisor || "",
+          notes: args.notes || "",
+          tenantId,
+          createdAt: ts,
+          createdBy: userUid,
+        });
+
+        actions.push({
+          type: "daily_log_created",
+          label: "Bitácora de obra creada",
+          icon: "📓",
+          details: `Fecha: ${args.date || "Hoy"}${args.weather ? ` | Clima: ${args.weather}` : ""}`,
+          success: true,
+        });
+
+        return `Bitácora de obra creada exitosamente [ID: ${docRef.id}]. Fecha: ${args.date || "Hoy"}, Clima: ${args.weather || "N/A"}, Personal: ${args.labor_count || 0}${args.activities?.length ? `, Actividades: ${args.activities.join(", ")}` : ""}${args.supervisor ? `, Supervisor: ${args.supervisor}` : ""}`;
+      }
+
+      // ── PROJECT UPDATE OPERATIONS ──
+      case "update_project_status": {
+        const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+        const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        const project = args.project_id
+          ? projects.find((p: any) => p.id === args.project_id)
+          : args.project_name
+          ? findProjectByName(projects, args.project_name)
+          : null;
+
+        if (!project) {
+          const error = args.project_name
+            ? `No encontré el proyecto "${args.project_name}".`
+            : "No se especificó ningún proyecto.";
+          actions.push({ type: "project_update_failed", label: "Error al actualizar proyecto", icon: "❌", details: error, success: false, error });
+          return error;
+        }
+
+        const oldStatus = project.data.status;
+        await db.collection("projects").doc(project.id).update({
+          status: args.new_status,
+          updatedAt: ts,
+        });
+
+        actions.push({
+          type: "project_status_updated",
+          label: "Estado de proyecto actualizado",
+          icon: "🔄",
+          details: `${project.data.name}: ${oldStatus} → ${args.new_status}`,
+          success: true,
+        });
+
+        return `Proyecto "${project.data.name}" actualizado de "${oldStatus}" a "${args.new_status}" exitosamente.`;
+      }
+
+      case "update_project_progress": {
+        const projSnap = await db.collection("projects").where("tenantId", "==", tenantId).limit(20).get();
+        const projects = projSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        const project = args.project_id
+          ? projects.find((p: any) => p.id === args.project_id)
+          : args.project_name
+          ? findProjectByName(projects, args.project_name)
+          : null;
+
+        if (!project) {
+          const error = args.project_name
+            ? `No encontré el proyecto "${args.project_name}".`
+            : "No se especificó ningún proyecto.";
+          actions.push({ type: "project_update_failed", label: "Error al actualizar proyecto", icon: "❌", details: error, success: false, error });
+          return error;
+        }
+
+        const clampedProgress = Math.min(100, Math.max(0, args.progress || 0));
+        const oldProgress = project.data.progress || 0;
+        await db.collection("projects").doc(project.id).update({
+          progress: clampedProgress,
+          updatedAt: ts,
+        });
+
+        actions.push({
+          type: "project_progress_updated",
+          label: "Progreso actualizado",
+          icon: "📊",
+          details: `${project.data.name}: ${oldProgress}% → ${clampedProgress}%`,
+          success: true,
+        });
+
+        return `Progreso del proyecto "${project.data.name}" actualizado de ${oldProgress}% a ${clampedProgress}%.`;
+      }
+
+      // ── DELETE OPERATIONS ──
+      case "delete_task": {
+        const tasksSnap = await db.collection("tasks").where("tenantId", "==", tenantId).limit(100).get();
+        const allTasks = tasksSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+
+        let task: any = null;
+        if (args.task_id) {
+          task = allTasks.find((t: any) => t.id === args.task_id);
+        } else if (args.task_title) {
+          task = findTaskByTitle(allTasks, args.task_title);
+        }
+
+        if (!task) {
+          const error = `No encontré la tarea "${args.task_title || args.task_id}".`;
+          actions.push({ type: "task_delete_failed", label: "Error al eliminar tarea", icon: "❌", details: error, success: false, error });
+          return error;
+        }
+
+        await db.collection("tasks").doc(task.id).delete();
+
+        actions.push({
+          type: "task_deleted",
+          label: "Tarea eliminada",
+          icon: "🗑️",
+          details: `"${task.data.title}" eliminada permanentemente`,
+          success: true,
+        });
+
+        return `Tarea "${task.data.title}" eliminada exitosamente.`;
       }
 
       default:
