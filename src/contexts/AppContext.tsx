@@ -983,15 +983,23 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => { unsub(); setMessages([]); };
   }, [ready, chatProjectId, chatDmUser, authUser, activeTenantId]);
 
-  // Load work phases
+  // Load work phases via Admin SDK (bypass security rules)
   useEffect(() => {
-    if (!ready || !selectedProjectId) return;
-    const db = getFirebase().firestore();
-    const unsub = db.collection('projects').doc(selectedProjectId).collection('workPhases').orderBy('order', 'asc').onSnapshot(snap => {
-      setWorkPhases(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
-    return () => { unsub(); setWorkPhases([]); };
-  }, [ready, selectedProjectId]);
+    if (!ready || !selectedProjectId || !activeTenantId) { setWorkPhases([]); return; }
+    let cancelled = false;
+    const loadPhases = async () => {
+      try {
+        const res = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`);
+        if (!res.ok) { setWorkPhases([]); return; }
+        const data = await res.json();
+        if (!cancelled) setWorkPhases(data.phases || []);
+      } catch (e) { if (!cancelled) setWorkPhases([]); }
+    };
+    loadPhases();
+    // Poll every 5s to keep data fresh
+    const interval = setInterval(loadPhases, 5000);
+    return () => { cancelled = true; clearInterval(interval); setWorkPhases([]); };
+  }, [ready, selectedProjectId, activeTenantId]);
 
   // Load project files
   useEffect(() => {
@@ -2714,6 +2722,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
       showToast('✅ Fases inicializadas (Diseño + Ejecución)');
+      // Immediately reload phases via API
+      const reloadRes = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`);
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setWorkPhases(reloadData.phases || []);
+      }
     } catch (err: any) { console.error('[ArchiFlow] initDefaultPhases error:', err); showToast('Error al inicializar fases: ' + (err.message || ''), 'error'); }
   };
 
