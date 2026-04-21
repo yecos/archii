@@ -1,4 +1,4 @@
-const CACHE_NAME = 'archiflow-v5';
+const CACHE_NAME = 'archiflow-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -45,6 +45,7 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
     url.hostname.includes('google.com') ||
+    url.hostname.includes('googleusercontent.com') ||
     url.hostname.includes('microsoft.com') ||
     url.hostname.includes('firebaseapp.com') ||
     url.hostname.includes('live.com') ||
