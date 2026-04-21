@@ -26,6 +26,7 @@ export default function ProjectDetailScreen() {
     setOneDriveFiles, setShowOneDrive, showOneDrive, timeAgo, toggleTask,
     updateApproval, updatePhaseStatus, updateProjectProgress, uploadFile, workPhases,
     doTogglePhaseEnabled,
+    initPhasesByType, isMigratingPhases,
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
     rfis, submittals, punchItems, changeTaskStatus, showToast,
@@ -687,7 +688,12 @@ export default function ProjectDetailScreen() {
                   <button className={`px-3 py-1.5 rounded-md text-[12px] cursor-pointer transition-all ${forms.workView === 'bitacora' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, workView: 'bitacora' }))}>📝 Bitácora</button>
                 </div>
                 <div className="flex gap-2">
-                  {forms.workView !== 'bitacora' && workPhases.length === 0 && <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={initDefaultPhases}>Inicializar fases</button>}
+                  {forms.workView !== 'bitacora' && workPhases.length === 0 && (
+                    <>
+                      <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={initDefaultPhases}>Inicializar fases</button>
+                      <button className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-emerald-700 transition-colors" onClick={() => initPhasesByType('Ambos')} disabled={isMigratingPhases}>{isMigratingPhases ? '⏳ Migrando...' : '🔄 Inicializar Ambas (Diseño + Ejecución)'}</button>
+                    </>
+                  )}
                 </div>
               </div>
 

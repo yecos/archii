@@ -2739,89 +2739,59 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [isMigratingPhases, setIsMigratingPhases] = useState(false);
 
   const migrateAllProjectPhases = useCallback(async () => {
-    // Solo ejecutar una vez (verificado por localStorage)
-    const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
-    if (typeof window !== 'undefined' && localStorage.getItem(migrationKey)) {
-      console.log('[ArchiFlow] Migración de fases ya ejecutada para este tenant');
+    if (!ready || !authUser || !activeTenantId) {
+      showToast('No hay sesión activa o tenant seleccionado', 'error');
       return;
     }
-    if (!ready || !authUser || !activeTenantId || projects.length === 0) return;
-
     setIsMigratingPhases(true);
-    console.log('[ArchiFlow] Iniciando migración de fases para', projects.length, 'proyectos...');
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    let migrated = 0;
-    let skipped = 0;
-
     try {
-      for (const proj of projects) {
-        try {
-          // Check if phases already exist in new format
-          const phasesSnap = await db.collection('projects').doc(proj.id).collection('workPhases').get();
-          
-          // Check if any phase has the new format (phaseKey field)
-          const hasNewFormat = phasesSnap.docs.some((d: any) => d.data().phaseKey);
-          
-          if (hasNewFormat) {
-            skipped++;
-            // Ensure projectType is set even if phases exist
-            if (!proj.data.projectType) {
-              await db.collection('projects').doc(proj.id).update({ projectType: 'Ambos' });
-            }
-            continue;
-          }
-
-          // Delete old phases if they exist
-          if (phasesSnap.size > 0) {
-            const batch = db.batch();
-            phasesSnap.docs.forEach((doc: any) => batch.delete(doc.ref));
-            await batch.commit();
-          }
-
-          // Initialize with "Ambos" type (all phases enabled)
-          await fbActions.initPhasesForProject(db, proj.id, 'Ambos', [], ts, activeTenantId);
-          
-          // Update project doc with projectType
-          await db.collection('projects').doc(proj.id).update({ projectType: 'Ambos' });
-          
-          migrated++;
-          console.log(`[ArchiFlow] Fases migradas para: ${proj.data.name}`);
-        } catch (projErr) {
-          console.error(`[ArchiFlow] Error migrando proyecto ${proj.data.name}:`, projErr);
-        }
+      const res = await fetch('/api/migrate-phases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: activeTenantId, uid: authUser.uid }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error en migración');
+      if (data.migrated > 0) {
+        showToast(`✅ ${data.migrated} proyectos migrados con fases nuevas`);
+      } else {
+        showToast(`ℹ️ ${data.skipped} proyectos ya tenían fases (nada que migrar)`);
       }
-
-      // Mark migration as done
+      if (data.errors?.length > 0) {
+        console.error('[ArchiFlow] Errores en migración:', data.errors);
+      }
+      // Mark as done in localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem(migrationKey, new Date().toISOString());
+        localStorage.setItem(`archiflow_phases_migrated_${activeTenantId}`, new Date().toISOString());
       }
-      
-      if (migrated > 0) {
-        showToast(`✅ ${migrated} proyectos actualizados con fases nuevas`);
-      }
-      if (skipped > 0) {
-        console.log(`[ArchiFlow] ${skipped} proyectos ya tenían fases nuevas, omitidos`);
-      }
-    } catch (err) {
-      console.error('[ArchiFlow] Error en migración de fases:', err);
-      showToast('Error en migración de fases', 'error');
+    } catch (err: any) {
+      console.error('[ArchiFlow] migrateAllProjectPhases error:', err);
+      showToast('Error en migración: ' + (err.message || err), 'error');
     } finally {
       setIsMigratingPhases(false);
     }
-  }, [ready, authUser, activeTenantId, projects, showToast]);
+  }, [ready, authUser, activeTenantId, showToast]);
 
-  // Auto-run migration once when projects are loaded
+  // Auto-run migration once when projects load and none have phases
   useEffect(() => {
-    if (ready && authUser && activeTenantId && projects.length > 0 && !isMigratingPhases) {
-      const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
-      if (typeof window !== 'undefined' && !localStorage.getItem(migrationKey)) {
-        // Delay slightly to not block initial render
-        const timer = setTimeout(() => migrateAllProjectPhases(), 3000);
-        return () => clearTimeout(timer);
-      }
+    if (!ready || !authUser || !activeTenantId || projects.length === 0 || isMigratingPhases) return;
+    const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
+    if (typeof window !== 'undefined' && localStorage.getItem(migrationKey)) return;
+    // Check if any project has phases in new format
+    const hasPhases = projects.some((p: any) => p.data.projectType);
+    if (hasPhases) {
+      // Already migrated at least partially
+      localStorage.setItem(migrationKey, new Date().toISOString());
+      return;
     }
-  }, [ready, authUser, activeTenantId, projects.length, isMigratingPhases, migrateAllProjectPhases]);
+    // Auto-run after a delay
+    const timer = setTimeout(() => {
+      console.log('[ArchiFlow] Auto-migración de fases iniciada...');
+      migrateAllProjectPhases();
+    }, 2000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authUser, activeTenantId, projects.length]);
 
   const saveApproval = async () => {
     const title = forms.appTitle || '';
