@@ -2735,6 +2735,94 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error('[ArchiFlow] initPhasesByType error:', err); }
   };
 
+  /* ===== MIGRACIÓN: Inicializar fases en proyectos existentes ===== */
+  const [isMigratingPhases, setIsMigratingPhases] = useState(false);
+
+  const migrateAllProjectPhases = useCallback(async () => {
+    // Solo ejecutar una vez (verificado por localStorage)
+    const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
+    if (typeof window !== 'undefined' && localStorage.getItem(migrationKey)) {
+      console.log('[ArchiFlow] Migración de fases ya ejecutada para este tenant');
+      return;
+    }
+    if (!ready || !authUser || !activeTenantId || projects.length === 0) return;
+
+    setIsMigratingPhases(true);
+    console.log('[ArchiFlow] Iniciando migración de fases para', projects.length, 'proyectos...');
+    const db = getFirebase().firestore();
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    let migrated = 0;
+    let skipped = 0;
+
+    try {
+      for (const proj of projects) {
+        try {
+          // Check if phases already exist in new format
+          const phasesSnap = await db.collection('projects').doc(proj.id).collection('workPhases').get();
+          
+          // Check if any phase has the new format (phaseKey field)
+          const hasNewFormat = phasesSnap.docs.some((d: any) => d.data().phaseKey);
+          
+          if (hasNewFormat) {
+            skipped++;
+            // Ensure projectType is set even if phases exist
+            if (!proj.data.projectType) {
+              await db.collection('projects').doc(proj.id).update({ projectType: 'Ambos' });
+            }
+            continue;
+          }
+
+          // Delete old phases if they exist
+          if (phasesSnap.size > 0) {
+            const batch = db.batch();
+            phasesSnap.docs.forEach((doc: any) => batch.delete(doc.ref));
+            await batch.commit();
+          }
+
+          // Initialize with "Ambos" type (all phases enabled)
+          await fbActions.initPhasesForProject(db, proj.id, 'Ambos', [], ts, activeTenantId);
+          
+          // Update project doc with projectType
+          await db.collection('projects').doc(proj.id).update({ projectType: 'Ambos' });
+          
+          migrated++;
+          console.log(`[ArchiFlow] Fases migradas para: ${proj.data.name}`);
+        } catch (projErr) {
+          console.error(`[ArchiFlow] Error migrando proyecto ${proj.data.name}:`, projErr);
+        }
+      }
+
+      // Mark migration as done
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(migrationKey, new Date().toISOString());
+      }
+      
+      if (migrated > 0) {
+        showToast(`✅ ${migrated} proyectos actualizados con fases nuevas`);
+      }
+      if (skipped > 0) {
+        console.log(`[ArchiFlow] ${skipped} proyectos ya tenían fases nuevas, omitidos`);
+      }
+    } catch (err) {
+      console.error('[ArchiFlow] Error en migración de fases:', err);
+      showToast('Error en migración de fases', 'error');
+    } finally {
+      setIsMigratingPhases(false);
+    }
+  }, [ready, authUser, activeTenantId, projects, showToast]);
+
+  // Auto-run migration once when projects are loaded
+  useEffect(() => {
+    if (ready && authUser && activeTenantId && projects.length > 0 && !isMigratingPhases) {
+      const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
+      if (typeof window !== 'undefined' && !localStorage.getItem(migrationKey)) {
+        // Delay slightly to not block initial render
+        const timer = setTimeout(() => migrateAllProjectPhases(), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [ready, authUser, activeTenantId, projects.length, isMigratingPhases, migrateAllProjectPhases]);
+
   const saveApproval = async () => {
     const title = forms.appTitle || '';
     if (!title) { showToast('El título es obligatorio', 'error'); return; }
@@ -3885,6 +3973,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     saveRFI, openEditRFI,
     saveSubmittal, openEditSubmittal,
     savePunchItem, openEditPunchItem,
+    isMigratingPhases,
+    migrateAllProjectPhases,
   };
 
   return <AppContext.Provider value={ctx as any}>{children}</AppContext.Provider>;
