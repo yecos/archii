@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
+          // CRITICAL: Firebase Auth popups (Google, Microsoft) require COOP=unsafe-none
+          // Vercel defaults to same-origin which blocks window.open() in OAuth flows
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
           // Se mantiene permisos pero sin bloquear completamente (algunos flujos OAuth en móvil los necesitan)
           { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
           {

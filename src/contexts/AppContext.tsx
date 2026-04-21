@@ -1899,7 +1899,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   };
 
+  let _msLoginLock = false;
   const doMicrosoftLogin = async () => {
+    if (_msLoginLock) {
+      console.log('[ArchiFlow Auth] Microsoft login already in progress, ignoring duplicate click');
+      return;
+    }
+    _msLoginLock = true;
     try {
       console.log('[ArchiFlow Auth] Attempting Microsoft login...');
       const fb = getFirebase();
@@ -2066,6 +2072,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         'auth/credential-already-in-use': 'Microsoft ya está vinculado a otra cuenta.',
       };
       showToast(msgs[e.code] || `Microsoft: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Microsoft'}`, 'error');
+    } finally {
+      _msLoginLock = false;
     }
   };
 
