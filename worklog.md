@@ -502,3 +502,40 @@ Stage Summary:
   2. Crear tarea desde Tareas con proyecto+fase → aparece en Proyecto > Obra
   3. Editar tarea desde Tareas → puede asignar/cambiar fase
   4. Filtrar tareas por fase en el modulo de Tareas
+
+---
+Task ID: 5
+Agent: Super Z (Main)
+Task: Fix del Sistema de Notificaciones — evitar notificaciones falsas al abrir la app
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-fix-notif-system-20260424
+
+Work Log:
+- Leidos LEE_PRIMERO.txt, INSTRUCTIVO_BITACORA.txt y worklog.md completo
+- Leido AppContext.tsx (4319 lineas) y firestore-actions.ts (1038 lineas)
+- Identificado el problema: timeout ciego de 2s para armar notificaciones + comparacion O(n) con arrays + duplicados de notifyWhatsApp
+- Creado tag de respaldo: backup-pre-fix-notif-system-20260424
+- Reemplazado timeout de 2s por tracker de hidratacion por coleccion (10 colecciones)
+- Reemplazado 10 refs de arrays por Sets de IDs con lookup O(1)
+- Agregados 7 Maps de tracking de status para deteccion de cambios
+- Implementada coalescencia de notificaciones con ventana de 800ms (bufferedNotify)
+- Context-aware: no muestra toast si ya estas en la pantalla relevante (chat)
+- Eliminadas 4 llamadas directas a notifyWhatsApp (saveTask, saveExpense, saveApproval, updateApproval)
+- Eliminado import de notifyWhatsApp (ya no se usa directamente en AppContext)
+- Build verificado: 0 errores, todas las rutas compilan correctamente
+
+Stage Summary:
+- Archivo modificado: src/contexts/AppContext.tsx (291 insertions, 440 deletions, net -149 lineas)
+- Commit: ec83b86
+- Build: exitoso (0 errores)
+- Deploy: Vercel auto-deploy en curso a https://archii-theta.vercel.app
+- Tag: backup-pre-fix-notif-system-20260424
+
+Cambios implementados (6):
+1. First-load guard: tracker de hidratacion por coleccion + safety timeout de 5s
+2. Diff de datos: Sets de IDs con lookup O(1) en vez de comparacion O(n) de arrays
+3. Coalescencia: agrupa eventos rapidos del mismo tipo en ventana de 800ms
+4. Context-aware: no muestra toast si ya estas en la pantalla relevante
+5. Duplicados: eliminadas llamadas directas a notifyWhatsApp de CRUD functions
+6. markHydrated: cada onSnapshot marca su coleccion como hidratada
