@@ -2476,7 +2476,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const subtasks = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()).map((s: any) => ({ text: String(s.text || ''), done: Boolean(s.done) })) : [];
-    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', phaseId: forms.taskPhase || '', subtasks, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const isNew = (forms.taskStatus || 'Por hacer') === 'Completado' && !editingId;
+    const isCompleting = editingId && (forms.taskStatus || 'Por hacer') === 'Completado';
+    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', phaseId: forms.taskPhase || '', subtasks, estimatedHours: forms.taskEstimatedHours || null, tags: Array.isArray(forms.taskTags) && forms.taskTags.length > 0 ? forms.taskTags : null, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    if (isNew || isCompleting) raw.completedAt = ts;
     const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
@@ -2486,7 +2489,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Tarea creada');
         // Notification handled by the centralized detector in the useEffect above
       }
-      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
+      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [], taskTags: [], taskEstimatedHours: null }));
     } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
     finally { setIsSavingTask(false); }
   };
@@ -2494,7 +2497,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const openEditTask = (t: Task) => {
     setEditingId(t.id);
     const assignees: string[] = Array.isArray((t.data as any).assigneeIds) ? (t.data as any).assigneeIds : ((t.data as any).assigneeId ? [(t.data as any).assigneeId] : []);
-    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: t.data.projectId || '', taskPhase: (t.data as any).phaseId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [] }));
+    setForms((f: any) => ({ ...f, taskTitle: t.data.title, taskDescription: (t.data as any).description || '', taskProject: t.data.projectId || '', taskPhase: (t.data as any).phaseId || '', taskAssignees: assignees, taskAssignee: t.data.assigneeId || '', taskPriority: t.data.priority || 'Media', taskStatus: t.data.status || 'Por hacer', taskDue: t.data.dueDate || '', taskSubtasks: Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [], taskTags: Array.isArray((t.data as any).tags) ? (t.data as any).tags : [], taskEstimatedHours: (t.data as any).estimatedHours || null }));
     openModal('task');
   };
 

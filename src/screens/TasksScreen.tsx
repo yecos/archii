@@ -3,10 +3,14 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown, Layers } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown, Layers, FileText, BarChart3, CheckCircle2, AlertTriangle, Clock, TrendingUp, Users, Tag, Target } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
+import { exportTasksPDF } from '@/lib/export-pdf';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const KANBAN_COLS = [
   { status: 'Por hacer', color: 'bg-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-400/30', dot: 'bg-slate-400' },
@@ -14,6 +18,35 @@ const KANBAN_COLS = [
   { status: 'Revision', color: 'bg-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' },
   { status: 'Completado', color: 'bg-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
 ];
+
+const STATUS_CHART_COLORS: Record<string, string> = {
+  'Por hacer': '#94a3b8',
+  'En progreso': '#3b82f6',
+  'Revision': '#f59e0b',
+  'Completado': '#10b981',
+};
+
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function ChartTooltipContent({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+      <div className="font-semibold">{payload[0].name || payload[0].dataKey}</div>
+      <div className="text-[var(--af-accent)]">{payload[0].value}</div>
+    </div>
+  );
+}
+
+function StatusPieTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
+      <div className="font-semibold">{payload[0].name}</div>
+      <div className="text-[var(--af-accent)]">{payload[0].value} tareas</div>
+    </div>
+  );
+}
 
 function getAssigneeIds(t: any): string[] {
   if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
@@ -63,8 +96,10 @@ export default function TasksScreen() {
     changeTaskStatus, deleteTask, forms, getUserName, loading,
     openEditTask, openModal, projects, setForms, tasks,
     timeEntries, showToast, teamUsers, toggleTask,
-    getPhaseName, loadPhasesForProject, projectPhasesCache,
+    getPhaseName, loadPhasesForProject, projectPhasesCache, authUser,
   } = useApp() as any;
+
+  const confirmDialog = useConfirmDialog();
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -74,6 +109,8 @@ export default function TasksScreen() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterPhase, setFilterPhase] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
 
   // Pick up incoming status/assignee filter set by navigation (e.g. from ProfileScreen)
   React.useEffect(() => {
@@ -87,12 +124,12 @@ export default function TasksScreen() {
   const taskFilterProject = forms.taskFilterProject || '';
 
   const handleNewTask = () => {
-    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer' }));
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer', taskTags: [], taskEstimatedHours: null }));
     openModal('task');
   };
 
   const handleNewTaskInColumn = (status: string) => {
-    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: taskFilterProject }));
+    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: taskFilterProject, taskTags: [], taskEstimatedHours: null }));
     openModal('task');
   };
 
@@ -148,13 +185,19 @@ export default function TasksScreen() {
     if (filterStatus) result = result.filter((t: any) => t.data.status === filterStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((t: any) => t.data.title.toLowerCase().includes(q));
+      result = result.filter((t: any) =>
+        t.data.title.toLowerCase().includes(q) ||
+        (t.data as any).description?.toLowerCase().includes(q) ||
+        (Array.isArray((t.data as any).tags) && (t.data as any).tags.some((tag: string) => tag.toLowerCase().includes(q)))
+      );
     }
     if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
     if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
     if (filterPhase) result = result.filter((t: any) => t.data.phaseId === filterPhase);
+    if (filterDateFrom) result = result.filter((t: any) => t.data.dueDate && t.data.dueDate >= filterDateFrom);
+    if (filterDateTo) result = result.filter((t: any) => t.data.dueDate && t.data.dueDate <= filterDateTo);
     return result;
-  }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee, filterPhase]);
+  }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee, filterPhase, filterDateFrom, filterDateTo]);
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
@@ -183,21 +226,159 @@ export default function TasksScreen() {
     return Array.from(map.values());
   }, [tasks, taskFilterProject, getPhaseName, projectPhasesCache]);
 
-  // Stats
-  const taskStats = useMemo(() => ({
-    total: filteredTasks.length,
-    completed: filteredTasks.filter((t: any) => t.data.status === 'Completado').length,
-    inProgress: filteredTasks.filter((t: any) => t.data.status === 'En progreso').length,
-    overdue: filteredTasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length,
-  }), [filteredTasks]);
+  // === KPI Calculations ===
+  const kpis = useMemo(() => {
+    const total = tasks.length;
+    const completed = tasks.filter((t: any) => t.data.status === 'Completado').length;
+    const inProgress = tasks.filter((t: any) => t.data.status === 'En progreso').length;
+    const overdue = tasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+    const highPrioActive = tasks.filter((t: any) => t.data.priority === 'Alta' && t.data.status !== 'Completado').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    // Tasks created this week
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    const createdThisWeek = tasks.filter((t: any) => {
+      const created = t.data.createdAt?.toDate ? t.data.createdAt.toDate() : t.data.createdAt ? new Date(t.data.createdAt) : null;
+      return created && created >= weekStart;
+    }).length;
+
+    return { total, completed, inProgress, overdue, highPrioActive, completionRate, createdThisWeek };
+  }, [tasks]);
+
+  // === Monthly trend (tasks created & completed, last 6 months) ===
+  const monthlyTrend = useMemo(() => {
+    const data: { name: string; creadas: number; completadas: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const created = tasks.filter((t: any) => {
+        const created = t.data.createdAt?.toDate ? t.data.createdAt.toDate() : t.data.createdAt ? new Date(t.data.createdAt) : null;
+        return created && `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}` === key;
+      }).length;
+      const completed = tasks.filter((t: any) => {
+        const completed = (t.data as any).completedAt?.toDate ? (t.data as any).completedAt.toDate() : (t.data as any).completedAt ? new Date((t.data as any).completedAt) : null;
+        return completed && `${completed.getFullYear()}-${String(completed.getMonth() + 1).padStart(2, '0')}` === key;
+      }).length;
+      data.push({ name: MONTHS[d.getMonth()], creadas: created, completadas: completed });
+    }
+    return data;
+  }, [tasks]);
+
+  // === Status distribution for pie chart ===
+  const statusDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tasks.forEach((t: any) => {
+      const s = t.data.status || 'Por hacer';
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return KANBAN_COLS.map(col => ({
+      name: col.status,
+      value: counts[col.status] || 0,
+      color: STATUS_CHART_COLORS[col.status],
+    }));
+  }, [tasks]);
+
+  // === Per-member productivity ===
+  const memberProductivity = useMemo(() => {
+    const map: Record<string, { total: number; done: number; overdue: number; highPrio: number }> = {};
+    tasks.forEach((t: any) => {
+      getAssigneeIds(t).forEach((uid: string) => {
+        if (!uid) return;
+        if (!map[uid]) map[uid] = { total: 0, done: 0, overdue: 0, highPrio: 0 };
+        map[uid].total++;
+        if (t.data.status === 'Completado') map[uid].done++;
+        if (t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()) map[uid].overdue++;
+        if (t.data.priority === 'Alta' && t.data.status !== 'Completado') map[uid].highPrio++;
+      });
+    });
+    return Object.entries(map)
+      .map(([uid, d]) => ({
+        uid,
+        name: getUserName(uid),
+        ...d,
+        pct: d.total > 0 ? Math.round((d.done / d.total) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [tasks, getUserName]);
+
+  const hasActiveFilters = searchQuery || filterPriority || filterAssignee || filterStatus || filterPhase || filterDateFrom || filterDateTo;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterPriority('');
+    setFilterAssignee('');
+    setFilterStatus('');
+    setFilterPhase('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+  };
+
+  // CSV Export
+  const exportCSV = () => {
+    const q = '"';
+    const dq = '""';
+    const getAssigneeNames = (t: any): string => getAssigneeIds(t).map((uid: string) => getUserName(uid)).join(', ') || '-';
+    const headers = ['Tarea', 'Proyecto', 'Prioridad', 'Estado', 'Asignado', 'Fecha Limite', 'Horas Est.', 'Subtareas', 'Etiquetas'];
+    const esc = (v: string) => q + String(v).split(q).join(dq) + q;
+    const rows = filteredTasks.map((t: any) => {
+      const sts: any[] = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [];
+      const stDone = sts.filter((s: any) => s.done).length;
+      const tags = Array.isArray((t.data as any).tags) ? (t.data as any).tags.join(', ') : '-';
+      return [
+        t.data.title,
+        projects.find((p: any) => p.id === t.data.projectId)?.data?.name || '-',
+        t.data.priority,
+        t.data.status,
+        getAssigneeNames(t),
+        t.data.dueDate || '-',
+        (t.data as any).estimatedHours || '-',
+        sts.length > 0 ? `${stDone}/${sts.length}` : '-',
+        tags,
+      ];
+    });
+    const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'tareas_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
+    showToast('Tareas exportadas a CSV');
+  };
 
   const viewMode = forms.taskView || 'list';
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <CheckCircle2 size={20} className="text-[var(--af-accent)]" />
+            Tareas
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{tasks.length} tareas registradas{filteredTasks.length !== tasks.length ? ` · ${filteredTasks.length} filtradas` : ''}</p>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Export buttons */}
+          <button
+            className="hidden md:flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            onClick={() => { try { exportTasksPDF({ tasks: filteredTasks, projects, teamUsers }); showToast('Tareas PDF descargado'); } catch { showToast('Error al generar PDF', 'error'); } }}
+          >
+            <FileText size={14} /> PDF
+          </button>
+          <button
+            className="hidden sm:flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            onClick={() => { try { exportTasksExcel(filteredTasks, projects, teamUsers); showToast('Tareas Excel descargado'); } catch { showToast('Error al generar Excel', 'error'); } }}
+          >
+            <Download size={14} /> Excel
+          </button>
+          <button
+            className="hidden sm:flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border border-[var(--border)] hover:bg-[var(--af-bg4)] transition-colors"
+            onClick={exportCSV}
+          >
+            <Download size={14} /> CSV
+          </button>
           {/* View toggle */}
           <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
             <button
@@ -213,60 +394,7 @@ export default function TasksScreen() {
               <KanbanSquare size={14} /> Kanban
             </button>
           </div>
-
-          {/* Project filter */}
-          <select
-            className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
-            value={taskFilterProject}
-            onChange={e => setForms((p: any) => ({ ...p, taskFilterProject: e.target.value }))}
-          >
-            <option value="">Todos los proyectos</option>
-            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
-          </select>
-
-          {/* Search - hidden on very small screens */}
-          <div className="relative flex-1 max-w-[160px] sm:max-w-none sm:flex-none">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--af-text3)]" />
-            <input
-              type="text"
-              placeholder="Buscar tarea..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="text-[13px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50 w-[160px] transition-all"
-            />
-            {searchQuery && (
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--af-text3)] cursor-pointer" onClick={() => setSearchQuery('')}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
-
-          {/* Filter button */}
-          <button
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] cursor-pointer transition-all ${showFilters ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={14} />
-            Filtros
-            {(filterPriority || filterAssignee || filterStatus || filterPhase) && <span className="w-2 h-2 rounded-full bg-[var(--af-accent)]" />}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Export Excel - desktop only */}
-          <button
-            className="hidden md:flex items-center gap-1.5 bg-[var(--af-bg3)] text-[var(--foreground)] px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-[var(--border)] hover:border-[var(--af-accent)]/30 transition-colors"
-            onClick={() => {
-              try {
-                exportTasksExcel(tasks, projects, useApp().teamUsers);
-                showToast('Tareas exportadas a Excel');
-              } catch (err) { showToast('Error al exportar', 'error'); }
-            }}
-          >
-            <Download size={13} /> Excel
-          </button>
-
-          {/* New task - desktop only */}
+          {/* New task - desktop */}
           <button
             className="hidden sm:flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
             onClick={handleNewTask}
@@ -276,78 +404,235 @@ export default function TasksScreen() {
         </div>
       </div>
 
-      {/* Filter bar (expandable) */}
-      {showFilters && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl animate-fadeIn">
-          <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)]">
-            <Filter size={13} /> Filtrar:
+      {/* Search + Filters */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[160px] max-w-[280px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar tarea, etiqueta..."
+              className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg pl-9 pr-3 py-2 text-[13px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] transition-colors"
+            />
+            {searchQuery && (
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--af-text3)] cursor-pointer" onClick={() => setSearchQuery('')}>
+                <X size={12} />
+              </button>
+            )}
           </div>
-          <select
-            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-          >
-            <option value="">Todos los estados</option>
-            <option value="Por hacer">Por hacer</option>
-            <option value="En progreso">En progreso</option>
-            <option value="Revision">En revision</option>
-            <option value="Completado">Completado</option>
-          </select>
-          <select
-            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
-            value={filterPriority}
-            onChange={e => setFilterPriority(e.target.value)}
-          >
-            <option value="">Todas las prioridades</option>
-            <option value="Alta">Alta</option>
-            <option value="Media">Media</option>
-            <option value="Baja">Baja</option>
-          </select>
-          <select
-            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
-            value={filterAssignee}
-            onChange={e => setFilterAssignee(e.target.value)}
-          >
-            <option value="">Todos los asignados</option>
-            {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select
-            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
-            value={filterPhase}
-            onChange={e => setFilterPhase(e.target.value)}
-          >
-            <option value="">Todas las fases</option>
-            {phaseOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          {(filterPriority || filterAssignee || filterStatus || filterPhase) && (
-            <button className="text-[11px] text-red-400 cursor-pointer hover:underline" onClick={() => { setFilterPriority(''); setFilterAssignee(''); setFilterStatus(''); setFilterPhase(''); }}>
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-      )}
 
-      {/* Stats bar */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)]">
-          <span className="font-semibold text-[var(--foreground)]">{taskStats.total}</span> tareas
+          {/* Project filter */}
+          <select
+            className="text-[13px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none cursor-pointer"
+            value={taskFilterProject}
+            onChange={e => setForms((p: any) => ({ ...p, taskFilterProject: e.target.value }))}
+          >
+            <option value="">Todos los proyectos</option>
+            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+          </select>
+
+          {/* Filter button */}
+          <button
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer border transition-colors ${showFilters || hasActiveFilters ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)] border-[var(--af-accent)]/30' : 'bg-[var(--card)] text-[var(--foreground)] border-[var(--border)] hover:bg-[var(--af-bg3)]'}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter size={14} />
+            Filtros
+            {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)]" />}
+          </button>
         </div>
-        <div className="w-px h-3 bg-[var(--border)]" />
-        <div className="flex items-center gap-1.5 text-[12px] text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="font-semibold">{taskStats.completed}</span> completadas
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] text-blue-400">
-          <span className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="font-semibold">{taskStats.inProgress}</span> en progreso
-        </div>
-        {taskStats.overdue > 0 && (
-          <div className="flex items-center gap-1.5 text-[12px] text-red-400">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="font-semibold">{taskStats.overdue}</span> vencidas
+
+        {showFilters && (
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 animate-fadeIn">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Estado</label>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer">
+                  <option value="">Todos</option>
+                  {KANBAN_COLS.map(c => <option key={c.status} value={c.status}>{c.status}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Prioridad</label>
+                <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer">
+                  <option value="">Todas</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Media">Media</option>
+                  <option value="Baja">Baja</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Asignado</label>
+                <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer">
+                  <option value="">Todos</option>
+                  {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Fase</label>
+                <select value={filterPhase} onChange={e => setFilterPhase(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer">
+                  <option value="">Todas</option>
+                  {phaseOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Desde</label>
+                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer" />
+              </div>
+              <div>
+                <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Hasta</label>
+                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer" />
+              </div>
+            </div>
+            {hasActiveFilters && (
+              <button className="mt-3 text-[11px] text-[var(--af-accent)] cursor-pointer hover:underline" onClick={clearFilters}>Limpiar filtros</button>
+            )}
           </div>
         )}
       </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Total tareas</div>
+          <div className="text-lg font-bold text-[var(--af-accent)]">{kpis.total}</div>
+          <div className="text-[10px] text-[var(--muted-foreground)]">{kpis.createdThisWeek} esta semana</div>
+        </div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1">Tasa de completado</div>
+          <div className="text-lg font-bold flex items-center gap-1">
+            <TrendingUp size={14} className={kpis.completionRate >= 50 ? 'text-emerald-400' : 'text-amber-400'} />
+            <span className={kpis.completionRate >= 50 ? 'text-emerald-400' : 'text-amber-400'}>{kpis.completionRate}%</span>
+          </div>
+          <div className="text-[10px] text-[var(--muted-foreground)]">{kpis.completed} completadas</div>
+        </div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1">En progreso</div>
+          <div className="text-lg font-bold text-blue-400">{kpis.inProgress}</div>
+        </div>
+        <div className={`bg-[var(--card)] border rounded-xl p-4 ${kpis.overdue > 0 ? 'border-red-500/30 bg-red-500/5' : 'border-[var(--border)]'}`}>
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1 flex items-center gap-1">
+            {kpis.overdue > 0 && <AlertTriangle size={10} className="text-red-400" />}
+            Vencidas
+          </div>
+          <div className={`text-lg font-bold ${kpis.overdue > 0 ? 'text-red-400' : ''}`}>{kpis.overdue}</div>
+        </div>
+        <div className={`bg-[var(--card)] border rounded-xl p-4 ${kpis.highPrioActive > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-[var(--border)]'}`}>
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1 flex items-center gap-1">
+            <Target size={10} className="text-amber-400" />
+            Alta prioridad
+          </div>
+          <div className={`text-lg font-bold ${kpis.highPrioActive > 0 ? 'text-amber-400' : ''}`}>{kpis.highPrioActive}</div>
+          <div className="text-[10px] text-[var(--muted-foreground)]">pendientes</div>
+        </div>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+          <div className="text-[11px] text-[var(--muted-foreground)] mb-1 flex items-center gap-1">
+            <Users size={10} />
+            Equipo activo
+          </div>
+          <div className="text-lg font-bold">{memberProductivity.length}</div>
+          <div className="text-[10px] text-[var(--muted-foreground)]">miembros con tareas</div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Pie chart: Status distribution */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+          <div className="text-[15px] font-semibold mb-3">Distribucion por Estado</div>
+          {kpis.total === 0 ? (
+            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie data={statusDistribution} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
+                    {statusDistribution.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip content={<StatusPieTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
+                {statusDistribution.map((d: any, i: number) => (
+                  <div key={i} className="flex items-center gap-1 text-[10px]">
+                    <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                    <span className="text-[var(--muted-foreground)]">{d.name}</span>
+                    <span className="font-semibold">{d.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Bar chart: Monthly trend created vs completed */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[15px] font-semibold flex items-center gap-2">
+              <BarChart3 size={16} className="text-[var(--af-accent)]" />
+              Tendencia Mensual
+            </div>
+            <span className="text-[10px] text-[var(--muted-foreground)] px-2 py-0.5 rounded-full bg-[var(--af-bg4)]">6 meses</span>
+          </div>
+          {monthlyTrend.every(d => d.creadas === 0 && d.completadas === 0) ? (
+            <div className="text-center py-10 text-[var(--af-text3)] text-sm">Sin datos en los ultimos 6 meses</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={170}>
+              <BarChart data={monthlyTrend} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--af-bg4)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'rgba(200,169,110,0.06)' }} />
+                <Bar dataKey="creadas" name="Creadas" fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={16} />
+                <Bar dataKey="completadas" name="Completadas" fill="#10b981" radius={[3, 3, 0, 0]} barSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Member Productivity Section */}
+      {memberProductivity.length > 0 && (
+        <div>
+          <div className="text-[15px] font-semibold mb-3 flex items-center gap-2">
+            <Users size={16} className="text-[var(--af-accent)]" />
+            Productividad por Miembro
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {memberProductivity.map((m) => (
+              <div key={m.uid} className={`bg-[var(--card)] border rounded-xl p-4 transition-all ${m.overdue > 0 ? 'border-red-500/30 bg-red-500/5' : 'border-[var(--border)]'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-7 h-7 rounded-full font-semibold flex items-center justify-center text-[10px] ${avatarColor(m.uid)}`}>
+                      {getInitials(m.name)}
+                    </span>
+                    <div>
+                      <div className="text-[13px] font-semibold">{m.name}</div>
+                      <div className="text-[10px] text-[var(--muted-foreground)]">{m.total} tarea{m.total !== 1 ? 's' : ''}</div>
+                    </div>
+                  </div>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${m.pct >= 80 ? 'bg-emerald-500/15 text-emerald-400' : m.pct >= 50 ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>
+                    {m.pct}%
+                  </span>
+                </div>
+                <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden mb-2">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${m.pct >= 80 ? 'bg-emerald-500' : m.pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${m.pct}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)]">
+                  <span>{m.done} completadas</span>
+                  <span>{m.overdue > 0 ? <span className="text-red-400">{m.overdue} vencida{m.overdue !== 1 ? 's' : ''}</span> : 'Sin vencidas'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading && <SkeletonTasks />}
 
@@ -359,10 +644,10 @@ export default function TasksScreen() {
               <KanbanSquare size={24} className="text-[var(--af-text3)]" />
             </div>
             <div className="text-[15px] font-medium text-[var(--muted-foreground)]">
-              {searchQuery || filterPriority || filterAssignee ? 'Sin resultados' : 'Sin tareas'}
+              {hasActiveFilters ? 'Sin resultados' : 'Sin tareas'}
             </div>
             <div className="text-xs mt-1">
-              {searchQuery || filterPriority || filterAssignee ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
+              {hasActiveFilters ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
             </div>
           </div>
         ) : (
@@ -381,6 +666,7 @@ export default function TasksScreen() {
                 {group.map((t: any) => {
                   const proj = projects.find((p: any) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
+                  const tTags: string[] = Array.isArray((t.data as any).tags) ? (t.data as any).tags : [];
                   return (
                     <div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
                       <div
@@ -423,6 +709,18 @@ export default function TasksScreen() {
                               {fmtDate(t.data.dueDate)}
                             </span>
                           )}
+                          {(t.data as any).estimatedHours > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-blue-400">
+                              <Clock size={9} className="flex-shrink-0" />
+                              {(t.data as any).estimatedHours}h
+                            </span>
+                          )}
+                          {tTags.length > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-violet-400">
+                              <Tag size={9} className="flex-shrink-0" />
+                              {tTags.slice(0, 2).join(', ')}{tTags.length > 2 ? ` +${tTags.length - 2}` : ''}
+                            </span>
+                          )}
                           <AssigneeAvatars task={t} getUserName={getUserName} />
                         </div>
                       </div>
@@ -431,7 +729,7 @@ export default function TasksScreen() {
                       {/* Desktop hover actions */}
                       <div className="hidden md:flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button className="text-xs px-2.5 py-1.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditTask(t)}>Editar</button>
-                        <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={() => deleteTask(t.id)}>
+                        <button className="text-xs px-2 py-1.5 rounded bg-red-500/10 text-red-400 cursor-pointer hover:bg-red-500/20" onClick={async () => { if (await confirmDialog.confirm({ title: 'Eliminar tarea', description: '¿Estas seguro? La tarea sera eliminada permanentemente.' })) deleteTask(t.id); }}>
                           <X size={12} />
                         </button>
                       </div>
@@ -447,7 +745,7 @@ export default function TasksScreen() {
                             {
                               label: 'Eliminar tarea',
                               icon: <Trash2 size={14} />,
-                              onClick: () => deleteTask(t.id),
+                              onClick: async () => { if (await confirmDialog.confirm({ title: 'Eliminar tarea', description: '¿Estas seguro? La tarea sera eliminada permanentemente.' })) deleteTask(t.id); },
                               variant: 'danger',
                               separator: true,
                             },
@@ -471,10 +769,10 @@ export default function TasksScreen() {
               <KanbanSquare size={24} className="text-[var(--af-text3)]" />
             </div>
             <div className="text-[15px] font-medium text-[var(--muted-foreground)]">
-              {searchQuery || filterPriority || filterAssignee ? 'Sin resultados' : 'Sin tareas'}
+              {hasActiveFilters ? 'Sin resultados' : 'Sin tareas'}
             </div>
             <div className="text-xs mt-1">
-              {searchQuery || filterPriority || filterAssignee ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
+              {hasActiveFilters ? 'Intenta con otros filtros' : 'Crea tu primera tarea para empezar'}
             </div>
           </div>
         ) : (
@@ -524,7 +822,7 @@ export default function TasksScreen() {
                     <div className="flex-1 space-y-2 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
                       {colTasks.length === 0 && !isDragOver && (
                         <div className="text-center py-10 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--af-text3)]">
-                          <div className="text-[11px] mb-1.5">Arrastra tareas aquí</div>
+                          <div className="text-[11px] mb-1.5">Arrastra tareas aqui</div>
                           <button
                             className="text-[10px] px-2.5 py-1 rounded-md bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--af-accent)]/30 hover:text-[var(--af-accent)] transition-all"
                             onClick={() => handleNewTaskInColumn(col.status)}
@@ -536,13 +834,14 @@ export default function TasksScreen() {
                       {colTasks.length === 0 && isDragOver && (
                         <div className={`text-center py-10 rounded-lg border-2 border-dashed ${col.border} text-[var(--af-text3)] text-[11px] animate-pulse`}>
                           <div className="text-base mb-1">↓</div>
-                          Soltar aquí
+                          Soltar aqui
                         </div>
                       )}
                       {colTasks.map((t: any) => {
                         const proj = projects.find((p: any) => p.id === t.data.projectId);
                         const isDragging = dragTaskId === t.id;
                         const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
+                        const tTags: string[] = Array.isArray((t.data as any).tags) ? (t.data as any).tags : [];
                         return (
                           <div
                             key={t.id}
@@ -596,7 +895,7 @@ export default function TasksScreen() {
                             </div>
 
                             {/* Tags row */}
-                            <div className="flex items-center mt-2.5 gap-1.5">
+                            <div className="flex items-center mt-2.5 gap-1.5 flex-wrap">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>
                                 {t.data.priority}
                               </span>
@@ -604,6 +903,12 @@ export default function TasksScreen() {
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
                                   <Calendar size={9} className="flex-shrink-0" />
                                   {fmtDate(t.data.dueDate)}
+                                </span>
+                              )}
+                              {(t.data as any).estimatedHours > 0 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 bg-blue-500/10 text-blue-400">
+                                  <Clock size={9} className="flex-shrink-0" />
+                                  {(t.data as any).estimatedHours}h
                                 </span>
                               )}
                             </div>
@@ -619,6 +924,19 @@ export default function TasksScreen() {
                                 </span>
                               );
                             })()}
+                            {/* Tags display */}
+                            {tTags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {tTags.slice(0, 2).map((tag: string) => (
+                                  <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {tTags.length > 2 && (
+                                  <span className="text-[9px] px-1 py-0.5 rounded-full bg-[var(--af-bg4)] text-[var(--muted-foreground)]">+{tTags.length - 2}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Footer: assignees */}
@@ -656,6 +974,7 @@ export default function TasksScreen() {
         onClick={handleNewTask}
         ariaLabel="Nueva tarea"
       />
+      <ConfirmDialog {...confirmDialog} />
     </div>
   );
 }

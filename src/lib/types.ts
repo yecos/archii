@@ -47,16 +47,33 @@ export interface Task {
   id: string;
   data: {
     title: string;
+    description?: string;
     projectId: string;
     assigneeId: string;
-    priority: string;
-    status: string;
+    assigneeIds?: string[];
+    priority: string;   // 'Alta' | 'Media' | 'Baja'
+    status: string;     // 'Por hacer' | 'En progreso' | 'Revision' | 'Completado'
     dueDate: string;
     phaseId?: string;
+    estimatedHours?: number;
+    tags?: string[];
+    subtasks?: { text: string; done: boolean }[];
+    completedAt?: any;
     createdAt: any;
     createdBy?: string;
+    updatedAt?: any;
+    updatedBy?: string;
   };
 }
+
+export const TASK_STATUSES = ['Por hacer', 'En progreso', 'Revision', 'Completado'] as const;
+export const TASK_PRIORITIES = ['Alta', 'Media', 'Baja'] as const;
+export const TASK_STATUS_COLORS: Record<string, string> = {
+  'Por hacer': 'bg-slate-400/10 text-slate-400',
+  'En progreso': 'bg-blue-500/10 text-blue-400',
+  'Revision': 'bg-amber-500/10 text-amber-400',
+  'Completado': 'bg-emerald-500/10 text-emerald-400',
+};
 
 export interface Expense {
   id: string;

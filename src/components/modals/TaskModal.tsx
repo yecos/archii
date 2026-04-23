@@ -3,13 +3,15 @@ import React, { useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
-import { X, Users, Plus, Trash2 } from 'lucide-react';
+import { X, Users, Plus, Trash2, Tag, Clock } from 'lucide-react';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser, getPhasesForProject, loadPhasesForProject, projectPhasesCache } = useApp() as any;
 
   const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : [];
   const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
+  const tags: string[] = Array.isArray(forms.taskTags) ? forms.taskTags : [];
+  const [tagInput, setTagInput] = React.useState('');
 
   // Get phases for the currently selected project in the modal
   const modalProjectId = forms.taskProject || '';
@@ -26,6 +28,11 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   const effectivePhases: any[] = modalProjectId && projectPhasesCache[modalProjectId]
     ? projectPhasesCache[modalProjectId]
     : currentPhases;
+
+  // Sync tag input when modal opens with editing data
+  React.useEffect(() => {
+    if (open) setTagInput('');
+  }, [open]);
 
   const toggleAssignee = (uid: string) => {
     setForms((p: any) => {
@@ -63,6 +70,18 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
       ...p,
       taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).filter((_: any, i: number) => i !== index),
     }));
+  };
+
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (t && !tags.includes(t)) {
+      setForms((p: any) => ({ ...p, taskTags: [...tags, t] }));
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setForms((p: any) => ({ ...p, taskTags: tags.filter((t: string) => t !== tag) }));
   };
 
   const doneSubtasks = subtasks.filter(s => s.done).length;
@@ -180,7 +199,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           </div>
         </FormField>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <FormField label="Prioridad">
             <FormSelect
               value={forms.taskPriority || 'Media'}
@@ -203,6 +222,17 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
               <option value="Completado">Completado</option>
             </FormSelect>
           </FormField>
+
+          <FormField label="Horas est.">
+            <FormInput
+              type="number"
+              min="0"
+              step="0.5"
+              value={forms.taskEstimatedHours ?? ''}
+              onChange={(e) => setForms((p: any) => ({ ...p, taskEstimatedHours: e.target.value ? Number(e.target.value) : null }))}
+              placeholder="0"
+            />
+          </FormField>
         </div>
 
         <FormField label="Fecha limite">
@@ -211,6 +241,49 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
             value={forms.taskDue || ''}
             onChange={(e) => setForms((p: any) => ({ ...p, taskDue: e.target.value }))}
           />
+        </FormField>
+
+        {/* Tags */}
+        <FormField label={`Etiquetas ${tags.length > 0 ? `(${tags.length})` : ''}`}>
+          <div className="space-y-2">
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 p-2 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg min-h-[36px]">
+                {tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                  >
+                    <Tag size={9} />
+                    {tag}
+                    <button
+                      type="button"
+                      className="ml-0.5 hover:text-red-400 cursor-pointer bg-transparent border-none p-0"
+                      onClick={() => removeTag(tag)}
+                    >
+                      <X size={10} className="stroke-current" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                placeholder="Agregar etiqueta..."
+                className="flex-1 text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]/50"
+              />
+              <button
+                type="button"
+                className="px-2.5 py-1.5 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--af-accent)]/30 hover:text-[var(--af-accent)] cursor-pointer transition-colors"
+                onClick={addTag}
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+          </div>
         </FormField>
 
         {/* Subtareas */}

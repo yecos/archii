@@ -38,26 +38,40 @@ function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
 export function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]) {
   const wb = XLSX.utils.book_new();
 
+  const getAssigneeNames = (t: any): string => {
+    const ids: string[] = Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0
+      ? t.data.assigneeIds
+      : t.data.assigneeId ? [t.data.assigneeId] : [];
+    return ids.map((uid: string) => {
+      const u = teamUsers.find((tu: any) => tu.id === uid);
+      return u?.data?.name || uid;
+    }).join(', ') || '-';
+  };
+
   const data = tasks.map(t => {
     const proj = projects.find(p => p.id === t.data.projectId);
-    const assignee = teamUsers.find(u => u.id === t.data.assigneeId);
+    const sts: { text: string; done: boolean }[] = Array.isArray(t.data.subtasks) ? t.data.subtasks : [];
+    const stDone = sts.filter(s => s.done).length;
+    const tags = Array.isArray(t.data.tags) ? t.data.tags.join(', ') : '-';
     return {
       Tarea: t.data.title,
-      Proyecto: proj?.data.name || '-',
+      Descripcion: t.data.description || '-',
+      Proyecto: proj?.data?.name || '-',
       Prioridad: t.data.priority || '-',
       Estado: t.data.status || '-',
-      Asignado: assignee?.data.name || '-',
-      'Fecha Límite': t.data.dueDate || '-',
+      Asignado: getAssigneeNames(t),
+      'Fecha Limite': t.data.dueDate || '-',
+      'Horas Estimadas': t.data.estimatedHours || '-',
+      Subtareas: sts.length > 0 ? `${stDone}/${sts.length}` : '-',
+      Etiquetas: tags,
       'Creado': t.data.createdAt ? (t.data.createdAt.toDate ? t.data.createdAt.toDate().toLocaleDateString('es-CO') : new Date(t.data.createdAt).toLocaleDateString('es-CO')) : '-',
     };
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
-
-  // Column widths
   ws['!cols'] = [
-    { wch: 35 }, { wch: 25 }, { wch: 12 }, { wch: 14 },
-    { wch: 20 }, { wch: 14 }, { wch: 14 },
+    { wch: 35 }, { wch: 35 }, { wch: 25 }, { wch: 12 }, { wch: 14 },
+    { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 14 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
@@ -71,18 +85,47 @@ export function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]
   });
 
   const summaryData = [
-    { Métrica: 'Total tareas', Valor: tasks.length },
-    { Métrica: 'Completadas', Valor: statuses['Completado'] || 0 },
-    { Métrica: 'En progreso', Valor: statuses['En progreso'] || 0 },
-    { Métrica: 'Por hacer', Valor: statuses['Por hacer'] || 0 },
-    { Métrica: 'En revisión', Valor: statuses['Revision'] || 0 },
-    { Métrica: 'Prioridad Alta', Valor: prios['Alta'] || 0 },
-    { Métrica: 'Prioridad Media', Valor: prios['Media'] || 0 },
-    { Métrica: 'Prioridad Baja', Valor: prios['Baja'] || 0 },
+    { Metrica: 'Total tareas', Valor: tasks.length },
+    { Metrica: 'Completadas', Valor: statuses['Completado'] || 0 },
+    { Metrica: 'En progreso', Valor: statuses['En progreso'] || 0 },
+    { Metrica: 'Por hacer', Valor: statuses['Por hacer'] || 0 },
+    { Metrica: 'En revision', Valor: statuses['Revision'] || 0 },
+    { Metrica: 'Prioridad Alta', Valor: prios['Alta'] || 0 },
+    { Metrica: 'Prioridad Media', Valor: prios['Media'] || 0 },
+    { Metrica: 'Prioridad Baja', Valor: prios['Baja'] || 0 },
   ];
   const ws2 = XLSX.utils.json_to_sheet(summaryData);
-  ws2['!cols'] = [{ wch: 20 }, { wch: 12 }];
+  ws2['!cols'] = [{ wch: 22 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+  // Per-member productivity sheet
+  const assigneeSummary: Record<string, { total: number; done: number; overdue: number }> = {};
+  tasks.forEach(t => {
+    const ids: string[] = Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0
+      ? t.data.assigneeIds
+      : t.data.assigneeId ? [t.data.assigneeId] : [];
+    ids.forEach(uid => {
+      if (!uid) return;
+      const name = teamUsers.find((u: any) => u.id === uid)?.data?.name || uid;
+      if (!assigneeSummary[name]) assigneeSummary[name] = { total: 0, done: 0, overdue: 0 };
+      assigneeSummary[name].total++;
+      if (t.data.status === 'Completado') assigneeSummary[name].done++;
+      if (t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()) assigneeSummary[name].overdue++;
+    });
+  });
+
+  const memberRows = Object.entries(assigneeSummary).map(([name, d]) => ({
+    Miembro: name,
+    'Tareas Totales': d.total,
+    Completadas: d.done,
+    Vencidas: d.overdue,
+    '% Cumplimiento': d.total > 0 ? Math.round((d.done / d.total) * 100) + '%' : '0%',
+  }));
+  if (memberRows.length > 0) {
+    const ws3 = XLSX.utils.json_to_sheet(memberRows);
+    ws3['!cols'] = [{ wch: 25 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Productividad');
+  }
 
   downloadWorkbook(wb, 'archiflow-tareas');
 }

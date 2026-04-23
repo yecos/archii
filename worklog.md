@@ -539,3 +539,32 @@ Cambios implementados (6):
 4. Context-aware: no muestra toast si ya estas en la pantalla relevante
 5. Duplicados: eliminadas llamadas directas a notifyWhatsApp de CRUD functions
 6. markHydrated: cada onSnapshot marca su coleccion como hidratada
+
+---
+Task ID: 2
+Agent: Super Z (Main)
+Task: Módulo Presupuestos Pro Max - Upgrade completo
+
+Work Log:
+- Auditoría completa del módulo de presupuestos (28 archivos, 4 capas)
+- Expandir EXPENSE_CATS de 5 a 8 categorías (+ Transporte, Equipos, Servicios)
+- Agregar tipo PaymentMethod con 6 métodos de pago
+- Ampliar interfaz Expense con campos opcionales: paymentMethod, vendor, notes
+- Reescribir ExpenseModal: modo crear/editar, campos nuevos, validación
+- Implementar saveExpense con soporte CRUD (crear + actualizar via editingId)
+- Crear openEditExpense helper para pre-cargar formulario
+- Rediseñar BudgetScreen: 6 KPIs, gráfico tendencia mensual, búsqueda, filtros, cards proyecto
+- Agregar búsqueda por concepto/proveedor con debounce implícito
+- Agregar filtros: proyecto, categoría, rango de fechas (paneles colapsables)
+- Cards de presupuesto por proyecto con barras de progreso y alertas (excedido/cerca límite)
+- Botón editar gasto en BudgetScreen (desktop hover + mobile OverflowMenu)
+- Actualizar ProjectDetailScreen: botón editar + mostrar proveedor en sección Finanzas
+- Actualizar exportaciones PDF y Excel con columnas nuevas
+- Build exitoso, commit 24ce3ed push a main
+
+Stage Summary:
+- 7 archivos modificados, 408 insertiones, 83 eliminaciones
+- Módulo presupuestos ahora soporta CRUD completo (crear/leer/editar/eliminar)
+- 8 categorías de gasto, 6 métodos de pago, campos proveedor y notas
+- Pantalla principal con KPIs avanzados, gráficos, filtros y búsqueda
+- Integración completa con ProjectDetailScreen y exportaciones

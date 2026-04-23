@@ -833,6 +833,159 @@ export function exportTeamPDF(data: { teamUsers: any[]; tasks: any[]; timeEntrie
 }
 
 /* ═══════════════════════════════════════════════
+   EXPORTAR TAREAS A PDF
+   ═══════════════════════════════════════════════ */
+
+export function exportTasksPDF(data: {
+  tasks: any[];
+  projects: any[];
+  teamUsers: any[];
+  projectName?: string;
+}) {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  const title = data.projectName ? `Tareas - ${data.projectName}` : 'Reporte de Tareas';
+  addHeader(doc, title, 'Listado completo de tareas con estado y prioridad');
+
+  let y = 40;
+
+  // Summary stats
+  const totalTasks = data.tasks.length;
+  const completed = data.tasks.filter(t => t.data.status === 'Completado').length;
+  const inProgress = data.tasks.filter(t => t.data.status === 'En progreso').length;
+  const overdue = data.tasks.filter(t => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+  const highPrio = data.tasks.filter(t => t.data.priority === 'Alta' && t.data.status !== 'Completado').length;
+  const completionRate = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
+
+  const stats = [
+    { label: 'Total Tareas', value: String(totalTasks), color: BRAND.blue },
+    { label: 'Completadas', value: `${completed} (${completionRate}%)`, color: BRAND.green },
+    { label: 'En Progreso', value: String(inProgress), color: BRAND.primary },
+    { label: 'Vencidas', value: String(overdue), color: overdue > 0 ? BRAND.red : BRAND.green },
+    { label: 'Prioridad Alta', value: String(highPrio), color: highPrio > 0 ? BRAND.red : BRAND.muted },
+    { label: 'Por Hacer', value: String(totalTasks - completed - inProgress), color: BRAND.muted },
+  ];
+
+  const boxW = (pageW - 28 - 15) / 6;
+  stats.forEach((stat, i) => {
+    const x = 14 + i * (boxW + 3);
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(x, y, boxW, 14, 1.5, 1.5, 'F');
+    doc.setFillColor(...stat.color);
+    doc.rect(x, y, 1.5, 14, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...stat.color);
+    doc.text(stat.value, x + 4, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(stat.label, x + 4, y + 12);
+  });
+
+  y += 22;
+
+  // Tasks table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Listado de Tareas', 14, y);
+  y += 4;
+
+  const getAssigneeNames = (t: any): string => {
+    const ids: string[] = Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0
+      ? t.data.assigneeIds
+      : t.data.assigneeId ? [t.data.assigneeId] : [];
+    return ids.map((uid: string) => {
+      const u = data.teamUsers.find((tu: any) => tu.id === uid);
+      return u?.data?.name || uid;
+    }).join(', ') || '-';
+  };
+
+  if (data.tasks.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Tarea', 'Proyecto', 'Prioridad', 'Estado', 'Asignado', 'Fecha Limite', 'Subtareas']],
+      body: data.tasks.slice(0, 60).map(t => {
+        const proj = data.projects.find((p: any) => p.id === t.data.projectId);
+        const sts: any[] = Array.isArray(t.data.subtasks) ? t.data.subtasks : [];
+        const stDone = sts.filter((s: any) => s.done).length;
+        const stText = sts.length > 0 ? `${stDone}/${sts.length}` : '-';
+        return [
+          t.data.title,
+          proj?.data?.name || '-',
+          t.data.priority || '-',
+          t.data.status || '-',
+          getAssigneeNames(t),
+          t.data.dueDate || '-',
+          stText,
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+      bodyStyles: { fontSize: 7, textColor: BRAND.text, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        2: { halign: 'center', cellWidth: 16 },
+        3: { halign: 'center', cellWidth: 18 },
+        5: { halign: 'center', cellWidth: 18 },
+        6: { halign: 'center', cellWidth: 14 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+  // Per-assignee summary
+  const assigneeSummary: Record<string, { total: number; done: number; overdue: number }> = {};
+  data.tasks.forEach(t => {
+    const ids: string[] = Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0
+      ? t.data.assigneeIds
+      : t.data.assigneeId ? [t.data.assigneeId] : [];
+    ids.forEach(uid => {
+      if (!uid) return;
+      const name = data.teamUsers.find((u: any) => u.id === uid)?.data?.name || uid;
+      if (!assigneeSummary[name]) assigneeSummary[name] = { total: 0, done: 0, overdue: 0 };
+      assigneeSummary[name].total++;
+      if (t.data.status === 'Completado') assigneeSummary[name].done++;
+      if (t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()) assigneeSummary[name].overdue++;
+    });
+  });
+
+  const memberRows = Object.entries(assigneeSummary).map(([name, d]) => [
+    name, String(d.total), String(d.done), String(d.overdue),
+    d.total > 0 ? Math.round((d.done / d.total) * 100) + '%' : '0%',
+  ]);
+
+  if (memberRows.length > 0) {
+    y = checkAddPage(doc, y, 40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...BRAND.dark);
+    doc.text('Productividad por Miembro', 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Miembro', 'Tareas', 'Completadas', 'Vencidas', 'Cumplimiento']],
+      body: memberRows,
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  addFooter(doc);
+  doc.save(`tareas-${data.projectName || 'general'}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════
    EXPORTAR REPORTE DE OBRA A PDF
    ═══════════════════════════════════════════════ */
 
