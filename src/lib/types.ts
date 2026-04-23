@@ -66,6 +66,9 @@ export interface Expense {
     category: string;
     amount: number;
     date: string;
+    paymentMethod?: string;
+    vendor?: string;
+    notes?: string;
     createdAt: any;
     createdBy?: string;
   };
@@ -525,7 +528,10 @@ export const PROJECT_TYPE_COLORS: Record<string, string> = {
 // Mantener compatibilidad con fases existentes
 export const DEFAULT_PHASES = PROJECT_TYPE_PHASES['Ejecución'].map(p => p.name);
 
-export const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos'];
+export const EXPENSE_CATS = ['Materiales', 'Mano de obra', 'Mobiliario', 'Acabados', 'Imprevistos', 'Transporte', 'Equipos', 'Servicios'];
+
+export const PAYMENT_METHODS = ['Efectivo', 'Transferencia', 'Tarjeta de crédito', 'Tarjeta débito', 'Cheque', 'Otro'] as const;
+export type PaymentMethod = typeof PAYMENT_METHODS[number];
 
 export const SUPPLIER_CATS = ['Materiales', 'Mobiliario', 'Iluminación', 'Acabados', 'Eléctrico', 'Plomería', 'Otro'];
 

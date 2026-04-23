@@ -102,12 +102,15 @@ export function exportExpensesExcel(expenses: any[], projects: any[]) {
       Categoría: e.data.category || '-',
       Monto: e.data.amount || 0,
       Fecha: e.data.date || '-',
+      'Método de pago': e.data.paymentMethod || '-',
+      Proveedor: e.data.vendor || '-',
+      Notas: e.data.notes || '-',
     };
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
   ws['!cols'] = [
-    { wch: 35 }, { wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 14 },
+    { wch: 35 }, { wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 14 }, { wch: 18 }, { wch: 22 }, { wch: 30 },
   ];
 
   // Summary

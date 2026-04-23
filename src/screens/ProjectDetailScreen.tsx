@@ -12,6 +12,7 @@ export default function ProjectDetailScreen() {
   const {
     approvals, calcGanttDays, calcGanttOffset, currentProject, dailyLogs, dailyLogTab,
     deleteApproval, deleteDailyLog, deleteExpense, deleteFile, deleteFromOneDrive, deleteTask,
+    openEditExpense,
     doMicrosoftLogin,
     downloadOneDriveFile, formatFileSize, forms, galleryLoading, getFileIcon,
     getUserName, handleDroppedFiles, handleFileUpload, initDefaultPhases, loadGalleryPhotos,
@@ -402,7 +403,7 @@ export default function ProjectDetailScreen() {
                 {forms.cfTab === 'finanzas' && (<div>
                   <div className="flex justify-between items-center mb-4">
                     <div className="text-sm text-[var(--muted-foreground)]">{projectExpenses.length} gastos · Total: <span className="text-[var(--af-accent)] font-semibold">{fmtCOP(projectSpent)}</span> {projectBudget > 0 && <span>de {fmtCOP(projectBudget)}</span>}</div>
-                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, expConcept: '', expProject: selectedProjectId, expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales' })); openModal('expense'); }}>+ Registrar gasto</button>
+                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, expConcept: '', expProject: selectedProjectId, expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' })); openModal('expense'); }}>+ Registrar gasto</button>
                   </div>
                   {projectBudget > 0 && <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-4">
                     <div className="flex justify-between text-sm mb-2"><span className="text-[var(--muted-foreground)]">Presupuesto utilizado</span><span className="font-semibold">{Math.min(100, Math.round((projectSpent / projectBudget) * 100))}%</span></div>
@@ -412,8 +413,9 @@ export default function ProjectDetailScreen() {
                   <div className="space-y-2">
                     {projectExpenses.map((e: any) => (
                       <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 bg-[var(--card)] border border-[var(--border)] rounded-lg">
-                        <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}</div></div>
+                        <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}{e.data.vendor ? ` · ${e.data.vendor}` : ''}</div></div>
                         <div className="text-sm font-semibold text-[var(--af-accent)]">{fmtCOP(e.data.amount)}</div>
+                        <button className="text-xs px-1.5 py-0.5 rounded bg-[var(--af-accent)]/10 text-[var(--af-accent)] cursor-pointer hover:bg-[var(--af-accent)]/20" onClick={() => openEditExpense(e)}>✎</button>
                         <button className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 cursor-pointer" onClick={() => deleteExpense(e.id)}>✕</button>
                       </div>
                     ))}

@@ -2755,14 +2755,50 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
     const db = getFirebase().firestore();
     const amount = Number(forms.expAmount) || 0;
-    const raw = { concept, projectId: forms.expProject || '', category: forms.expCategory || 'Materiales', amount, date: forms.expDate || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid };
+    if (amount <= 0) { showToast('El monto debe ser mayor a 0', 'error'); return; }
+    const raw = {
+      concept,
+      projectId: forms.expProject || '',
+      category: forms.expCategory || 'Materiales',
+      amount,
+      date: forms.expDate || '',
+      paymentMethod: forms.expPaymentMethod || 'Efectivo',
+      vendor: forms.expVendor || '',
+      notes: forms.expNotes || '',
+      tenantId: activeTenantId || '',
+      updatedBy: authUser.uid,
+      updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
+    };
     const data = scrubUndefined(raw);
     try {
-      await db.collection('expenses').add(data);
-      showToast('Gasto registrado');
-      closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] }));
-      // Notification handled by the centralized detector in the useEffect above
+      if (editingId) {
+        await db.collection('expenses').doc(editingId).update(data);
+        showToast('Gasto actualizado');
+        setEditingId(null);
+      } else {
+        data.createdAt = getFirebase().firestore.FieldValue.serverTimestamp();
+        data.createdBy = authUser.uid;
+        await db.collection('expenses').add(data);
+        showToast('Gasto registrado');
+      }
+      closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' }));
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+  };
+
+  const openEditExpense = (e: any) => {
+    setEditingId(e.id);
+    setForms(p => ({
+      ...p,
+      expConcept: e.data.concept || '',
+      expProject: e.data.projectId || '',
+      expCategory: e.data.category || 'Materiales',
+      expAmount: String(e.data.amount || ''),
+      expDate: e.data.date || '',
+      expPaymentMethod: e.data.paymentMethod || 'Efectivo',
+      expVendor: e.data.vendor || '',
+      expNotes: e.data.notes || '',
+    }));
+    openModal('expense');
   };
 
   const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
@@ -4054,6 +4090,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     toggleAudioPlay,
     fileIcon,
     saveExpense,
+    openEditExpense,
     deleteExpense,
     saveSupplier,
     deleteSupplier,

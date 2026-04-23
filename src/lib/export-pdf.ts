@@ -637,15 +637,15 @@ export function exportBudgetPDF(data: {
 
   autoTable(doc, {
     startY: y,
-    head: [['Concepto', 'Categoría', 'Monto (COP)', 'Fecha']],
+    head: [['Concepto', 'Categoría', 'Monto (COP)', 'Fecha', 'Método de pago', 'Proveedor']],
     body: data.expenses.slice(0, 50).map(e => [
-      e.data.concept, e.data.category, fmtCOPFull(e.data.amount), e.data.date || '-'
+      e.data.concept, e.data.category, fmtCOPFull(e.data.amount), e.data.date || '-', e.data.paymentMethod || '-', e.data.vendor || '-'
     ]),
     theme: 'striped',
-    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 8, textColor: BRAND.text },
+    headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 7, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 7, textColor: BRAND.text },
     alternateRowStyles: { fillColor: BRAND.bg },
-    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'center' } },
+    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'center' }, 4: { halign: 'center' } },
     margin: { left: 14, right: 14 },
   });
 
