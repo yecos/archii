@@ -17,7 +17,6 @@ import * as fbActions from '@/lib/firestore-actions';
 // import { useNotifications } from '@/hooks/useNotifications';
 // import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
-import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
 import { notifyExternal } from '@/lib/notify-unified';
 
 /* ===== APP CONTEXT ===== */
@@ -308,21 +307,40 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifSound, setNotifSound] = useState(true);
-  const prevMessagesRef = useRef<any[]>([]);
-  const prevTasksRef = useRef<any[]>([]);
-  const prevMeetingsRef = useRef<any[]>([]);
-  const prevApprovalsRef = useRef<any[]>([]);
-  const prevMovementsRef = useRef<any[]>([]);
-  const prevTransfersRef = useRef<any[]>([]);
-  const prevRfisRef = useRef<any[]>([]);
-  const prevSubmittalsRef = useRef<any[]>([]);
-  const prevPunchItemsRef = useRef<any[]>([]);
+  // Set-based known IDs for O(1) change detection (replaces O(n) array comparison)
+  const knownTaskIdsRef = useRef<Set<string>>(new Set());
+  const knownApprovalIdsRef = useRef<Set<string>>(new Set());
+  const knownMovementIdsRef = useRef<Set<string>>(new Set());
+  const knownTransferIdsRef = useRef<Set<string>>(new Set());
+  const knownMeetingIdsRef = useRef<Set<string>>(new Set());
+  const knownMessageIdsRef = useRef<Set<string>>(new Set());
+  const knownProjectIdsRef = useRef<Set<string>>(new Set());
+  const knownRfiIdsRef = useRef<Set<string>>(new Set());
+  const knownSubmittalIdsRef = useRef<Set<string>>(new Set());
+  const knownPunchItemIdsRef = useRef<Set<string>>(new Set());
   const navigateToRef = useRef<(s: string, projId?: string | null) => void>(() => {});
   const isTabVisibleRef = useRef(true);
-  const prevProjectsRef = useRef<any[]>([]);
   const overdueCheckedRef = useRef<string>('');
   // Track first data load to avoid re-notifying existing items
   const firstLoadDoneRef = useRef(false);
+  // Track which collections have hydrated at least once
+  const collectionsLoadedRef = useRef<Record<string, boolean>>({
+    tasks: false, approvals: false, meetings: false, messages: false,
+    movements: false, transfers: false, projects: false, rfis: false,
+    submittals: false, punchItems: false,
+  });
+  const allCollectionsLoadedRef = useRef(false);
+  // Maps for tracking status changes per entity (for changed-item detection)
+  const prevTaskStatusRef = useRef<Map<string, { status: string; priority: string; assigneeId: string }>>(new Map());
+  const prevApprovalStatusRef = useRef<Map<string, string>>(new Map());
+  const prevTransferStatusRef = useRef<Map<string, string>>(new Map());
+  const prevProjectStatusRef = useRef<Map<string, string>>(new Map());
+  const prevRfiStatusRef = useRef<Map<string, string>>(new Map());
+  const prevSubmittalStatusRef = useRef<Map<string, string>>(new Map());
+  const prevPunchStatusRef = useRef<Map<string, string>>(new Map());
+  // Notification coalescencia buffer
+  const notificationBufferRef = useRef<Map<string, { type: string; data: any; count: number }>>(new Map());
+  const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [inAppNotifs, setInAppNotifs] = useState<any[]>([]);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
@@ -531,6 +549,28 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Keep backward compat alias
   const sendBrowserNotif = sendNotif;
+
+  // === NOTIFICATION COALESCENCE ===
+  // Buffers rapid-fire notifications of the same type and flushes in 800ms windows
+  const bufferedNotify = useCallback((type: string, data: any) => {
+    const existing = notificationBufferRef.current.get(type);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      notificationBufferRef.current.set(type, { type, data, count: 1 });
+    }
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(() => {
+      notificationBufferRef.current.forEach((notif) => {
+        if (notif.count > 1) {
+          notifyExternal(notif.type, { ...notif.data, count: notif.count });
+        } else {
+          notifyExternal(notif.type, notif.data);
+        }
+      });
+      notificationBufferRef.current.clear();
+    }, 800);
+  }, []);
 
   // Toggle notification pref
   const toggleNotifPref = (key: string) => {
@@ -1247,42 +1287,76 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch (err) { console.error("[ArchiFlow]", err); };
   }, [notifPrefs]);
 
-  // After loading finishes, mark all current data as "seen" to avoid re-notifying
+  // Mark each collection as hydrated when its data first arrives.
+  // Once ALL collections have loaded at least once, arm notifications.
   useEffect(() => {
-    if (!loading && !firstLoadDoneRef.current) {
-      // Wait a bit for all Firestore listeners to populate
-      const timer = setTimeout(() => {
-        prevMessagesRef.current = messages;
-        prevTasksRef.current = tasks;
-        prevMeetingsRef.current = meetings;
-        prevApprovalsRef.current = approvals;
-        prevMovementsRef.current = invMovements;
-        prevTransfersRef.current = invTransfers;
-        prevRfisRef.current = rfis;
-        prevSubmittalsRef.current = submittals;
-        prevPunchItemsRef.current = punchItems;
-        prevProjectsRef.current = projects;
-        firstLoadDoneRef.current = true;
-        console.log('[ArchiFlow] First load complete — notifications armed');
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (loading || allCollectionsLoadedRef.current) return;
+    if (tasks.length > 0) collectionsLoadedRef.current.tasks = true;
+    if (approvals.length > 0) collectionsLoadedRef.current.approvals = true;
+    if (meetings.length > 0) collectionsLoadedRef.current.meetings = true;
+    if (messages.length > 0) collectionsLoadedRef.current.messages = true;
+    if (invMovements.length > 0) collectionsLoadedRef.current.movements = true;
+    if (invTransfers.length > 0) collectionsLoadedRef.current.transfers = true;
+    if (projects.length > 0) collectionsLoadedRef.current.projects = true;
+    if (rfis.length > 0) collectionsLoadedRef.current.rfis = true;
+    if (submittals.length > 0) collectionsLoadedRef.current.submittals = true;
+    if (punchItems.length > 0) collectionsLoadedRef.current.punchItems = true;
+    const allLoaded = Object.values(collectionsLoadedRef.current).every(Boolean);
+    if (allLoaded && !allCollectionsLoadedRef.current) {
+      allCollectionsLoadedRef.current = true;
+      // Seed all known ID sets with current data (mark as "seen")
+      knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
+      knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
+      knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
+      knownMessageIdsRef.current = new Set(messages.map(m => m.id));
+      knownMovementIdsRef.current = new Set(invMovements.map(m => m.id));
+      knownTransferIdsRef.current = new Set(invTransfers.map(t => t.id));
+      knownProjectIdsRef.current = new Set(projects.map(p => p.id));
+      knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
+      knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
+      knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
+      firstLoadDoneRef.current = true;
+      console.log('[ArchiFlow] All collections hydrated — notifications armed');
     }
-  }, [loading, messages, tasks, meetings, approvals, invMovements, invTransfers, projects]);
+  }, [loading, messages, tasks, meetings, approvals, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
+
+  // Safety timeout: arm notifications after 5s even if some collections are empty
+  useEffect(() => {
+    if (loading || allCollectionsLoadedRef.current) return;
+    const timer = setTimeout(() => {
+      if (!allCollectionsLoadedRef.current) {
+        // Seed known IDs with whatever data we have
+        knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
+        knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
+        knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
+        knownMessageIdsRef.current = new Set(messages.map(m => m.id));
+        knownMovementIdsRef.current = new Set(invMovements.map(m => m.id));
+        knownTransferIdsRef.current = new Set(invTransfers.map(t => t.id));
+        knownProjectIdsRef.current = new Set(projects.map(p => p.id));
+        knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
+        knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
+        knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
+        allCollectionsLoadedRef.current = true;
+        firstLoadDoneRef.current = true;
+        console.log('[ArchiFlow] Safety timeout 5s — notifications armed (some collections may be empty)');
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [loading, tasks, approvals, meetings, messages, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
 
   // Calculate unread notification count
   useEffect(() => {
     setUnreadCount(notifHistory.filter(n => !n.read).length);
   }, [notifHistory]);
 
-  // Detect new chat messages and notify
+  // Detect new chat messages and notify (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (messages.length === 0) { prevMessagesRef.current = []; return; }
-    const prev = prevMessagesRef.current;
-    const newMsgs = messages.filter(m => !prev.find(p => p.id === m.id));
-
-    if (newMsgs.length > 0 && notifPrefs.chat) {
-      const otherMsgs = newMsgs.filter(m => m.uid !== authUser?.uid);
+    const newMsgIds: string[] = [];
+    messages.forEach(m => { if (!knownMessageIdsRef.current.has(m.id)) newMsgIds.push(m.id); });
+    knownMessageIdsRef.current = new Set(messages.map(m => m.id));
+    if (newMsgIds.length > 0 && notifPrefs.chat) {
+      const otherMsgs = messages.filter(m => newMsgIds.includes(m.id) && m.uid !== authUser?.uid);
       if (otherMsgs.length > 0) {
         const lastMsg = otherMsgs[otherMsgs.length - 1];
         const projName = chatProjectId === '__general__' ? 'Chat General' : projects.find(p => p.id === chatProjectId)?.data?.name || 'Chat';
@@ -1290,241 +1364,164 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const msgType = lastMsg.type || 'TEXT';
         const typeLabel = msgType === 'AUDIO' ? '🎤 Nota de voz' : msgType === 'IMAGE' ? '🖼️ Imagen' : msgType === 'FILE' ? '📎 Archivo' : '';
         const bodyText = lastMsg.text?.substring(0, 120) || (msgType === 'AUDIO' ? '🎵 Nota de voz' : msgType === 'IMAGE' ? '📷 Foto' : msgType === 'FILE' ? `📎 ${lastMsg.fileName || 'Archivo'}` : '');
-        sendBrowserNotif(
-          `${senderName} en ${projName}`,
-          `${typeLabel}${bodyText}`,
-          undefined,
-          `chat-${chatProjectId}`,
-          { type: 'chat', screen: 'chat', itemId: chatProjectId }
-        );
+        // Context-aware: don't show toast if user is already on the chat screen
+        const isOnChatScreen = screen === 'chat' || screen === 'chatDetail';
+        if (!isOnChatScreen || !isTabVisibleRef.current) {
+          sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId });
+        }
+        playNotifSound('chat'); vibrateNotif();
       }
     }
-    prevMessagesRef.current = messages;
-  }, [messages, notifPrefs.chat, authUser, chatProjectId, projects, sendBrowserNotif]);
+  }, [messages, notifPrefs.chat, authUser, chatProjectId, projects, sendBrowserNotif, playNotifSound, vibrateNotif, screen]);
 
-  // Detect new/changed tasks assigned to me
+  // Detect new/changed tasks assigned to me (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (tasks.length === 0) { prevTasksRef.current = []; return; }
-    const prev = prevTasksRef.current;
-    const newTasks = tasks.filter(t => !prev.find(p => p.id === t.id));
-    const changedTasks = tasks.filter(t => {
-      const p = prev.find(pp => pp.id === t.id);
-      return p && (p.data.status !== t.data.status || p.data.priority !== t.data.priority || p.data.assigneeId !== t.data.assigneeId);
+    const newTaskIds: string[] = [];
+    const changedTaskIds: string[] = [];
+    tasks.forEach(t => {
+      if (!knownTaskIdsRef.current.has(t.id)) {
+        newTaskIds.push(t.id);
+      } else {
+        const prev = prevTaskStatusRef.current.get(t.id);
+        if (prev && (prev.status !== t.data.status || prev.priority !== t.data.priority || prev.assigneeId !== t.data.assigneeId)) {
+          changedTaskIds.push(t.id);
+        }
+      }
     });
+    // Update tracking maps
+    knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
+    tasks.forEach(t => { prevTaskStatusRef.current.set(t.id, { status: t.data.status, priority: t.data.priority, assigneeId: t.data.assigneeId }); });
 
     if (notifPrefs.tasks) {
-      // New tasks assigned to me
-      newTasks.forEach(t => {
+      newTaskIds.forEach(id => {
+        const t = tasks.find(tt => tt.id === id);
+        if (!t) return;
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif(
-            '📋 Nueva tarea asignada',
-            `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`,
-            undefined,
-            `task-${t.id}`,
-            { type: 'task', screen: 'tasks', itemId: t.id }
-          );
+          sendBrowserNotif('📋 Nueva tarea asignada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''}${t.data.dueDate ? ` · Vence: ${fmtDate(t.data.dueDate)}` : ''}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id });
         }
-        // External notification to assignee (if different from current user)
         if (t.data.assigneeId && t.data.assigneeId !== authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          notifyExternal.taskAssigned(
-            t.data.assigneeId,
-            t.data.title,
-            proj?.data?.name || 'Proyecto',
-            t.data.priority,
-            t.data.dueDate,
-            authUser?.displayName || authUser?.email || 'Alguien'
-          ).catch(() => {});
+          bufferedNotify('taskAssigned', { uid: t.data.assigneeId, title: t.data.title, projName: proj?.data?.name || 'Proyecto', priority: t.data.priority, dueDate: t.data.dueDate, by: authUser?.displayName || authUser?.email || 'Alguien' });
         }
       });
-
-      // Task status changes
-      changedTasks.forEach(t => {
+      changedTaskIds.forEach(id => {
+        const t = tasks.find(tt => tt.id === id);
+        if (!t) return;
         if (t.data.assigneeId === authUser?.uid) {
           const proj = projects.find(p => p.id === t.data.projectId);
-          sendBrowserNotif(
-            t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada',
-            `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''} · ${t.data.status}`,
-            undefined,
-            `task-${t.id}`,
-            { type: 'task', screen: 'tasks', itemId: t.id }
-          );
+          sendBrowserNotif(t.data.status === 'Completado' ? '✅ Tarea completada' : t.data.status === 'En progreso' ? '🔄 Tarea en progreso' : '📝 Tarea actualizada', `"${t.data.title}"${proj ? ` — ${proj.data.name}` : ''} · ${t.data.status}`, undefined, `task-${t.id}`, { type: 'task', screen: 'tasks', itemId: t.id });
         }
-        // External notification to assignee on status change (if different from current user)
         if (t.data.assigneeId && t.data.assigneeId !== authUser?.uid) {
-          notifyExternal.taskUpdated(
-            t.data.assigneeId,
-            t.data.title,
-            t.data.status
-          ).catch(() => {});
+          bufferedNotify('taskUpdated', { uid: t.data.assigneeId, title: t.data.title, status: t.data.status });
         }
       });
     }
-    prevTasksRef.current = tasks;
-  }, [tasks, notifPrefs.tasks, authUser, projects, sendBrowserNotif]);
+  }, [tasks, notifPrefs.tasks, authUser, projects, sendBrowserNotif, bufferedNotify]);
 
-  // Detect new meetings
+  // Detect new meetings (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (meetings.length === 0) { prevMeetingsRef.current = []; return; }
-    const prev = prevMeetingsRef.current;
-    const newMeetings = meetings.filter(m => !prev.find(p => p.id === m.id));
-
-    if (newMeetings.length > 0 && notifPrefs.meetings) {
-      newMeetings.forEach(m => {
+    const newMeetingIds: string[] = [];
+    meetings.forEach(m => { if (!knownMeetingIdsRef.current.has(m.id)) newMeetingIds.push(m.id); });
+    knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
+    if (newMeetingIds.length > 0 && notifPrefs.meetings) {
+      newMeetingIds.forEach(id => {
+        const m = meetings.find(mm => mm.id === id);
+        if (!m) return;
         const proj = projects.find(p => p.id === m.data.projectId);
-        sendBrowserNotif(
-          '📅 Nueva reunión programada',
-          `"${m.data.title}"${m.data.time ? ` a las ${m.data.time}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${proj.data.name}` : ''}`,
-          undefined,
-          `meeting-${m.id}`,
-          { type: 'meeting', screen: 'calendar', itemId: m.id }
-        );
-        // External push notification for meeting
+        sendBrowserNotif('📅 Nueva reunión programada', `"${m.data.title}"${m.data.time ? ` a las ${m.data.time}` : ''}${m.data.date ? ` · ${fmtDate(m.data.date)}` : ''}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `meeting-${m.id}`, { type: 'meeting', screen: 'calendar', itemId: m.id });
         if (proj) {
-          const meetingData = m.data;
-          // Notify all team members via push about the new meeting
-          const teamMemberIds = teamUsers
-            .filter(u => u.id !== authUser?.uid)
-            .map(u => u.id);
-          teamMemberIds.forEach(uid => {
-            notifyExternal.meetingReminder(
-              uid,
-              meetingData.title,
-              meetingData.date ? fmtDate(meetingData.date) : '',
-              meetingData.time || '',
-              proj.data.name
-            ).catch(() => {});
-          });
+          const teamMemberIds = teamUsers.filter(u => u.id !== authUser?.uid).map(u => u.id);
+          teamMemberIds.forEach(uid => { bufferedNotify('meetingReminder', { uid, title: m.data.title, date: m.data.date ? fmtDate(m.data.date) : '', time: m.data.time || '', projName: proj.data.name }); });
         }
       });
     }
-    prevMeetingsRef.current = meetings;
-  }, [meetings, notifPrefs.meetings, projects, teamUsers, authUser, sendBrowserNotif]);
+  }, [meetings, notifPrefs.meetings, projects, teamUsers, authUser, sendBrowserNotif, bufferedNotify]);
 
-  // Detect new approvals
+  // Detect new approvals (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (approvals.length === 0) { prevApprovalsRef.current = []; return; }
-    const prev = prevApprovalsRef.current;
-    const newApprovals = approvals.filter(a => !prev.find(p => p.id === a.id));
-    const changedApprovals = approvals.filter(a => {
-      const p = prev.find(pp => pp.id === a.id);
-      return p && p.data.status !== a.data.status;
+    const newApprovalIds: string[] = [];
+    const changedApprovalIds: string[] = [];
+    approvals.forEach(a => {
+      if (!knownApprovalIdsRef.current.has(a.id)) {
+        newApprovalIds.push(a.id);
+      } else {
+        const prev = prevApprovalStatusRef.current.get(a.id);
+        if (prev && prev !== a.data.status) changedApprovalIds.push(a.id);
+      }
     });
+    knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
+    approvals.forEach(a => { prevApprovalStatusRef.current.set(a.id, a.data.status); });
 
     if (notifPrefs.approvals) {
-      newApprovals.forEach(a => {
-        sendBrowserNotif(
-          '📋 Nueva solicitud de aprobación',
-          `"${a.data.title}" · Pendiente de revisión`,
-          undefined,
-          `approval-${a.id}`,
-          { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId }
-        );
-        // External notification to the person who needs to approve (if different from current user)
+      newApprovalIds.forEach(id => {
+        const a = approvals.find(aa => aa.id === id);
+        if (!a) return;
+        sendBrowserNotif('📋 Nueva solicitud de aprobación', `"${a.data.title}" · Pendiente de revisión`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId });
         const aData = a.data as any;
         const reviewerId = aData.assignedTo || aData.reviewerId || aData.reviewer;
         if (reviewerId && reviewerId !== authUser?.uid) {
           const proj = projects.find(p => p.id === (aData.projectId || selectedProjectId));
-          notifyExternal.approvalPending(
-            reviewerId,
-            a.data.title,
-            proj?.data?.name || 'Proyecto',
-            authUser?.displayName || authUser?.email || 'Alguien'
-          ).catch(() => {});
+          bufferedNotify('approvalPending', { uid: reviewerId, title: a.data.title, projName: proj?.data?.name || 'Proyecto', by: authUser?.displayName || authUser?.email || 'Alguien' });
         }
       });
-      changedApprovals.forEach(a => {
-        sendBrowserNotif(
-          a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada',
-          `"${a.data.title}" · ${a.data.status}`,
-          undefined,
-          `approval-${a.id}`,
-          { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId }
-        );
-        // External notification when approval is resolved
+      changedApprovalIds.forEach(id => {
+        const a = approvals.find(aa => aa.id === id);
+        if (!a) return;
+        sendBrowserNotif(a.data.status === 'Aprobada' ? '✅ Aprobación aceptada' : a.data.status === 'Rechazada' ? '❌ Aprobación rechazada' : '📝 Aprobación actualizada', `"${a.data.title}" · ${a.data.status}`, undefined, `approval-${a.id}`, { type: 'approval', screen: 'projectDetail', itemId: selectedProjectId });
         if (a.data.status && a.data.status !== 'Pendiente') {
           const aData = a.data as any;
           const creatorId = aData.createdBy || aData.requestedBy;
           const reviewerId = aData.assignedTo || aData.reviewerId || aData.reviewer;
-          if (creatorId && creatorId !== authUser?.uid) {
-            notifyExternal.approvalResolved(
-              creatorId,
-              a.data.title,
-              a.data.status,
-              authUser?.displayName || authUser?.email || 'Alguien'
-            ).catch(() => {});
-          }
-          if (reviewerId && reviewerId !== authUser?.uid && reviewerId !== creatorId) {
-            notifyExternal.approvalResolved(
-              reviewerId,
-              a.data.title,
-              a.data.status,
-              authUser?.displayName || authUser?.email || 'Alguien'
-            ).catch(() => {});
-          }
+          if (creatorId && creatorId !== authUser?.uid) bufferedNotify('approvalResolved', { uid: creatorId, title: a.data.title, status: a.data.status, by: authUser?.displayName || authUser?.email || 'Alguien' });
+          if (reviewerId && reviewerId !== authUser?.uid && reviewerId !== creatorId) bufferedNotify('approvalResolved', { uid: reviewerId, title: a.data.title, status: a.data.status, by: authUser?.displayName || authUser?.email || 'Alguien' });
         }
       });
     }
-    prevApprovalsRef.current = approvals;
-  }, [approvals, notifPrefs.approvals, selectedProjectId, sendBrowserNotif]);
+  }, [approvals, notifPrefs.approvals, selectedProjectId, sendBrowserNotif, bufferedNotify, authUser, projects]);
 
-  // Detect low stock and inventory alerts (debounced - max once per 2 minutes)
+  // Detect low stock and inventory alerts (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.inventory) return;
-    const prevMov = prevMovementsRef.current;
-    const prevTrans = prevTransfersRef.current;
+    const newMovIds: string[] = [];
+    const newTransIds: string[] = [];
+    const changedTransIds: string[] = [];
+    invMovements.forEach(m => { if (!knownMovementIdsRef.current.has(m.id)) newMovIds.push(m.id); });
+    invTransfers.forEach(t => {
+      if (!knownTransferIdsRef.current.has(t.id)) newTransIds.push(t.id);
+      else {
+        const prev = prevTransferStatusRef.current.get(t.id);
+        if (prev && prev !== t.data.status) changedTransIds.push(t.id);
+      }
+    });
+    knownMovementIdsRef.current = new Set(invMovements.map(m => m.id));
+    knownTransferIdsRef.current = new Set(invTransfers.map(t => t.id));
+    invTransfers.forEach(t => { prevTransferStatusRef.current.set(t.id, t.data.status); });
 
-    // New movements (entradas/salidas)
-    const newMovs = invMovements.filter(m => !prevMov.find(p => p.id === m.id));
-    newMovs.forEach(m => {
+    newMovIds.forEach(id => {
+      const m = invMovements.find(mm => mm.id === id);
+      if (!m) return;
       const prod = invProducts.find(p => p.id === m.data.productId);
-      sendNotif(
-        m.data.type === 'Entrada' ? '📥 Entrada de inventario' : '📤 Salida de inventario',
-        `${prod?.data?.name || 'Producto'} · ${m.data.quantity} ${prod?.data?.unit || 'uds'}${m.data.reason ? ` — ${m.data.reason}` : ''}`,
-        undefined,
-        `mov-${m.id}`,
-        { type: 'inventory', screen: 'inventory' }
-      );
+      sendNotif(m.data.type === 'Entrada' ? '📥 Entrada de inventario' : '📤 Salida de inventario', `${prod?.data?.name || 'Producto'} · ${m.data.quantity} ${prod?.data?.unit || 'uds'}${m.data.reason ? ` — ${m.data.reason}` : ''}`, undefined, `mov-${m.id}`, { type: 'inventory', screen: 'inventory' });
     });
-
-    // New transfers
-    const newTrans = invTransfers.filter(t => !prevTrans.find(p => p.id === t.id));
-    newTrans.forEach(t => {
-      sendNotif(
-        '🚚 Nueva transferencia',
-        `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse} (${t.data.quantity})`,
-        undefined,
-        `transfer-${t.id}`,
-        { type: 'inventory', screen: 'inventory' }
-      );
+    newTransIds.forEach(id => {
+      const t = invTransfers.find(tt => tt.id === id);
+      if (!t) return;
+      sendNotif('🚚 Nueva transferencia', `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse} (${t.data.quantity})`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory' });
     });
-
-    // Transfer status changes
-    const changedTrans = invTransfers.filter(t => {
-      const p = prevTrans.find(pp => pp.id === t.id);
-      return p && p.data.status !== t.data.status;
-    });
-    changedTrans.forEach(t => {
+    changedTransIds.forEach(id => {
+      const t = invTransfers.find(tt => tt.id === id);
+      if (!t) return;
       const statusEmoji = t.data.status === 'Completada' ? '✅' : t.data.status === 'En tránsito' ? '🚛' : t.data.status === 'Cancelada' ? '❌' : '📦';
-      sendNotif(
-        `${statusEmoji} Transferencia ${t.data.status.toLowerCase()}`,
-        `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse}`,
-        undefined,
-        `transfer-${t.id}`,
-        { type: 'inventory', screen: 'inventory' }
-      );
+      sendNotif(`${statusEmoji} Transferencia ${t.data.status.toLowerCase()}`, `${t.data.productName || 'Producto'}: ${t.data.fromWarehouse} → ${t.data.toWarehouse}`, undefined, `transfer-${t.id}`, { type: 'inventory', screen: 'inventory' });
     });
-
-    prevMovementsRef.current = invMovements;
-    prevTransfersRef.current = invTransfers;
   }, [invMovements, invTransfers, invProducts, notifPrefs.inventory, sendNotif]);
 
-  // Meeting reminder check (every 60 seconds)
+  // Meeting reminder check (every 60 seconds) — unchanged logic, just guard
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.meetings || !authUser) return;
@@ -1532,22 +1529,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const now = new Date();
       const todayStr = now.toISOString().split('T')[0];
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
       meetings.forEach(m => {
         if (m.data.date === todayStr && m.data.time) {
           const [h, min] = m.data.time.split(':').map(Number);
           const meetingMinutes = h * 60 + min;
           const diff = meetingMinutes - nowMinutes;
-          // Notify 15 minutes before and 5 minutes before
           if (diff === 15 || diff === 5) {
             const proj = projects.find(p => p.id === m.data.projectId);
-            sendBrowserNotif(
-              `⏰ Reunión en ${diff} minutos`,
-              `"${m.data.title}" a las ${m.data.time}${proj ? ` — ${proj.data.name}` : ''}`,
-              undefined,
-              `reminder-${m.id}-${diff}`,
-              { type: 'meeting', screen: 'calendar' }
-            );
+            sendBrowserNotif(`⏰ Reunión en ${diff} minutos`, `"${m.data.title}" a las ${m.data.time}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `reminder-${m.id}-${diff}`, { type: 'meeting', screen: 'calendar' });
           }
         }
       });
@@ -1557,31 +1546,28 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => clearInterval(iv);
   }, [meetings, notifPrefs.meetings, authUser, projects, sendBrowserNotif]);
 
-  // Detect project status changes
+  // Detect project status changes (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (projects.length === 0) { prevProjectsRef.current = []; return; }
-    const prev = prevProjectsRef.current;
-    const changedProjects = projects.filter(p => {
-      const pr = prev.find(pp => pp.id === p.id);
-      return pr && (pr.data.status !== p.data.status);
+    const changedProjectIds: string[] = [];
+    projects.forEach(p => {
+      if (!knownProjectIdsRef.current.has(p.id)) return;
+      const prev = prevProjectStatusRef.current.get(p.id);
+      if (prev && prev !== p.data.status) changedProjectIds.push(p.id);
     });
+    knownProjectIdsRef.current = new Set(projects.map(p => p.id));
+    projects.forEach(p => { prevProjectStatusRef.current.set(p.id, p.data.status); });
     if (notifPrefs.projects) {
-      changedProjects.forEach(p => {
+      changedProjectIds.forEach(id => {
+        const p = projects.find(pp => pp.id === id);
+        if (!p) return;
         const statusEmoji = p.data.status === 'Ejecucion' ? '🏗️' : p.data.status === 'Terminado' ? '🎉' : p.data.status === 'Diseno' ? '🎨' : '📁';
-        sendNotif(
-          `${statusEmoji} Proyecto actualizado`,
-          `"${p.data.name}" cambió a: ${p.data.status}`,
-          undefined,
-          `proj-${p.id}`,
-          { type: 'project', screen: 'projects', itemId: p.id }
-        );
+        sendNotif(`${statusEmoji} Proyecto actualizado`, `"${p.data.name}" cambió a: ${p.data.status}`, undefined, `proj-${p.id}`, { type: 'project', screen: 'projects', itemId: p.id });
       });
     }
-    prevProjectsRef.current = projects;
   }, [projects, notifPrefs.projects, sendNotif]);
 
-  // Overdue tasks reminder (check every 30 min)
+  // Overdue tasks reminder (check every 30 min) — unchanged logic, just guard
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.tasks || !authUser) return;
@@ -1590,21 +1576,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const checkKey = `overdue-${today}`;
       if (overdueCheckedRef.current === checkKey) return;
       overdueCheckedRef.current = checkKey;
-
-      const myOverdue = tasks.filter(t =>
-        t.data.assigneeId === authUser?.uid &&
-        t.data.status !== 'Completado' &&
-        t.data.dueDate &&
-        t.data.dueDate < today
-      );
+      const myOverdue = tasks.filter(t => t.data.assigneeId === authUser?.uid && t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today);
       if (myOverdue.length > 0) {
-        sendNotif(
-          `⚠️ ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`,
-          myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '),
-          undefined,
-          'overdue-daily',
-          { type: 'reminder', screen: 'tasks' }
-        );
+        sendNotif(`⚠️ ${myOverdue.length} tarea${myOverdue.length > 1 ? 's' : ''} vencida${myOverdue.length > 1 ? 's' : ''}`, myOverdue.slice(0, 3).map(t => `"${t.data.title}"`).join(', '), undefined, 'overdue-daily', { type: 'reminder', screen: 'tasks' });
       }
     };
     check();
@@ -1612,239 +1586,133 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => clearInterval(iv);
   }, [tasks, notifPrefs.tasks, authUser, sendNotif]);
 
-  // Low stock periodic check (every 10 min)
+  // Low stock periodic check (every 10 min) — unchanged logic, just guard
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
     if (!notifPrefs.inventory) return;
     let lastLowStockCount = -1;
     const check = () => {
-      const lowStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
-        return stock > 0 && stock <= (p.data.minStock || 5);
-      });
-      const outOfStock = invProducts.filter(p => {
-        const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock;
-        return stock <= 0;
-      });
+      const lowStock = invProducts.filter(p => { const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock; return stock > 0 && stock <= (p.data.minStock || 5); });
+      const outOfStock = invProducts.filter(p => { const stock = p.data.warehouseStock ? (Object.values(p.data.warehouseStock) as number[]).reduce((a: number, b: number) => a + b, 0) : p.data.stock; return stock <= 0; });
       const total = lowStock.length + outOfStock.length;
       if (total > 0 && total !== lastLowStockCount) {
         lastLowStockCount = total;
-        sendNotif(
-          outOfStock.length > 0 ? '🚨 Alerta de inventario' : '⚠️ Stock bajo',
-          outOfStock.length > 0
-            ? `${outOfStock.length} sin stock${lowStock.length > 0 ? `, ${lowStock.length} bajo mínimo` : ''}: ${outOfStock.map(p => p.data.name).slice(0,3).join(', ')}`
-            : `${lowStock.length} producto${lowStock.length > 1 ? 's' : ''} bajo mínimo: ${lowStock.map(p => p.data.name).slice(0,3).join(', ')}`,
-          undefined,
-          'inv-lowstock-check',
-          { type: 'inventory', screen: 'inventory' }
-        );
+        sendNotif(outOfStock.length > 0 ? '🚨 Alerta de inventario' : '⚠️ Stock bajo', outOfStock.length > 0 ? `${outOfStock.length} sin stock${lowStock.length > 0 ? `, ${lowStock.length} bajo mínimo` : ''}: ${outOfStock.map(p => p.data.name).slice(0,3).join(', ')}` : `${lowStock.length} producto${lowStock.length > 1 ? 's' : ''} bajo mínimo: ${lowStock.map(p => p.data.name).slice(0,3).join(', ')}`, undefined, 'inv-lowstock-check', { type: 'inventory', screen: 'inventory' });
       }
     };
-    // Initial check after 10 seconds, then every 10 minutes
     const initTimer = setTimeout(check, 10000);
     const iv = setInterval(check, 10 * 60 * 1000);
     return () => { clearTimeout(initTimer); clearInterval(iv); };
   }, [invProducts, notifPrefs.inventory, sendNotif]);
 
-  // Detect new/changed RFIs and notify
+  // Detect new/changed RFIs (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (rfis.length === 0) { prevRfisRef.current = []; return; }
-    const prev = prevRfisRef.current;
-    const newRfis = rfis.filter(r => !prev.find(p => p.id === r.id));
-    const changedRfis = rfis.filter(r => {
-      const p = prev.find(pp => pp.id === r.id);
-      return p && p.data.status !== r.data.status;
+    const newRfiIds: string[] = [];
+    const changedRfiIds: string[] = [];
+    rfis.forEach(r => {
+      if (!knownRfiIdsRef.current.has(r.id)) newRfiIds.push(r.id);
+      else { const prev = prevRfiStatusRef.current.get(r.id); if (prev && prev !== r.data.status) changedRfiIds.push(r.id); }
     });
-
+    knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
+    rfis.forEach(r => { prevRfiStatusRef.current.set(r.id, r.data.status); });
     if (notifPrefs.rfis) {
-      newRfis.forEach(r => {
+      newRfiIds.forEach(id => {
+        const r = rfis.find(rr => rr.id === id);
+        if (!r) return;
         const proj = projects.find(p => p.id === r.data.projectId);
-        sendNotif(
-          '❓ Nuevo RFI',
-          `"${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}`,
-          undefined,
-          `rfi-${r.id}`,
-          { type: 'rfi', screen: 'rfis', itemId: r.id }
-        );
-        // External notification to assigned person
-        if (r.data.assignedTo && r.data.assignedTo !== authUser?.uid) {
-          notifyExternal.custom(
-            r.data.assignedTo,
-            `❓ Nuevo RFI: "${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}`
-          ).catch(() => {});
-        }
+        sendNotif('❓ Nuevo RFI', `"${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}`, undefined, `rfi-${r.id}`, { type: 'rfi', screen: 'rfis', itemId: r.id });
+        if (r.data.assignedTo && r.data.assignedTo !== authUser?.uid) bufferedNotify('custom', { uid: r.data.assignedTo, message: `❓ Nuevo RFI: "${r.data.subject || r.data.number}"${proj ? ` — ${proj.data.name}` : ''}${r.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}` });
       });
-      changedRfis.forEach(r => {
+      changedRfiIds.forEach(id => {
+        const r = rfis.find(rr => rr.id === id);
+        if (!r) return;
         const proj = projects.find(p => p.id === r.data.projectId);
         if (r.data.status === 'Respondido' && r.data.assignedTo === authUser?.uid) {
-          sendNotif(
-            '✅ RFI respondido',
-            `"${r.data.subject || r.data.number}" ha sido respondido${proj ? ` — ${proj.data.name}` : ''}`,
-            undefined,
-            `rfi-${r.id}`,
-            { type: 'rfi', screen: 'rfis', itemId: r.id }
-          );
-          // External: notify the creator that their RFI was answered
-          if (r.data.createdBy && r.data.createdBy !== authUser?.uid) {
-            notifyExternal.custom(
-              r.data.createdBy,
-              `✅ RFI respondido: "${r.data.subject || r.data.number}"`
-            ).catch(() => {});
-          }
+          sendNotif('✅ RFI respondido', `"${r.data.subject || r.data.number}" ha sido respondido${proj ? ` — ${proj.data.name}` : ''}`, undefined, `rfi-${r.id}`, { type: 'rfi', screen: 'rfis', itemId: r.id });
+          if (r.data.createdBy && r.data.createdBy !== authUser?.uid) bufferedNotify('custom', { uid: r.data.createdBy, message: `✅ RFI respondido: "${r.data.subject || r.data.number}"` });
         } else if (r.data.status === 'Cerrado' && r.data.createdBy === authUser?.uid) {
-          sendNotif(
-            '🔒 RFI cerrado',
-            `"${r.data.subject || r.data.number}" ha sido cerrado`,
-            undefined,
-            `rfi-${r.id}`,
-            { type: 'rfi', screen: 'rfis', itemId: r.id }
-          );
+          sendNotif('🔒 RFI cerrado', `"${r.data.subject || r.data.number}" ha sido cerrado`, undefined, `rfi-${r.id}`, { type: 'rfi', screen: 'rfis', itemId: r.id });
         }
       });
     }
-    prevRfisRef.current = rfis;
-  }, [rfis, notifPrefs.rfis, authUser, projects, sendNotif]);
+  }, [rfis, notifPrefs.rfis, authUser, projects, sendNotif, bufferedNotify]);
 
-  // Detect new/changed Submittals and notify
+  // Detect new/changed Submittals (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (submittals.length === 0) { prevSubmittalsRef.current = []; return; }
-    const prev = prevSubmittalsRef.current;
-    const newSubs = submittals.filter(s => !prev.find(p => p.id === s.id));
-    const changedSubs = submittals.filter(s => {
-      const p = prev.find(pp => pp.id === s.id);
-      return p && p.data.status !== s.data.status;
+    const newSubIds: string[] = [];
+    const changedSubIds: string[] = [];
+    submittals.forEach(s => {
+      if (!knownSubmittalIdsRef.current.has(s.id)) newSubIds.push(s.id);
+      else { const prev = prevSubmittalStatusRef.current.get(s.id); if (prev && prev !== s.data.status) changedSubIds.push(s.id); }
     });
-
+    knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
+    submittals.forEach(s => { prevSubmittalStatusRef.current.set(s.id, s.data.status); });
     if (notifPrefs.submittals) {
-      newSubs.forEach(s => {
+      newSubIds.forEach(id => {
+        const s = submittals.find(ss => ss.id === id);
+        if (!s) return;
         if (s.data.reviewer === authUser?.uid) {
           const proj = projects.find(p => p.id === s.data.projectId);
-          sendNotif(
-            '📋 Nuevo submittal para revisión',
-            `"${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}`,
-            undefined,
-            `sub-${s.id}`,
-            { type: 'submittal', screen: 'submittals', itemId: s.id }
-          );
+          sendNotif('📋 Nuevo submittal para revisión', `"${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}`, undefined, `sub-${s.id}`, { type: 'submittal', screen: 'submittals', itemId: s.id });
         }
-        // External notification to reviewer
         if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
           const proj = projects.find(p => p.id === s.data.projectId);
-          notifyExternal.custom(
-            s.data.reviewer,
-            `📋 Nuevo submittal para revisión: "${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}`
-          ).catch(() => {});
+          bufferedNotify('custom', { uid: s.data.reviewer, message: `📋 Nuevo submittal para revisión: "${s.data.title || s.data.number}"${proj ? ` — ${proj.data.name}` : ''}` });
         }
       });
-      changedSubs.forEach(s => {
+      changedSubIds.forEach(id => {
+        const s = submittals.find(ss => ss.id === id);
+        if (!s) return;
         const proj = projects.find(p => p.id === s.data.projectId);
         if (s.data.status === 'Aprobado' && s.data.createdBy === authUser?.uid) {
-          sendNotif(
-            '✅ Submittal aprobado',
-            `"${s.data.title || s.data.number}" ha sido aprobado${proj ? ` — ${proj.data.name}` : ''}`,
-            undefined,
-            `sub-${s.id}`,
-            { type: 'submittal', screen: 'submittals', itemId: s.id }
-          );
-          // External: notify creator
-          if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
-            notifyExternal.custom(
-              s.data.reviewer,
-              `✅ Submittal aprobado: "${s.data.title || s.data.number}"`
-            ).catch(() => {});
-          }
+          sendNotif('✅ Submittal aprobado', `"${s.data.title || s.data.number}" ha sido aprobado${proj ? ` — ${proj.data.name}` : ''}`, undefined, `sub-${s.id}`, { type: 'submittal', screen: 'submittals', itemId: s.id });
         } else if ((s.data.status === 'Rechazado' || s.data.status === 'Devuelto') && s.data.createdBy === authUser?.uid) {
-          sendNotif(
-            s.data.status === 'Rechazado' ? '❌ Submittal rechazado' : '↩️ Submittal devuelto',
-            `"${s.data.title || s.data.number}" — ${s.data.reviewNotes || 'Sin notas'}`,
-            undefined,
-            `sub-${s.id}`,
-            { type: 'submittal', screen: 'submittals', itemId: s.id }
-          );
-          // External: notify reviewer
-          if (s.data.reviewer && s.data.reviewer !== authUser?.uid) {
-            notifyExternal.custom(
-              s.data.reviewer,
-              `${s.data.status === 'Rechazado' ? '❌' : '↩️'} Submittal ${s.data.status.toLowerCase()}: "${s.data.title || s.data.number}"`
-            ).catch(() => {});
-          }
+          sendNotif(s.data.status === 'Rechazado' ? '❌ Submittal rechazado' : '↩️ Submittal devuelto', `"${s.data.title || s.data.number}" — ${s.data.reviewNotes || 'Sin notas'}`, undefined, `sub-${s.id}`, { type: 'submittal', screen: 'submittals', itemId: s.id });
         } else if (s.data.status === 'En revisión' && s.data.reviewer === authUser?.uid) {
-          sendNotif(
-            '⚖️ Submittal listo para revisión',
-            `"${s.data.title || s.data.number}" requiere tu revisión${proj ? ` — ${proj.data.name}` : ''}`,
-            undefined,
-            `sub-${s.id}`,
-            { type: 'submittal', screen: 'submittals', itemId: s.id }
-          );
-          // External: notify reviewer
-          if (s.data.createdBy && s.data.createdBy !== authUser?.uid) {
-            notifyExternal.custom(
-              s.data.reviewer,
-              `⚖️ Submittal listo para revisión: "${s.data.title || s.data.number}"`
-            ).catch(() => {});
-          }
+          sendNotif('⚖️ Submittal listo para revisión', `"${s.data.title || s.data.number}" requiere tu revisión${proj ? ` — ${proj.data.name}` : ''}`, undefined, `sub-${s.id}`, { type: 'submittal', screen: 'submittals', itemId: s.id });
         }
       });
     }
-    prevSubmittalsRef.current = submittals;
-  }, [submittals, notifPrefs.submittals, authUser, projects, sendNotif]);
+  }, [submittals, notifPrefs.submittals, authUser, projects, sendNotif, bufferedNotify]);
 
-  // Detect new/changed Punch Items and notify
+  // Detect new/changed Punch Items (Set-based O(1) lookup)
   useEffect(() => {
     if (!firstLoadDoneRef.current) return;
-    if (punchItems.length === 0) { prevPunchItemsRef.current = []; return; }
-    const prev = prevPunchItemsRef.current;
-    const newPunch = punchItems.filter(p => !prev.find(pp => pp.id === p.id));
-    const changedPunch = punchItems.filter(p => {
-      const pr = prev.find(pp => pp.id === p.id);
-      return pr && pr.data.status !== p.data.status;
+    const newPunchIds: string[] = [];
+    const changedPunchIds: string[] = [];
+    punchItems.forEach(p => {
+      if (!knownPunchItemIdsRef.current.has(p.id)) newPunchIds.push(p.id);
+      else { const prev = prevPunchStatusRef.current.get(p.id); if (prev && prev !== p.data.status) changedPunchIds.push(p.id); }
     });
-
+    knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
+    punchItems.forEach(p => { prevPunchStatusRef.current.set(p.id, p.data.status); });
     if (notifPrefs.punchList) {
-      newPunch.forEach(p => {
+      newPunchIds.forEach(id => {
+        const p = punchItems.find(pp => pp.id === id);
+        if (!p) return;
         if (p.data.assignedTo === authUser?.uid) {
           const proj = projects.find(pr => pr.id === p.data.projectId);
-          sendNotif(
-            '✅ Nuevo item Punch List',
-            `"${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}`,
-            undefined,
-            `punch-${p.id}`,
-            { type: 'punchList', screen: 'punchList', itemId: p.id }
-          );
+          sendNotif('✅ Nuevo item Punch List', `"${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}`, undefined, `punch-${p.id}`, { type: 'punchList', screen: 'punchList', itemId: p.id });
         }
-        // External notification to assigned person
         if (p.data.assignedTo && p.data.assignedTo !== authUser?.uid) {
           const proj = projects.find(pr => pr.id === p.data.projectId);
-          notifyExternal.custom(
-            p.data.assignedTo,
-            `✅ Nuevo Punch List: "${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}`
-          ).catch(() => {});
+          bufferedNotify('custom', { uid: p.data.assignedTo, message: `✅ Nuevo Punch List: "${p.data.title}" — ${p.data.location || 'Sin ubicación'}${p.data.priority === 'Alta' ? ' · Prioridad ALTA' : ''}${proj ? ` — ${proj.data.name}` : ''}` });
         }
       });
-      changedPunch.forEach(p => {
-        const proj = projects.find(pr => pr.id === p.data.projectId);
+      changedPunchIds.forEach(id => {
+        const p = punchItems.find(pp => pp.id === id);
+        if (!p) return;
         if (p.data.status === 'Completado' && p.data.assignedTo === authUser?.uid) {
-          sendNotif(
-            '✅ Punch item completado',
-            `"${p.data.title}" — ${p.data.location || ''}`,
-            undefined,
-            `punch-${p.id}`,
-            { type: 'punchList', screen: 'punchList', itemId: p.id }
-          );
+          sendNotif('✅ Punch item completado', `"${p.data.title}" — ${p.data.location || ''}`, undefined, `punch-${p.id}`, { type: 'punchList', screen: 'punchList', itemId: p.id });
         }
-        // External: notify assigned person when completed
         if (p.data.status === 'Completado' && p.data.assignedTo && p.data.assignedTo !== authUser?.uid) {
-          notifyExternal.custom(
-            p.data.assignedTo,
-            `✅ Punch item completado: "${p.data.title}" — ${p.data.location || ''}`
-          ).catch(() => {});
+          bufferedNotify('custom', { uid: p.data.assignedTo, message: `✅ Punch item completado: "${p.data.title}" — ${p.data.location || ''}` });
         }
       });
     }
-    prevPunchItemsRef.current = punchItems;
-  }, [punchItems, notifPrefs.punchList, authUser, projects, sendNotif]);
+  }, [punchItems, notifPrefs.punchList, authUser, projects, sendNotif, bufferedNotify]);
 
   /* ===== FIREBASE ACTIONS ===== */
   const doLogin = async () => {
@@ -2616,13 +2484,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const createData = scrubUndefined({ ...raw, createdAt: ts, createdBy: authUser.uid });
         await db.collection('tasks').add(createData);
         showToast('Tarea creada');
-        if (assignees.length > 0 && forms.taskProject) {
-          const proj = projects.find((p: any) => p.id === forms.taskProject);
-          const projName = proj?.data?.name || 'Proyecto';
-          assignees.forEach((uid: string) => {
-            notifyWhatsApp.taskAssigned(uid, title, projName, forms.taskPriority || 'Media', forms.taskDue || undefined).catch(() => {});
-          });
-        }
+        // Notification handled by the centralized detector in the useEffect above
       }
       closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [] }));
     } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
@@ -2899,12 +2761,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       await db.collection('expenses').add(data);
       showToast('Gasto registrado');
       closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0] }));
-      // Notificar por WhatsApp al creador
-      if (forms.expProject) {
-        const proj = projects.find(p => p.id === forms.expProject);
-        const projName = proj?.data.name || 'Proyecto';
-        notifyWhatsApp.expenseCreated(authUser.uid, concept, amount, projName, forms.expCategory || undefined).catch(() => {});
-      }
+      // Notification handled by the centralized detector in the useEffect above
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
@@ -3085,8 +2942,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add(scrubUndefined({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid }));
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
-      const projName = currentProject?.data.name || 'Proyecto';
-      notifyWhatsApp.approvalPending(authUser.uid, title, projName, authUser.displayName || authUser.email || 'Usuario').catch(() => {});
+      // Notification handled by the centralized detector in the useEffect above
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
@@ -3094,12 +2950,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
       showToast('Estado actualizado');
-      // Notificar por WhatsApp al creador de la aprobación
-      const approval = approvals.find(a => a.id === id);
-      if ((approval?.data as any)?.createdBy) {
-        const projName = currentProject?.data.name || 'Proyecto';
-        notifyWhatsApp.approvalResolved((approval!.data as any).createdBy, approval!.data.title, status, authUser?.displayName || undefined).catch(() => {});
-      }
+      // Notification handled by the centralized detector in the useEffect above
     } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
