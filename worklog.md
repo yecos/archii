@@ -470,3 +470,35 @@ Stage Summary:
   - VAPID_PRIVATE_KEY (para push)
   - VAPID_SUBJECT (opcional, default: mailto:admin@archiflow.app)
 - Uso: import { notifyExternal } from '@/lib/notify-unified'
+
+---
+Task ID: 9
+Agent: Super Z (Main)
+Task: Vincular tareas de fases del modulo de proyectos con el modulo de tareas (bidireccional)
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Diagnosticado el problema: workPhases solo se cargaba para selectedProjectId
+- Las fases del proyecto no se mostraban en TasksScreen ni en TaskModal al crear/editar desde el modulo de tareas
+- Creado cache de fases por proyecto (projectPhasesCache) en AppContext
+- Creados 3 helpers en AppContext: getPhasesForProject, loadPhasesForProject, getPhaseName
+- Actualizado TaskModal: ahora carga fases de CUALQUIER proyecto seleccionado (no solo el activo)
+- Actualizado TasksScreen (lista): muestra tag de fase con icono Layers en violeta
+- Actualizado TasksScreen (kanban): muestra fase junto al nombre del proyecto en cada tarjeta
+- Agregado filtro de fase en TasksScreen (selector desplegable en panel de filtros)
+- Actualizado ProjectDetailScreen (tab Tareas): muestra badge de fase con icono Layers
+- TypeScript check: 0 errores nuevos (3 errores pre-existentes de projectType sin relacion)
+- ESLint: error pre-existente de config circular (no relacionado)
+
+Stage Summary:
+- Archivos modificados: 4
+  - src/contexts/AppContext.tsx (+50 lineas): cache de fases + 3 helpers
+  - src/components/modals/TaskModal.tsx (reescrito): fases dinamicas por proyecto
+  - src/screens/TasksScreen.tsx (+40 lineas): fase visible + filtro de fase
+  - src/screens/ProjectDetailScreen.tsx (+10 lineas): fase en tab Tareas
+- Vinculacion bidireccional completada:
+  1. Crear tarea desde Proyecto > Obra > fase → aparece en Tareas con su fase
+  2. Crear tarea desde Tareas con proyecto+fase → aparece en Proyecto > Obra
+  3. Editar tarea desde Tareas → puede asignar/cambiar fase
+  4. Filtrar tareas por fase en el modulo de Tareas

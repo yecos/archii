@@ -1,15 +1,31 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
 import { X, Users, Plus, Trash2 } from 'lucide-react';
 
 export default function TaskModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser, workPhases } = useApp();
+  const { forms, setForms, editingId, closeModal, saveTask, isSavingTask, projects, teamUsers, authUser, getPhasesForProject, loadPhasesForProject, projectPhasesCache } = useApp() as any;
 
   const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : [];
   const subtasks: { text: string; done: boolean }[] = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks : [];
+
+  // Get phases for the currently selected project in the modal
+  const modalProjectId = forms.taskProject || '';
+  const currentPhases: any[] = modalProjectId ? (getPhasesForProject(modalProjectId) || []) : [];
+
+  // When project changes, load its phases on demand if not cached
+  useEffect(() => {
+    if (open && modalProjectId && !projectPhasesCache[modalProjectId]) {
+      loadPhasesForProject(modalProjectId);
+    }
+  }, [open, modalProjectId, projectPhasesCache]);
+
+  // Re-check after cache updates (loadPhasesForProject is async)
+  const effectivePhases: any[] = modalProjectId && projectPhasesCache[modalProjectId]
+    ? projectPhasesCache[modalProjectId]
+    : currentPhases;
 
   const toggleAssignee = (uid: string) => {
     setForms((p: any) => {
@@ -85,15 +101,15 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           </FormSelect>
         </FormField>
 
-        {/* Fase (solo si hay proyecto seleccionado con fases) */}
-        {forms.taskProject && workPhases.length > 0 && (
+        {/* Fase — works for ANY project selected, not just the active one */}
+        {forms.taskProject && effectivePhases.length > 0 && (
           <FormField label="Fase">
             <FormSelect
               value={forms.taskPhase || ''}
               onChange={(e) => setForms((p: any) => ({ ...p, taskPhase: e.target.value }))}
             >
               <option value="">— Sin fase —</option>
-              {workPhases
+              {effectivePhases
                 .filter((ph: any) => ph.data.enabled !== false)
                 .map((ph: any) => (
                   <option key={ph.id} value={ph.id}>{ph.data.type ? `[${ph.data.type}] ` : ''}{ph.data.name}</option>

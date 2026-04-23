@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
-import { Plus } from 'lucide-react';
+import { Plus, Layers } from 'lucide-react';
 import { PROJECT_TYPE_COLORS } from '@/lib/types';
 
 
@@ -31,6 +31,7 @@ export default function ProjectDetailScreen() {
     logForm, setLogForm, openEditLog, resetLogForm, saveDailyLog, selectedLogId,
     setDailyLogTab, setSelectedLogId,
     rfis, submittals, punchItems, changeTaskStatus, showToast,
+    getPhaseName,
   } = useApp();
 
   // Computed values
@@ -243,6 +244,16 @@ export default function ProjectDetailScreen() {
                     <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
                     <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${prioColor(t.data.priority)}`}>{t.data.priority}</span>
+                      {t.data.phaseId && (() => {
+                        const phaseName = getPhaseName(t.data.phaseId, selectedProjectId);
+                        if (!phaseName) return null;
+                        return (
+                          <span className="inline-flex items-center gap-0.5 text-violet-400">
+                            <Layers size={10} className="flex-shrink-0" />
+                            {phaseName}
+                          </span>
+                        );
+                      })()}
                       {t.data.dueDate && <span>📅 {fmtDate(t.data.dueDate)}</span>}
                       {t.data.assigneeId && <span>👤 {getUserName(t.data.assigneeId)}</span>}
                     </div>

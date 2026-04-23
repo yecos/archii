@@ -86,6 +86,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [messages, setMessages] = useState<any[]>([]);
   const [chatProjectId, setChatProjectId] = useState<string | null>(null);
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
+  const [projectPhasesCache, setProjectPhasesCache] = useState<Record<string, WorkPhase[]>>({});
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -993,7 +994,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const res = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`);
         if (!res.ok) { setWorkPhases([]); return; }
         const data = await res.json();
-        if (!cancelled) setWorkPhases(data.phases || []);
+        const phases = data.phases || [];
+        if (!cancelled) {
+          setWorkPhases(phases);
+          setProjectPhasesCache(prev => ({ ...prev, [selectedProjectId]: phases }));
+        }
       } catch (e) { if (!cancelled) setWorkPhases([]); }
     };
     loadPhases();
@@ -1001,6 +1006,35 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const interval = setInterval(loadPhases, 5000);
     return () => { cancelled = true; clearInterval(interval); setWorkPhases([]); };
   }, [ready, selectedProjectId, activeTenantId]);
+
+  // Helper: get phases for any project (with cache)
+  const getPhasesForProject = useCallback((projectId: string): WorkPhase[] => {
+    if (projectPhasesCache[projectId]) return projectPhasesCache[projectId];
+    // If not cached and it's the selected project, return current workPhases
+    if (projectId === selectedProjectId) return workPhases;
+    return [];
+  }, [projectPhasesCache, selectedProjectId, workPhases]);
+
+  // Helper: load phases for a project on demand (used by TaskModal)
+  const loadPhasesForProject = useCallback(async (projectId: string) => {
+    if (!ready || !activeTenantId || !projectId) return;
+    if (projectPhasesCache[projectId]) return; // Already cached
+    try {
+      const res = await fetch(`/api/project-phases?projectId=${projectId}&tenantId=${activeTenantId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const phases = data.phases || [];
+      setProjectPhasesCache(prev => ({ ...prev, [projectId]: phases }));
+    } catch (e) { /* silent */ }
+  }, [ready, activeTenantId, projectPhasesCache]);
+
+  // Helper: get phase name by id
+  const getPhaseName = useCallback((phaseId: string | undefined, projectId: string | undefined): string => {
+    if (!phaseId || !projectId) return '';
+    const phases = getPhasesForProject(projectId);
+    const phase = phases.find(p => p.id === phaseId);
+    return phase ? phase.data.name : '';
+  }, [getPhasesForProject]);
 
   // Load project files
   useEffect(() => {
@@ -3903,6 +3937,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     chatProjectId,
     setChatProjectId,
     workPhases,
+    getPhasesForProject,
+    loadPhasesForProject,
+    getPhaseName,
+    projectPhasesCache,
     setWorkPhases,
     projectFiles,
     setProjectFiles,

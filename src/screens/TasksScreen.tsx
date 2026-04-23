@@ -3,7 +3,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown } from 'lucide-react';
+import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown, Layers } from 'lucide-react';
 import { exportTasksExcel } from '@/lib/export-excel';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
@@ -63,6 +63,7 @@ export default function TasksScreen() {
     changeTaskStatus, deleteTask, forms, getUserName, loading,
     openEditTask, openModal, projects, setForms, tasks,
     timeEntries, showToast, teamUsers, toggleTask,
+    getPhaseName, loadPhasesForProject, projectPhasesCache,
   } = useApp() as any;
 
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export default function TasksScreen() {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [filterPhase, setFilterPhase] = useState('');
 
   // Pick up incoming status/assignee filter set by navigation (e.g. from ProfileScreen)
   React.useEffect(() => {
@@ -150,8 +152,9 @@ export default function TasksScreen() {
     }
     if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
     if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
+    if (filterPhase) result = result.filter((t: any) => t.data.phaseId === filterPhase);
     return result;
-  }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee]);
+  }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee, filterPhase]);
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
@@ -166,6 +169,19 @@ export default function TasksScreen() {
     });
     return Array.from(map.values());
   }, [tasks, getUserName]);
+
+  // Get unique phases for filter (from tasks with phaseId)
+  const phaseOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    const sourceTasks = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
+    sourceTasks.forEach((t: any) => {
+      if (t.data.phaseId && t.data.projectId) {
+        const name = getPhaseName(t.data.phaseId, t.data.projectId);
+        if (name) map.set(t.data.phaseId, { id: t.data.phaseId, name });
+      }
+    });
+    return Array.from(map.values());
+  }, [tasks, taskFilterProject, getPhaseName, projectPhasesCache]);
 
   // Stats
   const taskStats = useMemo(() => ({
@@ -232,7 +248,7 @@ export default function TasksScreen() {
           >
             <Filter size={14} />
             Filtros
-            {(filterPriority || filterAssignee || filterStatus) && <span className="w-2 h-2 rounded-full bg-[var(--af-accent)]" />}
+            {(filterPriority || filterAssignee || filterStatus || filterPhase) && <span className="w-2 h-2 rounded-full bg-[var(--af-accent)]" />}
           </button>
         </div>
 
@@ -295,8 +311,16 @@ export default function TasksScreen() {
             <option value="">Todos los asignados</option>
             {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          {(filterPriority || filterAssignee || filterStatus) && (
-            <button className="text-[11px] text-red-400 cursor-pointer hover:underline" onClick={() => { setFilterPriority(''); setFilterAssignee(''); setFilterStatus(''); }}>
+          <select
+            className="text-[12px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-[var(--foreground)] outline-none cursor-pointer"
+            value={filterPhase}
+            onChange={e => setFilterPhase(e.target.value)}
+          >
+            <option value="">Todas las fases</option>
+            {phaseOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          {(filterPriority || filterAssignee || filterStatus || filterPhase) && (
+            <button className="text-[11px] text-red-400 cursor-pointer hover:underline" onClick={() => { setFilterPriority(''); setFilterAssignee(''); setFilterStatus(''); setFilterPhase(''); }}>
               Limpiar filtros
             </button>
           )}
@@ -383,6 +407,16 @@ export default function TasksScreen() {
                         })()}
                         <div className="text-[11px] text-[var(--af-text3)] mt-1 flex items-center gap-2 flex-wrap">
                           {proj && <span>{proj.data.name}</span>}
+                          {t.data.phaseId && (() => {
+                            const phaseName = getPhaseName(t.data.phaseId, t.data.projectId);
+                            if (!phaseName) return null;
+                            return (
+                              <span className="inline-flex items-center gap-0.5 text-violet-400">
+                                <Layers size={9} className="flex-shrink-0" />
+                                {phaseName}
+                              </span>
+                            );
+                          })()}
                           {t.data.dueDate && (
                             <span className={isOverdue ? 'text-red-400' : ''}>
                               <Calendar size={10} className="inline mr-0.5" />
@@ -540,8 +574,17 @@ export default function TasksScreen() {
 
                             {/* Project tag */}
                             {proj && (
-                              <div className="text-[10px] text-[var(--af-text3)] mb-1.5 truncate pr-16">
+                              <div className="text-[10px] text-[var(--af-text3)] mb-1 truncate pr-16">
                                 {proj.data.name}
+                                {t.data.phaseId && (() => {
+                                  const phaseName = getPhaseName(t.data.phaseId, t.data.projectId);
+                                  return phaseName ? (
+                                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-violet-400">
+                                      <Layers size={8} className="flex-shrink-0" />
+                                      {phaseName}
+                                    </span>
+                                  ) : null;
+                                })()}
                               </div>
                             )}
 
