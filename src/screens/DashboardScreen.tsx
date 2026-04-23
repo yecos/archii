@@ -5,7 +5,7 @@ import { useApp } from '@/contexts/AppContext';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer, Plus } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 
@@ -33,6 +33,7 @@ export default function DashboardScreen() {
     activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
     timeEntries, showToast, visibleProjects, companies, meetings,
     rfis, submittals, punchItems, overdueTasks, userName,
+    approvals, dailyLogs, invLowStock, invAlerts, openModal, setForms, timeSession, suppliers,
   } = useApp();
 
   // ─── Date Range State ───
@@ -104,6 +105,25 @@ export default function DashboardScreen() {
   const rangeCompletedTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'Completado').length, [rangeTasks]);
   const rangeActiveTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'En progreso' || t.data.status === 'Revision').length, [rangeTasks]);
   const rangeTotalTime = useMemo(() => rangeTimeEntries.reduce((s: number, te: any) => s + (te.data.duration || 0), 0), [rangeTimeEntries]);
+
+  // Pending approvals
+  const pendingApprovals = useMemo(() => approvals.filter((a: any) => a.data.status === 'Pendiente').length, [approvals]);
+
+  // Time formatting helper
+  const fmtHours = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  // Overdue invoices count
+  const overdueInvoices = useMemo(() => invoices.filter((inv: any) => {
+    if (inv.data.status !== 'Enviada' || !inv.data.dueDate) return false;
+    return new Date(inv.data.dueDate) < new Date();
+  }).length, [invoices]);
+
+  // Total budget across all projects
+  const totalBudget = useMemo(() => projects.reduce((s: number, p: any) => s + (p.data.budget || 0), 0), [projects]);
 
   // Tasks due this week (within 7 days, not completed, not overdue)
   const weekTasks = useMemo(() => tasks.filter((t: any) => {
@@ -304,7 +324,13 @@ export default function DashboardScreen() {
                 <span className="text-[11px] text-blue-400 font-medium">{overdueRFIs} RFI{overdueRFIs !== 1 ? 's' : ''} vencida{overdueRFIs !== 1 ? 's' : ''}</span>
               </div>
             )}
-            {overdueCount === 0 && todayMeetings.length === 0 && todayDueTasks.length === 0 && overdueRFIs === 0 && (
+            {overdueInvoices > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/15 transition-colors" onClick={() => navigateTo('invoices')}>
+                <DollarSign size={12} className="text-amber-400" />
+                <span className="text-[11px] text-amber-400 font-medium">{overdueInvoices} factura{overdueInvoices !== 1 ? 's' : ''} vencida{overdueInvoices !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {overdueCount === 0 && todayMeetings.length === 0 && todayDueTasks.length === 0 && overdueRFIs === 0 && overdueInvoices === 0 && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                 <CheckCircle2 size={12} className="text-emerald-400" />
                 <span className="text-[11px] text-emerald-400 font-medium">Todo al día</span>
@@ -314,8 +340,8 @@ export default function DashboardScreen() {
         </div>
       </div>
 
-      {/* ════════════ ROW 1: KPI Cards (6) ════════════ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* ════════════ ROW 1: KPI Cards (8) ════════════ */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-3">
         {[
           { val: projects.length, lbl: 'Proyectos', icon: <FolderKanban size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${execProjects} en ejecución`, click: 'projects' },
           { val: rangeTasks.filter((t: any) => t.data.status !== 'Completado').length, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${rangeActiveTasks} activas`, click: 'tasks' },
@@ -323,8 +349,10 @@ export default function DashboardScreen() {
           { val: todayMeetings.length, lbl: 'Reuniones hoy', icon: <CalendarDays size={15} />, bg: 'bg-purple-500/10', iconC: 'text-purple-400', sub: weekTasks.length > 0 ? `${weekTasks.length} tareas esta semana` : '', click: 'calendar' },
           { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Subs', icon: <CircleHelp size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} subs`, click: 'rfis', alert: overdueRFIs > 0 },
           { val: openPunchItems, lbl: 'Punch List', icon: <ListChecks size={15} />, bg: 'bg-teal-500/10', iconC: 'text-teal-400', sub: `${punchItems.length} items totales`, click: 'punchList' },
+          { val: totalBudget > 0 ? Math.round((totalExpenses / totalBudget) * 100) + '%' : '—', lbl: 'Presupuesto', icon: <DollarSign size={15} />, bg: totalBudget > 0 && totalExpenses > totalBudget * 0.9 ? 'bg-red-500/10' : 'bg-emerald-500/10', iconC: totalBudget > 0 && totalExpenses > totalBudget * 0.9 ? 'text-red-400' : 'text-emerald-400', sub: totalBudget > 0 ? `${fmtCOP(totalExpenses)} / ${fmtCOP(totalBudget)}` : 'Sin presupuesto', click: 'budget', alert: totalBudget > 0 && totalExpenses > totalBudget },
+          { val: rangeTotalTime > 0 ? fmtHours(rangeTotalTime) : '—', lbl: 'Tiempo', icon: <Timer size={15} />, bg: 'bg-indigo-500/10', iconC: 'text-indigo-400', sub: `${rangeTimeEntries.length} registros`, click: 'timeTracking' },
         ].map((m, i) => (
-          <div key={i} className={`af-kpi-card p-3.5 sm:p-4 animate-fadeInUp stagger-${Math.min(i + 1, 6)} hover:border-[var(--af-accent)]/30 transition-all cursor-pointer group`} onClick={() => navigateTo(m.click)}>
+          <div key={i} className={`af-kpi-card p-3.5 sm:p-4 animate-fadeInUp stagger-${Math.min(i + 1, 8)} hover:border-[var(--af-accent)]/30 transition-all cursor-pointer group`} onClick={() => navigateTo(m.click)}>
             <div className="flex items-center justify-between mb-2">
               <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconC}`}>{m.icon}</div>
               {m.alert && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
@@ -334,6 +362,27 @@ export default function DashboardScreen() {
             <div className="text-[9px] sm:text-[10px] text-[var(--af-text3)] mt-0.5 truncate">{m.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* ════════════ Quick Actions ════════════ */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Acciones:</span>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--af-bg3)] transition-colors" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: '', taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer' })); openModal('task'); }}>
+          <Plus size={12} /> Tarea
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--af-bg3)] transition-colors" onClick={() => { setForms(p => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' })); openModal('expense'); }}>
+          <DollarSign size={12} /> Gasto
+        </button>
+        {pendingApprovals > 0 && (
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/15 transition-colors" onClick={() => navigateTo('approvals')}>
+            <AlertTriangle size={12} /> {pendingApprovals} aprobación{pendingApprovals !== 1 ? 'es' : ''}
+          </button>
+        )}
+        {invLowStock > 0 && (
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/15 transition-colors" onClick={() => navigateTo('inventory')}>
+            <AlertTriangle size={12} /> {invLowStock} stock bajo
+          </button>
+        )}
       </div>
 
       {/* ════════════ ROW 2: Today's Agenda + Projects ════════════ */}
@@ -505,6 +554,13 @@ export default function DashboardScreen() {
               <span className="text-[10px] text-[var(--af-text3)]">·</span>
               <span className="text-[10px] text-emerald-400">{rangeCompletedTasks} completadas</span>
             </div>
+            {rangeTotalTime > 0 && (
+              <div className="flex items-center justify-center gap-1.5 mt-1 pt-2 border-t border-[var(--border)]">
+                <Timer size={10} className="text-blue-400" />
+                <span className="text-[10px] text-blue-400 font-medium">{fmtHours(rangeTotalTime)} registradas</span>
+                <span className="text-[10px] text-[var(--af-text3)]">({rangeTimeEntries.length} entradas)</span>
+              </div>
+            )}
           </div>
           {/* Task distribution legend */}
           {taskStatusData.length > 0 && (
@@ -542,6 +598,18 @@ export default function DashboardScreen() {
               <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-400" /><span className="text-[12px]">Por cobrar</span></div>
               <span className="text-[12px] font-semibold text-blue-400">{fmtCOP(totalInvoiced - totalPaid)}</span>
             </div>
+            {totalBudget > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[var(--af-text3)]" /><span className="text-[12px]">Presupuesto total</span></div>
+                <span className="text-[12px] font-semibold">{fmtCOP(totalBudget)}</span>
+              </div>
+            )}
+            {overdueInvoices > 0 && (
+              <div className="flex items-center justify-between mt-1">
+                <div className="flex items-center gap-2"><AlertTriangle size={10} className="text-red-400" /><span className="text-[11px] text-red-400 font-medium">Facturas vencidas</span></div>
+                <span className="text-[11px] font-semibold text-red-400">{overdueInvoices}</span>
+              </div>
+            )}
           </div>
           {/* Balance bar */}
           <div className="mt-3 pt-3 border-t border-[var(--border)]">
@@ -549,18 +617,11 @@ export default function DashboardScreen() {
               <span className="text-[11px] text-[var(--muted-foreground)]">Balance neto</span>
               <span className={`text-[14px] font-bold ${totalInvoiced - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtCOP(totalInvoiced - totalExpenses)}</span>
             </div>
-            {totalInvoiced > 0 && (
+            {(totalInvoiced > 0 || totalExpenses > 0) && (
               <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: (totalPaid / totalInvoiced * 100) + '%' }} />
-                <div className="h-full bg-[var(--af-accent)] transition-all" style={{ width: ((totalInvoiced - totalPaid) / totalInvoiced * 100) + '%' }} />
-                <div className="h-full bg-red-400 transition-all" style={{ width: Math.min(totalExpenses / totalInvoiced * 100, 100 - totalInvoiced / totalInvoiced * 100) + '%' }} />
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, totalInvoiced > 0 ? (totalPaid / totalInvoiced * 100) : 0)}%` }} />
               </div>
             )}
-            <div className="flex justify-between mt-1">
-              <span className="text-[8px] text-emerald-400">Cobrado</span>
-              <span className="text-[8px] text-[var(--af-accent)]">Pendiente</span>
-              <span className="text-[8px] text-red-400">Gastado</span>
-            </div>
           </div>
           <button className="w-full mt-3 text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline text-center" onClick={() => navigateTo('invoices')}>Ver facturas y presupuesto →</button>
         </div>
