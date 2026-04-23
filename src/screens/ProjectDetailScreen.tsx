@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { Plus, Layers } from 'lucide-react';
 import { PROJECT_TYPE_COLORS } from '@/lib/types';
@@ -46,6 +47,38 @@ export default function ProjectDetailScreen() {
   const budgetPct = projectBudget > 0 ? Math.min(100, Math.round((projectSpent / projectBudget) * 100)) : 0;
   const budgetExceeded = projectSpent > projectBudget && projectBudget > 0;
 
+  // --- Computed progress from enabled phases ---
+  const enabledPhases = workPhases.filter((p: any) => p.data.enabled !== false);
+  const getPhaseProgress = useCallback((phaseId: string) => {
+    const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phaseId);
+    if (phaseTasks.length === 0) return null;
+    const completed = phaseTasks.filter((t: any) => t.data.status === 'Completado').length;
+    return Math.round((completed / phaseTasks.length) * 100);
+  }, [projectTasks]);
+  const computedProgress = enabledPhases.length > 0
+    ? Math.round(
+        enabledPhases.map((p: any) => {
+          const fromTasks = getPhaseProgress(p.id);
+          return fromTasks !== null ? fromTasks : (p.data.status === 'Completado' ? 100 : p.data.status === 'En progreso' ? 50 : 0);
+        }).reduce((a: number, b: number) => a + b, 0) / enabledPhases.length
+      )
+    : (currentProject?.data.progress || 0);
+
+  // Auto-sync computed progress to Firestore
+  const lastSyncedProgress = useRef<number | null>(null);
+  useEffect(() => {
+    if (enabledPhases.length === 0) return; // No phases — use manual value
+    if (!selectedProjectId) return;
+    const current = currentProject?.data.progress ?? 0;
+    if (computedProgress !== current && computedProgress !== lastSyncedProgress.current) {
+      lastSyncedProgress.current = computedProgress;
+      getFirebase().firestore().collection('projects').doc(selectedProjectId).update({
+        progress: computedProgress,
+        updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {});
+    }
+  }, [computedProgress, selectedProjectId, currentProject?.data.progress, enabledPhases.length]);
+
   // Progress edit state
   const [editingProgress, setEditingProgress] = useState(false);
 
@@ -83,7 +116,7 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${(currentProject.data.progress || 0) >= 80 ? 'bg-emerald-500' : (currentProject.data.progress || 0) >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: (currentProject.data.progress || 0) + '%' }} /></div>
+                <div className="flex-1 h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden"><div className={`h-full rounded-full ${computedProgress >= 80 ? 'bg-emerald-500' : computedProgress >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: computedProgress + '%' }} /></div>
                 {editingProgress ? (
                   <input
                     autoFocus
@@ -170,13 +203,13 @@ export default function ProjectDetailScreen() {
                 </div>
               )}
 
-              {/* Work phases timeline (compact) */}
-              {workPhases.length > 0 && (
+              {/* Work phases timeline (compact) — only enabled phases */}
+              {enabledPhases.length > 0 && (
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
                   <div className="text-[13px] font-semibold mb-3">Fases del proyecto</div>
                   <div className="relative pl-5">
                     <div className="absolute left-[7px] top-1 bottom-1 w-px bg-[var(--input)]" />
-                    {workPhases.map((phase: any) => {
+                    {enabledPhases.map((phase: any) => {
                       const isActive = phase.data.status === 'En progreso';
                       const isDone = phase.data.status === 'Completado';
                       return (
