@@ -194,6 +194,25 @@ function FileBrowser({
         </div>
       )}
 
+      {/* Error banner */}
+      {od.error && (
+        <div className="mb-3 p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+          <span className="text-sm mt-0.5">⚠️</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] text-red-400 font-medium">{od.error}</div>
+            {od.errorType === 'auth' && (
+              <div className="text-[10px] text-red-400/70 mt-0.5">Vuelve a conectar tu cuenta de Microsoft para resolver esto.</div>
+            )}
+          </div>
+          <button
+            onClick={od.clearError}
+            className="text-red-400/60 hover:text-red-400 text-xs flex-shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Drop zone overlay */}
       {od.dragOver && (
         <div className="absolute inset-0 z-10 bg-[var(--af-accent)]/5 border-2 border-dashed border-[var(--af-accent)] rounded-xl flex items-center justify-center pointer-events-none">

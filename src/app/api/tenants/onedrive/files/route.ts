@@ -6,6 +6,55 @@ const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
 
 /**
+ * Attempt to auto-refresh the tenant's Microsoft access token.
+ * Returns the new token if successful, or null if refresh failed.
+ */
+async function autoRefreshTenantToken(
+  tenantId: string,
+  tenantData: Record<string, any>
+): Promise<string | null> {
+  const storedRefresh = tenantData.msRefreshToken;
+  if (!storedRefresh) return null;
+
+  const clientId = process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  try {
+    const params = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: storedRefresh,
+      scope: 'Files.ReadWrite.All Sites.ReadWrite.All offline_access',
+    });
+
+    const tokenRes = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    if (!tokenRes.ok) return null;
+
+    const tokenData = await tokenRes.json();
+    const newAccessToken = tokenData.access_token;
+    const newRefreshToken = tokenData.refresh_token || storedRefresh;
+
+    // Save updated tokens to Firestore
+    const db = getAdminDb();
+    await db.collection('tenants').doc(tenantId).update({
+      msAccessToken: newAccessToken,
+      msRefreshToken: newRefreshToken,
+    });
+
+    return newAccessToken;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get the tenant's MS access token from Firestore.
  * If the token is missing, try to refresh using the stored refresh token.
  */
@@ -94,8 +143,27 @@ export async function GET(request: NextRequest) {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // If token expired, return special header so client knows to request refresh
+    // If token expired, try auto-refresh
     if (res.status === 401) {
+      // Try to auto-refresh the token
+      const refreshed = await autoRefreshTenantToken(tenantId, tenantData);
+      if (refreshed) {
+        // Retry the request with the new token
+        const retryRes = await fetch(graphUrl, {
+          headers: { Authorization: `Bearer ${refreshed}` },
+        });
+        if (retryRes.ok) {
+          const retryData = await retryRes.json();
+          const retryItems = retryData.value || [];
+          retryItems.sort((a: any, b: any) => {
+            const aIsFolder = !!a.folder;
+            const bIsFolder = !!b.folder;
+            if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+            return (a.name || '').localeCompare(b.name || '');
+          });
+          return NextResponse.json({ items: retryItems, count: retryItems.length, folderId: actualFolderId });
+        }
+      }
       return NextResponse.json(
         { error: 'Token de Microsoft expirado', code: 'TOKEN_EXPIRED' },
         { status: 401, headers: { 'X-Tenant-OD-Status': 'token-expired' } }
@@ -215,7 +283,25 @@ export async function POST(request: NextRequest) {
       });
 
       if (res.status === 401) {
-        return NextResponse.json({ error: 'Token expirado', code: 'TOKEN_EXPIRED' }, { status: 401 });
+        // Try auto-refresh for upload too
+        const refreshed = await autoRefreshTenantToken(tenantId, tenantData);
+        if (refreshed) {
+          const retryRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${refreshed}`,
+              'Content-Type': file.type || 'application/octet-stream',
+            },
+            body: buffer,
+          });
+          if (retryRes.ok) {
+            uploadResult = await retryRes.json();
+          } else {
+            return NextResponse.json({ error: 'Token expirado', code: 'TOKEN_EXPIRED' }, { status: 401 });
+          }
+        } else {
+          return NextResponse.json({ error: 'Token expirado', code: 'TOKEN_EXPIRED' }, { status: 401 });
+        }
       }
       if (res.status === 409) {
         return NextResponse.json({ error: 'Ya existe un archivo con este nombre' }, { status: 409 });
@@ -253,6 +339,8 @@ export async function POST(request: NextRequest) {
       const uploadUrl: string = sessionData.uploadUrl;
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       let offset = 0;
+      const MAX_CHUNK_RETRIES = 3;
+      let chunkRetries = 0;
 
       while (offset < fileSize) {
         const chunkEnd = Math.min(offset + CHUNK_SIZE, fileSize);
@@ -275,6 +363,13 @@ export async function POST(request: NextRequest) {
 
         if (chunkRes.status === 429) {
           const retryAfter = chunkRes.headers.get('Retry-After') || '60';
+          chunkRetries++;
+          if (chunkRetries > MAX_CHUNK_RETRIES) {
+            return NextResponse.json(
+              { error: 'Demasiados reintentos por throttling. Intenta más tarde.' },
+              { status: 429 }
+            );
+          }
           await new Promise((resolve) => setTimeout(resolve, Number(retryAfter) * 1000));
           continue;
         }
@@ -288,6 +383,7 @@ export async function POST(request: NextRequest) {
         }
 
         offset = chunkEnd;
+        chunkRetries = 0;
       }
 
       if (!uploadResult) {

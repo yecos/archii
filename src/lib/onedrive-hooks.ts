@@ -71,7 +71,21 @@ export function useTenantOneDrive(tenantId: string | null) {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'auth' | 'network' | 'quota' | 'generic'>('generic');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-clear error after 8 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError(null);
+      setErrorType('generic');
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  const clearError = () => { setError(null); setErrorType('generic'); };
 
   // Check connection status
   useEffect(() => {
@@ -128,11 +142,16 @@ export function useTenantOneDrive(tenantId: string | null) {
           if (retryRes.ok) {
             const data2 = await retryRes.json();
             setItems(data2.items || []);
+          } else {
+            setError('Sesión de Microsoft expirada. Reconecta la cuenta.');
+            setErrorType('auth');
           }
         }
       }
     } catch (err) {
       console.error('[Tenant OD] Load files error:', err);
+      setError('Error al cargar archivos. Verifica tu conexión.');
+      setErrorType('network');
     } finally {
       setLoading(false);
     }
@@ -203,10 +222,15 @@ export function useTenantOneDrive(tenantId: string | null) {
       if (res.ok) {
         loadFiles();
       } else {
-        console.error('[Tenant OD] Upload error:', await res.text());
+        const errText = await res.text().catch(() => '');
+        console.error('[Tenant OD] Upload error:', errText);
+        setError(`Error al subir "${file.name}". Intenta de nuevo.`);
+        setErrorType(res.status === 401 ? 'auth' : res.status === 507 ? 'quota' : 'network');
       }
     } catch (err) {
       console.error('[Tenant OD] Upload error:', err);
+      setError(`Error al subir "${file.name}". Intenta de nuevo.`);
+      setErrorType('network');
     } finally {
       setUploading(false);
       setUploadProgress(100);
@@ -228,9 +252,14 @@ export function useTenantOneDrive(tenantId: string | null) {
       });
       if (res.ok) {
         loadFiles();
+      } else {
+        setError(`Error al eliminar "${itemName}". Intenta de nuevo.`);
+        setErrorType('generic');
       }
     } catch (err) {
       console.error('[Tenant OD] Delete error:', err);
+      setError(`Error al eliminar "${itemName}". Verifica tu conexión.`);
+      setErrorType('network');
     }
   };
 
@@ -250,9 +279,14 @@ export function useTenantOneDrive(tenantId: string | null) {
         setRenamingId(null);
         setRenameName('');
         loadFiles();
+      } else {
+        setError(`Error al renombrar. Intenta de nuevo.`);
+        setErrorType('generic');
       }
     } catch (err) {
       console.error('[Tenant OD] Rename error:', err);
+      setError('Error al renombrar. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -282,9 +316,14 @@ export function useTenantOneDrive(tenantId: string | null) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      } else {
+        setError('Error al descargar el archivo.');
+        setErrorType('network');
       }
     } catch (err) {
       console.error('[Tenant OD] Download error:', err);
+      setError('Error al descargar. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -303,9 +342,14 @@ export function useTenantOneDrive(tenantId: string | null) {
         setCreatingFolder(false);
         setNewFolderName('');
         loadFiles();
+      } else {
+        setError('Error al crear la carpeta.');
+        setErrorType('generic');
       }
     } catch (err) {
       console.error('[Tenant OD] Create folder error:', err);
+      setError('Error al crear la carpeta. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -327,6 +371,7 @@ export function useTenantOneDrive(tenantId: string | null) {
     renamingId, setRenamingId, renameName, setRenameName,
     creatingFolder, setCreatingFolder, newFolderName, setNewFolderName,
     dragOver, setDragOver, fileInputRef,
+    error, errorType, clearError,
     loadFiles, navigateToFolder, navigateBreadcrumb, uploadFile,
     deleteFile, renameFile, downloadFile, createFolder, handleDroppedFiles,
   };
@@ -349,7 +394,21 @@ export function usePersonalOneDrive() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'auth' | 'network' | 'quota' | 'generic'>('generic');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-clear error after 8 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError(null);
+      setErrorType('generic');
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  const clearError = () => { setError(null); setErrorType('generic'); };
 
   const loadFiles = useCallback(async (folderId?: string) => {
     if (!msConnected) return;
@@ -377,12 +436,20 @@ export function usePersonalOneDrive() {
             if (retryRes.ok) {
               const data2 = await retryRes.json();
               setItems(data2.items || []);
+            } else {
+              setError('Sesión de Microsoft expirada. Reconecta tu cuenta.');
+              setErrorType('auth');
             }
+          } else {
+            setError('Sesión de Microsoft expirada. Reconecta tu cuenta.');
+            setErrorType('auth');
           }
         }
       }
     } catch (err) {
       console.error('[Personal OD] Load error:', err);
+      setError('Error al cargar archivos. Verifica tu conexión.');
+      setErrorType('network');
     } finally {
       setLoading(false);
     }
@@ -434,9 +501,16 @@ export function usePersonalOneDrive() {
       setUploadProgress(90);
       if (res.ok) {
         loadFiles();
+      } else {
+        const errText = await res.text().catch(() => '');
+        console.error('[Personal OD] Upload error:', errText);
+        setError(`Error al subir "${file.name}". Intenta de nuevo.`);
+        setErrorType(res.status === 401 ? 'auth' : res.status === 507 ? 'quota' : 'network');
       }
     } catch (err) {
       console.error('[Personal OD] Upload error:', err);
+      setError(`Error al subir "${file.name}". Intenta de nuevo.`);
+      setErrorType('network');
     } finally {
       setUploading(false);
       setUploadProgress(100);
@@ -454,9 +528,16 @@ export function usePersonalOneDrive() {
         method: 'DELETE',
         headers: { 'x-firebase-token': fbToken, 'Authorization': `Bearer ${msAccessToken}` },
       });
-      if (res.ok) loadFiles();
+      if (res.ok) {
+        loadFiles();
+      } else {
+        setError(`Error al eliminar "${itemName}". Intenta de nuevo.`);
+        setErrorType('generic');
+      }
     } catch (err) {
       console.error('[Personal OD] Delete error:', err);
+      setError(`Error al eliminar "${itemName}". Verifica tu conexión.`);
+      setErrorType('network');
     }
   };
 
@@ -474,9 +555,14 @@ export function usePersonalOneDrive() {
         setRenamingId(null);
         setRenameName('');
         loadFiles();
+      } else {
+        setError('Error al renombrar. Intenta de nuevo.');
+        setErrorType('generic');
       }
     } catch (err) {
       console.error('[Personal OD] Rename error:', err);
+      setError('Error al renombrar. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -504,9 +590,14 @@ export function usePersonalOneDrive() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      } else {
+        setError('Error al descargar el archivo.');
+        setErrorType('network');
       }
     } catch (err) {
       console.error('[Personal OD] Download error:', err);
+      setError('Error al descargar. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -524,9 +615,14 @@ export function usePersonalOneDrive() {
         setCreatingFolder(false);
         setNewFolderName('');
         loadFiles();
+      } else {
+        setError('Error al crear la carpeta.');
+        setErrorType('generic');
       }
     } catch (err) {
       console.error('[Personal OD] Create folder error:', err);
+      setError('Error al crear la carpeta. Verifica tu conexión.');
+      setErrorType('network');
     }
   };
 
@@ -546,6 +642,7 @@ export function usePersonalOneDrive() {
     renamingId, setRenamingId, renameName, setRenameName,
     creatingFolder, setCreatingFolder, newFolderName, setNewFolderName,
     dragOver, setDragOver, fileInputRef,
+    error, errorType, clearError,
     loadFiles, navigateToFolder, navigateBreadcrumb, uploadFile,
     deleteFile, renameFile, downloadFile, createFolder, handleDroppedFiles,
   };

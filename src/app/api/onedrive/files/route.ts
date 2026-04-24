@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { authenticateRequest } from '@/lib/api-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
 
 /**
  * Verify ArchiFlow authentication from X-Firebase-Token header.
@@ -30,6 +31,37 @@ function getAccessToken(request: NextRequest): string | null {
   const auth = request.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return null;
   return auth.slice(7);
+}
+
+/**
+ * Attempt to auto-refresh a personal MS access token using client credentials.
+ * Personal tokens are stored client-side via Firebase Auth, so this is a best-effort
+ * server-side fallback using the app's Azure AD credentials.
+ */
+async function autoRefreshPersonalToken(refreshToken: string): Promise<string | null> {
+  const clientId = process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  try {
+    const params = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      scope: 'Files.ReadWrite.All offline_access',
+    });
+    const tokenRes = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    if (!tokenRes.ok) return null;
+    const tokenData = await tokenRes.json();
+    return tokenData.access_token || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -225,6 +257,8 @@ export async function POST(request: NextRequest) {
       // Read the entire file into a buffer
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       let offset = 0;
+      const MAX_CHUNK_RETRIES = 3;
+      let chunkRetries = 0;
 
       while (offset < fileSize) {
         const chunkEnd = Math.min(offset + CHUNK_SIZE, fileSize);
@@ -245,7 +279,14 @@ export async function POST(request: NextRequest) {
         }
         if (chunkRes.status === 429) {
           const retryAfter = chunkRes.headers.get('Retry-After') || '60';
-          // Retry after waiting — simple sequential retry
+          chunkRetries++;
+          if (chunkRetries > MAX_CHUNK_RETRIES) {
+            return NextResponse.json(
+              { error: 'Demasiados reintentos por throttling. Intenta más tarde.' },
+              { status: 429 }
+            );
+          }
+          // Retry after waiting
           const waitMs = Number(retryAfter) * 1000;
           await new Promise((resolve) => setTimeout(resolve, waitMs));
           // Retry this chunk
@@ -267,6 +308,7 @@ export async function POST(request: NextRequest) {
 
         // 202 means more chunks to come
         offset = chunkEnd;
+        chunkRetries = 0;
       }
 
       // If we finished the loop without a final 200/201, fetch the result
