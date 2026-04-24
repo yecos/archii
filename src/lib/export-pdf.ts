@@ -986,6 +986,146 @@ export function exportTasksPDF(data: {
 }
 
 /* ═══════════════════════════════════════════════
+   EXPORTAR PROYECTOS A PDF
+   ═══════════════════════════════════════════════ */
+
+export function exportProjectsPDF(data: {
+  projects: any[];
+  tasks: any[];
+  expenses: any[];
+}) {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  addHeader(doc, 'Reporte de Proyectos', ` ${data.projects.length} proyectos registrados`);
+
+  let y = 40;
+
+  // KPI summary
+  const totalBudget = data.projects.reduce((s, p) => s + (p.data.budget || 0), 0);
+  const totalSpent = data.expenses.reduce((s, e) => s + (e.data.amount || 0), 0);
+  const avgProgress = data.projects.length > 0
+    ? Math.round(data.projects.reduce((s, p) => s + (p.data.progress || 0), 0) / data.projects.length)
+    : 0;
+  const completedProjects = data.projects.filter(p => p.data.status === 'Terminado').length;
+  const activeProjects = data.projects.filter(p => p.data.status !== 'Terminado').length;
+  const overBudget = data.projects.filter(p => {
+    const spent = data.expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + (e.data.amount || 0), 0);
+    return p.data.budget > 0 && spent > p.data.budget;
+  }).length;
+
+  const stats = [
+    { label: 'Proyectos Activos', value: String(activeProjects), color: BRAND.blue },
+    { label: 'Presupuesto Total', value: fmtCOPFull(totalBudget), color: BRAND.primary },
+    { label: 'Total Gastado', value: fmtCOPFull(totalSpent), color: totalBudget > 0 && totalSpent > totalBudget * 0.8 ? BRAND.red : BRAND.green },
+    { label: 'Progreso Promedio', value: `${avgProgress}%`, color: avgProgress >= 50 ? BRAND.green : BRAND.primary },
+    { label: 'Terminados', value: String(completedProjects), color: BRAND.green },
+    { label: 'Sobrepasados', value: String(overBudget), color: overBudget > 0 ? BRAND.red : BRAND.muted },
+  ];
+
+  const boxW = (pageW - 28 - 15) / 6;
+  stats.forEach((stat, i) => {
+    const x = 14 + i * (boxW + 3);
+    doc.setFillColor(...BRAND.bg);
+    doc.roundedRect(x, y, boxW, 14, 1.5, 1.5, 'F');
+    doc.setFillColor(...stat.color);
+    doc.rect(x, y, 1.5, 14, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...stat.color);
+    doc.text(stat.value, x + 4, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...BRAND.muted);
+    doc.text(stat.label, x + 4, y + 12);
+  });
+
+  y += 22;
+
+  // Projects table
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Listado de Proyectos', 14, y);
+  y += 4;
+
+  if (data.projects.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Proyecto', 'Estado', 'Cliente', 'Presupuesto', 'Gastado', 'Saldo', 'Progreso', 'Tareas', 'Entrega']],
+      body: data.projects.map(p => {
+        const projTasks = data.tasks.filter(t => t.data.projectId === p.id);
+        const completed = projTasks.filter(t => t.data.status === 'Completado').length;
+        const spent = data.expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + (e.data.amount || 0), 0);
+        return [
+          p.data.name,
+          p.data.status || 'Concepto',
+          p.data.client || '-',
+          fmtCOPFull(p.data.budget || 0),
+          fmtCOPFull(spent),
+          fmtCOPFull((p.data.budget || 0) - spent),
+          `${p.data.progress || 0}%`,
+          `${completed}/${projTasks.length}`,
+          p.data.endDate || '-',
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+      bodyStyles: { fontSize: 7, textColor: BRAND.text, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        3: { halign: 'right', cellWidth: 22 },
+        4: { halign: 'right', cellWidth: 22 },
+        5: { halign: 'right', cellWidth: 22 },
+        6: { halign: 'center', cellWidth: 14 },
+        7: { halign: 'center', cellWidth: 12 },
+        8: { halign: 'center', cellWidth: 18 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+  // Budget summary by project
+  y = checkAddPage(doc, y, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BRAND.dark);
+  doc.text('Resumen Financiero por Proyecto', 14, y);
+  y += 4;
+
+  const budgetProjects = data.projects.filter(p => (p.data.budget || 0) > 0);
+  if (budgetProjects.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Proyecto', 'Presupuesto', 'Gastado', 'Saldo', '% Utilizacion']],
+      body: budgetProjects.map(p => {
+        const spent = data.expenses.filter(e => e.data.projectId === p.id).reduce((s, e) => s + (e.data.amount || 0), 0);
+        const pct = Math.round((spent / (p.data.budget || 1)) * 100);
+        return [
+          p.data.name,
+          fmtCOPFull(p.data.budget || 0),
+          fmtCOPFull(spent),
+          fmtCOPFull((p.data.budget || 0) - spent),
+          `${pct}%`,
+        ];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: BRAND.dark, textColor: BRAND.white, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: BRAND.text },
+      alternateRowStyles: { fillColor: BRAND.bg },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  addFooter(doc);
+  doc.save(`archiflow-proyectos-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════
    EXPORTAR REPORTE DE OBRA A PDF
    ═══════════════════════════════════════════════ */
 
