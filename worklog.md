@@ -692,3 +692,100 @@ Stage Summary:
 - CI/CD en GitHub Actions (lint + build + security audit)
 - Build limpio, sin errores nuevos
 - Commit: 6305334
+
+---
+Task ID: 12
+Agent: Super Z (Main)
+Task: Fase 2 - Core Enterprise: RAG, Health Score, SSO/SAML, Public API, Webhooks
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-fase2-202604252208
+
+Work Log:
+- Git pull + verificacion sin locks
+- Backup tag pre-existent: backup-pre-fase2-202604252208
+- PASO 2.1: IA RAG por Tenant
+  - Creado src/lib/rag-service.ts (~350 lineas)
+  - generateEmbedding(): Gemini text-embedding-004 API (768 dimensiones)
+  - generateEmbeddingBatch(): batch de hasta 100 textos
+  - chunkText(): division en chunks con overlap, mantiene parrafos enteros
+  - cosineSimilarity(): similitud coseno para ranking
+  - indexDocument(): chunking + embeddings + almacenamiento en Firestore (document_chunks)
+  - deleteDocumentChunks(): limpieza de chunks por sourceDocId
+  - searchDocuments(): busqueda semantica con aislamiento estricto por tenantId
+  - askWithRAG(): busca contexto + genera respuesta con IA + cita fuentes
+  - reindexCollection(): re-indexa toda una coleccion para un tenant
+  - Creado /api/ai/rag/route.ts: search, ask, index, delete, reindex
+  - Gated por feature flag 'rag_search'
+- PASO 2.2: Health Score Predictivo
+  - Creado src/lib/health-score.ts (~350 lineas)
+  - calculateHealthScore(): score 0-100 con 5 dimensiones ponderadas
+    - Task completion rate (30%)
+    - Timeliness / delays (20%)
+    - Budget health (20%)
+    - Activity level (15%)
+    - Resolution rate RFIs/Submittals (15%)
+  - generateInsights(): mensajes contextuales sobre problemas detectados
+  - generateRecommendations(): acciones sugeridas para mejorar score
+  - saveHealthScore(): persiste en Firestore con calculo de tendencia
+  - getHealthScoreHistory(): historial para analisis de tendencias
+  - calculateAllTenantScores(): calcula scores para todos los proyectos de un tenant
+  - getHealthColor(): semaforo visual (verde >=80, amarillo >=60, rojo <60)
+  - Creado /api/health-score/route.ts: GET score/history, POST calculate-all
+  - Gated por feature flag 'health_score_predictive'
+- PASO 2.3: SSO/SAML + SCIM
+  - Creado src/lib/sso-service.ts (~350 lineas)
+  - saveSSOConfig(): configuracion SAML por tenant (Azure AD, Okta, Google Workspace)
+  - getSSOConfig(): obtiene config SSO activa
+  - mapIdPRoleToInternal(): mapeo de roles IdP → roles internos (admin/editor/viewer)
+  - extractRoleFromClaims(): extrae rol desde claims del token SAML
+  - generateSCIMSecret(): genera secret para webhooks SCIM
+  - verifySCIMSignature(): verifica HMAC-SHA256 de webhooks SCIM
+  - processSCIMEvent(): procesa create/update/delete de usuarios via SCIM
+  - generateSPMetadata(): genera metadata XML del Service Provider
+  - Creado /api/sso/route.ts: GET config, POST save/disable/metadata
+  - Creado /api/scim/route.ts: POST provisioning, GET eventos (debug)
+  - Gated por feature flag 'sso_saml'
+- PASO 2.4: API Pública + Rate Limiting
+  - Creado src/lib/rate-limiter.ts (~250 lineas)
+  - checkRateLimit(): sliding window con Firestore (100 req/min default)
+  - generateAPIKey(): formato af_live_xxxxx (48 chars hex)
+  - validateAPIKey(): SHA-256 hash + verificacion de expiracion
+  - createAPIKey(): genera key + almacena hash (la key solo se muestra UNA VEZ)
+  - listAPIKeys(): lista keys sin exponer hash
+  - revokeAPIKey(): desactiva una API key
+  - Creado /api/v1/projects/route.ts: GET (paginado, filtros) + POST (crear)
+  - Creado /api/v1/tasks/route.ts: GET (paginado, filtros) + POST (crear)
+  - Creado /api/v1/health/route.ts: health check publico sin auth
+  - Creado /api/v1/keys/route.ts: GET list + POST create/revoke
+  - Creado /api/v1/openapi/route.ts: spec OpenAPI 3.0 completa
+  - Auth dual: X-API-Key header o Authorization: Bearer (Firebase)
+  - Rate limit headers: X-RateLimit-Limit, X-RateLimit-Remaining
+  - Gated por feature flag 'public_api'
+- PASO 2.5: Webhooks System
+  - Creado src/lib/webhook-service.ts (~350 lineas)
+  - 20+ tipos de evento definidos (task.*, project.*, expense.*, rfi.*, etc.)
+  - createWebhook(): registra webhook con URL, eventos, secret HMAC
+  - listWebhooks(): lista webhooks sin exponer secret
+  - deleteWebhook(): elimina webhook por ID
+  - signWebhookPayload(): HMAC-SHA256 para verificacion del receptor
+  - dispatchWebhookEvent(): busca webhooks coincidentes y dispara async
+  - deliverWebhook(): POST con firma, reintentos exponenciales (3 intentos)
+  - sanitizePayload(): redacta campos sensibles antes de enviar
+  - triggerWebhook(): helper para disparar facilmente desde cualquier punto
+  - getWebhookDeliveries(): log de entregas para debugging
+  - Creado /api/webhooks/route.ts: GET list/deliveries, POST create/delete/test
+  - Gated por feature flag 'webhooks_system'
+- Build: exitoso, 42 rutas compiladas correctamente (10 nuevas)
+- Commit: face65b
+
+Stage Summary:
+- 15 archivos nuevos, 3389 lineas agregadas
+- RAG aislado por tenant con embeddings Gemini + cosine similarity
+- Health Score predictivo 0-100 con 5 dimensiones + semaforo visual
+- SSO/SAML con mapeo de roles + SCIM provisioning automatico
+- API publica /api/v1/* con API Key auth + rate limiting + OpenAPI spec
+- Webhooks con 20+ eventos, HMAC signature, retry exponencial
+- Todas las features gated por feature flags (rag_search, health_score_predictive, sso_saml, public_api, webhooks_system)
+- Build limpio, 42 rutas sin errores
+- Commit: face65b
