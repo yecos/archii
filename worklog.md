@@ -599,3 +599,39 @@ Stage Summary:
 - Integracion con tareas (overdue count, completed/total per project)
 - Patron consistente con BudgetScreen Pro Max
 - Build: exitoso (0 errores)
+---
+Task ID: 10
+Agent: Super Z (Main)
+Task: Fase 0 - Fixes criticos: Kanban duplicado, estabilidad IA, validacion authUser?.uid en writes
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-fase0-202604262145
+
+Work Log:
+- Git clone + verificacion sin conflictos
+- Backup tag pre-fase0 creado
+- Kanban (PASO 1): fix race-condition en KanbanBoardScreen.tsx
+  - Root cause: onSnapshot suscrito dentro de .then() callback
+  - StrictMode double-invoke causaba listener leak (cleanup no cancelaba promesa pendiente)
+  - Fix: flag cancelled + variable local snapshotUnsub en vez de ref
+  - Eliminado useRef import no utilizado
+  - Agregado error callback al onSnapshot listener
+- IA (PASO 2): creado src/lib/ai-service.ts
+  - callAIWithRetry: retry exponencial (3x) + validacion tenantId + fallback message
+  - callAIWithToolsRetry: retry exponencial para function calling
+  - Usa tipos exportados de gemini-helper (ChatMessage, OpenAITool)
+- Writes (PASO 3): auth validation en firestore-actions.ts
+  - Creada funcion requireAuth() que lanza WRITE_BLOCKED si no hay uid
+  - Agregada a TODAS las 20 funciones de escritura en firestore-actions.ts
+  - Creada safeWrite() en helpers.ts como wrapper publico para writes directos fuera de firestore-actions
+  - Exportados ChatMessage y OpenAITool desde gemini-helper.ts
+- TypeScript: 0 errores nuevos (solo pre-existentes en AppContext y ProjectsScreen)
+- Build: exitoso, 32 rutas compiladas correctamente
+
+Stage Summary:
+- Kanban sin duplicados: race-condition corregido con flag cancelled + cleanup local
+- IA con reintento: ai-service.ts con backoff exponencial y fallback
+- 20 funciones de escritura protegidas con requireAuth()
+- safeWrite() disponible para writes directos fuera de firestore-actions
+- Build limpio, sin errores nuevos introducidos
+

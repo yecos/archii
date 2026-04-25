@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useUIStore } from '@/stores/ui-store';
 import KanbanToolbar from '@/components/kanban/KanbanToolbar';
@@ -55,7 +55,6 @@ export default function KanbanBoardScreen() {
   const [showCardModal, setShowCardModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
-  const unsubRef = useRef<any>(null);
 
   // Get entity data map for the helpers
   const contextData = useMemo(() => ({
@@ -72,6 +71,10 @@ export default function KanbanBoardScreen() {
   useEffect(() => {
     if (!activeTenantId || !authUser) return;
 
+    // Race-condition guard: prevent stale .then() callbacks from executing after cleanup
+    let cancelled = false;
+    let snapshotUnsub: (() => void) | null = null;
+
     // Try to find existing board for this entity type and tenant
     const db = getFirebase().firestore();
     let query = db.collection('kanbanBoards')
@@ -80,6 +83,9 @@ export default function KanbanBoardScreen() {
       .limit(1);
 
     query.get().then(snap => {
+      // Abort if cleanup already ran (StrictMode double-invoke)
+      if (cancelled) return;
+
       if (!snap.empty) {
         const doc = snap.docs[0];
         setKanbanBoardId(doc.id);
@@ -87,12 +93,11 @@ export default function KanbanBoardScreen() {
         setLoading(false);
 
         // Subscribe for real-time updates
-        const unsub = (doc as any).ref.onSnapshot((docSnap: any) => {
+        snapshotUnsub = (doc as any).ref.onSnapshot((docSnap: any) => {
           if (docSnap.exists) {
             setBoard({ id: docSnap.id, data: docSnap.data().data });
           }
-        }, () => {});
-        unsubRef.current = unsub;
+        }, (err: any) => console.error('[Kanban] onSnapshot error:', err));
       } else {
         // No board found — show template selection
         setBoard(null);
@@ -100,11 +105,13 @@ export default function KanbanBoardScreen() {
         setLoading(false);
       }
     }).catch(() => {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     });
 
+    // Cleanup: cancel both pending promise and active snapshot
     return () => {
-      if (unsubRef.current) unsubRef.current();
+      cancelled = true;
+      if (snapshotUnsub) snapshotUnsub();
     };
   }, [activeTenantId, authUser, kanbanEntityType, setKanbanBoardId]);
 

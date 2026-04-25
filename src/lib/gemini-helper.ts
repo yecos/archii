@@ -22,7 +22,7 @@ export interface ImageData {
   data: string;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
   images?: ImageData[];
@@ -40,7 +40,7 @@ interface ToolCall {
   };
 }
 
-interface OpenAITool {
+export interface OpenAITool {
   type: "function";
   function: {
     name: string;

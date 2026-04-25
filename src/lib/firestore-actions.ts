@@ -11,6 +11,14 @@ import { DEFAULT_PHASES, PROJECT_TYPE_PHASES, PhaseTemplate } from '@/lib/types'
 
 type ToastFn = (msg: string, type?: string) => void;
 
+/** Guard: verifica que el usuario esté autenticado antes de cualquier write */
+function requireAuth(authUser: any, action: string): void {
+  if (!authUser?.uid) {
+    console.error(`[ArchiFlow] WRITE_BLOCKED: ${action} — usuario no autenticado`);
+    throw new Error(`WRITE_BLOCKED: No se puede ${action} sin usuario autenticado`);
+  }
+}
+
 /** Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore */
 function scrubUndefined(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
@@ -39,6 +47,7 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
 
 export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar proyecto', async () => {
+    requireAuth(authUser, 'guardar proyecto');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -97,6 +106,7 @@ export async function deleteProject(projectId: string, showToast: ToastFn, tenan
 
 export function saveTask(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar tarea', async () => {
+    requireAuth(authUser, 'guardar tarea');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -146,6 +156,7 @@ export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: s
 
 export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: any, showToast: ToastFn, tenantId: string | null) {
   return fbAction('enviar mensaje', async () => {
+    requireAuth(authUser, 'enviar mensaje');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -169,6 +180,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
 
 export function saveExpense(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar gasto', async () => {
+    requireAuth(authUser, 'guardar gasto');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -209,6 +221,7 @@ export async function deleteExpense(expenseId: string, showToast: ToastFn, tenan
 
 export function saveSupplier(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar proveedor', async () => {
+    requireAuth(authUser, 'guardar proveedor');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -255,6 +268,7 @@ export async function deleteSupplier(supplierId: string, showToast: ToastFn, ten
 
 export function saveCompany(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar empresa', async () => {
+    requireAuth(authUser, 'guardar empresa');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -297,6 +311,7 @@ export async function deleteCompany(companyId: string, showToast: ToastFn, tenan
 
 export async function uploadProjectFile(projectId: string, file: File, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('subir archivo', async () => {
+    requireAuth(authUser, 'subir archivo');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -433,6 +448,7 @@ export async function updatePhaseStatus(projectId: string, phaseId: string, stat
 
 export function saveApproval(projectId: string, data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar aprobación', async () => {
+    requireAuth(authUser, 'guardar aprobación');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -477,6 +493,7 @@ export async function deleteApproval(projectId: string, approvalId: string, show
 
 export function saveMeeting(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar reunión', async () => {
+    requireAuth(authUser, 'guardar reunión');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -524,6 +541,7 @@ export async function deleteMeeting(meetingId: string, showToast: ToastFn, tenan
 
 export async function saveGalleryPhoto(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar foto', async () => {
+    requireAuth(authUser, 'guardar foto');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('galleryPhotos').add({
@@ -551,6 +569,7 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn, te
 
 export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar producto', async () => {
+    requireAuth(authUser, 'guardar producto');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
@@ -597,8 +616,9 @@ export async function deleteInvProduct(productId: string, showToast: ToastFn, te
   }, showToast);
 }
 
-export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn, tenantId: string | null) {
+export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar categoría', async () => {
+    requireAuth(authUser, 'guardar categoría');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     if (editingId) {
@@ -631,6 +651,7 @@ export async function deleteInvCategory(catId: string, showToast: ToastFn, tenan
 
 export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('registrar movimiento', async () => {
+    requireAuth(authUser, 'registrar movimiento');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invMovements').add({
@@ -659,6 +680,7 @@ export async function deleteInvMovement(movId: string, showToast: ToastFn, tenan
 
 export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('registrar transferencia', async () => {
+    requireAuth(authUser, 'registrar transferencia');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('invTransfers').add({
@@ -720,6 +742,7 @@ export async function updateUserCompany(userId: string, companyId: string, showT
 
 export function saveTimeEntry(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar registro de tiempo', async () => {
+    requireAuth(authUser, 'guardar registro de tiempo');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -761,6 +784,7 @@ export async function deleteTimeEntry(entryId: string, showToast: ToastFn, tenan
 
 export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar factura', async () => {
+    requireAuth(authUser, 'guardar factura');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -816,6 +840,7 @@ export async function deleteInvoice(invoiceId: string, showToast: ToastFn, tenan
 
 export function saveComment(data: Record<string, any>, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar comentario', async () => {
+    requireAuth(authUser, 'guardar comentario');
     const fb = getFirebase();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     await fb.firestore().collection('comments').add({
@@ -844,6 +869,7 @@ export async function deleteComment(commentId: string, showToast: ToastFn, tenan
 
 export function saveRFI(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar RFI', async () => {
+    requireAuth(authUser, 'guardar RFI');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -911,6 +937,7 @@ export async function updateRFIStatus(rfiId: string, status: string, response: s
 
 export function saveSubmittal(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar submittal', async () => {
+    requireAuth(authUser, 'guardar submittal');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
@@ -978,6 +1005,7 @@ export async function updateSubmittalStatus(subId: string, status: string, revie
 
 export function savePunchItem(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: any, tenantId: string | null) {
   return fbAction('guardar item punch list', async () => {
+    requireAuth(authUser, 'guardar item punch list');
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
