@@ -81,7 +81,7 @@ export interface UserDataExport {
   rfis: Record<string, unknown>[];
   submittals: Record<string, unknown>[];
   punchItems: Record<string, unknown>[];
-  consents: PrivacyConsent[];
+  consents: Record<string, unknown>[];
 }
 
 export interface DataProcessingReport {
@@ -191,7 +191,7 @@ export async function exportUserData(
   const punchItems = await queryCollection(db, 'punchItems', 'createdBy', userId, tenantId);
 
   // 13. Consents
-  const consents = await getUserConsents(userId, tenantId);
+  const consents = await getPrivacyConsent(userId, tenantId);
 
   return {
     userId,
@@ -209,7 +209,7 @@ export async function exportUserData(
     rfis,
     submittals,
     punchItems,
-    consents,
+    consents: consents.map((c) => ({ ...c }) as unknown as Record<string, unknown>),
   };
 }
 

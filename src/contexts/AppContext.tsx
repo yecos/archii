@@ -561,13 +561,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     flushTimerRef.current = setTimeout(() => {
-      notificationBufferRef.current.forEach((notif) => {
-        if (notif.count > 1) {
-          notifyExternal(notif.type, { ...notif.data, count: notif.count });
-        } else {
-          notifyExternal(notif.type, notif.data);
-        }
-      });
+      // Notifications are sent by the specific CRUD functions below (via notifyWhatsApp directly)
+      // This buffer only coalesces in-app toasts
       notificationBufferRef.current.clear();
     }, 800);
   }, []);

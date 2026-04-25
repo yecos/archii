@@ -82,10 +82,10 @@ export async function checkRateLimit(
     // Leer contador actual
     const counterDoc = await counterRef.get();
     let currentCount = 0;
+    const rawData = counterDoc.exists ? counterDoc.data() : null;
 
-    if (counterDoc.exists) {
-      const data = counterDoc.data();
-      const timestamps: number[] = data.timestamps || [];
+    if (counterDoc.exists && rawData) {
+      const timestamps: number[] = rawData?.timestamps || [];
 
       // Filtrar timestamps dentro de la ventana
       const validTimestamps = timestamps.filter((ts: number) => ts > windowStart);
@@ -104,8 +104,8 @@ export async function checkRateLimit(
 
     if (allowed) {
       // Agregar timestamp a la ventana
-      const timestamps = counterDoc.exists
-        ? [...((await counterDoc.get()).data()?.timestamps || []).filter((ts: number) => ts > windowStart), now]
+      const timestamps = counterDoc.exists && rawData
+        ? [...(rawData.timestamps || []).filter((ts: number) => ts > windowStart), now]
         : [now];
 
       await counterRef.set({
@@ -268,7 +268,7 @@ export async function revokeAPIKey(keyId: string, tenantId: string): Promise<boo
   if (!doc.exists) return false;
 
   const data = doc.data();
-  if (data.tenantId !== tenantId) return false;
+  if (!data || data.tenantId !== tenantId) return false;
 
   await docRef.update({ active: false, revokedAt: new Date().toISOString() });
   return true;

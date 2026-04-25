@@ -23,18 +23,18 @@ import { getAdminDb } from '@/lib/firebase-admin';
 /* ---- Dynamic connector imports ---- */
 
 // Lazy-loaded connectors for test/sync
-async function getConnector(providerId: string) {
+async function getConnector(providerId: string): Promise<any> {
   switch (providerId) {
     case 'slack':
-      return (await import('@/lib/connectors/slack-connector')).default;
+      return await import('@/lib/connectors/slack-connector');
     case 'jira':
-      return (await import('@/lib/connectors/jira-connector')).default;
+      return await import('@/lib/connectors/jira-connector');
     case 'github':
-      return (await import('@/lib/connectors/github-connector')).default;
+      return await import('@/lib/connectors/github-connector');
     case 'calendly':
-      return (await import('@/lib/connectors/calendly-connector')).default;
+      return await import('@/lib/connectors/calendly-connector');
     case 'stripe':
-      return (await import('@/lib/connectors/stripe-connector')).default;
+      return await import('@/lib/connectors/stripe-connector');
     default:
       return null;
   }
@@ -64,7 +64,7 @@ async function getInstanceConfig(
   const doc = await db.collection('integrations').doc(instanceId).get();
   if (!doc.exists) return null;
   const data = doc.data();
-  if (data.tenantId !== tenantId) return null;
+  if (!data || data.tenantId !== tenantId) return null;
   return { config: data.config || {}, providerId: data.providerId };
 }
 

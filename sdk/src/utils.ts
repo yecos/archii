@@ -72,8 +72,9 @@ export function parseDate(dateStr: string): Date {
  * Build a URL query string from a params object.
  * Filters out undefined and null values.
  */
-export function buildQueryString(params?: Record<string, unknown>): string {
-  if (!params || Object.keys(params).length === 0) {
+export function buildQueryString(params?: unknown): string {
+  if (!params || typeof params !== 'object') return '';
+  if (Object.keys(params).length === 0) {
     return '';
   }
 

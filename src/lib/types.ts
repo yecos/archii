@@ -37,6 +37,7 @@ export interface Project {
     endDate: string;
     progress: number;
     companyId?: string;
+    projectType?: string;
     createdAt: any;
     updatedAt?: any;
     createdBy?: string;

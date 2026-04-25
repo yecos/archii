@@ -213,7 +213,7 @@ export class WebhookHandler {
       // Dispatch to the matching handler
       const handler = handlers[event.event as WebhookEvent];
       if (handler) {
-        await (handler as WebhookEventHandler<WebhookEvent>)(event);
+        await (handler as any)(event);
       }
 
       return event;

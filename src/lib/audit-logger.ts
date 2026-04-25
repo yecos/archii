@@ -174,7 +174,7 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
   // Escribir en Firestore (fire-and-forget)
   try {
     const db = getFirebase().firestore();
-    const ts = db.FieldValue.serverTimestamp();
+    const ts = (db as any).FieldValue?.serverTimestamp?.() || new Date().toISOString();
 
     await db.collection('audit_logs').add({
       ...sanitizedEntry,

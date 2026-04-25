@@ -201,7 +201,7 @@ function TimelineView({ projects, getHealth }: { projects: any[]; getHealth: (p:
           const d = p.data;
           const hasDates = d.startDate && d.endDate;
           const health = getHealth(p);
-          const healthCfg = HEALTH_CONFIG[health.level];
+          const healthCfg = HEALTH_CONFIG[health.level as HealthLevel];
           const leftPct = dateToPct(d.startDate);
           const widthPct = hasDates ? Math.max(1.5, dateToPct(d.endDate, true) - leftPct) : 0;
           const barColor = STATUS_COLORS[d.status] || '#828282';
@@ -384,7 +384,7 @@ export default function ProjectsScreen() {
     return map;
   }, [projects, tasks, expenses, today]);
 
-  const getHealth = (p: any) => healthMap[p.id] || { score: 100, level: 'excelente' as HealthLevel, details: { budget: 25, schedule: 25, tasks: 25, progress: 25 } };
+  const getHealth = (p: any): { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } => healthMap[p.id] || { score: 100, level: 'excelente' as HealthLevel, details: { budget: 25, schedule: 25, tasks: 25, progress: 25 } };
 
   // Health KPI summary
   const healthSummary = useMemo(() => {
@@ -576,7 +576,8 @@ export default function ProjectsScreen() {
     if (!confirmed || !activeTenantId) return;
     try {
       const { getFirebase } = await import('@/lib/firebase-service');
-      const db = getFirebase();
+      const app = getFirebase();
+      const db = app.firestore();
       const batch = db.batch();
       selected.forEach((p: any) => {
         const ref = db.collection('projects').doc(p.id);

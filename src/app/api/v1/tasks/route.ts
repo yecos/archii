@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     const snapshot = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).get();
 
-    const tasks = snapshot.docs.map((doc) => ({
+    const tasks = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     }));

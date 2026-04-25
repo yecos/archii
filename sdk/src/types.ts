@@ -692,6 +692,6 @@ export type ResponseInterceptor = (
 ) => Response;
 
 export type ErrorInterceptor = (
-  error: ArchiflowError,
+  error: any, // ArchiflowError (imported from errors.ts) — using any to avoid circular dep
   request: RequestInit & { url: string }
 ) => void;

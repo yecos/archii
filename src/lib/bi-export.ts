@@ -506,7 +506,7 @@ async function fetchCollectionData(
   let nextCursor: string | undefined;
   if (hasMore && docs.length > 0) {
     const lastDoc = docs[docs.length - 1];
-    const lastCreatedAt = String(lastDoc['createdAt'] ?? '');
+    const lastCreatedAt = String((lastDoc as any)['createdAt'] ?? '');
     const payload = JSON.stringify({ lastCreatedAt, lastId: lastDoc['id'] });
     nextCursor = Buffer.from(payload).toString('base64url');
   }

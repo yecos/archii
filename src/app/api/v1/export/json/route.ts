@@ -46,7 +46,7 @@ async function authenticateExport(
     if (!tenantId) {
       return { authenticated: false, error: { status: 400, message: 'Header x-tenant-id requerido' } };
     }
-    return { authenticated: true, tenantId, user };
+    return { authenticated: true, tenantId };
   }
 
   return { authenticated: false, error: { status: 401, message: 'Autenticación requerida. Usa X-API-Key o Authorization: Bearer.' } };

@@ -120,5 +120,4 @@ export {
   PunchItemPriority,
   PunchItemStatus,
   WebhookEvent,
-  IntegrationProvider,
 } from './types';

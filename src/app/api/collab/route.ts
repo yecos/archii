@@ -301,7 +301,7 @@ export async function POST(request: NextRequest) {
           .doc(documentId);
 
         // Use Firestore transaction for conflict resolution
-        let mergedVersion: Record<string, number>;
+        let mergedVersion: Record<string, number> = {};
         let conflicted = false;
 
         await db.runTransaction(async (tx) => {

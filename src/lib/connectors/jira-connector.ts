@@ -270,11 +270,13 @@ export function formatJiraToArchiflow(jiraIssue: JiraIssue): {
 
   return {
     title: jiraIssue.fields.summary.replace(/^\[ArchiFlow\]\s*/, ''),
-    description: jiraIssue.fields.description
-      ? jiraIssue.fields.description.content
+    description: jiraIssue.fields.description && typeof jiraIssue.fields.description === 'object'
+      ? (jiraIssue.fields.description as any).content
           ?.map((c: any) => c.content?.map((t: any) => t.text).join('') || '')
           .join('\n') || ''
-      : undefined,
+      : typeof jiraIssue.fields.description === 'string'
+        ? jiraIssue.fields.description
+        : undefined,
     priority: priorityMap[jiraIssue.fields.priority?.name || ''] || 'Media',
     status: statusMap[jiraIssue.fields.status?.name || ''] || 'Por hacer',
     dueDate: jiraIssue.fields.duedate || undefined,

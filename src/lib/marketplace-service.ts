@@ -382,7 +382,8 @@ export async function uninstallIntegration(
   const doc = await docRef.get();
 
   if (!doc.exists) return false;
-  if (doc.data().tenantId !== tenantId) return false;
+  const data = doc.data();
+  if (!data || data.tenantId !== tenantId) return false;
 
   await docRef.delete();
 

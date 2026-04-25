@@ -582,7 +582,7 @@ export default function IntegrationsScreen() {
                         </button>
                         <button
                           className="px-3 py-2 rounded-lg text-[12px] font-medium cursor-pointer transition-all border-none bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                          onClick={() => handleUninstall(instance.id)}
+                          onClick={() => instance && handleUninstall(instance.id)}
                         >
                           Desinstalar
                         </button>

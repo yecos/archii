@@ -97,9 +97,9 @@ export class ArchiFlowClient {
     }
 
     this.config = {
-      apiKey: config.apiKey,
+      apiKey: config.apiKey || '',
       baseUrl: (config.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ''),
-      tenantId: config.tenantId,
+      tenantId: config.tenantId || '',
       webhookSecret: config.webhookSecret,
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
       maxRetries: config.maxRetries ?? DEFAULT_MAX_RETRIES,
@@ -566,10 +566,10 @@ export class ArchiFlowClient {
     method: string,
     path: string,
     body?: unknown,
-    params?: Record<string, unknown>,
+    params?: unknown,
     rawResponse: boolean = false
   ): Promise<T> {
-    const queryString = buildQueryString(params as Record<string, unknown>);
+    const queryString = buildQueryString(params);
     const url = `${this.config.baseUrl}/v1${path}${queryString}`;
 
     const headers: Record<string, string> = {
