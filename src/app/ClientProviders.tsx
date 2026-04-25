@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import AppProvider from '@/contexts/AppContext';
 import { useUIStore } from '@/stores/ui-store';
+import { initOfflineSync } from '@/lib/offline-queue';
 
 /**
  * ClientProviders — Client-side wrapper for layout.tsx
@@ -17,6 +18,12 @@ export default function ClientProviders({ children }: { children: React.ReactNod
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // Inicializar offline sync listener (fire-and-forget)
+  useEffect(() => {
+    const cleanup = initOfflineSync();
+    return cleanup;
+  }, []);
 
   return <AppProvider>{children}</AppProvider>;
 }
