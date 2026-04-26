@@ -128,7 +128,6 @@ async function migrateExistingData(
       if (migrated > 0) {
         counts[collectionName] = migrated;
         totalMigrated += migrated;
-        console.log(`[Tenants] Migrated ${migrated} documents from ${collectionName} to tenant ${tenantId}`);
       }
     } catch (err) {
       console.error(`[Tenants] Error migrating ${collectionName}:`, err);
@@ -136,7 +135,6 @@ async function migrateExistingData(
     }
   }
 
-  console.log(`[Tenants] Total migrated: ${totalMigrated} documents to tenant ${tenantId}`);
   return counts;
 }
 
@@ -201,7 +199,7 @@ export async function POST(request: NextRequest) {
           const defaultTenant = tenants.find((t: any) => t.id === userData.defaultTenantId);
           if (defaultTenant && defaultTenant.role === 'Super Admin') {
             await db.collection("users").doc(user.uid).update({ defaultTenantRole: "Super Admin" });
-            console.log(`[Tenants] Auto-fixed defaultTenantRole to Super Admin for ${user.email}`);
+
           }
         }
       }
@@ -224,13 +222,10 @@ export async function POST(request: NextRequest) {
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      console.log(`[Tenants] Created tenant "${name.trim()}" (${tenantCode}) by ${user.email} — Super Admin`);
-
       // Migrate existing unassigned data to this new tenant
       let migratedCounts: Record<string, number> | null = null;
       if (migrateExisting) {
         migratedCounts = await migrateExistingData(db, tenantRef.id, user.uid);
-        console.log(`[Tenants] Migration complete for tenant ${tenantRef.id}:`, migratedCounts);
       }
 
       return NextResponse.json({
@@ -273,8 +268,6 @@ export async function POST(request: NextRequest) {
       await db.collection("tenants").doc(tenantId).update({
         members: FieldValue.arrayUnion(user.uid),
       });
-
-      console.log(`[Tenants] User ${user.email} joined tenant "${tenantData.name}" (${code}) as Miembro`);
 
       return NextResponse.json({
         tenantId,
@@ -406,8 +399,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
       }
 
-      console.log(`[Tenants] remove-member: tenantId=${tenantId}, memberUid=${memberUid}, callerUid=${user.uid}`);
-
       const tenantDoc = await db.collection("tenants").doc(tenantId).get();
       if (!tenantDoc.exists) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
@@ -416,7 +407,6 @@ export async function POST(request: NextRequest) {
       const isCreatorCheck = tenantData.createdBy === user.uid;
       const isInSuperAdmins = (tenantData.superAdmins || []).includes(user.uid);
       const isSuperAdmin = isCreatorCheck || isInSuperAdmins;
-      console.log(`[Tenants] remove-member: createdBy=${tenantData.createdBy}, isCreator=${isCreatorCheck}, superAdmins=${JSON.stringify(tenantData.superAdmins || [])}, isSuperAdmin=${isSuperAdmin}, isMemberCreator=${tenantData.createdBy === memberUid}`);
       if (!isSuperAdmin) {
         return NextResponse.json({ error: "Solo el creador o Super Admin puede eliminar miembros" }, { status: 403 });
       }
@@ -432,7 +422,7 @@ export async function POST(request: NextRequest) {
       const currentMembers: string[] = tenantData.members || [];
       if (!currentMembers.includes(memberUid)) {
         // Maybe they're a super admin but not in members — just skip silently
-        console.log(`[Tenants] remove-member: ${memberUid} not in members array (${JSON.stringify(currentMembers)}). Trying to remove from superAdmins too.`);
+
         // Also remove from superAdmins if present
         const updates: any = {};
         if ((tenantData.superAdmins || []).includes(memberUid)) {
@@ -440,7 +430,6 @@ export async function POST(request: NextRequest) {
         }
         if (Object.keys(updates).length > 0) {
           await db.collection("tenants").doc(tenantId).update(updates);
-          console.log(`[Tenants] remove-member: removed from superAdmins`);
         }
         return NextResponse.json({
           tenantName: tenantData.name,
@@ -454,7 +443,6 @@ export async function POST(request: NextRequest) {
         members: FieldValue.arrayRemove(memberUid),
       });
 
-      console.log(`[Tenants] remove-member: OK — removed ${memberUid} from ${tenantId}`);
       return NextResponse.json({
         tenantName: tenantData.name,
         removed: memberUid,
@@ -468,7 +456,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Faltan tenantId o memberUid" }, { status: 400 });
       }
 
-      console.log(`[Tenants] delete-member: tenantId=${tenantId}, memberUid=${memberUid}, callerUid=${user.uid}`);
+
 
       const tenantDoc = await db.collection("tenants").doc(tenantId).get();
       if (!tenantDoc.exists) {
@@ -517,7 +505,7 @@ export async function POST(request: NextRequest) {
         const memberDoc = await db.collection("users").doc(memberUid).get();
         if (memberDoc.exists) {
           await db.collection("users").doc(memberUid).delete();
-          console.log(`[Tenants] delete-member: deleted user doc ${memberUid}`);
+
         }
       } catch (err: any) {
         console.warn(`[Tenants] delete-member: could not delete user doc ${memberUid}:`, err.message);
@@ -533,13 +521,12 @@ export async function POST(request: NextRequest) {
             batch.update(doc.ref, { assigneeId: null });
           }
           await batch.commit();
-          console.log(`[Tenants] delete-member: unassigned ${tasksSnap.size} tasks from ${memberUid}`);
+
         }
       } catch (err: any) {
         console.warn(`[Tenants] delete-member: could not unassign tasks:`, err.message);
       }
 
-      console.log(`[Tenants] delete-member: OK — removed ${memberUid} from tenant ${tenantId}`);
       return NextResponse.json({
         tenantName: tenantData.name,
         removed: memberUid,
@@ -663,8 +650,6 @@ export async function POST(request: NextRequest) {
         targetName = targetUserDoc.exists ? (targetUserDoc.data()?.name || '') : targetUid;
       }
 
-      console.log(`[Tenants] ${user.email} set ${targetName} (${targetUid}) as Super Admin in tenant ${tenantData.name}`);
-
       return NextResponse.json({
         success: true,
         tenantName: tenantData.name,
@@ -693,7 +678,7 @@ export async function POST(request: NextRequest) {
         const newCode = await ensureUniqueCode(db);
         await db.collection("tenants").doc(tenantId).update({ code: newCode });
         tenantData.code = newCode;
-        console.log(`[Tenants] Auto-generated code "${newCode}" for legacy tenant ${tenantId}`);
+
       }
 
       for (const uid of memberUids) {
@@ -812,7 +797,7 @@ export async function POST(request: NextRequest) {
           const isRelatedMember = relatedUids.some(uid => members.includes(uid));
 
           if (isRelatedCreator || isRelatedSA || isRelatedMember) {
-            console.log(`[Tenants fix-my-role] Found orphaned tenant "${t.name}" — related by email. Adding current UID ${user.uid}`);
+
             // Add current UID to members and superAdmins
             const updates: Record<string, any> = {
               members: FieldValue.arrayUnion(user.uid),

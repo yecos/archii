@@ -362,7 +362,6 @@ export async function installIntegration(
     updatedAt: new Date().toISOString(),
   })).id;
 
-  console.log(`[Marketplace] Installed ${providerId} for tenant ${tenantId} → ${instanceId}`);
   return instanceId;
 }
 
@@ -400,7 +399,6 @@ export async function uninstallIntegration(
   }
   await batch.commit();
 
-  console.log(`[Marketplace] Uninstalled ${instanceId} from tenant ${tenantId}`);
   return true;
 }
 
@@ -443,7 +441,6 @@ export async function updateIntegrationConfig(
     updatedAt: new Date().toISOString(),
   });
 
-  console.log(`[Marketplace] Updated config for ${instanceId}`);
 }
 
 /**

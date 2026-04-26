@@ -55,7 +55,6 @@ export async function sendEmail({
     }
 
     const data = await response.json();
-    console.log('[ArchiFlow Email] Email enviado:', data.id);
     return { success: true, messageId: data.id };
   } catch (err: any) {
     console.error('[ArchiFlow Email] Error:', err.message);

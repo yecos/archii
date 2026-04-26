@@ -147,7 +147,6 @@ async function discoverModels(): Promise<string[]> {
       return b.localeCompare(a);
     });
 
-    console.log(`[Gemini Discovery] Found ${models.length} flash models: ${models.slice(0, 5).join(", ")}`);
     return models;
   } catch (err: any) {
     console.error("[Gemini Discovery] Failed:", err?.message, "— using fallback models");
@@ -380,7 +379,6 @@ async function callGemini(body: Record<string, unknown>): Promise<GeminiResponse
         continue;
       }
 
-      console.log(`[Gemini] Success with model: ${model}`);
       return data;
     } catch (err: any) {
       if (err?.name === "AbortError") {

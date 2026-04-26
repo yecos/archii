@@ -205,10 +205,6 @@ export async function POST(request: NextRequest) {
 
       await db.collection('tenants').doc(tenantId).update(updateData);
 
-      console.log(
-        `[Tenant OneDrive] Connected tenant ${tenantId} to MS account ${msEmail}`
-      );
-
       return NextResponse.json({
         success: true,
         email: msEmail,
@@ -233,8 +229,6 @@ export async function POST(request: NextRequest) {
         msConnectedAt: null,
         msRootFolderId: null,
       });
-
-      console.log(`[Tenant OneDrive] Disconnected tenant ${tenantId}`);
 
       return NextResponse.json({ success: true });
     }

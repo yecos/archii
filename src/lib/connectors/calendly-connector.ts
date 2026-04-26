@@ -375,19 +375,17 @@ const calendlyConnector: IntegrationConnector = {
         const eventData = formatArchiflowToCalendly(payload as any);
         if (eventData.eventTypeId) {
           await createCalendlyEvent(calConfig, eventData);
-          console.log('[Calendly] Created scheduling link');
         }
         break;
       }
       case 'meeting.cancelled': {
         if (payload.calendlyEventUri) {
           await cancelCalendlyEvent(calConfig, payload.calendlyEventUri);
-          console.log('[Calendly] Cancelled event');
         }
         break;
       }
       default:
-        console.log(`[Calendly] Unhandled event: ${event}`);
+        break;
     }
   },
 

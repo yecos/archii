@@ -152,7 +152,6 @@ export async function createWebhook(config: Omit<WebhookConfig, 'id' | 'createdA
     updatedAt: new Date().toISOString(),
   });
 
-  console.log(`[Webhooks] Created webhook ${docRef.id} for tenant ${config.tenantId}: ${config.url}`);
   return docRef.id;
 }
 

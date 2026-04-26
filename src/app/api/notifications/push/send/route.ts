@@ -165,7 +165,6 @@ export async function POST(request: NextRequest) {
           batch.update(db.collection(COLLECTION).doc(uid), { active: false });
         }
         await batch.commit();
-        console.log(`[ArchiFlow Push] Marcadas ${expiredEndpoints.length} suscripciones como inactivas`);
       }
 
       return NextResponse.json({ ok: true, sent, failed, total: snap.size });

@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`[ArchiFlow Push] Suscripción guardada para ${user.uid}`);
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
@@ -90,7 +89,6 @@ export async function DELETE(request: NextRequest) {
 
     await db.collection(COLLECTION).doc(user.uid).delete();
 
-    console.log(`[ArchiFlow Push] Suscripción eliminada para ${user.uid}`);
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';

@@ -249,7 +249,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      console.log(`[SuperAdmin] Created tenant "${name.trim()}" (${code}) by ${user.email}, owner: ${ownerUid}`);
       return NextResponse.json({
         tenantId: tenantRef.id,
         name: name.trim(),
@@ -298,11 +297,9 @@ export async function POST(request: NextRequest) {
           // Projects were already deleted above if they had tenantId
         } catch (e) { /* skip */ }
 
-        console.log(`[SuperAdmin] Deleted ${totalDeleted} documents for tenant ${tenantName}`);
       }
 
       await db.collection("tenants").doc(tenantId).delete();
-      console.log(`[SuperAdmin] Deleted tenant "${tenantName}" (${tenantId})`);
       return NextResponse.json({ deleted: tenantName, tenantId });
     }
 
@@ -330,7 +327,6 @@ export async function POST(request: NextRequest) {
       }
 
       await db.collection("tenants").doc(tenantId).update(updates);
-      console.log(`[SuperAdmin] Updated tenant ${tenantId}:`, updates);
       return NextResponse.json({ updated: true, ...updates });
     }
 
@@ -453,7 +449,6 @@ export async function POST(request: NextRequest) {
       const oldRole = userDoc.data()?.role || "Miembro";
       await db.collection("users").doc(targetUid).update({ role: newRole });
 
-      console.log(`[SuperAdmin] Changed role for ${userDoc.data()?.email} from ${oldRole} to ${newRole} — by ${user.email}`);
       return NextResponse.json({ updated: true, uid: targetUid, oldRole, newRole });
     }
 
@@ -491,12 +486,10 @@ export async function POST(request: NextRequest) {
         const { getAdminAuth } = await import("@/lib/firebase-admin");
         const adminAuth = getAdminAuth();
         await adminAuth.updateUser(targetUid, { disabled: true });
-        console.log(`[SuperAdmin] Disabled Firebase Auth user ${targetUid}`);
       } catch (e: any) {
         console.warn(`[SuperAdmin] Could not disable Auth user: ${e.message}`);
       }
 
-      console.log(`[SuperAdmin] Deleted user ${userData.email} (${targetUid}) — by ${user.email}`);
       return NextResponse.json({ deleted: true, email: userData.email, removedFromTenants: tenantsSnap.size });
     }
 
@@ -522,7 +515,6 @@ export async function POST(request: NextRequest) {
       const userName = uDoc.exists ? uDoc.data()?.name || "Desconocido" : "Desconocido";
       const userEmail = uDoc.exists ? uDoc.data()?.email || "" : "";
 
-      console.log(`[SuperAdmin] Added ${userEmail} to tenant "${tenantData.name}" — by ${user.email}`);
       return NextResponse.json({ added: true, tenantName: tenantData.name, userName, userEmail });
     }
 
@@ -547,7 +539,6 @@ export async function POST(request: NextRequest) {
         members: FieldValue.arrayRemove(targetUid),
       });
 
-      console.log(`[SuperAdmin] Removed ${targetUid} from tenant "${tenantData.name}" — by ${user.email}`);
       return NextResponse.json({ removed: true, tenantName: tenantData.name });
     }
 
@@ -561,7 +552,6 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
 
       await db.collection("tenants").doc(tenantId).update({ code });
-      console.log(`[SuperAdmin] Regenerated code for tenant ${tenantId}: ${code}`);
       return NextResponse.json({ code, tenantId });
     }
 
@@ -580,7 +570,6 @@ export async function POST(request: NextRequest) {
 
       await db.collection("tenants").doc(tenantId).update({ createdBy: newOwnerUid });
 
-      console.log(`[SuperAdmin] Transferred ownership of "${tenantData.name}" to ${newOwnerUid} — by ${user.email}`);
       return NextResponse.json({ transferred: true, tenantName: tenantData.name, newOwnerUid });
     }
 

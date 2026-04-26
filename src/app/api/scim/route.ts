@@ -73,8 +73,6 @@ export async function POST(request: NextRequest) {
     // Procesar evento
     const result = await processSCIMEvent(body);
 
-    console.log(`[SCIM] ${body.operation} for ${user.emails?.[0]?.value}: ${result.action}`);
-
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('[SCIM API] Error:', error?.message);

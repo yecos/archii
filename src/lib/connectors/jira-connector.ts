@@ -356,13 +356,11 @@ const jiraConnector: IntegrationConnector = {
     switch (event) {
       case 'task.created': {
         const result = await createJiraIssue(jiraConfig, taskData);
-        console.log(`[Jira] Created issue ${result.key}`);
         break;
       }
       case 'task.updated': {
         if (payload.jiraIssueKey) {
           await updateJiraIssue(jiraConfig, payload.jiraIssueKey, taskData);
-          console.log(`[Jira] Updated issue ${payload.jiraIssueKey}`);
         }
         break;
       }
@@ -372,12 +370,11 @@ const jiraConnector: IntegrationConnector = {
           await jiraRequest(jiraConfig, 'POST', `/issue/${payload.jiraIssueKey}/transitions`, {
             transition: { id: '31' }, // Typically 'Done' transition ID
           });
-          console.log(`[Jira] Completed issue ${payload.jiraIssueKey}`);
         }
         break;
       }
       default:
-        console.log(`[Jira] Unhandled event: ${event}`);
+        break;
     }
   },
 

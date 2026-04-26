@@ -392,16 +392,14 @@ const stripeConnector: IntegrationConnector = {
     switch (event) {
       case 'invoice.created': {
         const result = await syncArchiflowInvoice(payload as any, stripeConfig);
-        console.log(`[Stripe] Created invoice ${result.invoiceId}`);
         break;
       }
       case 'invoice.paid':
       case 'invoice.overdue':
         // These are typically handled by inbound webhooks
-        console.log(`[Stripe] Event ${event} received (usually from webhook)`);
         break;
       default:
-        console.log(`[Stripe] Unhandled event: ${event}`);
+        break;
     }
   },
 

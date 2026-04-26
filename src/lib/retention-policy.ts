@@ -323,8 +323,6 @@ export async function archiveCollection(
     await batch.commit();
     totalArchived += snapshot.size;
 
-    console.log(`[Retention] Archived ${snapshot.size} docs from ${collection} (total: ${totalArchived})`);
-
     // Safety: max 10 batches per run
     if (totalArchived >= 4000) break;
   }
@@ -528,6 +526,5 @@ export async function scheduleRetentionCleanup(tenantId: string): Promise<string
     error: null,
   });
 
-  console.log(`[Retention] Scheduled cleanup job ${docRef.id} for tenant ${tenantId}`);
   return docRef.id;
 }

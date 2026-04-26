@@ -556,7 +556,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         });
         n.onclick = () => { window.focus(); n.close(); if (data?.screen) navigateToRef.current(data.screen, data.itemId); };
         setTimeout(() => n.close(), 8000);
-      } catch (e: any) { console.warn('OS Notification error:', e); }
+      } catch { /* OS notification not available */ }
     }
   }, [playNotifSound, vibrateNotif]);
 
@@ -728,8 +728,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
               } else {
                 await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
               }
-            } catch (dupErr) {
-              console.warn('[ArchiFlow Auth] Duplicate check failed, creating user doc anyway:', dupErr);
+            } catch (_dupErr) {
+              // Duplicate check failed, creating user doc anyway
               await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
             }
           } else {
@@ -811,14 +811,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                     localStorage.setItem('archiflow-active-tenant-name', tenantName);
                     localStorage.setItem('archiflow-active-tenant-role', role);
                   } else {
-                    console.log('[ArchiFlow Auth] Saved tenant no longer has this user as member, showing selector');
+                    // Saved tenant no longer has this user as member
                   }
                 } else {
-                  console.log('[ArchiFlow Auth] Saved tenant no longer exists, showing selector');
+                  // Saved tenant no longer exists
                 }
               }
-            } catch (restoreErr) {
-              console.warn('[ArchiFlow Auth] Could not restore tenant from Firestore:', restoreErr);
+            } catch (_restoreErr) {
+              // Could not restore tenant from Firestore
             }
           }
       }
@@ -864,7 +864,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
     const db = getFirebase().firestore();
     const uid = authUser.uid;
-    console.log('[ArchiFlow Team] Listening to tenant members:', activeTenantId);
     const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
       if (snap.exists) {
         const data = snap.data();
@@ -939,7 +938,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const data = await res.json();
 
         if (data.fixed?.length > 0 || data.addedToMembers?.length > 0) {
-          console.log('[ArchiFlow] AUTO-FIX: Role corrected — reloading in 2s');
           setTimeout(() => window.location.reload(), 2000);
         }
       } catch (err) {
@@ -955,10 +953,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
     if (activeTenantId && activeTenantMembers.length > 0) {
       const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
-      console.log('[ArchiFlow Team] Filtered teamUsers:', filtered.length);
       setTeamUsers(filtered);
     } else {
-      console.log('[ArchiFlow Team] No tenant filter — showing all', allUsersCache.length, 'users');
       setTeamUsers(allUsersCache);
     }
   }, [allUsersCache, activeTenantId, activeTenantMembers]);
@@ -1324,7 +1320,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
       knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
       firstLoadDoneRef.current = true;
-      console.log('[ArchiFlow] All collections hydrated — notifications armed');
     }
   }, [loading, messages, tasks, meetings, approvals, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
 
@@ -1346,7 +1341,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
         allCollectionsLoadedRef.current = true;
         firstLoadDoneRef.current = true;
-        console.log('[ArchiFlow] Safety timeout 5s — notifications armed (some collections may be empty)');
       }
     }, 5000);
     return () => clearTimeout(timer);
@@ -1729,7 +1723,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
 
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
-      console.log('[ArchiFlow Auth] Email/password login successful');
     } catch (e: any) {
       console.error('[ArchiFlow Auth] Login error:', e.code, e.message);
       const msgs: Record<string, string> = {
@@ -1770,7 +1763,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const doGoogleLogin = async () => {
     try {
-      console.log('[ArchiFlow Auth] Attempting Google login...');
       const fb = getFirebase();
       const projectId = fb.apps?.[0]?.options?.projectId || 'unknown';
 
@@ -1875,8 +1867,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 showToast('Token de Microsoft renovado. OneDrive conectado!');
                 return;
               }
-            } catch (reauthErr: any) {
-              console.warn('[ArchiFlow Auth] Microsoft reauth failed:', reauthErr.code);
+            } catch (_reauthErr) {
+              // Microsoft reauth failed, continuing
             }
           }
           if (linkErr.code === 'auth/popup-blocked') {
@@ -1885,7 +1877,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           }
           // If link with scopes fails, try without scopes
           if (linkErr.code === 'auth/internal-error' || linkErr.code === 'auth/oauth_error') {
-            console.warn('[ArchiFlow Auth] Microsoft link with scopes failed, trying basic...');
             try {
               const basicProvider = new authNS.OAuthProvider('microsoft.com');
               basicProvider.setCustomParameters({ prompt: 'consent' });
@@ -1928,7 +1919,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       } catch (popupErr: any) {
         // Si falla con scopes de OneDrive, intentar login básico sin scopes extra
         if (popupErr.code === 'auth/internal-error' || popupErr.code === 'auth/oauth_error') {
-          console.warn('[ArchiFlow Auth] Microsoft login con scopes falló, intentando login básico:', popupErr.code);
           const basicProvider = new authNS.OAuthProvider('microsoft.com');
           basicProvider.setCustomParameters({ prompt: 'select_account' });
           try {
@@ -2456,9 +2446,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Proyecto creado');
         // Si hay sesion de OneDrive activa, crear carpeta del proyecto
         if (msConnected && msAccessToken) {
-          ensureProjectFolder(name).then(folderId => {
-            if (folderId) { console.log('[ArchiFlow] Carpeta OneDrive creada para:', name); }
-            else { console.warn('[ArchiFlow] No se pudo crear carpeta OneDrive para:', name); }
+          ensureProjectFolder(name).then(() => {
+            // OneDrive folder creation handled silently
           });
         }
       }
@@ -3743,12 +3732,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         if (result.duplicatesRemoved && result.duplicatesRemoved > 0) {
 
           showToast(`Limpieza automática: ${result.duplicatesRemoved} duplicados eliminados`);
-        } else {
-          console.log('[ArchiFlow AutoDedup] No duplicates found — all clean');
         }
-      } catch (err) {
+      } catch (_err) {
         // Silent fail — this is a background task
-        console.warn('[ArchiFlow AutoDedup] Silent fail:', err);
       }
       sessionStorage.setItem('archiflow-dedup-done', 'true');
     }, 10000); // 10 seconds after app loads
@@ -3776,7 +3762,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           defaultTenantId: tenantId,
           defaultTenantName: tenantName,
           defaultTenantRole: role,
-        }).catch((err: any) => console.warn('[ArchiFlow] Could not save tenant pref to Firestore:', err));
+        }).catch(() => { /* Firestore pref save failed silently */ });
       } catch (_e) { /* silent */ }
     }
     const roleLabel = role === 'Super Admin' ? ' (Super Admin)' : '';

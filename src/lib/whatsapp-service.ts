@@ -61,7 +61,6 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<{ s
     }
 
     const data = await response.json();
-    console.log('[ArchiFlow WhatsApp] Mensaje enviado:', data.messages?.[0]?.id);
     return { success: true };
   } catch (err: any) {
     console.error('[ArchiFlow WhatsApp] Error de conexion:', err.message);
@@ -123,7 +122,6 @@ export function verifyWebhook(mode: string, token: string, challenge: string): {
   if (!config) return { verified: false };
 
   if (mode === 'subscribe' && token === config.verifyToken) {
-    console.log('[ArchiFlow WhatsApp] Webhook verificado');
     return { verified: true, body: challenge };
   }
 

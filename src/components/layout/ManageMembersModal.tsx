@@ -119,7 +119,6 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, canR
     setActionLoading(true);
     try {
       const data = await apiCall({ action: 'remove-member', tenantId, memberUid: uid });
-      console.log('[ManageMembers] remove-member response:', data);
       if (data.error) { showToast(data.error, 'error'); return; }
       showToast(`${name} eliminado del tenant`);
       await loadMembers();

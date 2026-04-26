@@ -33,7 +33,6 @@ export default function TopBar() {
         body: JSON.stringify({ action: 'fix-my-role' }),
       });
       const data = await res.json();
-      console.log('[TopBar] fix-my-role result:', data);
       if (data.fixed?.length > 0 || data.addedToMembers?.length > 0) {
         showToast(`Rol corregido en ${data.fixed?.length || 0} espacios`, 'success');
         // Reload page to pick up corrected role

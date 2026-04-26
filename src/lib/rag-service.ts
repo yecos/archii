@@ -213,7 +213,6 @@ function cosineSimilarity(a: number[], b: number[]): number {
  */
 export async function indexDocument(options: RAGIndexOptions): Promise<number> {
   if (!isFlagEnabled('rag_search')) {
-    console.log('[RAG] Feature flag desactivada, saltando indexación');
     return 0;
   }
 
@@ -274,7 +273,6 @@ export async function indexDocument(options: RAGIndexOptions): Promise<number> {
     await writeBatch.commit();
   }
 
-  console.log(`[RAG] Indexados ${indexed} chunks para ${source}/${sourceDocId} (tenant: ${tenantId})`);
   return indexed;
 }
 
@@ -299,7 +297,6 @@ export async function deleteDocumentChunks(
   snapshot.docs.forEach((doc) => batch.delete(doc.ref));
   await batch.commit();
 
-  console.log(`[RAG] Eliminados ${snapshot.size} chunks para ${sourceDocId} (tenant: ${tenantId})`);
   return snapshot.size;
 }
 
@@ -311,7 +308,6 @@ export async function searchDocuments(
   options: RAGQueryOptions
 ): Promise<RAGSearchResult[]> {
   if (!isFlagEnabled('rag_search')) {
-    console.log('[RAG] Feature flag desactivada');
     return [];
   }
 
@@ -470,6 +466,5 @@ export async function reindexCollection(
     }
   }
 
-  console.log(`[RAG] Re-indexación completa: ${totalIndexed} chunks de ${snapshot.size} documentos`);
   return totalIndexed;
 }

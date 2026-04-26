@@ -19,12 +19,9 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("hub.verify_token") || "";
   const challenge = request.nextUrl.searchParams.get("hub.challenge") || "";
 
-  console.log("[ArchiFlow WhatsApp] GET recibido:", { mode, token: token ? '***' : 'MISSING', challenge: challenge ? 'present' : 'MISSING' });
-
   const result = verifyWebhook(mode, token, challenge);
 
   if (result.verified) {
-    console.log("[ArchiFlow WhatsApp] Webhook verificado OK");
     return new NextResponse(result.body, {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -40,23 +37,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    console.log("[ArchiFlow WhatsApp] POST recibido - Raw body keys:", Object.keys(body || {}));
-
     // Parsear el mensaje de Meta
     const message = parseWebhookPayload(body);
 
     if (!message) {
-      console.log("[ArchiFlow WhatsApp] No se extrajo mensaje (puede ser status update). Body sample:", JSON.stringify(body).substring(0, 300));
       return NextResponse.json({ ok: true });
     }
-
-    console.log("[ArchiFlow WhatsApp] Mensaje recibido:", {
-      from: message.from,
-      name: message.name,
-      body: message.body?.substring(0, 50),
-      type: message.type,
-      buttonId: message.buttonId,
-    });
 
     // Verificar configuracion de WhatsApp
     const config = {
@@ -110,7 +96,6 @@ async function safeReply(message: any) {
     if (reply.buttons && reply.buttons.length > 0) {
       const btnResult = await sendWhatsAppButtons(message.from, reply.text, reply.buttons);
       if (btnResult.success) {
-        console.log("[ArchiFlow WhatsApp] Botones enviados OK a:", message.from);
         return;
       }
       // Si botones fallan, hacer fallback a texto plano
@@ -120,7 +105,7 @@ async function safeReply(message: any) {
     // Enviar como texto plano
     const textResult = await sendWhatsAppMessage(message.from, reply.text);
     if (textResult.success) {
-      console.log("[ArchiFlow WhatsApp] Texto enviado OK a:", message.from);
+      // success
     } else {
       console.error("[ArchiFlow WhatsApp] FALLO envio de texto a:", message.from, "Error:", textResult.error);
     }
@@ -133,7 +118,7 @@ async function safeReply(message: any) {
 async function handleLinkingFlow(message: any, db: any): Promise<{ text: string; buttons?: { id: string; title: string }[] }> {
   const msg = message.body.toLowerCase().trim();
 
-  console.log("[ArchiFlow WhatsApp] handleLinkingFlow msg:", msg, "from:", message.from);
+
 
   // Primer contacto o boton de vincular
   if (msg === 'hola' || msg === 'hi' || msg === 'link_start' || msg === '1') {
@@ -205,7 +190,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
         linkedAt: FieldValue.serverTimestamp(),
       });
 
-      console.log("[ArchiFlow WhatsApp] Cuenta vinculada:", email, "→", message.from);
+
       return getLinkedSuccess(userName);
     } catch (err: any) {
       console.error("[ArchiFlow WhatsApp] Error vinculando:", err.message);

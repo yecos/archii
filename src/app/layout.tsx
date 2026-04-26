@@ -106,7 +106,6 @@ export default function RootLayout({
               try { firebase.setLogLevel && firebase.setLogLevel('error'); } catch(e){}
             }
             window.__AF_FB = true;
-            console.log('[ArchiFlow] Firebase ready:', firebase.apps[0]?.options?.projectId);
           } catch(err) {
             console.error('[ArchiFlow] Firebase init failed:', err);
             window.__AF_FB = false;

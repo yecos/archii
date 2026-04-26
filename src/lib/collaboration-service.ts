@@ -576,7 +576,6 @@ export class PresenceManager {
 
       if (deleted > 0) {
         await batch.commit();
-        console.log(`[Collab] Cleaned up ${deleted} stale presence entries`);
       }
     } catch (err) {
       console.error('[Collab] Stale presence cleanup error:', err);
@@ -937,7 +936,6 @@ export class CollaborationService {
     await this.comments.init();
 
     this._active = true;
-    console.log(`[Collab] Session joined: doc=${documentId}, user=${userId}`);
   }
 
   /**
@@ -963,8 +961,6 @@ export class CollaborationService {
     this.cursorTracker = null;
     this.comments = null;
     this._active = false;
-
-    console.log('[Collab] Session left');
   }
 
   /**

@@ -52,14 +52,12 @@ export default function TenantSelectionScreen() {
         // force the role fix from the server side
         const anyMemberRole = data.tenants.some((t: any) => t.role === 'Miembro');
         if (anyMemberRole) {
-          console.log('[TenantSelection] Detected Miembro role — calling fix-my-role');
           fetch('/api/tenants', {
             method: 'POST',
             headers: { ...headers, 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'fix-my-role' }),
           }).then(fixRes => fixRes.json()).then(fixData => {
             if (fixData && (fixData.fixed?.length > 0 || fixData.already?.length > 0)) {
-              console.log('[TenantSelection] fix-my-role result:', fixData);
               // Reload tenants to get corrected roles
               if (fixData.fixed?.length > 0) {
                 fetch('/api/tenants', {

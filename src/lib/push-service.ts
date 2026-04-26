@@ -119,7 +119,6 @@ export async function registerPushSubscription(): Promise<boolean> {
     const existing = await registration.pushManager.getSubscription();
 
     if (existing) {
-      console.log('[ArchiFlow Push] Suscripción ya existe, re-guardando en servidor');
       const saved = await saveSubscriptionToServer(existing);
       return saved;
     }
@@ -131,9 +130,6 @@ export async function registerPushSubscription(): Promise<boolean> {
     });
 
     const saved = await saveSubscriptionToServer(subscription);
-    if (saved) {
-      console.log('[ArchiFlow Push] Suscripción registrada exitosamente');
-    }
     return saved;
   } catch (err: any) {
     console.error('[ArchiFlow Push] Error en registerPushSubscription:', err.message);
@@ -151,11 +147,9 @@ export async function unregisterPushSubscription(): Promise<void> {
 
     if (subscription) {
       await subscription.unsubscribe();
-      console.log('[ArchiFlow Push] Suscripción eliminada del navegador');
     }
 
     await removeSubscriptionFromServer();
-    console.log('[ArchiFlow Push] Suscripción eliminada del servidor');
   } catch (err: any) {
     console.error('[ArchiFlow Push] Error en unregisterPushSubscription:', err.message);
   }

@@ -2157,8 +2157,6 @@ export async function POST(request: NextRequest) {
           funcArgs = {};
         }
 
-        console.log(`[AI Agent] Executing tool: ${funcName}`, funcArgs);
-
         const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId);
 
         // Add tool result to conversation

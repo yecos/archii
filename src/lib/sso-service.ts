@@ -114,7 +114,6 @@ export async function saveSSOConfig(config: SSOConfig): Promise<string> {
     updatedAt: new Date().toISOString(),
   });
 
-  console.log(`[SSO] Config saved for tenant ${config.tenantId}: ${docRef.id}`);
   return docRef.id;
 }
 
@@ -157,7 +156,6 @@ export async function disableSSO(tenantId: string): Promise<void> {
   });
   await batch.commit();
 
-  console.log(`[SSO] Disabled for tenant ${tenantId}`);
 }
 
 /* ---- Role Mapping ---- */

@@ -419,7 +419,6 @@ export async function calculateAllTenantScores(
     }
   }
 
-  console.log(`[HealthScore] Tenant ${tenantId}: ${calculated} scores calculados, ${errors} errores`);
   return { calculated, errors };
 }
 

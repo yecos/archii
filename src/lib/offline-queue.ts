@@ -96,7 +96,6 @@ export async function enqueueOfflineWrite(params: {
     enqueuedAt: Date.now(),
     retryCount: 0,
   });
-  console.log(`[Offline] Operación encolada: ${params.action} ${params.collection}${params.docId ? '/' + params.docId : ''}`);
   return id as number;
 }
 
@@ -182,8 +181,6 @@ export async function syncOfflineQueue(): Promise<{
   const queue = await getPendingQueue();
   if (queue.length === 0) return result;
 
-  console.log(`[Offline] Sincronizando ${queue.length} operaciones pendientes...`);
-
   for (const item of queue) {
     try {
       // Validar que el usuario y tenant coincidan
@@ -240,7 +237,6 @@ export async function syncOfflineQueue(): Promise<{
     }
   }
 
-  console.log(`[Offline] Sync completado: ${result.synced} exitosos, ${result.failed} fallidos, ${result.skipped} saltados`);
   return result;
 }
 
@@ -250,7 +246,6 @@ export async function syncOfflineQueue(): Promise<{
 export async function clearOfflineQueue(): Promise<void> {
   const db = await getDB();
   await db.clear('queue');
-  console.log('[Offline] Cola limpiada');
 }
 
 /* ---- Online/Offline Detection Hook ---- */
@@ -279,7 +274,6 @@ export function initOfflineSync(): () => void {
   if (typeof window === 'undefined') return () => {};
 
   const handleOnline = async () => {
-    console.log('[Offline] Conexión restaurada, sincronizando...');
     listeners.forEach((fn) => fn(true));
     try {
       const result = await syncOfflineQueue();
@@ -297,7 +291,6 @@ export function initOfflineSync(): () => void {
   };
 
   const handleOffline = () => {
-    console.log('[Offline] Sin conexión, writes se encolarán');
     listeners.forEach((fn) => fn(false));
   };
 

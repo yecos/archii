@@ -324,7 +324,6 @@ const githubConnector: IntegrationConnector = {
       case 'task.created': {
         const issueData = formatArchiflowToGitHubIssue(payload as any);
         const issue = await createGitHubIssue(ghConfig, issueData);
-        console.log(`[GitHub] Created issue #${issue.number}`);
         break;
       }
       case 'task.updated': {
@@ -335,7 +334,6 @@ const githubConnector: IntegrationConnector = {
             body: issueData.body,
             labels: issueData.labels,
           });
-          console.log(`[GitHub] Updated issue #${payload.githubIssueNumber}`);
         }
         break;
       }
@@ -344,12 +342,11 @@ const githubConnector: IntegrationConnector = {
           await updateGitHubIssue(ghConfig, Number(payload.githubIssueNumber), {
             state: 'closed',
           });
-          console.log(`[GitHub] Closed issue #${payload.githubIssueNumber}`);
         }
         break;
       }
       default:
-        console.log(`[GitHub] Unhandled event: ${event}`);
+        break;
     }
   },
 
