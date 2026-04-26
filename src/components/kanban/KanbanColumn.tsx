@@ -59,7 +59,7 @@ export default function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-col min-w-[280px] w-[280px] max-w-[280px] flex-shrink-0 rounded-2xl transition-all duration-200 ${
+      className={`flex flex-col min-w-[200px] w-[280px] max-w-[280px] sm:min-w-[280px] flex-shrink-0 rounded-2xl transition-all duration-200 ${
         isOver ? 'ring-2 ring-[var(--af-accent)]/40' : ''
       }`}
     >

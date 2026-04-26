@@ -3,14 +3,13 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNotificationsContext } from '@/hooks/useNotifications';
 import { avatarColor } from '@/lib/helpers';
-import { ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, Building2, ChevronDown, Crown, Users, Shield, Palette } from 'lucide-react';
+import { useUIStore } from '@/stores/ui-store';
+import { ChevronLeft, Bell, Plus, Menu, LayoutGrid, Building2, ChevronDown, Crown, Users, Shield, Settings } from 'lucide-react';
 import ManageMembersModal from './ManageMembersModal';
-import ThemePanel from './ThemePanel';
-import { ADMIN_EMAILS } from '@/lib/types';
 
 export default function TopBar() {
   const {
-    screen, navigateTo, setSidebarOpen, currentProject, darkMode, toggleTheme,
+    screen, navigateTo, setSidebarOpen, currentProject,
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
     initials, pendingCount,
     projects, userName, companies, screenTitles,
@@ -18,10 +17,11 @@ export default function TopBar() {
     showToast,
   } = useApp();
   const { setShowNotifPanel, unreadCount, notifPermission, showNotifPanel } = useNotificationsContext();
+  const settingsOpen = useUIStore(s => s.settingsOpen);
+  const setSettingsOpen = useUIStore(s => s.setSettingsOpen);
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
   const [showManageMembers, setShowManageMembers] = React.useState(false);
-  const [showThemePanel, setShowThemePanel] = React.useState(false);
   const [fixingRole, setFixingRole] = React.useState(false);
 
   const handleFixRole = async () => {
@@ -187,17 +187,9 @@ export default function TopBar() {
             <span className="absolute -top-1 -right-1 w-[10px] h-[10px] bg-amber-500 rounded-full animate-pulse" />
           )}
         </button>
-        {/* Theme toggle */}
-        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={toggleTheme} title={(darkMode ? 'Cambiar a modo día' : 'Cambiar a modo noche') + ' (Ctrl+D)'}>
-          {darkMode ? (
-            <Sun size={18} className="stroke-[var(--muted-foreground)]" />
-          ) : (
-            <Moon size={18} className="stroke-[var(--muted-foreground)]" />
-          )}
-        </button>
-        {/* Theme panel — hidden on mobile to save space */}
-        <button className="hidden sm:flex w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={() => setShowThemePanel(true)} title="Temas y colores">
-          <Palette size={18} className="stroke-[var(--muted-foreground)]" />
+        {/* Settings — unified config panel (visible on all sizes) */}
+        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={() => setSettingsOpen(true)} title="Configuración">
+          <Settings size={18} className="stroke-[var(--muted-foreground)]" />
         </button>
         {screen === 'projects' && (
           <button className="hidden sm:flex items-center gap-1.5 af-btn-primary text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto' })); openModal('project'); }}>
@@ -220,7 +212,6 @@ export default function TopBar() {
         <div className={`w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] font-semibold border flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>{authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}</div>
       </div>
     </header>
-    {showThemePanel && <ThemePanel onClose={() => setShowThemePanel(false)} />}
     </>
   );
 }

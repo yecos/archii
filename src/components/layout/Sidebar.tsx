@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
+import { useUIStore } from '@/stores/ui-store';
 import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
@@ -26,6 +27,7 @@ interface SidebarProps {
   activeTenantName: string | null;
   activeTenantRole: string;
   onSwitchTenant: () => void;
+  onOpenSettings?: () => void;
 }
 
 export default function Sidebar({
@@ -33,7 +35,9 @@ export default function Sidebar({
   userName, initials, authUser, teamUsers, isEmailAdmin,
   projects, tasks, pendingCount, galleryPhotos, invLowStock, isAdmin,
   activeTenantName, activeTenantRole, onSwitchTenant,
+  onOpenSettings,
 }: SidebarProps) {
+  const setSettingsOpen = useUIStore(s => s.setSettingsOpen);
   const calendarBadge = useMemo(() => {
     const count = tasks.filter(t => t.data.dueDate && t.data.status !== 'Completado').length;
     return count > 0 ? count : undefined;
@@ -140,6 +144,21 @@ export default function Sidebar({
             <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-3 mt-4 mb-1">Gestión</div>
             {renderNavList(gestionItems, isActive)}
           </div>
+
+          {/* Settings button */}
+          <button
+            onClick={() => { setSidebarOpen(false); setTimeout(() => setSettingsOpen(true), 200); }}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer hover:bg-[var(--af-bg3)] active:bg-[var(--af-bg4)] transition-all bg-transparent border-none text-left mb-1 mt-2"
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[var(--af-accent)]/15">
+              <Settings size={16} className="stroke-[var(--af-accent)]" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[14px] font-medium">Configuración</div>
+              <div className="text-[11px] text-[var(--muted-foreground)]">Temas, notificaciones, cuenta</div>
+            </div>
+            <ChevronLeft size={14} className="stroke-[var(--muted-foreground)] rotate-180" />
+          </button>
 
           {/* User profile at bottom */}
           <div className="border-t border-[var(--border)] mt-4 pt-3">

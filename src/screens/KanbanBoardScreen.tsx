@@ -44,7 +44,14 @@ export default function KanbanBoardScreen() {
     kanbanViewMode,
     kanbanBoardId,
     setKanbanBoardId,
+    setKanbanViewMode,
   } = useUIStore();
+
+  // Auto-switch to list view on mobile
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    if (mq.matches) setKanbanViewMode('list');
+  }, [setKanbanViewMode]);
 
   // Board state
   const [board, setBoard] = useState<KanbanBoardType | null>(null);

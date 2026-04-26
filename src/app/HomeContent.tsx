@@ -16,6 +16,7 @@ import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
 import InstallBanner from '@/components/layout/InstallBanner';
 import NotifPanel from '@/components/layout/NotifPanel';
+import SettingsPanel from '@/components/layout/SettingsPanel';
 
 /* ─── Features ─── */
 import LightboxViewer from '@/components/features/LightboxViewer';
@@ -227,6 +228,7 @@ function AppContent() {
         </div>
 
         <NotifPanel />
+        <SettingsPanel />
 
         {/* Main content with screen rendering */}
         <main

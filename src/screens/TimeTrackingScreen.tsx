@@ -76,9 +76,9 @@ export default function TimeTrackingScreen() {
               <span className="text-[14px] font-semibold">Entrada rapida</span>
               <span className="text-[10px] text-[var(--af-text3)]">— Registra tiempo sin abrir el cronometro</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-col sm:flex-row">
               <select
-                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none cursor-pointer flex-1 min-w-[160px]"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none cursor-pointer w-full sm:min-w-[160px] sm:flex-1"
                 value={quickProject}
                 onChange={e => setQuickProject(e.target.value)}
               >
@@ -87,7 +87,7 @@ export default function TimeTrackingScreen() {
               </select>
               <input
                 type="date"
-                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-[130px]"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-full sm:w-[130px]"
                 value={quickDate}
                 onChange={e => setQuickDate(e.target.value)}
               />
@@ -96,19 +96,19 @@ export default function TimeTrackingScreen() {
                 step="0.5"
                 min="0.5"
                 placeholder="Horas"
-                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-[80px]"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-full sm:w-[80px]"
                 value={quickHours}
                 onChange={e => setQuickHours(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Descripcion (opcional)"
-                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none flex-1 min-w-[140px]"
+                className="text-[12px] bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none w-full sm:min-w-[140px] sm:flex-1"
                 value={quickDesc}
                 onChange={e => setQuickDesc(e.target.value)}
               />
               <button
-                className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-4 py-2 rounded-lg text-[12px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors flex-shrink-0"
+                className="flex items-center justify-start gap-1.5 bg-[var(--af-accent)] text-background px-4 py-2 rounded-lg text-[12px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors flex-shrink-0 w-full sm:w-auto"
                 onClick={handleQuickSave}
                 disabled={quickSaving}
               >

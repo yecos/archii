@@ -17,7 +17,9 @@ export default function BottomNav() {
       ].map(item => {
         const isActive = item.id === '_more' ? sidebarOpen : screen === item.id;
         return (
-          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-all relative ${isActive ? 'text-[var(--af-accent)] drop-shadow-[0_0_6px_rgba(200,169,110,0.5)]' : 'text-[var(--af-text3)]'}`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, undefined)}>
+          <button key={item.id} className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-all relative ${
+            isActive ? 'text-[var(--af-accent)] drop-shadow-[0_0_6px_rgba(200,169,110,0.5)]' : 'text-[var(--af-text3)]'
+          }`} onClick={() => item.id === '_more' ? setSidebarOpen(true) : navigateTo(item.id, undefined)}>
             {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-gradient-to-r from-transparent via-[var(--af-accent)] to-transparent w-10" />}
             {item.icon}
             <span className="text-[10px] leading-tight font-medium">{item.label}</span>

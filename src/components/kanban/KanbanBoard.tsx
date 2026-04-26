@@ -108,8 +108,8 @@ export default function KanbanBoard({
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-          {/* List header */}
-          <div className="grid grid-cols-[1fr_120px_100px_120px_80px] gap-2 px-4 py-2.5 bg-[var(--af-bg3)] border-b border-[var(--border)] text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+          {/* List header — hidden on mobile */}
+          <div className="hidden sm:grid grid-cols-[1fr_120px_100px_120px_80px] gap-2 px-4 py-2.5 bg-[var(--af-bg3)] border-b border-[var(--border)] text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
             <span>Titulo</span>
             <span>Estado</span>
             <span>Prioridad</span>
@@ -124,28 +124,65 @@ export default function KanbanBoard({
               <div
                 key={card.id}
                 onClick={() => onCardClick(card)}
-                className="grid grid-cols-[1fr_120px_100px_120px_80px] gap-2 px-4 py-3 border-b border-[var(--border)] last:border-0 cursor-pointer hover:bg-[var(--af-bg3)] transition-colors"
+                className="border-b border-[var(--border)] last:border-0 cursor-pointer hover:bg-[var(--af-bg3)] transition-colors"
               >
-                <span className="text-[13px] font-medium text-[var(--foreground)] truncate">{card.title}</span>
-                <span className="text-[12px] text-[var(--muted-foreground)] flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: column?.color || '#6b7280' }} />
-                  {column?.title || ''}
-                </span>
-                <span className={`text-[12px] px-2 py-0.5 rounded-md w-fit ${
-                  card.priority === 'Alta' ? 'bg-red-500/10 text-red-400' :
-                  card.priority === 'Media' ? 'bg-amber-500/10 text-amber-400' :
-                  'bg-emerald-500/10 text-emerald-400'
-                }`}>
-                  {card.priority}
-                </span>
-                <span className="text-[12px] text-[var(--muted-foreground)] truncate">{userName}</span>
-                <span className={`text-[12px] ${
-                  card.dueDate && new Date(card.dueDate) < new Date(new Date().toDateString())
-                    ? 'text-red-400'
-                    : 'text-[var(--muted-foreground)]'
-                }`}>
-                  {card.dueDate ? new Date(card.dueDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'}
-                </span>
+                {/* Desktop row — table grid */}
+                <div className="hidden sm:grid grid-cols-[1fr_120px_100px_120px_80px] gap-2 px-4 py-3">
+                  <span className="text-[13px] font-medium text-[var(--foreground)] truncate">{card.title}</span>
+                  <span className="text-[12px] text-[var(--muted-foreground)] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: column?.color || '#6b7280' }} />
+                    {column?.title || ''}
+                  </span>
+                  <span className={`text-[12px] px-2 py-0.5 rounded-md w-fit ${
+                    card.priority === 'Alta' ? 'bg-red-500/10 text-red-400' :
+                    card.priority === 'Media' ? 'bg-amber-500/10 text-amber-400' :
+                    'bg-emerald-500/10 text-emerald-400'
+                  }`}>
+                    {card.priority}
+                  </span>
+                  <span className="text-[12px] text-[var(--muted-foreground)] truncate">{userName}</span>
+                  <span className={`text-[12px] ${
+                    card.dueDate && new Date(card.dueDate) < new Date(new Date().toDateString())
+                      ? 'text-red-400'
+                      : 'text-[var(--muted-foreground)]'
+                  }`}>
+                    {card.dueDate ? new Date(card.dueDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'}
+                  </span>
+                </div>
+
+                {/* Mobile card layout */}
+                <div className="sm:hidden px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[13px] font-medium text-[var(--foreground)] line-clamp-2 flex-1">{card.title}</span>
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0 ${
+                      card.priority === 'Alta' ? 'bg-red-500/10 text-red-400' :
+                      card.priority === 'Media' ? 'bg-amber-500/10 text-amber-400' :
+                      'bg-emerald-500/10 text-emerald-400'
+                    }`}>
+                      {card.priority}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className="text-[12px] text-[var(--muted-foreground)] flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: column?.color || '#6b7280' }} />
+                      {column?.title || ''}
+                    </span>
+                    <span className="text-[var(--border)]">·</span>
+                    <span className="text-[12px] text-[var(--muted-foreground)] truncate max-w-[120px]">{userName}</span>
+                    {card.dueDate && (
+                      <>
+                        <span className="text-[var(--border)]">·</span>
+                        <span className={`text-[12px] ${
+                          new Date(card.dueDate) < new Date(new Date().toDateString())
+                            ? 'text-red-400'
+                            : 'text-[var(--muted-foreground)]'
+                        }`}>
+                          {new Date(card.dueDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}

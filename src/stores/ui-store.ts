@@ -29,6 +29,11 @@ interface UIState {
   setCommandOpen: (open: boolean) => void;
   toggleCommand: () => void;
 
+  // Settings Panel
+  settingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
+  toggleSettings: () => void;
+
   // Notifications
   unreadCount: number;
   setUnreadCount: (count: number) => void;
@@ -122,6 +127,11 @@ export const useUIStore = create<UIState>((set, get) => ({
   commandOpen: false,
   setCommandOpen: (open) => set({ commandOpen: open }),
   toggleCommand: () => set((state) => ({ commandOpen: !state.commandOpen })),
+
+  // Settings Panel
+  settingsOpen: false,
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
+  toggleSettings: () => set((state) => ({ settingsOpen: !state.settingsOpen })),
 
   // Notifications
   unreadCount: 0,
