@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { avatarColor } from '@/lib/helpers';
-import { Home, ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, MoreHorizontal, ClipboardList, Folder, Building2, ChevronDown, LogOut, Crown, Users, Shield, Palette } from 'lucide-react';
+import { ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, Building2, ChevronDown, Crown, Users, Shield, Palette } from 'lucide-react';
 import ManageMembersModal from './ManageMembersModal';
 import ThemePanel from './ThemePanel';
 import { ADMIN_EMAILS } from '@/lib/types';

@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
-import { FileText, ChevronDown, ChevronUp, Thermometer, Users, Wrench, Package } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Users, Wrench, Package } from 'lucide-react';
 import { exportDailyLogsPDF } from '@/lib/export-pdf';
 
 const WEATHER_COLORS: Record<string, string> = {

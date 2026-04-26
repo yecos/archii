@@ -4,59 +4,6 @@
  * Extraídas de page.tsx para modularización.
  */
 
-import { getFirebase } from './firebase-service';
-
-// ─── SAFE WRITE WRAPPER ──────────────────────────────────────────────
-
-/**
- * safeWrite — Wrapper seguro para writes a Firestore.
- * Valida que el usuario esté autenticado Y que tenantId exista
- * antes de ejecutar cualquier operación de escritura.
- *
- * Uso:
- *   const ref = db.collection('tasks');
- *   await safeWrite('add', ref, { title: 'Foo', tenantId: 'abc' }, authUser);
- *
- * NOTA: Este wrapper usa Firebase Compat SDK (getFirebase().firestore()).
- * Las funciones en firestore-actions.ts ya validan authUser internamente,
- * pero este wrapper puede usarse para writes directos fuera de firestore-actions.
- */
-export async function safeWrite(
-  type: 'add' | 'set' | 'update',
-  ref: any,
-  data: Record<string, any>,
-  authUser: { uid: string } | null | undefined,
-) {
-  if (!authUser?.uid) {
-    throw new Error('WRITE_BLOCKED: Usuario no autenticado');
-  }
-  if (!data.tenantId) {
-    throw new Error('WRITE_BLOCKED: tenantId requerido');
-  }
-
-  const metadata = {
-    ...data,
-    createdBy: data.createdBy || authUser.uid,
-    updatedBy: authUser.uid,
-    updatedAt: data.updatedAt || getFirebase().firestore.FieldValue.serverTimestamp(),
-  };
-
-  switch (type) {
-    case 'add':
-      return ref.add(metadata);
-    case 'set':
-      return ref.doc(data.id || authUser.uid).set(metadata);
-    case 'update':
-      return ref.doc(data.id).update({
-        ...metadata,
-        updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
-        updatedBy: authUser.uid,
-      });
-    default:
-      throw new Error(`safeWrite: tipo desconocido: ${type}`);
-  }
-}
-
 /**
  * Formatea un número como moneda COP (pesos colombianos).
  */
