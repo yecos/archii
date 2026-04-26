@@ -66,7 +66,7 @@ export default function TopBar() {
 
   return (
     <>
-    <header className="h-[60px] af-glass border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
+    <header className="af-glass border-b border-[var(--border)] flex items-center px-4 md:px-6 gap-3 flex-shrink-0 safe-top" style={{ minHeight: 'calc(60px + env(safe-area-inset-top, 0px))' }}>
       <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer md:hidden flex hover:scale-105 active:scale-95" onClick={() => setSidebarOpen(true)}>
         <Menu size={18} className="stroke-[var(--muted-foreground)]" />
       </button>

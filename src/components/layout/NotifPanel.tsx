@@ -48,7 +48,7 @@ export default function NotifPanel() {
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
-      <div className="absolute right-2 sm:right-4 top-[60px] z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ animation: 'fadeIn 0.2s ease' }}>
+      <div className="absolute right-2 sm:right-4 z-[60] w-[calc(100vw-16px)] sm:w-[400px] max-h-[85dvh] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden animate-fadeIn flex flex-col" style={{ top: 'calc(60px + env(safe-area-inset-top, 0px))', animation: 'fadeIn 0.2s ease' }}>
         {/* Header */}
         <div className="p-4 border-b border-[var(--border)] flex-shrink-0">
           <div className="flex items-center justify-between mb-3">

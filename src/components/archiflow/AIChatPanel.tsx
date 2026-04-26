@@ -432,7 +432,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--af-bg4)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--af-bg4)]" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}>
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--af-accent)] to-amber-600 flex items-center justify-center shadow-lg shadow-[var(--af-accent)]/20">
