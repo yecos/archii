@@ -95,12 +95,12 @@ export default function RootLayout({
           try {
             if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
               firebase.initializeApp({
-                apiKey: "AIzaSyBQOTu97ACa8Im9V8zcvWfEoVRIFDVK1Ho",
-                authDomain: "archiflow-prod-2026.firebaseapp.com",
-                projectId: "archiflow-prod-2026",
-                storageBucket: "archiflow-prod-2026.firebasestorage.app",
-                messagingSenderId: "1090724963650",
-                appId: "1:1090724963650:web:28468b10aef5e89c0f54db"
+                apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ''}",
+                authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ''}",
+                projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ''}",
+                storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || ''}",
+                messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || ''}",
+                appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''}"
               });
               try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch(e){}
               try { firebase.setLogLevel && firebase.setLogLevel('error'); } catch(e){}

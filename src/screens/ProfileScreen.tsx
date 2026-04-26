@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
-import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, USER_ROLES } from '@/lib/types';
+import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, USER_ROLES, toDate } from '@/lib/types';
 
 type ProfileTab = 'resumen' | 'calendario' | 'actividad' | 'integraciones';
 
@@ -154,7 +154,7 @@ export default function ProfileScreen() {
     // Avg tasks per day (completed in last 30 days)
     const thirtyAgo = new Date(today.getTime() - 30 * 86400000);
     const recentCompleted = myCompleted.filter(t => {
-      const cd = t.data.completedAt?.toDate ? t.data.completedAt.toDate() : t.data.updatedAt?.toDate ? t.data.updatedAt.toDate() : new Date(t.data.createdAt);
+      const cd = toDate(t.data.completedAt) || toDate(t.data.updatedAt) || toDate(t.data.createdAt);
       return cd >= thirtyAgo;
     });
     const avgPerDay = recentCompleted.length > 0 ? (recentCompleted.length / 30).toFixed(1) : '0';
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const dayEnd = new Date(dayStart.getTime() + 86400000);
       const completed = myCompleted.filter(t => {
-        const cd = t.data.completedAt?.toDate ? t.data.completedAt.toDate() : t.data.createdAt?.toDate ? t.data.createdAt.toDate() : new Date(t.data.createdAt);
+        const cd = toDate(t.data.completedAt) || toDate(t.data.createdAt);
         return cd >= dayStart && cd < dayEnd;
       }).length;
       return { label, count: completed };
@@ -197,7 +197,7 @@ export default function ProfileScreen() {
     const activityTimeline = myCompleted
       .map(t => {
         const proj = projects.find(p => p.id === t.data.projectId);
-        const cd = t.data.completedAt?.toDate ? t.data.completedAt.toDate() : t.data.updatedAt?.toDate ? t.data.updatedAt.toDate() : new Date(t.data.createdAt);
+        const cd = toDate(t.data.completedAt) || toDate(t.data.updatedAt) || toDate(t.data.createdAt);
         return { id: t.id, title: t.data.title, project: proj?.data.name || '', date: cd, priority: t.data.priority };
       })
       .sort((a, b) => b.date.getTime() - a.date.getTime())

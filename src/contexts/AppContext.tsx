@@ -366,6 +366,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         setTenantReady(true);
       }
     } catch (err) { console.error("[ArchiFlow]", err); }
+
+    // Cleanup: stop voice recording on unmount to prevent mic leak
+    return () => {
+      try {
+        if (mediaRecRef.current?.state === 'recording') { mediaRecRef.current.stop(); }
+        audioStreamRef.current?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+        if (recTimerRef.current) clearInterval(recTimerRef.current);
+        if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
+        // Revoke blob URL to free memory
+        // Note: audioPreviewUrl is a state value captured at mount time (null)
+        // The actual cleanup happens via the ref pattern in handleMicButton
+      } catch { /* already cleaned up */ }
+    };
   }, []);
 
   // Check if running as standalone app
@@ -2733,13 +2746,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (playingAudio === msgId) {
       audioEl.pause(); setPlayingAudio(null); setAudioProgress(0);
     } else {
-      if (playingAudio) { const prev = document.getElementById('audio-' + playingAudio) as HTMLAudioElement; if (prev) prev.pause(); }
-      audioEl.play(); setPlayingAudio(msgId);
+      // Cleanup: pause previous and remove listeners to prevent accumulation
+      if (playingAudio) { const prev = document.getElementById('audio-' + playingAudio) as HTMLAudioElement; if (prev) { prev.pause(); prev.ontimeupdate = null; prev.onended = null; prev.onpause = null; } }
+      setPlayingAudio(msgId);
+      // Use onXXX properties (auto-replaced, no accumulation) instead of addEventListener
       const onTime = () => { if (audioEl.duration) { setAudioProgress((audioEl.currentTime / audioEl.duration) * 100); setAudioCurrentTime(audioEl.currentTime); } };
       const onEnd = () => { setPlayingAudio(null); setAudioProgress(0); };
-      audioEl.addEventListener('timeupdate', onTime);
-      audioEl.addEventListener('ended', onEnd);
-      audioEl.addEventListener('pause', onEnd);
+      audioEl.ontimeupdate = onTime;
+      audioEl.onended = onEnd;
+      audioEl.onpause = onEnd;
+      audioEl.play().catch(() => { setPlayingAudio(null); });
     }
   };
 

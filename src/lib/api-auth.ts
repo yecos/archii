@@ -7,7 +7,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase-admin";
 
-const ADMIN_EMAILS = ["yecos11@gmail.com"];
+// Admin emails — loaded from env var, comma-separated. Fallback for local dev.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'yecos11@gmail.com').split(',').map(e => e.trim().toLowerCase());
 
 export interface AuthUser {
   uid: string;

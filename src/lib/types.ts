@@ -4,6 +4,19 @@
  * Extraído de page.tsx para modularización.
  */
 
+/* ===== COMMON TYPES ===== */
+
+/** Firebase Timestamp — can be a server timestamp object or a plain string */
+export type FirestoreTimestamp = string | { toDate: () => Date } | null;
+
+/** Safely convert a FirestoreTimestamp (or undefined) to a JavaScript Date */
+export function toDate(ts: FirestoreTimestamp | undefined): Date {
+  if (!ts) return new Date();
+  if (typeof ts === 'string') return new Date(ts);
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  return new Date();
+}
+
 /* ===== INTERFACES ===== */
 
 export interface User {
@@ -38,8 +51,8 @@ export interface Project {
     progress: number;
     companyId?: string;
     projectType?: string;
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp;
+    updatedAt?: FirestoreTimestamp;
     createdBy?: string;
   };
 }
@@ -59,10 +72,10 @@ export interface Task {
     estimatedHours?: number;
     tags?: string[];
     subtasks?: { text: string; done: boolean }[];
-    completedAt?: any;
-    createdAt: any;
+    completedAt?: FirestoreTimestamp;
+    createdAt: FirestoreTimestamp;
     createdBy?: string;
-    updatedAt?: any;
+    updatedAt?: FirestoreTimestamp;
     updatedBy?: string;
   };
 }
@@ -87,7 +100,7 @@ export interface Expense {
     paymentMethod?: string;
     vendor?: string;
     notes?: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy?: string;
   };
 }
@@ -103,7 +116,7 @@ export interface Supplier {
     website: string;
     notes: string;
     rating: number;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
   };
 }
 
@@ -113,7 +126,7 @@ export interface Approval {
     title: string;
     description: string;
     status: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
   };
 }
 
@@ -126,7 +139,7 @@ export interface WorkPhase {
     order: number;
     startDate: string;
     endDate: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     type: 'Diseño' | 'Ejecución' | 'Otro';
     enabled: boolean;
     phaseKey: string; // clave única: 'conceptualizacion', 'anteproyecto', 'obra_gris', etc.
@@ -148,8 +161,8 @@ export interface DailyLog {
     photos: string[]; // Base64 photo strings
     supervisor: string; // Supervisor name
     createdBy: string; // User UID
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp;
+    updatedAt?: FirestoreTimestamp;
   };
 }
 
@@ -159,7 +172,7 @@ export interface ProjectFile {
   type: string;
   size: number;
   url: string;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
 
 export interface OneDriveFile {
@@ -179,7 +192,7 @@ export interface GalleryPhoto {
     categoryName: string;
     caption: string;
     imageData: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
   };
 }
@@ -198,9 +211,9 @@ export interface InvProduct {
     imageData: string;
     warehouse: string;
     warehouseStock: Record<string, number>;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
-    updatedAt?: any;
+    updatedAt?: FirestoreTimestamp;
   };
 }
 
@@ -210,7 +223,7 @@ export interface InvCategory {
     name: string;
     color: string;
     description: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
   };
 }
 
@@ -223,7 +236,7 @@ export interface InvMovement {
     reason: string;
     reference: string;
     date: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
   };
 }
@@ -239,9 +252,9 @@ export interface InvTransfer {
     status: string;
     date: string;
     notes: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
-    completedAt?: any;
+    completedAt?: FirestoreTimestamp;
   };
 }
 
@@ -254,7 +267,7 @@ export interface Company {
     phone?: string;
     email?: string;
     legalName?: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
   };
 }
 
@@ -284,8 +297,8 @@ export interface TimeEntry {
     billable: boolean;
     rate: number; // COP/hora
     date: string;
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp;
+    updatedAt?: FirestoreTimestamp;
   };
 }
 
@@ -305,7 +318,7 @@ export interface Invoice {
     issueDate: string;
     dueDate: string;
     paidDate?: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
   };
 }
@@ -329,8 +342,8 @@ export interface Comment {
     text: string;
     mentions: string[];
     parentId?: string;
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp;
+    updatedAt?: FirestoreTimestamp;
   };
 }
 
@@ -356,11 +369,11 @@ export interface RFI {
     assignedTo: string;
     dueDate: string;
     photos: string[];
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
-    updatedAt: any;
+    updatedAt: FirestoreTimestamp;
     respondedBy: string;
-    respondedAt: any;
+    respondedAt: FirestoreTimestamp;
   };
 }
 
@@ -376,11 +389,11 @@ export interface Submittal {
     submittedBy: string;
     reviewer: string;
     dueDate: string;
-    reviewedAt: any;
+    reviewedAt: FirestoreTimestamp;
     reviewNotes: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
-    updatedAt: any;
+    updatedAt: FirestoreTimestamp;
   };
 }
 
@@ -396,11 +409,11 @@ export interface PunchItem {
     assignedTo: string;
     dueDate: string;
     photos: string[];
-    completedAt: any;
+    completedAt: FirestoreTimestamp;
     completedBy: string;
-    createdAt: any;
+    createdAt: FirestoreTimestamp;
     createdBy: string;
-    updatedAt: any;
+    updatedAt: FirestoreTimestamp;
   };
 }
 
@@ -433,8 +446,8 @@ export interface KanbanBoard {
     quickCards: KanbanQuickCard[];
     filters: KanbanFilters;
     viewMode: 'board' | 'list';
-    createdAt: any;
-    updatedAt?: any;
+    createdAt: FirestoreTimestamp;
+    updatedAt?: FirestoreTimestamp;
     createdBy: string;
   };
 }
@@ -448,7 +461,7 @@ export interface KanbanQuickCard {
   order: number;
   color: string;
   tags: string[];
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
   createdBy: string;
 }
 
