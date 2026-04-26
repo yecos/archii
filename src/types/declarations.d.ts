@@ -108,26 +108,3 @@ declare module 'react-resizable-panels' {
   const PanelResizeHandle: FC<PanelResizeHandleProps>;
   export { Panel, PanelGroup, PanelResizeHandle };
 }
-
-declare module 'next-themes' {
-  import { FC, ReactNode } from 'react';
-  interface ThemeProviderProps {
-    children: ReactNode;
-    attribute?: string | string[];
-    defaultTheme?: string;
-    enableSystem?: boolean;
-    disableTransitionOnChange?: boolean;
-    storageKey?: string;
-    themes?: string[];
-    forcedTheme?: string;
-  }
-  const ThemeProvider: FC<ThemeProviderProps>;
-  function useTheme(): {
-    theme: string | undefined;
-    setTheme: (theme: string) => void;
-    forcedTheme: string | undefined;
-    resolvedTheme: string | undefined;
-    systemTheme: string | undefined;
-  };
-  export { ThemeProvider, useTheme };
-}
