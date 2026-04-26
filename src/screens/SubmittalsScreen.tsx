@@ -6,7 +6,7 @@ import { SUBMITTAL_STATUS_COLORS, SUBMITTAL_STATUSES } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, FileCheck } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -62,10 +62,16 @@ export default function SubmittalsScreen() {
   };
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="text-sm text-[var(--muted-foreground)]">{submittals.length} submittals</div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <FileCheck size={20} className="text-[var(--af-accent)]" />
+            Submittals
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{submittals.length} submittals</p>
+        </div>
         <button
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
           onClick={handleCreate}

@@ -71,13 +71,15 @@ export default function SuperAdminScreen() {
   return (
     <div className="animate-fadeIn p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center shadow-lg">
-          <Shield size={20} className="text-white" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">Super Admin</h2>
-          <p className="text-xs text-[var(--muted-foreground)]">Gestión global de la plataforma</p>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center shadow-lg">
+            <Shield size={20} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Super Admin</h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Gestión global de la plataforma</p>
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[10px] px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-semibold">SUPER ADMIN</span>

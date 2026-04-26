@@ -2,6 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
+import { ShieldCheck } from 'lucide-react';
 import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase, getAuthHeaders } from '@/lib/firebase-service';
 
@@ -38,8 +39,19 @@ export default function AdminScreen() {
 
       {isAdmin && (
         <div className="animate-fadeIn p-4 sm:p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <ShieldCheck size={20} className="text-[var(--af-accent)]" />
+                Panel Admin
+              </h2>
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Gestión administrativa del equipo</p>
+            </div>
+          </div>
+
           {/* Sub-tabs */}
-          <div className="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto scrollbar-none">
             {[{ id: 'timeline' as const, label: '📊 Timeline' }, { id: 'dashboard' as const, label: '📈 Dashboard' }, { id: 'permissions' as const, label: '🔐 Permisos' }, { id: 'team' as const, label: '👥 Equipo' }].map(tab => (
               <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap cursor-pointer transition-all ${adminTab === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setAdminTab(tab.id)}>{tab.label}</button>
             ))}

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, fmtTimer, getWeekStart } from '@/lib/helpers';
+import { Clock } from 'lucide-react';
 import { DEFAULT_PHASES } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
@@ -50,8 +51,19 @@ export default function TimeTrackingScreen() {
   };
 
   return (
-<div className="animate-fadeIn space-y-4">
-        <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
+<div className="animate-fadeIn space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Clock size={20} className="text-[var(--af-accent)]" />
+            Control de Tiempo
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{timeEntries.length} registros de tiempo</p>
+        </div>
+      </div>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
           {[{ k: 'Tracker', v: 'tracker' as const }, { k: 'Registros', v: 'entries' as const }, { k: 'Resumen', v: 'summary' as const }].map(tab => (
             <button key={tab.v} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${timeTab === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setTimeTab(tab.v)}>{tab.k}</button>
           ))}

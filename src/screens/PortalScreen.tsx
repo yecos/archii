@@ -39,12 +39,12 @@ export default function PortalScreen() {
       {/* Header */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-            <Globe size={20} />
-          </div>
           <div>
-            <div className="text-lg font-semibold">Portal del cliente</div>
-            <div className="text-[11px] text-[var(--af-text3)]">Accede al progreso y documentos de cada proyecto</div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Globe size={20} className="text-blue-400" />
+              Portal del cliente
+            </h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Accede al progreso y documentos de cada proyecto</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 mt-4">

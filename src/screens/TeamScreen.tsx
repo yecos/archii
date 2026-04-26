@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { Users } from 'lucide-react';
 import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import ManageMembersModal from '@/components/layout/ManageMembersModal';
@@ -17,33 +18,41 @@ export default function TeamScreen() {
   const canManage = myRole === 'Admin' || myRole === 'Director' || activeTenantRole === 'Super Admin';
 
   return (
-    <div className="animate-fadeIn">
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        {/* Company filter for team */}
-        {(canManage) && companies.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 flex-1">
-            <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
-              👥 Todo el equipo
-            </button>
-            {companies.map(c => (
-              <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
-                🏢 {c.data.name}
-              </button>
-            ))}
-          </div>
-        )}
+    <div className="animate-fadeIn space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Users size={20} className="text-[var(--af-accent)]" />
+            Equipo
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</p>
+        </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--muted-foreground)]">{teamUsers.filter(u => !forms.teamCompanyFilter || u.data.companyId === forms.teamCompanyFilter).length} miembros</span>
           {canManage && (
             <button
               onClick={() => setShowManageMembers(true)}
-              className="px-3 py-1.5 rounded-full text-[12px] font-medium cursor-pointer transition-all whitespace-nowrap bg-[var(--af-accent)] text-background hover:opacity-90 border-none"
+              className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
             >
-              + Gestionar miembros
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Gestionar miembros
             </button>
           )}
         </div>
       </div>
+      {/* Company filter pills */}
+      {(canManage) && companies.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+          <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.teamCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: '' }))}>
+            Todo el equipo
+          </button>
+          {companies.map(c => (
+            <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.teamCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms(p => ({ ...p, teamCompanyFilter: c.id }))}>
+              {c.data.name}
+            </button>
+          ))}
+        </div>
+      )}
       {/* Role Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
         {USER_ROLES.slice(0, 4).map(role => {

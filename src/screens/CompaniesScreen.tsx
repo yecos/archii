@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { Building2 } from 'lucide-react';
 
 export default function CompaniesScreen() {
   const {
@@ -8,9 +9,15 @@ export default function CompaniesScreen() {
   } = useApp();
 
   return (
-    <div className="animate-fadeIn space-y-4">
+    <div className="animate-fadeIn space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="text-sm text-[var(--muted-foreground)]">{companies.length} empresa{companies.length !== 1 ? 's' : ''} registrada{companies.length !== 1 ? 's' : ''}</div>
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Building2 size={20} className="text-[var(--af-accent)]" />
+            Empresas
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{companies.length} empresa{companies.length !== 1 ? 's' : ''} registrada{companies.length !== 1 ? 's' : ''}</p>
+        </div>
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none" onClick={() => { setEditingId(null); setForms(p => ({ ...p, compName: '', compNit: '', compAddress: '', compPhone: '', compEmail: '', compLegal: '' })); openModal('company'); }}>
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva empresa
         </button>

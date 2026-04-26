@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
-import { Download, FileText } from 'lucide-react';
+import { BarChart3, Download, FileText } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import ReportsOverview from '@/components/reports/ReportsOverview';
 import ReportsFinanciero from '@/components/reports/ReportsFinanciero';
@@ -71,13 +71,15 @@ export default function ReportsScreen() {
   };
 
   return (
-    <div className="animate-fadeIn space-y-4">
-      {/* Export toolbar */}
+    <div className="animate-fadeIn space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
-          {['General', 'Financiero', 'Tiempo', 'Equipo', 'Obra'].map(tab => (
-            <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${activeTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
-          ))}
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <BarChart3 size={20} className="text-[var(--af-accent)]" />
+            Reportes
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Reportes consolidados del proyecto</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Date filter */}
@@ -118,6 +120,13 @@ export default function ReportsScreen() {
             <Download size={13} /> CSV
           </button>
         </div>
+      </div>
+
+      {/* Report tabs */}
+      <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto scrollbar-none">
+        {['General', 'Financiero', 'Tiempo', 'Equipo', 'Obra'].map(tab => (
+          <button key={tab} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${activeTab === tab ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, reportTab: tab }))}>{tab}</button>
+        ))}
       </div>
 
       {/* General Report */}

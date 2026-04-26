@@ -540,14 +540,12 @@ export default function FilesScreen() {
       {/* Header Card */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[var(--af-accent)]/10 flex items-center justify-center">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
               <FolderOpen size={20} className="text-[var(--af-accent)]" />
-            </div>
-            <div>
-              <div className="text-lg font-semibold">Archivos</div>
-              <div className="text-[11px] text-[var(--muted-foreground)]">Gestiona archivos del equipo y personales</div>
-            </div>
+              Archivos
+            </h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Gestiona archivos del equipo y personales</p>
           </div>
         </div>
 

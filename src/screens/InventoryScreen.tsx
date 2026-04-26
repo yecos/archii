@@ -2,6 +2,7 @@
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useInventoryContext } from '@/hooks/useInventory';
+import { Package } from 'lucide-react';
 import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -29,9 +30,20 @@ export default function InventoryScreen() {
   const confirm = confirmDialog.confirm;
 
   return (
-<div className="animate-fadeIn">
-            {/* Sub-tabs */}
-            <div className="flex gap-1 mb-4 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+<div className="animate-fadeIn space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Package size={20} className="text-[var(--af-accent)]" />
+            Inventario
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{invProducts.length} productos · {invCategories.length} categorías</p>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto scrollbar-none">
               {[{ id: 'dashboard' as const, label: '📊 Panel' }, { id: 'products' as const, label: '📦 Productos' }, { id: 'categories' as const, label: '🏷️ Categorías' }, { id: 'warehouse' as const, label: '🏢 Almacén' }, { id: 'movements' as const, label: '📋 Movimientos' }, { id: 'transfers' as const, label: '🔄 Transferencias' }, { id: 'reports' as const, label: '📊 Reportes' }].map(tab => (
                 <button key={tab.id} className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${invTab === tab.id ? 'bg-[var(--af-accent)] text-background' : 'bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setInvTab(tab.id)}>
                   {tab.label}

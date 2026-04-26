@@ -5,7 +5,7 @@ import { fmtDate } from '@/lib/helpers';
 import { PUNCH_STATUS_COLORS, PUNCH_STATUSES, PUNCH_PRIORITIES, PUNCH_LOCATIONS } from '@/lib/types';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
-import { Camera, Pencil, Trash2 } from 'lucide-react';
+import { Camera, Pencil, Trash2, ClipboardCheck } from 'lucide-react';
 import { PRIO_COLORS, LOC_COLORS } from '@/lib/constants/colors';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
@@ -60,10 +60,16 @@ export default function PunchListScreen() {
   };
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="text-sm text-[var(--muted-foreground)]">{punchItems.length} items</div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <ClipboardCheck size={20} className="text-[var(--af-accent)]" />
+            Punch List
+          </h2>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{punchItems.length} items</p>
+        </div>
         <button
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
           onClick={handleCreate}
