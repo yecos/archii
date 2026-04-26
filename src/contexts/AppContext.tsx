@@ -48,7 +48,6 @@ interface AppContextValue {
   galleryPhotos: GalleryPhoto[];
   comments: Comment[];
   timeEntries: TimeEntry[];
-  generalMessages: any[];
   dailyLogs: DailyLog[];
   approvals: Approval[];
   rfis: RFI[];
@@ -83,15 +82,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [chatProjectId, setChatProjectId] = useState<string | null>(null);
+
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectPhasesCache, setProjectPhasesCache] = useState<Record<string, WorkPhase[]>>({});
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [chatMobileShow, setChatMobileShow] = useState(false);
+
   const [loading, setLoading] = useState(true);
   // Toast state removido — ahora usa Sonner directamente
 
@@ -219,44 +217,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     });
   };
 
-  // Chat voice & files state
-  const [isRecording, setIsRecording] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
-  const [recDuration, setRecDuration] = useState(0);
-  const [recVolume, setRecVolume] = useState(0);
-  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
-  const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
-  const [pendingFiles, setPendingFiles] = useState<any[]>([]);
-  const [chatDropActive, setChatDropActive] = useState(false);
-  const mediaRecRef = useRef<any>(null);
-  const audioChunksRef = useRef<any[]>([]);
-  const audioStreamRef = useRef<any>(null);
-  const analyserRef = useRef<any>(null);
-  const recTimerRef = useRef<any>(null);
-  const recAnimRef = useRef<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioPreviewBlobRef = useRef<Blob | null>(null);
-  const playingAudioRef = useRef<string | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [chatDmUser, setChatDmUser] = useState<string | null>(null);
-
-  // Chat reply state
-  const [chatReplyingTo, setChatReplyingTo] = useState<{ id: string; text: string; userName: string; uid: string } | null>(null);
-
-  // Chat reactions
-  const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
-
-  // Typing indicator
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
-
-  // Chat context menu
-  const [chatMenuMsg, setChatMenuMsg] = useState<string | null>(null);
-
-  // Chat search within conversation
-  const [chatMsgSearch, setChatMsgSearch] = useState('');
 
   // Theme state — derived from ui-store (single source of truth)
   const themeId = useUIStore(s => s.theme);
@@ -283,7 +244,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const knownMovementIdsRef = useRef<Set<string>>(new Set());
   const knownTransferIdsRef = useRef<Set<string>>(new Set());
   const knownMeetingIdsRef = useRef<Set<string>>(new Set());
-  const knownMessageIdsRef = useRef<Set<string>>(new Set());
+
   const knownProjectIdsRef = useRef<Set<string>>(new Set());
   const knownRfiIdsRef = useRef<Set<string>>(new Set());
   const knownSubmittalIdsRef = useRef<Set<string>>(new Set());
@@ -293,7 +254,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const firstLoadDoneRef = useRef(false);
   // Track which collections have hydrated at least once
   const collectionsLoadedRef = useRef<Record<string, boolean>>({
-    tasks: false, approvals: false, meetings: false, messages: false,
+    tasks: false, approvals: false, meetings: false,
     movements: false, transfers: false, projects: false, rfis: false,
     submittals: false, punchItems: false,
   });
@@ -332,18 +293,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     } catch (err) { console.error("[ArchiFlow]", err); }
 
-    // Cleanup: stop voice recording on unmount to prevent mic leak
-    return () => {
-      try {
-        if (mediaRecRef.current?.state === 'recording') { mediaRecRef.current.stop(); }
-        audioStreamRef.current?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
-        if (recTimerRef.current) clearInterval(recTimerRef.current);
-        if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
-        // Revoke blob URL to free memory
-        // Note: audioPreviewUrl is a state value captured at mount time (null)
-        // The actual cleanup happens via the ref pattern in handleMicButton
-      } catch { /* already cleaned up */ }
-    };
+    return () => {};
   }, []);
 
   // Check if running as standalone app
@@ -842,28 +792,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsubs.forEach(u => u());
   }, [ready, authUser, activeTenantId]);
 
-  // Load chat messages
-  useEffect(() => {
-    if (!ready || !chatProjectId) return;
-    const db = getFirebase().firestore();
-    let unsub: any;
-    if (chatProjectId === '__general__') {
-      unsub = db.collection('generalMessages').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-      }, () => {});
-    } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
-      const ids = [authUser.uid, chatDmUser].sort();
-      const dmId = `dm_${ids[0]}_${ids[1]}`;
-      unsub = db.collection('directMessages').doc(dmId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-      }, () => {});
-    } else {
-      unsub = db.collection('projects').doc(chatProjectId).collection('messages').orderBy('createdAt', 'asc').limitToLast(60).onSnapshot(snap => {
-        setMessages(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-      }, () => {});
-    }
-    return () => { unsub(); setMessages([]); };
-  }, [ready, chatProjectId, chatDmUser, authUser, activeTenantId]);
+
 
   // Load work phases via Admin SDK (bypass security rules)
   useEffect(() => {
@@ -1081,20 +1010,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => clearInterval(interval);
   }, [timeSession.isRunning, timeSession.startTime]);
 
-  // Init default chat project (use ref to avoid set-state-in-effect)
-  const chatProjectInitRef = useRef(false);
-  useEffect(() => {
-    if (projects.length > 0 && !chatProjectId && !chatProjectInitRef.current) {
-      chatProjectInitRef.current = true;
-      setChatProjectId('__general__');
-    }
-  }, [projects, chatProjectId]);
 
-  // Auto-scroll chat
-  useEffect(() => {
-    const el = document.getElementById('chat-msgs');
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
 
   /* ===== NOTIFICATION DETECTION EFFECTS ===== */
   // (Notification engine — state, sound, OS notifications — extracted to NotificationProvider)
@@ -1107,7 +1023,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (tasks.length > 0) collectionsLoadedRef.current.tasks = true;
     if (approvals.length > 0) collectionsLoadedRef.current.approvals = true;
     if (meetings.length > 0) collectionsLoadedRef.current.meetings = true;
-    if (messages.length > 0) collectionsLoadedRef.current.messages = true;
     if (invMovements.length > 0) collectionsLoadedRef.current.movements = true;
     if (invTransfers.length > 0) collectionsLoadedRef.current.transfers = true;
     if (projects.length > 0) collectionsLoadedRef.current.projects = true;
@@ -1121,7 +1036,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
       knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
       knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
-      knownMessageIdsRef.current = new Set(messages.map(m => m.id));
       knownMovementIdsRef.current = new Set(invMovements.map(m => m.id));
       knownTransferIdsRef.current = new Set(invTransfers.map(t => t.id));
       knownProjectIdsRef.current = new Set(projects.map(p => p.id));
@@ -1130,7 +1044,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
       firstLoadDoneRef.current = true;
     }
-  }, [loading, messages, tasks, meetings, approvals, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
+  }, [loading, tasks, meetings, approvals, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
 
   // Safety timeout: arm notifications after 5s even if some collections are empty
   useEffect(() => {
@@ -1141,7 +1055,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
         knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
         knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
-        knownMessageIdsRef.current = new Set(messages.map(m => m.id));
         knownMovementIdsRef.current = new Set(invMovements.map(m => m.id));
         knownTransferIdsRef.current = new Set(invTransfers.map(t => t.id));
         knownProjectIdsRef.current = new Set(projects.map(p => p.id));
@@ -1153,32 +1066,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [loading, tasks, approvals, meetings, messages, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
-
-  // Detect new chat messages and notify (Set-based O(1) lookup)
-  useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
-    const newMsgIds: string[] = [];
-    messages.forEach(m => { if (!knownMessageIdsRef.current.has(m.id)) newMsgIds.push(m.id); });
-    knownMessageIdsRef.current = new Set(messages.map(m => m.id));
-    if (newMsgIds.length > 0 && notifPrefs.chat) {
-      const otherMsgs = messages.filter(m => newMsgIds.includes(m.id) && m.uid !== authUser?.uid);
-      if (otherMsgs.length > 0) {
-        const lastMsg = otherMsgs[otherMsgs.length - 1];
-        const projName = chatProjectId === '__general__' ? 'Chat General' : projects.find(p => p.id === chatProjectId)?.data?.name || 'Chat';
-        const senderName = lastMsg.userName || 'Alguien';
-        const msgType = lastMsg.type || 'TEXT';
-        const typeLabel = msgType === 'AUDIO' ? '🎤 Nota de voz' : msgType === 'IMAGE' ? '🖼️ Imagen' : msgType === 'FILE' ? '📎 Archivo' : '';
-        const bodyText = lastMsg.text?.substring(0, 120) || (msgType === 'AUDIO' ? '🎵 Nota de voz' : msgType === 'IMAGE' ? '📷 Foto' : msgType === 'FILE' ? `📎 ${lastMsg.fileName || 'Archivo'}` : '');
-        // Context-aware: don't show toast if user is already on the chat screen
-        const isOnChatScreen = screen === 'chat' || screen === 'chatDetail';
-        if (!isOnChatScreen || !isTabVisibleRef.current) {
-          sendBrowserNotif(`${senderName} en ${projName}`, `${typeLabel}${bodyText}`, undefined, `chat-${chatProjectId}`, { type: 'chat', screen: 'chat', itemId: chatProjectId });
-        }
-        playNotifSound('chat'); vibrateNotif();
-      }
-    }
-  }, [messages, notifPrefs.chat, authUser, chatProjectId, projects, sendBrowserNotif, playNotifSound, vibrateNotif, screen]);
+  }, [loading, tasks, approvals, meetings, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
 
   // Detect new/changed tasks assigned to me (Set-based O(1) lookup)
   useEffect(() => {
@@ -1974,239 +1862,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
-  const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
-    const text = textOverride || forms.chatInput || '';
-    if (!text && !audioData && !fileData) return;
-    if (!chatProjectId || !authUser) return;
-    try {
-      const db = getFirebase().firestore();
-      const msgData: any = scrubUndefined({ text, uid: authUser.uid, userName: authUser.displayName || (authUser.email || '').split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
-      if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
-      if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
-      if (!msgData.type) msgData.type = 'TEXT';
-      // Support reply-to
-      if (chatReplyingTo) {
-        msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid };
-      }
-      if (chatProjectId === '__general__') { await db.collection('generalMessages').add({ ...msgData, tenantId: activeTenantId || '' }); }
-      else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
-        const ids = [authUser.uid, chatDmUser].sort();
-        const dmId = `dm_${ids[0]}_${ids[1]}`;
-        msgData.recipientId = chatDmUser;
-        await db.collection('directMessages').doc(dmId).collection('messages').add(msgData);
-      }
-      else { await db.collection('projects').doc(chatProjectId).collection('messages').add(msgData); }
-      setForms(p => ({ ...p, chatInput: '' }));
-      setChatReplyingTo(null);
-    } catch (err) { console.error('[ArchiFlow] sendMessage error:', err); showToast('Error al enviar', 'error'); }
-  };
-
-  // Voice recording functions
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 } });
-      audioStreamRef.current = stream;
-      audioChunksRef.current = [];
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-      const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
-      recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-      recorder.start(100);
-      mediaRecRef.current = recorder;
-      setIsRecording(true);
-      let sec = 0;
-      recTimerRef.current = setInterval(() => setRecDuration(++sec), 1000);
-      const monitorVol = () => {
-        if (!analyserRef.current) return;
-        const data = new Uint8Array(analyserRef.current.frequencyBinCount);
-        analyserRef.current.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
-        setRecVolume(Math.min(Math.sqrt(sum / data.length) * 4, 1));
-        recAnimRef.current = requestAnimationFrame(monitorVol);
-      };
-      monitorVol();
-    } catch { showToast('No se pudo acceder al microfono', 'error'); }
-  };
-
-  const stopRecording = (): Promise<Blob | null> => {
-    return new Promise((resolve) => {
-      const recorder = mediaRecRef.current;
-      if (!recorder) { resolve(null); return; }
-      recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioStreamRef.current?.getTracks().forEach((t: any) => t.stop());
-        if (recTimerRef.current) clearInterval(recTimerRef.current);
-        if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
-        setIsRecording(false); setRecDuration(0); setRecVolume(0);
-        resolve(blob);
-      };
-      recorder.stop();
-    });
-  };
-
-  const cancelRecording = () => {
-    mediaRecRef.current?.stop();
-    audioStreamRef.current?.getTracks().forEach((t: any) => t.stop());
-    if (recTimerRef.current) clearInterval(recTimerRef.current);
-    if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
-    setIsRecording(false); setRecDuration(0); setRecVolume(0);
-  };
-
-  const handleMicButton = async () => {
-    if (isRecording) {
-      const blob = await stopRecording();
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      setAudioPreviewUrl(url);
-      setAudioPreviewDuration(recDuration);
-      audioPreviewBlobRef.current = blob;
-    } else if (audioPreviewUrl) {
-      setAudioPreviewUrl(null); setAudioPreviewDuration(0);
-      audioPreviewBlobRef.current = null;
-    } else {
-      await startRecording();
-    }
-  };
-
-  const sendVoiceNote = async () => {
-    if (!audioPreviewBlobRef.current) return;
-    showToast('Enviando nota de voz...');
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      await sendMessage('', base64, audioPreviewDuration);
-      setAudioPreviewUrl(null); setAudioPreviewDuration(0);
-      audioPreviewBlobRef.current = null;
-    };
-    reader.readAsDataURL(audioPreviewBlobRef.current);
-  };
-
-  // File handling
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return;
-    Array.from(files).forEach(file => {
-      if (file.size > 25 * 1024 * 1024) { showToast(`${file.name} excede 25MB`, 'error'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newFile = { id: Date.now() + '-' + Math.random().toString(36).slice(2,6), name: file.name, type: file.type, size: file.size, data: reader.result as string, preview: file.type.startsWith('image/') ? reader.result as string : null };
-        setPendingFiles(prev => [...prev, newFile]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removePendingFile = (id: string) => { setPendingFiles(prev => prev.filter(f => f.id !== id)); };
-
-  const sendPendingFiles = async () => {
-    for (const f of pendingFiles) {
-      await sendMessage('', undefined, undefined, { name: f.name, type: f.type, size: f.size, data: f.data });
-    }
-    setPendingFiles([]);
-  };
-
-  const sendAll = async () => {
-    setShowEmojiPicker(false);
-    if (audioPreviewBlobRef.current) { await sendVoiceNote(); return; }
-    if (pendingFiles.length > 0) { await sendPendingFiles(); }
-    if (forms.chatInput?.trim()) { await sendMessage(); }
-  };
-
-  // Toggle reaction on a message
-  const toggleReaction = async (msgId: string, emoji: string) => {
-    if (!authUser) return;
-    const uid = authUser.uid;
-    setMessageReactions(prev => {
-      const msgReactions = { ...prev[msgId] };
-      const users = msgReactions[emoji] || [];
-      if (users.includes(uid)) {
-        msgReactions[emoji] = users.filter((u: string) => u !== uid);
-        if (msgReactions[emoji].length === 0) delete msgReactions[emoji];
-      } else {
-        msgReactions[emoji] = [...users, uid];
-      }
-      return { ...prev, [msgId]: msgReactions };
-    });
-    try {
-      const db = getFirebase().firestore();
-      let collection: string;
-      if (chatProjectId === '__general__') collection = 'generalMessages';
-      else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
-        const ids = [authUser.uid, chatDmUser].sort();
-        collection = `directMessages/dm_${ids[0]}_${ids[1]}/messages`;
-      } else {
-        collection = `projects/${chatProjectId}/messages`;
-      }
-      const reactionRef = db.collection(collection).doc(msgId).collection('reactions').doc(emoji);
-      const snap = await reactionRef.get();
-      if (snap.exists) {
-        const data = snap.data();
-        if (data.users.includes(uid)) {
-          if (data.users.length <= 1) await reactionRef.delete();
-          else await reactionRef.update({ users: data.users.filter((u: string) => u !== uid) });
-        } else {
-          await reactionRef.update({ users: [...data.users, uid] });
-        }
-      } else {
-        await reactionRef.set({ users: [uid] });
-      }
-    } catch (err) { console.error('[ArchiFlow] Reaction error:', err); }
-  };
-
-  // Delete a chat message (only own messages)
-  const deleteMessage = async (msgId: string) => {
-    try {
-      const db = getFirebase().firestore();
-      let collection: string;
-      if (chatProjectId === '__general__') collection = 'generalMessages';
-      else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
-        const ids = [authUser.uid, chatDmUser].sort();
-        collection = `directMessages/dm_${ids[0]}_${ids[1]}/messages`;
-      } else {
-        collection = `projects/${chatProjectId}/messages`;
-      }
-      await db.collection(collection).doc(msgId).delete();
-      setChatMenuMsg(null);
-      showToast('Mensaje eliminado');
-    } catch { showToast('Error al eliminar', 'error'); }
-  };
-
-  // Copy message text to clipboard
-  const copyMessageText = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setChatMenuMsg(null);
-    showToast('Texto copiado');
-  };
-
-  // Audio player
-  const toggleAudioPlay = (msgId: string) => {
-    const audioEl = document.getElementById('audio-' + msgId) as HTMLAudioElement;
-    if (!audioEl) return;
-    if (playingAudio === msgId) {
-      audioEl.pause(); setPlayingAudio(null); setAudioProgress(0);
-    } else {
-      // Cleanup: pause previous and remove listeners to prevent accumulation
-      if (playingAudio) { const prev = document.getElementById('audio-' + playingAudio) as HTMLAudioElement; if (prev) { prev.pause(); prev.ontimeupdate = null; prev.onended = null; prev.onpause = null; } }
-      setPlayingAudio(msgId);
-      // Use onXXX properties (auto-replaced, no accumulation) instead of addEventListener
-      const onTime = () => { if (audioEl.duration) { setAudioProgress((audioEl.currentTime / audioEl.duration) * 100); setAudioCurrentTime(audioEl.currentTime); } };
-      const onEnd = () => { setPlayingAudio(null); setAudioProgress(0); };
-      audioEl.ontimeupdate = onTime;
-      audioEl.onended = onEnd;
-      audioEl.onpause = onEnd;
-      audioEl.play().catch(() => { setPlayingAudio(null); });
-    }
-  };
-
-  const fmtRecTime = (s: number) => { const m = Math.floor(s / 60); const sec = s % 60; return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `0:${String(sec).padStart(2, '0')}`; };
-  const fileIcon = (type: string) => { if (type.startsWith('image/')) return '🖼️'; if (type.includes('pdf')) return '📄'; if (type.startsWith('audio/')) return '🎵'; if (type.startsWith('video/')) return '🎬'; if (type.includes('word') || type.includes('document')) return '📝'; if (type.includes('sheet') || type.includes('excel')) return '📊'; if (type.includes('zip') || type.includes('rar')) return '📦'; return '📎'; };
-  const fmtFileSize = fmtSize;
-
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
     if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
@@ -2821,7 +2476,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setScreen(s);
     setSelectedProjectId(projId ?? selectedProjectId);
     setSidebarOpen(false);
-    if (s !== 'chat') { setChatMobileShow(false); setShowEmojiPicker(false); }
     useUIStore.getState().setCurrentScreen(s);
   };
   // Wire navigate function to NotificationProvider (for OS notification click navigation)
@@ -3277,10 +2931,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setEditingId,
     ready,
     loading,
-    messages,
-    setMessages,
-    chatProjectId,
-    setChatProjectId,
     workPhases,
     getPhasesForProject,
     loadPhasesForProject,
@@ -3291,8 +2941,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setProjectFiles,
     approvals,
     setApprovals,
-    chatMobileShow,
-    setChatMobileShow,
     calMonth,
     setCalMonth,
     calYear,
@@ -3376,54 +3024,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     rolePerms,
     setRolePerms,
     toggleRolePerm,
-    isRecording,
-    setIsRecording,
     isSavingTask,
     setIsSavingTask,
-    recDuration,
-    setRecDuration,
-    recVolume,
-    setRecVolume,
-    audioPreviewUrl,
-    setAudioPreviewUrl,
-    audioPreviewDuration,
-    setAudioPreviewDuration,
-    pendingFiles,
-    setPendingFiles,
-    chatDropActive,
-    setChatDropActive,
-    mediaRecRef,
-    audioChunksRef,
-    audioStreamRef,
-    analyserRef,
-    recTimerRef,
-    recAnimRef,
-    fileInputRef,
-    audioPreviewBlobRef,
-    playingAudioRef,
-    playingAudio,
-    setPlayingAudio,
-    audioProgress,
-    setAudioProgress,
-    audioCurrentTime,
-    setAudioCurrentTime,
-    showEmojiPicker,
-    setShowEmojiPicker,
-    chatDmUser,
-    setChatDmUser,
-    chatReplyingTo,
-    setChatReplyingTo,
-    messageReactions,
-    setMessageReactions,
-    typingUsers,
-    setTypingUsers,
-    chatMenuMsg,
-    setChatMenuMsg,
-    chatMsgSearch,
-    setChatMsgSearch,
-    toggleReaction,
-    deleteMessage,
-    copyMessageText,
     installPrompt,
     setInstallPrompt,
     showInstallBanner,
@@ -3456,18 +3058,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     toggleTask,
     changeTaskStatus,
     deleteTask,
-    sendMessage,
-    startRecording,
-    stopRecording,
-    cancelRecording,
-    handleMicButton,
-    sendVoiceNote,
-    handleFileSelect,
-    removePendingFile,
-    sendPendingFiles,
-    sendAll,
-    toggleAudioPlay,
-    fileIcon,
     saveExpense,
     openEditExpense,
     deleteExpense,

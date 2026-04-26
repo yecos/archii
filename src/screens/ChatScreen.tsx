@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useChatContext } from '@/hooks/useChat';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
 
 /* ===== EMOJI DATA ===== */
@@ -40,21 +41,21 @@ const getAvatarHSL = (uid: string) => {
 };
 
 export default function ChatScreen() {
+  const { authUser, projects, teamUsers, forms, setForms, showToast } = useApp();
   const {
-    audioPreviewBlobRef, audioPreviewDuration, audioPreviewUrl, audioProgress, authUser,
+    audioPreviewBlobRef, audioPreviewDuration, audioPreviewUrl, audioProgress,
     chatDmUser, chatDropActive, chatMobileShow, chatProjectId, fileIcon,
-    fileInputRef, forms, handleFileSelect, handleMicButton, isRecording,
-    messages, pendingFiles, playingAudio, projects, recDuration,
+    fileInputRef, handleFileSelect, handleMicButton, isRecording,
+    messages, pendingFiles, playingAudio, recDuration,
     recVolume, removePendingFile, sendAll, setAudioPreviewDuration, setAudioPreviewUrl,
-    setChatDmUser, setChatDropActive, setChatMobileShow, setChatProjectId, setForms,
-    setShowEmojiPicker, showEmojiPicker, stopRecording, teamUsers, toggleAudioPlay,
-    chatReplyingTo, setChatReplyingTo,
+    setChatDropActive, setChatDmUser, setChatMobileShow, setChatProjectId, setChatReplyingTo, setMessages,
+    setShowEmojiPicker, showEmojiPicker, stopRecording, toggleAudioPlay,
+    chatReplyingTo,
     messageReactions, toggleReaction,
     chatMenuMsg, setChatMenuMsg,
     chatMsgSearch, setChatMsgSearch,
     deleteMessage, copyMessageText,
-    showToast,
-  } = useApp();
+  } = useChatContext();
 
   const [emojiSearch, setEmojiSearch] = useState('');
   const [activeEmojiCat, setActiveEmojiCat] = useState('Frecuentes');
