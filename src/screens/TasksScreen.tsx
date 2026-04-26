@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import type { Task, Project } from '@/lib/types';
+import { toDate } from '@/lib/types';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
@@ -241,9 +242,8 @@ export default function TasksScreen() {
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
     weekStart.setHours(0, 0, 0, 0);
     const createdThisWeek = tasks.filter((t: Task) => {
-      const raw = t.data.createdAt;
-      const created = raw && typeof raw === 'object' ? raw.toDate() : raw ? new Date(raw) : null;
-      return created && created >= weekStart;
+      const created = toDate(t.data.createdAt);
+      return created >= weekStart;
     }).length;
 
     return { total, completed, inProgress, overdue, highPrioActive, completionRate, createdThisWeek };
@@ -257,14 +257,12 @@ export default function TasksScreen() {
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const created = tasks.filter((t: Task) => {
-        const rawC = t.data.createdAt;
-        const created = rawC && typeof rawC === 'object' ? rawC.toDate() : rawC ? new Date(rawC) : null;
-        return created && `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}` === key;
+        const d = toDate(t.data.createdAt);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === key;
       }).length;
       const completed = tasks.filter((t: Task) => {
-        const rawComp = t.data.completedAt;
-        const completed = rawComp && typeof rawComp === 'object' ? rawComp.toDate() : rawComp ? new Date(rawComp) : null;
-        return completed && `${completed.getFullYear()}-${String(completed.getMonth() + 1).padStart(2, '0')}` === key;
+        const d = toDate(t.data.completedAt);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === key;
       }).length;
       data.push({ name: MONTHS[d.getMonth()], creadas: created, completadas: completed });
     }
