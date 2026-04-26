@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { Download, FileText } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import ReportsOverview from '@/components/reports/ReportsOverview';
@@ -11,10 +12,11 @@ import ReportsObra from '@/components/reports/ReportsObra';
 
 export default function ReportsScreen() {
   const {
-    expenses, forms, invoices, projects, setForms,
-    showToast, tasks, teamUsers, timeEntries, dailyLogs,
+    expenses, forms, projects, setForms,
+    showToast, tasks, teamUsers, dailyLogs,
     rfis, submittals, punchItems,
   } = useApp();
+  const { invoices, timeEntries } = useTimeTrackingContext();
 
   const [dateFilter, setDateFilter] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
 

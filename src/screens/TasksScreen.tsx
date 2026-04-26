@@ -3,6 +3,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import type { Task, Project } from '@/lib/types';
 import { toDate } from '@/lib/types';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { LayoutList, KanbanSquare, Plus, GripVertical, X, Search, Filter, Download, Calendar, User, Pencil, Trash2, ChevronDown, Layers, FileText, BarChart3, CheckCircle2, AlertTriangle, Clock, TrendingUp, Users, Tag, Target } from 'lucide-react';
@@ -97,9 +98,10 @@ export default function TasksScreen() {
   const {
     changeTaskStatus, deleteTask, forms, getUserName, loading,
     openEditTask, openModal, projects, setForms, tasks,
-    timeEntries, showToast, teamUsers, toggleTask,
+    showToast, teamUsers, toggleTask,
     getPhaseName, loadPhasesForProject, projectPhasesCache, authUser,
   } = useApp();
+  const { timeEntries } = useTimeTrackingContext();
 
   const confirmDialog = useConfirmDialog();
 

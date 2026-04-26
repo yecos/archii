@@ -4,6 +4,7 @@ import AppProvider from '@/contexts/AppContext';
 import { NotificationProvider } from '@/hooks/useNotifications';
 import { ChatProvider } from '@/hooks/useChat';
 import { InventoryProvider } from '@/hooks/useInventory';
+import { TimeTrackingProvider } from '@/hooks/useTimeTracking';
 import { useUIStore } from '@/stores/ui-store';
 import { initOfflineSync } from '@/lib/offline-queue';
 
@@ -11,7 +12,7 @@ import { initOfflineSync } from '@/lib/offline-queue';
  * ClientProviders — Client-side wrapper for layout.tsx
  *
  * Provider hierarchy:
- *   NotificationProvider → AppProvider → ChatProvider → InventoryProvider → children
+ *   NotificationProvider → AppProvider → ChatProvider → InventoryProvider → TimeTrackingProvider → children
  *
  * NotificationProvider wraps AppProvider so that:
  * - AppProvider can call useNotificationsContext() for detection effects
@@ -23,6 +24,9 @@ import { initOfflineSync } from '@/lib/offline-queue';
  * - InventoryProvider can call useApp() for auth/tenant/forms/modals
  * - InventoryProvider can call useNotificationsContext() for inventory notifications
  * - Components can use useInventoryContext() for inventory state and functions
+ * TimeTrackingProvider wraps inside InventoryProvider so that:
+ * - TimeTrackingProvider can call useApp() for auth/tenant/forms/modals
+ * - Components can use useTimeTrackingContext() for time tracking + invoices state
  */
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   const initTheme = useUIStore(s => s.initTheme);
@@ -41,7 +45,9 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     <NotificationProvider>
       <AppProvider>
         <ChatProvider>
-          <InventoryProvider>{children}</InventoryProvider>
+          <InventoryProvider>
+            <TimeTrackingProvider>{children}</TimeTrackingProvider>
+          </InventoryProvider>
         </ChatProvider>
       </AppProvider>
     </NotificationProvider>

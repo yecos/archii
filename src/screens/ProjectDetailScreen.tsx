@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { useOneDrive, formatFileSize, getFileIcon } from '@/hooks/useOneDrive';
 import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
@@ -32,8 +33,9 @@ export default function ProjectDetailScreen() {
     rfis, submittals, punchItems, changeTaskStatus, showToast,
     getPhaseName,
     comments, commentText, setCommentText, replyingTo, setReplyingTo,
-    timeEntries, authUser, teamUsers, activeTenantId,
+    authUser, teamUsers, activeTenantId,
   } = useApp();
+  const { timeEntries } = useTimeTrackingContext();
 
   // Computed values
   const today = new Date().toISOString().split('T')[0];

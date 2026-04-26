@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, TimeEntry, Invoice, InvoiceItem, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -41,10 +41,8 @@ interface AppContextValue {
   teamUsers: TeamUser[];
   meetings: Meeting[];
 
-  invoices: Invoice[];
   galleryPhotos: GalleryPhoto[];
   comments: Comment[];
-  timeEntries: TimeEntry[];
   dailyLogs: DailyLog[];
   approvals: Approval[];
   rfis: RFI[];
@@ -55,7 +53,6 @@ interface AppContextValue {
   saveApproval: () => Promise<void>;
   saveExpense: () => Promise<void>;
   saveMeeting: () => Promise<void>;
-  saveManualTimeEntry: () => Promise<void>;
 }
 const AppContext = createContext<AppContextValue & Record<string, any>>(null!);
 
@@ -105,20 +102,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
   const [lightboxPhoto, setLightboxPhoto] = useState<GalleryPhoto | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
-
-  // Time Tracking state
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [timeTab, setTimeTab] = useState<'tracker' | 'entries' | 'summary'>('tracker');
-  const [timeFilterProject, setTimeFilterProject] = useState<string>('all');
-  const [timeFilterDate, setTimeFilterDate] = useState<string>('');
-  const [timeSession, setTimeSession] = useState<{ entryId: string | null; startTime: number | null; description: string; projectId: string; phaseName: string; isRunning: boolean }>({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
-  const [timeTimerMs, setTimeTimerMs] = useState(0);
-
-  // Invoices state
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [invoiceTab, setInvoiceTab] = useState<'list' | 'create'>('list');
-  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
-  const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
 
   // Comments state
   const [comments, setComments] = useState<Comment[]>([]);
@@ -865,26 +848,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
-  // Load time entries (tenant-filtered)
-  useEffect(() => {
-    if (!ready || !authUser || !activeTenantId) { setTimeEntries([]); return; }
-    const db = getFirebase().firestore();
-    const unsub = db.collection('timeEntries').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(200).onSnapshot(snap => {
-      setTimeEntries(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
-    return () => unsub();
-  }, [ready, authUser, activeTenantId]);
-
-  // Load invoices (tenant-filtered)
-  useEffect(() => {
-    if (!ready || !authUser || !activeTenantId) { setInvoices([]); return; }
-    const db = getFirebase().firestore();
-    const unsub = db.collection('invoices').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').limit(100).onSnapshot(snap => {
-      setInvoices(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
-    return () => unsub();
-  }, [ready, authUser, activeTenantId]);
-
   // Load comments (tenant-filtered)
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setComments([]); return; }
@@ -934,17 +897,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }, () => {});
     return () => { unsub(); setDailyLogs([]); };
   }, [ready, authUser, selectedProjectId]);
-
-  // Time tracker: live timer update
-  useEffect(() => {
-    if (!timeSession.isRunning || !timeSession.startTime) return;
-    const interval = setInterval(() => {
-      setTimeTimerMs(Date.now() - timeSession.startTime!);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeSession.isRunning, timeSession.startTime]);
-
-
 
   /* ===== NOTIFICATION DETECTION EFFECTS ===== */
   // (Notification engine — state, sound, OS notifications — extracted to NotificationProvider)
@@ -2355,106 +2307,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
   const platform = getPlatform();
 
-  /* ===== TIME TRACKING FUNCTIONS ===== */
-  const startTimeTracking = () => {
-    if (timeSession.isRunning) return;
-    const desc = forms.teDescription || forms.teQuickDesc || 'Trabajo en proyecto';
-    const projId = forms.teProject || '';
-    const phase = forms.tePhase || '';
-    if (!projId) { showToast('Selecciona un proyecto', 'error'); return; }
-    const entryId = 'temp-' + Date.now();
-    setTimeSession({ entryId: null, startTime: Date.now(), description: desc, projectId: projId, phaseName: phase, isRunning: true });
-    setTimeTimerMs(0);
-  };
-
-  const stopTimeTracking = async () => {
-    if (!timeSession.isRunning || !timeSession.startTime) return;
-    const endTime = new Date();
-    const startTime = new Date(timeSession.startTime);
-    const durationMin = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
-    if (durationMin < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
-    const dateStr = startTime.toISOString().split('T')[0];
-    const startStr = startTime.toTimeString().substring(0, 5);
-    const endStr = endTime.toTimeString().substring(0, 5);
-    await fbActions.saveTimeEntry({
-      teProject: timeSession.projectId,
-      tePhase: timeSession.phaseName,
-      teDescription: timeSession.description,
-      teStartTime: startStr,
-      teEndTime: endStr,
-      teDuration: durationMin,
-      teBillable: true,
-      teRate: Number(forms.teRate) || 50000,
-      teDate: dateStr,
-    }, null, showToast, authUser, activeTenantId);
-    setTimeSession({ entryId: null, startTime: null, description: '', projectId: '', phaseName: '', isRunning: false });
-    setTimeTimerMs(0);
-  };
-
-  const saveManualTimeEntry = () => {
-    const dur = Number(forms.teManualDuration) || 0;
-    if (dur < 1) { showToast('Mínimo 1 minuto', 'error'); return; }
-    if (!forms.teProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    fbActions.saveTimeEntry({
-      teProject: forms.teProject,
-      tePhase: forms.tePhase || '',
-      teDescription: forms.teDescription || '',
-      teStartTime: forms.teStartTime || '08:00',
-      teEndTime: forms.teEndTime || '17:00',
-      teDuration: dur,
-      teBillable: forms.teBillable !== false,
-      teRate: Number(forms.teRate) || 50000,
-      teDate: forms.teDate || new Date().toISOString().split('T')[0],
-    }, editingId, showToast, authUser, activeTenantId);
-    closeModal('timeEntry');
-  };
-
-  /* ===== INVOICE FUNCTIONS ===== */
-  const openNewInvoice = () => {
-    setEditingId(null);
-    setInvoiceItems([{ concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
-    setForms(p => ({ ...p, invProject: '', invNumber: '', invStatus: 'Borrador', invTax: 19, invNotes: '', invIssueDate: new Date().toISOString().split('T')[0], invDueDate: '' }));
-    setInvoiceTab('create');
-  };
-
-  const updateInvoiceItem = (idx: number, field: string, value: any) => {
-    setInvoiceItems(prev => {
-      const items = [...prev];
-      items[idx] = { ...items[idx], [field]: value };
-      if (field === 'hours' || field === 'rate') {
-        items[idx].amount = (Number(items[idx].hours) || 0) * (Number(items[idx].rate) || 0);
-      }
-      return items;
-    });
-  };
-
-  const addInvoiceItem = () => setInvoiceItems(prev => [...prev, { concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
-
-  const removeInvoiceItem = (idx: number) => {
-    if (invoiceItems.length <= 1) return;
-    setInvoiceItems(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const saveInvoice = () => {
-    if (!forms.invProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
-    const tax = Number(forms.invTax) || 19;
-    const total = subtotal + (subtotal * tax / 100);
-    fbActions.saveInvoice({
-      invProject: forms.invProject,
-      invNumber: forms.invNumber || '',
-      invStatus: forms.invStatus || 'Borrador',
-      invItems: invoiceItems,
-      invSubtotal: subtotal,
-      invTax: tax,
-      invTotal: total,
-      invNotes: forms.invNotes || '',
-      invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
-      invDueDate: forms.invDueDate || '',
-    }, editingId, showToast, authUser, activeTenantId);
-    setInvoiceTab('list');
-  };
-
   /* ===== RFI / SUBMITTAL / PUNCH LIST FUNCTIONS ===== */
 
   const saveRFI = async () => {
@@ -2665,24 +2517,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setLightboxPhoto,
     lightboxIndex,
     setLightboxIndex,
-    timeEntries,
-    timeTab,
-    setTimeTab,
-    timeFilterProject,
-    setTimeFilterProject,
-    timeFilterDate,
-    setTimeFilterDate,
-    timeSession,
-    setTimeSession,
-    timeTimerMs,
-    setTimeTimerMs,
-    invoices,
-    invoiceTab,
-    setInvoiceTab,
-    invoiceItems,
-    setInvoiceItems,
-    invoiceFilterStatus,
-    setInvoiceFilterStatus,
     comments,
     setComments,
     commentText,
@@ -2796,14 +2630,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     lightboxPrev,
     lightboxNext,
     getFilteredGalleryPhotos,
-    startTimeTracking,
-    stopTimeTracking,
-    saveManualTimeEntry,
-    openNewInvoice,
-    updateInvoiceItem,
-    addInvoiceItem,
-    removeInvoiceItem,
-    saveInvoice,
     postComment,
     calcGanttDays,
     calcGanttOffset,

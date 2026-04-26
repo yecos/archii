@@ -1,17 +1,22 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { fmtCOP, getInitials, avatarColor, fmtDuration, fmtTimer, getWeekStart } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
 import * as fbActions from '@/lib/firestore-actions';
 
 export default function TimeTrackingScreen() {
   const {
-    forms, openModal, projects, setForms, setTimeFilterDate,
-    setTimeFilterProject, setTimeTab, showToast, startTimeTracking, stopTimeTracking,
-    timeEntries, timeFilterDate, timeFilterProject, timeSession, timeTab,
-    timeTimerMs, userName, activeTenantId, authUser,
+    forms, openModal, projects, setForms,
+    showToast, userName, activeTenantId, authUser,
   } = useApp();
+  const {
+    setTimeFilterDate, setTimeFilterProject, setTimeTab,
+    startTimeTracking, stopTimeTracking,
+    timeEntries, timeFilterDate, timeFilterProject, timeSession, timeTab,
+    timeTimerMs,
+  } = useTimeTrackingContext();
 
   // Quick entry state
   const [quickProject, setQuickProject] = useState('');

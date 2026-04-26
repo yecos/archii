@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
@@ -14,11 +15,13 @@ import { useConfirmDialog } from '@/lib/useConfirmDialog';
 
 export default function InvoicesScreen() {
   const {
-    addInvoiceItem, forms, invoiceFilterStatus, invoiceItems, invoiceTab,
-    invoices, openNewInvoice, projects, removeInvoiceItem, saveInvoice,
-    setForms, setInvoiceFilterStatus, setInvoiceTab, showToast, updateInvoiceItem,
-    activeTenantId,
+    forms, projects, setForms, showToast, activeTenantId,
   } = useApp();
+  const {
+    addInvoiceItem, invoiceFilterStatus, invoiceItems, invoiceTab,
+    invoices, openNewInvoice, removeInvoiceItem, saveInvoice,
+    setInvoiceFilterStatus, setInvoiceTab, updateInvoiceItem,
+  } = useTimeTrackingContext();
 
   const confirmDialog = useConfirmDialog();
   const confirm = confirmDialog.confirm;

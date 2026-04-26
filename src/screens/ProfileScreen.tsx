@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { useOneDrive } from '@/hooks/useOneDrive';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, USER_ROLES, toDate } from '@/lib/types';
@@ -91,9 +92,10 @@ export default function ProfileScreen() {
     approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
     expenses, initials, meetings, myRole,
     navigateTo, projects, tasks, teamUsers, userName,
-    rfis, submittals, punchItems, timeEntries, getUserName, setForms,
+    rfis, submittals, punchItems, getUserName, setForms,
     updateUserName, updateUserRole, updateUserCompany, companies, showToast,
   } = useApp();
+  const { timeEntries } = useTimeTrackingContext();
   const od = useOneDrive();
 
   const today = new Date();

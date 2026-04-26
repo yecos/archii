@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { useNotificationsContext } from '@/hooks/useNotifications';
 import { useInventoryContext } from '@/hooks/useInventory';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
@@ -34,11 +35,12 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, openProject, getUserName,
-    activeTasks, completedTasks, expenses, invoices, teamUsers, authUser,
-    timeEntries, showToast, visibleProjects, companies, meetings,
+    activeTasks, completedTasks, expenses, teamUsers, authUser,
+    showToast, visibleProjects, companies, meetings,
     rfis, submittals, punchItems, overdueTasks, userName,
-    approvals, dailyLogs, openModal, setForms, timeSession, suppliers,
+    approvals, dailyLogs, openModal, setForms, suppliers,
   } = useApp();
+  const { invoices, timeEntries, timeSession } = useTimeTrackingContext();
   const { unreadCount, notifHistory } = useNotificationsContext();
   const { invLowStock, invAlerts } = useInventoryContext();
 

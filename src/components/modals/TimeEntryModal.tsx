@@ -2,10 +2,12 @@
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useApp } from '@/contexts/AppContext';
+import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { DEFAULT_PHASES } from '@/lib/types';
 
 export default function TimeEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, closeModal, saveManualTimeEntry, projects } = useApp();
+  const { forms, setForms, closeModal, projects } = useApp();
+  const { saveManualTimeEntry } = useTimeTrackingContext();
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={480}>
