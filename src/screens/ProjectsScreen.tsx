@@ -208,7 +208,7 @@ function TimelineView({ projects, getHealth }: { projects: Project[]; getHealth:
           const barColor = STATUS_COLORS[d.status] || '#828282';
 
           return (
-            <div key={p.id} className="relative px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--af-bg3)]/30 transition-colors cursor-pointer" onClick={() => {}}>
+            <div key={p.id} className="relative px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--af-bg3)]/30 transition-colors cursor-pointer" onClick={() => openProject(p.id)}>
               {/* Project label */}
               <div className="w-36 sm:w-48 flex-shrink-0">
                 <div className="text-[12px] font-semibold truncate">{d.name}</div>
@@ -358,7 +358,10 @@ export default function ProjectsScreen() {
 
   // --- KPI computations ---
   const totalBudget = useMemo(() => projects.reduce((s: number, p: Project) => s + (p.data.budget || 0), 0), [projects]);
-  const totalSpent = useMemo(() => expenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [expenses]);
+  const totalSpent = useMemo(() => {
+    const projectIds = new Set(projects.map((p: Project) => p.id));
+    return expenses.filter((e: Expense) => projectIds.has(e.data.projectId)).reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
+  }, [expenses, projects]);
   const avgProgress = useMemo(() => projects.length > 0
     ? Math.round(projects.reduce((s: number, p: Project) => s + (p.data.progress || 0), 0) / projects.length)
     : 0, [projects]);
@@ -580,9 +583,10 @@ export default function ProjectsScreen() {
       const app = getFirebase();
       const db = app.firestore();
       const batch = db.batch();
+      const ts = db.FieldValue.serverTimestamp();
       selected.forEach((p: Project) => {
         const ref = db.collection('projects').doc(p.id);
-        batch.update(ref, { status: newStatus, updatedAt: new Date() });
+        batch.update(ref, { status: newStatus, updatedAt: ts });
       });
       await batch.commit();
       showToast(`${selected.length} proyectos actualizados a "${STATUS_LABELS[newStatus] || newStatus}"`);

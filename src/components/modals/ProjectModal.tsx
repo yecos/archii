@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import CenterModal from '@/components/common/CenterModal';
-import { PROJECT_TYPE_PHASES, PROJECT_TYPE_COLORS } from '@/lib/types';
+import { PROJECT_TYPE_PHASES, PROJECT_TYPE_COLORS, type Company } from '@/lib/types';
 
 export default function ProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, editingId, closeModal, saveProject, companies } = useApp();
@@ -149,8 +149,8 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
             onChange={(e) => setForms(p => ({ ...p, projCompany: e.target.value }))}
           >
             <option value="">— Sin empresa —</option>
-            {companies.map((c: any) => (
-              <option key={c.id} value={c.id}>{c.data?.name || c.name}</option>
+            {companies.map((c: Company) => (
+              <option key={c.id} value={c.id}>{c.data.name}</option>
             ))}
           </FormSelect>
         </FormField>

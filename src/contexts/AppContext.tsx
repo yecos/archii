@@ -1645,35 +1645,21 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const name = forms.projName || '';
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
-    const db = getFirebase().firestore();
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    const projType = forms.projType || 'Ejecución';
-    const raw = { name, status: forms.projStatus || 'Concepto', client: forms.projClient || '', location: forms.projLocation || '', budget: Number(forms.projBudget) || 0, description: forms.projDesc || '', startDate: forms.projStart || '', endDate: forms.projEnd || '', companyId: forms.projCompany || '', tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid, projectType: projType };
-    const data = scrubUndefined(raw);
     try {
-      if (editingId) {
-        const prevType = currentProject?.data?.projectType || 'Ejecución';
-        await db.collection('projects').doc(editingId).update(data);
-        // Si cambió el tipo de proyecto, reiniciar fases
-        if (projType !== prevType) {
-          await fbActions.initPhasesForProject(db, editingId, projType, forms.enabledPhases || [], ts, activeTenantId);
-        }
-        showToast('Proyecto actualizado');
-      }
-      else {
-        const createData = scrubUndefined({ ...raw, createdAt: ts, createdBy: authUser.uid, progress: 0 });
-        const ref = await db.collection('projects').add(createData);
-        // Init phases based on project type
-        await fbActions.initPhasesForProject(db, ref.id, projType, forms.enabledPhases || [], ts, activeTenantId);
-        showToast('Proyecto creado');
-        // OneDrive folder creation now handled by useOneDrive hook
-        // (folder is auto-created when user opens OneDrive for the project)
-      }
+      await fbActions.saveProject({ ...forms, projName: name }, editingId, showToast, authUser, activeTenantId);
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projType: 'Ejecución', enabledPhases: [] }));
     } catch (err) { console.error('[ArchiFlow] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
   };
 
-  const deleteProject = async (id: string) => { if (!confirm('¿Eliminar este proyecto?')) return; try { await getFirebase().firestore().collection('projects').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); } };
+  const deleteProject = async (id: string) => {
+    // Validate tenant ownership before deleting
+    const proj = projects.find(p => p.id === id);
+    if (proj && activeTenantId && proj.data.tenantId && proj.data.tenantId !== activeTenantId) {
+      showToast('Error: proyecto no pertenece a tu espacio', 'error');
+      return;
+    }
+    try { await fbActions.deleteProject(id, showToast, activeTenantId); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+  };
 
   const openEditProject = (p: Project) => {
     setEditingId(p.id);
