@@ -417,6 +417,27 @@ export interface PunchItem {
   };
 }
 
+export interface Meeting {
+  id: string;
+  data: {
+    title: string;
+    description: string;
+    projectId: string;
+    date: string;              // YYYY-MM-DD
+    time: string;              // HH:MM
+    duration: number;          // minutes (15, 30, 45, 60, 90, 120)
+    attendees: string[];       // array of attendee names
+    createdBy: string;         // user UID
+    tenantId: string;
+    createdAt: FirestoreTimestamp;
+    recurring?: 'weekly' | 'none';
+    recurringDayOfWeek?: number;     // 0=Sun … 6=Sat
+    recurringEndDate?: string;       // YYYY-MM-DD
+    recurringGroupId?: string;       // shared across series
+    location?: string;
+  };
+}
+
 /* ===== KANBAN TYPES ===== */
 export interface KanbanColumn {
   id: string;

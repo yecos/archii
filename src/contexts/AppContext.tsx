@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog, Meeting } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -38,7 +38,7 @@ interface AppContextValue {
   suppliers: Supplier[];
   companies: Company[];
   teamUsers: TeamUser[];
-  meetings: any[];
+  meetings: Meeting[];
   invProducts: InvProduct[];
   invCategories: InvCategory[];
   invMovements: InvMovement[];
@@ -128,7 +128,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<string | null>(null);
   const [calFilterProject, setCalFilterProject] = useState<string>('all');
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   // Gallery state
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
@@ -645,7 +645,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     // Handle redirect results (for signInWithRedirect fallback)
     auth.getRedirectResult().then((result: any) => {
       if (result?.credential) {
-        console.log('[ArchiFlow Auth] Redirect sign-in successful:', result.user?.email);
+
         // Handle Microsoft redirect tokens
         if (result.credential.accessToken) {
           setMsAccessToken(result.credential.accessToken);
@@ -684,7 +684,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           const ref = db.collection('users').doc(user.uid);
           const snap = await ref.get();
           const isAdminEmail = ADMIN_EMAILS.includes(user.email);
-          console.log('[ArchiFlow Auth]', { email: user.email, isAdminEmail, currentRole: snap.exists ? snap.data()?.role : 'new', photoURL: user.photoURL });
+
           if (!snap.exists) {
             // ANTI-DUP: Check if another user doc already exists with this email
             // (happens when same person logs in with different providers)
@@ -695,7 +695,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
               if (!existingByMail.empty) {
                 const existingDoc = existingByMail.docs[0];
                 const existingData = existingDoc.data();
-                console.log('[ArchiFlow Auth] Duplicate detected! Existing user doc:', existingDoc.id, 'for email:', user.email, '— linking to current UID:', user.uid);
+
                 // The existing doc has better data (from previous login), don't create new one.
                 // Instead, update the current doc with existing data so future lookups work
                 await ref.set({
@@ -718,11 +718,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                   // Also migrate Super Admin role if the old UID was Super Admin
                   if (superAdmins.includes(existingDoc.id) && !superAdmins.includes(user.uid)) {
                     tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
-                    console.log('[ArchiFlow Auth] Migrating Super Admin role to UID', user.uid, 'in tenant', tenantDoc.id);
+
                   }
                   if (Object.keys(tenantUpdates).length > 0) {
                     await db.collection('tenants').doc(tenantDoc.id).update(tenantUpdates);
-                    console.log('[ArchiFlow Auth] Migrated UID', user.uid, 'to tenant', tenantDoc.id, Object.keys(tenantUpdates));
+
                   }
                 }
               } else {
@@ -747,7 +747,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             }
             if (isAdminEmail && existing.role !== 'Admin') {
               updates.role = 'Admin';
-              console.log('[ArchiFlow] Promoting', user.email, 'from', existing.role, 'to Admin');
+
             }
             if (Object.keys(updates).length > 0) {
               await ref.update(updates);
@@ -783,7 +783,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                         tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
                       }
                       await db.collection('tenants').doc(fsDefaultTenantId).update(tenantUpdates);
-                      console.log('[ArchiFlow Auth] Migrated new UID', user.uid, 'to restored tenant', fsDefaultTenantId);
+
                     }
                     // Determine role — trust saved defaultTenantRole first, then verify on tenant doc
                     let role = 'Miembro';
@@ -795,13 +795,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                         await db.collection('tenants').doc(fsDefaultTenantId).update({
                           superAdmins: fb.firestore.FieldValue.arrayUnion(user.uid),
                         });
-                        console.log('[ArchiFlow Auth] Restored Super Admin role for UID', user.uid);
+
                       }
                     } else if (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid)) {
                       role = 'Super Admin';
                     }
                     const tenantName = userData.defaultTenantName || tData.name || fsDefaultTenantId;
-                    console.log('[ArchiFlow Auth] Restoring tenant from Firestore:', tenantName, 'as', role, '— cache was cleared');
+
                     setActiveTenantId(fsDefaultTenantId);
                     setActiveTenantName(tenantName);
                     setActiveTenantRole(role);
@@ -841,7 +841,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('users').onSnapshot(snap => {
       const users = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
-      console.log('[ArchiFlow Team] allUsersCache loaded:', users.length, 'users — UIDs:', users.map((u: any) => u.id));
+
       setAllUsersCache(users);
     }, (err: any) => {
       console.error('[ArchiFlow Team] ERROR loading users collection:', err.code, err.message);
@@ -869,19 +869,19 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (snap.exists) {
         const data = snap.data();
         const members = data?.members || [];
-        console.log('[ArchiFlow Team] Tenant members loaded:', members.length, '— UIDs:', members);
+
         setActiveTenantMembers(members);
         // VERIFY ROLE: Always re-derive the real role from tenant document
         const isCreator = data?.createdBy === uid;
         const superAdmins: string[] = data?.superAdmins || [];
         const isSuperAdmin = isCreator || superAdmins.includes(uid);
         const realRole = isSuperAdmin ? 'Super Admin' : 'Miembro';
-        console.log('[ArchiFlow Team] Role check — isCreator:', isCreator, '(createdBy:', data?.createdBy, 'uid:', uid, ') superAdmins:', superAdmins, '→ realRole:', realRole);
+
 
         // ALWAYS update role state from tenant doc (no stale closure comparison)
         setActiveTenantRole(prev => {
           if (prev !== realRole) {
-            console.log('[ArchiFlow Team] Role corrected:', prev, '→', realRole);
+
             // Persist corrected role
             try {
               localStorage.setItem('archiflow-active-tenant-role', realRole);
@@ -898,11 +898,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             if (userDoc.exists) {
               const userData = userDoc.data();
               if (userData?.defaultTenantRole === 'Super Admin' || userData?.defaultTenantId === activeTenantId) {
-                console.log('[ArchiFlow Team] AUTO-FIX: Adding UID', uid, 'to superAdmins for tenant', activeTenantId, '(was SA in user doc but missing from tenant doc)');
+
                 db.collection('tenants').doc(activeTenantId).update({
                   superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
                 }).then(() => {
-                  console.log('[ArchiFlow Team] AUTO-FIX completed — UID added to superAdmins');
+
                   localStorage.setItem('archiflow-active-tenant-role', 'Super Admin');
                   db.collection('users').doc(uid).update({ defaultTenantRole: 'Super Admin' });
                 }).catch(err => {
@@ -913,7 +913,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           }).catch(() => {});
         }
       } else {
-        console.warn('[ArchiFlow Team] Tenant document does NOT exist:', activeTenantId);
+
         setActiveTenantMembers([]);
       }
     }, (err: any) => {
@@ -930,14 +930,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const timer = setTimeout(async () => {
       try {
         const token = await authUser.getIdToken();
-        console.log('[ArchiFlow] AUTO-FIX: Calling fix-my-role from AppContext...');
+
         const res = await fetch('/api/tenants', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'fix-my-role' }),
         });
         const data = await res.json();
-        console.log('[ArchiFlow] AUTO-FIX result:', JSON.stringify(data));
+
         if (data.fixed?.length > 0 || data.addedToMembers?.length > 0) {
           console.log('[ArchiFlow] AUTO-FIX: Role corrected — reloading in 2s');
           setTimeout(() => window.location.reload(), 2000);
@@ -952,7 +952,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Derive teamUsers from allUsersCache + activeTenantMembers
   // This REACTS immediately when members change — no race condition
   useEffect(() => {
-    console.log('[ArchiFlow Team] Deriving teamUsers — allUsers:', allUsersCache.length, 'members:', activeTenantMembers.length, 'tenantId:', activeTenantId);
+
     if (activeTenantId && activeTenantMembers.length > 0) {
       const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
       console.log('[ArchiFlow Team] Filtered teamUsers:', filtered.length);
@@ -1727,11 +1727,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const email = forms.loginEmail || '', pass = forms.loginPass || '';
     if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      console.log('[ArchiFlow Auth] Attempting email/password login for:', email);
+
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
       console.log('[ArchiFlow Auth] Email/password login successful');
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Login error:', e.code, e.message, e);
+      console.error('[ArchiFlow Auth] Login error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/invalid-credential': 'Correo o contraseña incorrectos',
         'auth/user-not-found': 'No existe cuenta con ese correo',
@@ -1748,14 +1748,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const name = forms.regName || '', email = forms.regEmail || '', pass = forms.regPass || '';
     if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
     try {
-      console.log('[ArchiFlow Auth] Attempting registration for:', email);
+
       const cred = await getFirebase().auth().createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       const db = getFirebase().firestore();
       await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
-      console.log('[ArchiFlow Auth] Registration successful for:', email);
+
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Register error:', e.code, e.message, e);
+      console.error('[ArchiFlow Auth] Register error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/email-already-in-use': 'Ese correo ya está registrado. Intenta iniciar sesión.',
         'auth/weak-password': 'La contraseña es muy débil. Mínimo 6 caracteres.',
@@ -1773,14 +1773,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       console.log('[ArchiFlow Auth] Attempting Google login...');
       const fb = getFirebase();
       const projectId = fb.apps?.[0]?.options?.projectId || 'unknown';
-      console.log('[ArchiFlow Auth] Firebase project:', projectId);
+
       // IMPORTANT: GoogleAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
       const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await fb.auth().signInWithPopup(provider);
-      console.log('[ArchiFlow Auth] Google login successful:', result.user?.email);
+
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Google login error:', e.code, e.message, e);
+      console.error('[ArchiFlow Auth] Google login error:', e.code, e.message);
       if (e.code === 'auth/popup-closed-by-user') return;
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
@@ -1794,7 +1794,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       };
       // If popup fails with internal-error, popup-blocked or unauthorized-domain, try redirect as fallback
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain' || e.code === 'auth/internal-error') {
-        console.log('[ArchiFlow Auth] Popup failed (' + e.code + '), trying redirect fallback for Google...');
+
         try {
           const fb2 = getFirebase();
           const provider2 = new fb2.auth.GoogleAuthProvider();
@@ -1812,12 +1812,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   let _msLoginLock = false;
   const doMicrosoftLogin = async () => {
     if (_msLoginLock) {
-      console.log('[ArchiFlow Auth] Microsoft login already in progress, ignoring duplicate click');
+
       return;
     }
     _msLoginLock = true;
     try {
-      console.log('[ArchiFlow Auth] Attempting Microsoft login...');
+
       const fb = getFirebase();
       // IMPORTANT: OAuthProvider is on firebase.auth (namespace), NOT firebase.auth() (instance)
       const authNS = fb.auth;
@@ -1826,7 +1826,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
       // If user is already logged in (e.g. with Google), LINK Microsoft to existing account
       if (currentUser) {
-        console.log('[ArchiFlow Auth] User already logged in, linking Microsoft...');
+
         try {
           // First get the Microsoft credential via popup
           const provider = new authNS.OAuthProvider('microsoft.com');
@@ -1836,7 +1836,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           provider.setCustomParameters({ prompt: 'consent' });
 
           const linkResult = await currentUser.linkWithPopup(provider);
-          console.log('[ArchiFlow Auth] Microsoft linked successfully');
+
           const credential = linkResult.credential as any;
           if (credential?.accessToken) {
             setMsAccessToken(credential.accessToken);
@@ -1855,7 +1855,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           if (linkErr.code === 'auth/popup-closed-by-user') return;
           if (linkErr.code === 'auth/credential-already-in-use') {
             // Microsoft already linked to this account — try re-auth to get fresh token
-            console.log('[ArchiFlow Auth] Microsoft already linked, re-authenticating...');
+
             try {
               const provider = new authNS.OAuthProvider('microsoft.com');
               provider.addScope('Files.ReadWrite.All');
@@ -1935,7 +1935,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             result = await authInstance.signInWithPopup(basicProvider);
           } catch (basicErr: any) {
             if (basicErr.code === 'auth/popup-blocked' || basicErr.code === 'auth/internal-error') {
-              console.log('[ArchiFlow Auth] Microsoft popup failed (' + basicErr.code + '), trying redirect fallback...');
+
               const redirectProvider = new authNS.OAuthProvider('microsoft.com');
               redirectProvider.setCustomParameters({ prompt: 'select_account' });
               await authInstance.signInWithRedirect(redirectProvider);
@@ -1944,7 +1944,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             throw basicErr;
           }
         } else if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/internal-error') {
-          console.log('[ArchiFlow Auth] Microsoft popup blocked, trying redirect fallback...');
+
           const redirectProvider = new authNS.OAuthProvider('microsoft.com');
           redirectProvider.setCustomParameters({ prompt: 'select_account' });
           await authInstance.signInWithRedirect(redirectProvider);
@@ -1954,7 +1954,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         }
       }
 
-      console.log('[ArchiFlow Auth] Microsoft login successful');
+
       const credential = result.credential as any;
       if (credential?.accessToken) {
         setMsAccessToken(credential.accessToken);
@@ -1970,7 +1970,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     } catch (e: any) {
       if (e.code === 'auth/popup-closed-by-user') return;
-      console.error('[ArchiFlow Auth] Microsoft login error:', e.code, e.message, e);
+      console.error('[ArchiFlow Auth] Microsoft login error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
@@ -2978,7 +2978,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
     // Auto-run after a delay
     const timer = setTimeout(() => {
-      console.log('[ArchiFlow] Auto-migración de fases iniciada...');
+
       migrateAllProjectPhases();
     }, 2000);
     return () => clearTimeout(timer);
@@ -3427,7 +3427,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '', _meetRecurringGroupId: undefined }));
     } catch (err) { console.error('[ArchiFlow] saveMeeting error:', err); showToast('Error al guardar reunión', 'error'); }
   };
-  const deleteMeeting = async (id: string, meetingData?: any) => {
+  const deleteMeeting = async (id: string, meetingData?: Meeting) => {
     const isRecurring = meetingData?.data?.recurring === 'weekly' && meetingData?.data?.recurringGroupId;
     const groupId = meetingData?.data?.recurringGroupId;
     const meetingDate = meetingData?.data?.date;
@@ -3456,7 +3456,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al eliminar reunión', 'error'); }
   };
-  const openEditMeeting = (m: any) => {
+  const openEditMeeting = (m: Meeting) => {
     setEditingId(m.id);
     setForms(f => ({ ...f,
       meetTitle: m.data.title, meetProject: m.data.projectId || '', meetDate: m.data.date || '',
@@ -3741,7 +3741,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         });
         const result = await res.json();
         if (result.duplicatesRemoved && result.duplicatesRemoved > 0) {
-          console.log('[ArchiFlow AutoDedup] Removed', result.duplicatesRemoved, 'duplicates from', result.tenantName, result.details);
+
           showToast(`Limpieza automática: ${result.duplicatesRemoved} duplicados eliminados`);
         } else {
           console.log('[ArchiFlow AutoDedup] No duplicates found — all clean');

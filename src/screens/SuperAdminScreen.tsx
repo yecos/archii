@@ -22,8 +22,13 @@ async function apiCall(action: string, body: Record<string, any> = {}): Promise<
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ action, ...body }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error del servidor');
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Error del servidor (HTTP ${res.status})`);
+  }
+  if (!res.ok) throw new Error(data.error || `Error del servidor (HTTP ${res.status})`);
   return data;
 }
 

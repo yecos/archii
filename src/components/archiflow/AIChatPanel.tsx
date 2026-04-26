@@ -177,6 +177,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const projectContext = useUIStore((s) => s.aiProjectContext);
   const { activeTenantId } = useApp();
 
@@ -265,6 +266,12 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     setIsLoading(true);
     setExecutingTools(true);
 
+    // Abort any previous in-flight request
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 120_000); // 2 min timeout
+
     try {
       const authHeaders = await getAuthHeaders();
 
@@ -291,6 +298,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       const response = await fetch('/api/ai-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: apiMessages,
           projectContext: projectContext || undefined,
@@ -299,6 +307,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       });
 
       const data = await response.json();
+      clearTimeout(timeoutId);
       setExecutingTools(false);
 
       if (!response.ok) {
@@ -338,16 +347,28 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('[ArchiFlow AI] Error en chat:', error);
+      clearTimeout(timeoutId);
       setExecutingTools(false);
-      const errorMessage: Message = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: '⚠️ Error de conexión. Verifica tu internet e intenta de nuevo.',
-        timestamp: new Date(),
-        isError: true,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      if ((error as Error).name === 'AbortError') {
+        const errorMessage: Message = {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: '⚠️ La solicitud tardó demasiado. Intenta de nuevo con una consulta más corta.',
+          timestamp: new Date(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } else {
+        console.error('[ArchiFlow AI] Error en chat:', error);
+        const errorMessage: Message = {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: '⚠️ Error de conexión. Verifica tu internet e intenta de nuevo.',
+          timestamp: new Date(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -389,6 +410,11 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Cleanup: abort in-flight request on unmount
+  useEffect(() => {
+    return () => { abortControllerRef.current?.abort(); };
+  }, []);
 
   if (!isOpen) return null;
 

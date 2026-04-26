@@ -217,7 +217,7 @@ export default function ProfileScreen() {
     const myCalRFIs = rfis.filter(r => r.data.assignedTo === uid && r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido');
     const myCalSubs = submittals.filter(s => (s.data.reviewer === uid || s.data.createdBy === uid) && s.data.dueDate && s.data.status !== 'Aprobado' && s.data.status !== 'Rechazado');
     const myCalPunch = punchItems.filter(p => p.data.assignedTo === uid && p.data.dueDate && p.data.status !== 'Completado');
-    const myCalMeetings = meetings.filter(m => m.data.date && (m.data.createdBy === uid || m.data.createdByUid === uid || (Array.isArray(m.data.attendees) && m.data.attendees.some((a: string) => a === userName))));
+    const myCalMeetings = meetings.filter(m => m.data.date && (m.data.createdBy === uid || (Array.isArray(m.data.attendees) && m.data.attendees.some((a: string) => a === userName))));
 
     return {
       allMyTasks, myPending, myCompleted, myInProgress, myReview, myHighPrio, myOverdue,
