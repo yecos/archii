@@ -694,6 +694,49 @@ Stage Summary:
 - Commit: 6305334
 
 ---
+Task ID: 13
+Agent: Super Z (Main)
+Task: Fix 5 bugs — Portal tab, filtro por rol, cliente autocomplete, deleteCompany dialog, dead code
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-bugs-portal-cliente-20260427
+
+Work Log:
+- Git pull + verificacion sin conflictos
+- Tag de respaldo creado: backup-pre-bugs-portal-cliente-20260427
+- Bug 5: Eliminados clientId y clientName de ProjectData en interfaces.ts (dead code)
+- Bug 4: AppContext.tsx — agregado estado pendingDeleteAction para dialog global
+  - deleteCompany ahora usa pendingDeleteAction + ConfirmDialog en vez de confirm() nativo
+  - Exportados pendingDeleteAction y setPendingDeleteAction desde AppContext
+- Bug 4: HomeContent.tsx — importado ConfirmDialog y conectado a pendingDeleteAction
+  - Dialog profesional con botones "Eliminar" (rojo) y "Cancelar"
+- Bug 3: ProjectModal.tsx — campo Cliente con datalist autocomplete de empresas
+  - Auto-fill del cliente al seleccionar empresa en dropdown
+- Bug 1: ProjectDetailScreen.tsx — agregado tab 'Portal' (9 tabs)
+  - Tab Portal con vista completa cliente: header, progreso, KPIs, fases con progreso,
+    presupuesto gastado vs total, actividad reciente (bitacora), documentos compartidos,
+    aprobaciones pendientes
+- Bug 2: PortalScreen.tsx — rewrite completo
+  - Ahora usa visibleProjects() en vez de projects (filtro por rol/empresa)
+  - Barra de busqueda por nombre/descripcion/cliente/ubicacion
+  - Filtro por estado con pills (Todos, Concepto, Diseno, Ejecucion, Terminado)
+  - 4 KPIs resumen: total proyectos, en ejecucion, completados, presupuesto total
+- CompaniesScreen.tsx — rewrite completo
+  - Barra de busqueda por nombre
+  - Ordenamiento: Nombre A-Z/Z-A, mas proyectos, mas recientes
+  - Budget info por empresa (total presupuesto de proyectos vinculados)
+  - Boton "Ver proyectos" por empresa
+  - 3 KPIs resumen: total empresas, total proyectos, presupuesto total
+- TypeScript check: 0 errores nuevos en archivos modificados
+- Commit: 0e79216, push a main completado
+
+Stage Summary:
+- 7 archivos modificados, +828 lineas, -74 lineas
+- Commit: 0e79216
+- Tag: backup-pre-bugs-portal-cliente-20260427
+- Deploy automático a Vercel en curso (https://archii-theta.vercel.app)
+
+---
 Task ID: 12
 Agent: Super Z (Main)
 Task: Fase 2 - Core Enterprise: RAG, Health Score, SSO/SAML, Public API, Webhooks
@@ -998,3 +1041,73 @@ Stage Summary:
 - Commit: 835d011, push a main completado
 - Tag: backup-pre-projects-audit-20260426
 
+
+---
+Task ID: 14
+Agent: Super Z (Main)
+Task: Fix 2 bugs — notificaciones al cambiar tenant + no puede borrar tareas
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-fix-notif-delete-20260427
+
+Work Log:
+- Git pull + verificacion sin conflictos
+- Tag de respaldo creado: backup-pre-fix-notif-delete-20260427
+- Bug 1 (Notificaciones al entrar al tenant):
+  - Causa raiz: allCollectionsLoadedRef, firstLoadDoneRef, knownTaskIdsRef, etc.
+    nunca se reseteaban al cambiar de tenant. Al entrar a un tenant nuevo, TODOS los
+    datos del nuevo tenant se trataban como "nuevos" y disparaban notificaciones
+    para cada tarea, aprobacion, reunion, RFI, submittal, punch item.
+  - Fix: agregado useEffect que watchea activeTenantId y resetea TODOS los refs
+    de tracking cuando el tenant cambia (allCollectionsLoadedRef, firstLoadDoneRef,
+    collectionsLoadedRef, 7 knownIdSets, 7 prevStatusMaps, notificationBuffer, flushTimer)
+- Bug 2 (No puede borrar tareas):
+  - Causa 1: deleteTask() no mostraba error al usuario si fallaba el delete en Firestore
+    (solo console.error silencioso)
+  - Causa 2: ConfirmDialog tenia e.preventDefault() en AlertDialogAction que podia
+    interferir con el cierre del dialog en Radix UI en algunos navegadores
+  - Fix: deleteTask ahora muestra toast de error con mensaje descriptivo
+  - Fix: Removido e.preventDefault() de ConfirmDialog para que Radix maneje
+    el cierre del dialog normalmente
+- Build exitoso, commit 9678aad, push a main completado
+
+Stage Summary:
+- Archivos modificados: 2
+  - src/contexts/AppContext.tsx (+29 lineas): reset de notificaciones al cambiar tenant + error toast en deleteTask
+  - src/components/common/ConfirmDialog.tsx (-1 linea): removido e.preventDefault()
+- Commit: 9678aad
+- Tag: backup-pre-fix-notif-delete-20260427
+- Deploy automatico a Vercel en curso (https://archii-theta.vercel.app)
+
+---
+Task ID: 14
+Agent: Super Z (Main)
+Task: Fix - No se pueden eliminar tareas del panel de tareas
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+
+Work Log:
+- Git pull + verificacion sin conflictos
+- Investigado el flujo de eliminacion de tareas en TasksScreen.tsx
+- Identificada la causa raiz: useConfirmDialog.ts tiene un bug de stale closure
+  - Usaba useState para almacenar la funcion resolve del Promise
+  - Los callbacks handleConfirm/handleCancel/handleOpenChange se creaban con useCallback(fn, [])
+  - Capturaban el valor inicial null de resolveRef[0] y nunca veian la funcion actualizada
+  - Resultado: el Promise de confirm() NUNCA se resolvía
+  - deleteTask/deleteProject nunca se ejecutaba despues de la confirmacion
+- Fix: reemplazado useState por useRef para la funcion resolve
+  - useRef.current siempre lee el valor actual sin importar el closure
+  - Agregado resolveRef.current = null despues de resolver para prevenir double-resolve
+- Verificado: 0 errores TypeScript nuevos
+- Commit: dcfd91a, push a main completado
+
+Stage Summary:
+- Archivo modificado: src/lib/useConfirmDialog.ts (12 insertions, 7 deletions)
+- Commit: dcfd91a
+- Este fix aplica a TODAS las pantallas que usan useConfirmDialog:
+  - TasksScreen (eliminar tareas)
+  - ProjectsScreen (eliminar proyectos)
+  - BudgetScreen (eliminar gastos)
+  - KanbanBoardScreen (eliminar tarjetas)
+  - RFIsScreen, SubmittalsScreen, PunchListScreen, InvoicesScreen, InventoryScreen
+- Deploy automatico a Vercel en curso (https://archii-theta.vercel.app)
