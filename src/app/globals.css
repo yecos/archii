@@ -164,7 +164,7 @@
 
 /* Responsive text utility classes */
 .af-text-responsive { font-size: clamp(0.75rem, 1.5vw, 0.875rem); }
-.af-heading-responsive { font-size: clamp(1.25rem, 3.5vw, 1.75rem); font-weight: 700; }
+.af-heading-responsive { font-size: clamp(0.9375rem, 2.5vw, 1.25rem); font-weight: 600; }
 
 /* === SKELETON LOADER === */
 

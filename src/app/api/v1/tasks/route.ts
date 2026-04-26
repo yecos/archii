@@ -106,17 +106,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title requerido' }, { status: 400 });
     }
 
+    const status = body.status || 'Por hacer';
+    const now = new Date().toISOString();
     const db = getAdminDb();
     const docRef = await db.collection('tasks').add({
-      title: body.title,
+      title: body.title.trim(),
       description: body.description || '',
       projectId: body.projectId || '',
       assigneeId: body.assigneeId || '',
+      assigneeIds: Array.isArray(body.assigneeIds) ? body.assigneeIds : (body.assigneeId ? [body.assigneeId] : []),
       priority: body.priority || 'Media',
-      status: body.status || 'Por hacer',
+      status,
       dueDate: body.dueDate || '',
+      startDate: body.startDate || '',
+      phaseId: body.phaseId || '',
+      estimatedHours: body.estimatedHours || null,
+      tags: Array.isArray(body.tags) && body.tags.length > 0 ? body.tags : null,
+      subtasks: Array.isArray(body.subtasks) ? body.subtasks.filter((s: any) => s.text?.trim()) : [],
+      completedAt: status === 'Completado' ? now : null,
       tenantId,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       createdBy: auth.user?.uid || auth.apiKeyRecord?.createdBy || 'api',
     });
 

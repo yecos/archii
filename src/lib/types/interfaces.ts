@@ -22,8 +22,15 @@ export interface TaskData {
   assigneeIds?: string[];
   assigneeId?: string;
   dueDate?: string;
+  startDate?: string;
+  phaseId?: string;
+  estimatedHours?: number;
+  tags?: string[];
+  subtasks?: { text: string; done: boolean }[];
+  completedAt?: string | { toDate: () => Date } | null;
   createdAt: string | { toDate: () => Date };
   updatedAt?: string | { toDate: () => Date };
+  updatedBy?: string;
   tenantId: string;
   createdBy?: string;
 }

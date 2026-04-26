@@ -110,8 +110,8 @@ export default function ObraScreen() {
         <div className="absolute -right-8 -top-8 w-44 h-44 border-[40px] border-[var(--af-accent)]/5 rounded-full" />
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xl font-semibold mb-1">Bitácora de Obra</div>
-            <div className="text-sm text-[var(--muted-foreground)]">Registro diario de actividades, clima, personal y materiales en obra</div>
+            <div className="text-lg font-semibold mb-1">Bitácora de Obra</div>
+            <div className="text-xs text-[var(--muted-foreground)]">Registro diario de actividades, clima, personal y materiales en obra</div>
           </div>
           {displayLogs.length > 0 && (
             <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => {

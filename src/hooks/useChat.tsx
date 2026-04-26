@@ -232,12 +232,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [messages, notifPrefs.chat, authUser, chatProjectId, projects, sendNotif, playNotifSound, vibrateNotif, screen]);
 
-  // Mark chat as loaded once messages arrive (for firstLoadDoneRef)
+  // Mark chat as loaded once the listener fires (even if 0 messages), for firstLoadDoneRef
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 || (ready && chatProjectId)) {
       firstLoadDoneRef.current = true;
     }
-  }, [messages]);
+  }, [messages, ready, chatProjectId]);
 
   // ===== CHAT FUNCTIONS =====
   const sendMessage = async (textOverride?: string, audioData?: string, audioDur?: number, fileData?: any) => {
@@ -246,7 +246,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (!chatProjectId || !authUser) return;
     try {
       const db = getFirebase().firestore();
-      const msgData: any = scrubUndefined({ text, uid: authUser.uid, userName: authUser.displayName || (authUser.email || '').split('@')[0], createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
+      const msgData: any = scrubUndefined({ text, uid: authUser.uid, userName: authUser.displayName || (authUser.email || '').split('@')[0], userPhoto: authUser.photoURL || '', tenantId: activeTenantId || '', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
       if (audioData) { msgData.audioData = audioData; msgData.audioDuration = audioDur || 0; msgData.type = 'AUDIO'; }
       if (fileData) { msgData.fileData = fileData.data; msgData.fileName = fileData.name; msgData.fileType = fileData.type; msgData.fileSize = fileData.size; msgData.type = fileData.type.startsWith('image/') ? 'IMAGE' : 'FILE'; }
       if (!msgData.type) msgData.type = 'TEXT';
@@ -254,7 +254,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (chatReplyingTo) {
         msgData.replyTo = { id: chatReplyingTo.id, text: chatReplyingTo.text, userName: chatReplyingTo.userName, uid: chatReplyingTo.uid };
       }
-      if (chatProjectId === '__general__') { await db.collection('generalMessages').add({ ...msgData, tenantId: activeTenantId || '' }); }
+      if (chatProjectId === '__general__') { await db.collection('generalMessages').add(msgData); }
       else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
         const ids = [authUser.uid, chatDmUser].sort();
         const dmId = `dm_${ids[0]}_${ids[1]}`;

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { Puzzle } from 'lucide-react';
 
 /* ================================================================
    TYPES (local to screen)
@@ -310,7 +311,7 @@ export default function IntegrationsScreen() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold">Marketplace</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Puzzle size={20} className="text-[var(--af-accent)]" /> Marketplace</h2>
           <p className="text-[12px] text-[var(--muted-foreground)]">
             Conecta ArchiFlow con tus herramientas favoritas
           </p>

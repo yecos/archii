@@ -1677,10 +1677,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const ts = getFirebase().firestore.FieldValue.serverTimestamp();
     const assignees: string[] = Array.isArray(forms.taskAssignees) ? forms.taskAssignees : (forms.taskAssignee ? [forms.taskAssignee] : []);
     const subtasks = Array.isArray(forms.taskSubtasks) ? forms.taskSubtasks.filter((s: any) => s.text && s.text.trim()).map((s: any) => ({ text: String(s.text || ''), done: Boolean(s.done) })) : [];
-    const isNew = (forms.taskStatus || 'Por hacer') === 'Completado' && !editingId;
-    const isCompleting = editingId && (forms.taskStatus || 'Por hacer') === 'Completado';
-    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: forms.taskStatus || 'Por hacer', dueDate: forms.taskDue || '', phaseId: forms.taskPhase || '', subtasks, estimatedHours: forms.taskEstimatedHours || null, tags: Array.isArray(forms.taskTags) && forms.taskTags.length > 0 ? forms.taskTags : null, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
+    const newStatus = forms.taskStatus || 'Por hacer';
+    const isNew = newStatus === 'Completado' && !editingId;
+    const isCompleting = editingId && newStatus === 'Completado';
+    const isUncompleting = editingId && newStatus !== 'Completado';
+    const raw: Record<string, unknown> = { title, description: forms.taskDescription || '', projectId: forms.taskProject || '', assigneeId: assignees[0] || '', assigneeIds: assignees, priority: forms.taskPriority || 'Media', status: newStatus, dueDate: forms.taskDue || '', phaseId: forms.taskPhase || '', subtasks, estimatedHours: forms.taskEstimatedHours || null, tags: Array.isArray(forms.taskTags) && forms.taskTags.length > 0 ? forms.taskTags : null, tenantId: activeTenantId || '', updatedAt: ts, updatedBy: authUser.uid };
     if (isNew || isCompleting) raw.completedAt = ts;
+    if (isUncompleting) raw.completedAt = getFirebase().firestore.FieldValue.delete();
     const data = scrubUndefined(raw);
     try {
       if (editingId) { await db.collection('tasks').doc(editingId).update(data); showToast('Tarea actualizada'); }
@@ -1714,14 +1717,28 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const toggleTask = async (id: string, status: string) => {
     const ns = status === 'Completado' ? 'Por hacer' : 'Completado';
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    try {
+      if (ns === 'Completado') {
+        await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, completedAt: ts, updatedAt: ts });
+      } else {
+        await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, completedAt: getFirebase().firestore.FieldValue.delete(), updatedAt: ts });
+      }
+    } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
   const changeTaskStatus = async (id: string, newStatus: string) => {
-    try { await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); } catch (err) { console.error("[ArchiFlow]", err); }
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    try {
+      if (newStatus === 'Completado') {
+        await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, completedAt: ts, updatedAt: ts });
+      } else {
+        await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: ts });
+      }
+    } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteTask = async (id: string) => { if (!confirm('¿Eliminar tarea?')) return; try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteTask = async (id: string) => { try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
   const saveExpense = async () => {
     const concept = forms.expConcept || '';

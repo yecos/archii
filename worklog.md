@@ -900,3 +900,101 @@ Stage Summary:
 - **Impact**: Project phases and OneDrive token auto-refresh restored
 - **Commit**: 8aeebc4
 ---
+
+---
+Task ID: 13
+Agent: Super Z (Main)
+Task: Auditoría completa del sistema de notificaciones + fixes de integración
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-fix-notifs-v2-20260426
+
+Work Log:
+- Mapeado completo: 19 archivos dedicados a notificaciones (3,719 líneas)
+- 3 capas: in-app (useNotifications), external (notify-unified → WhatsApp/Email/Push), server (7 API routes)
+- Auditoría profunda de: useNotifications hook, notify-unified.ts, push-service.ts, push-notifications.ts, email-service.ts, whatsapp-notifications.ts, NotifPanel.tsx, sw.js, API routes
+- Identificados 3 bugs críticos + 1 bug menor
+
+BUG 1 (CRÍTICO): bufferedNotify acumulaba eventos pero NUNCA los enviaba
+  - El timer de flush solo hacía notificationBufferRef.current.clear()
+  - Nunca llamaba a notifyExternal para enviar a WhatsApp/Email/Push
+  - Impacto: 0 notificaciones externas funcionaban para otros usuarios
+  - Fix: Switch/case que dispatcha cada tipo a notifyExternal
+
+BUG 2 (ALTO): Evento sw-navigate sin listener
+  - Service worker → layout.tsx despacha CustomEvent('sw-navigate')
+  - Ningún componente escuchaba el evento
+  - Impacto: Click en notificación push no navegaba a pantalla correcta
+  - Fix: useEffect en AppContext escucha sw-navigate → navigateTo()
+
+BUG 3 (MEDIO): Colecciones vacías nunca se marcaban como hidratadas
+  - collectionsLoadedRef solo se marcaba si length > 0
+  - Si un tenant no tenía tareas/reuniones, el sistema nunca armaba notificaciones
+  - Fix: Cuando loading=false, marcar TODAS como cargadas (snapshot vacío = loaded)
+  - También seeder status maps al hidratar para evitar falsos positivos de cambio
+
+Build: exitoso (0 errores)
+Commit: 58cfe4c, push a main completado
+
+Stage Summary:
+- 3 bugs corregidos en AppContext.tsx (+74 líneas, -10 líneas)
+- Sistema de notificaciones externas ahora funciona completamente:
+  - Nuevas tareas asignadas → notifican al asignado via WhatsApp/Email/Push
+  - Cambios de estado → notifican al asignado
+  - Nuevas reuniones → notifican a todos los miembros del equipo
+  - Aprobaciones pendientes/resueltas → notifican al revisor/solicitante
+  - RFIs, Submittals, Punch List → notifican al asignado
+- Push notification clicks navegan correctamente a la pantalla del evento
+- Colecciones vacías no bloquean más el sistema de notificaciones
+---
+Task ID: 13
+Agent: Super Z (Main)
+Task: Auditoría completa del módulo de Proyectos — 7 bugs encontrados y corregidos
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-projects-audit-20260426
+
+Work Log:
+- Leidos: ProjectsScreen.tsx (1138 lineas), ProjectDetailScreen.tsx (~700 lineas), ProjectModal.tsx (202 lineas), types.ts, firestore-actions.ts, AppContext.tsx (funciones de proyectos)
+- Auditado CRUD completo: saveProject, deleteProject, openEditProject, visibleProjects
+- Auditado KPIs, Health Score, Timeline/Gantt, batch operations, exportaciones
+- Auditado integración con tareas, gastos, fases, empresas, OneDrive
+
+Bugs encontrados y corregidos (7):
+
+FIX 1 (CRITICO): deleteProject NO borraba subcolecciones
+- AppContext.tsx hacia db.collection("projects").doc(id).delete() directamente
+- Esto dejaba datos huérfanos: tareas, gastos, fases, mensajes, archivos, approvals
+- firestore-actions.ts ya tenia la version correcta que borra subcolecciones
+- Fix: deleteProject ahora delega a fbActions.deleteProject
+
+FIX 2 (CRITICO): saveProject duplicaba lógica de firestore-actions.ts
+- 30 lineas de lógica duplicada sin requireAuth() ni error handling robusto
+- Fix: saveProject ahora delega a fbActions.saveProject
+
+FIX 3: totalSpent KPI sumaba TODOS los gastos del tenant
+- Incluía gastos no vinculados a ningún proyecto → KPI inflado
+- Fix: filtra expenses por projectIds existentes antes de sumar
+
+FIX 4: Timeline onClick era un no-op
+- Click en barra del timeline no navegaba a detalle del proyecto
+- Fix: onClick={() => openProject(p.id)}
+
+FIX 5: batchChangeStatus usaba new Date() del cliente
+- Timestamps inconsistentes entre clientes
+- Fix: db.FieldValue.serverTimestamp()
+
+FIX 6: deleteProject no validaba tenantId
+- Podía eliminarse un proyecto de otro tenant
+- Fix: validación de tenantId antes de eliminar
+
+FIX 7: ProjectModal usaba tipo any para companies
+- Fix: importado tipo Company y aplicado correctamente
+
+Stage Summary:
+- 3 archivos modificados: AppContext.tsx, ProjectsScreen.tsx, ProjectModal.tsx
+- Net: +20 lineas, -30 lineas (codigo simplificado al delegar a firestore-actions)
+- Build: exitoso, 38 rutas compiladas, 0 errores
+- Commit: 835d011, push a main completado
+- Tag: backup-pre-projects-audit-20260426
+

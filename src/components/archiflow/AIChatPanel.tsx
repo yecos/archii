@@ -78,6 +78,8 @@ const formatMessage = (content: string): string => {
 /* ─── Typewriter Hook ─── */
 function useTypewriter(messages: Message[], setMessages: React.Dispatch<React.SetStateAction<Message[]>>) {
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   const pendingMsg = useMemo(() => {
     for (const m of messages) {
@@ -107,7 +109,8 @@ function useTypewriter(messages: Message[], setMessages: React.Dispatch<React.Se
         const newIndex = Math.min(current.length + chunkSize, full.length);
         return prev.map(m => m.id === msgId ? { ...m, displayContent: full.slice(0, newIndex) } : m);
       });
-      const msg = messages.find(m => m.id === msgId);
+      // Use ref instead of stale closure for delay calculation
+      const msg = messagesRef.current.find(m => m.id === msgId);
       if (!msg) return;
       const currentLen = (msg.displayContent || '').length;
       const nextChar = msg.content[currentLen];

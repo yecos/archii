@@ -195,8 +195,8 @@ export default function TopBar() {
             <Moon size={18} className="stroke-[var(--muted-foreground)]" />
           )}
         </button>
-        {/* Theme panel */}
-        <button className="w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={() => setShowThemePanel(true)} title="Temas y colores">
+        {/* Theme panel — hidden on mobile to save space */}
+        <button className="hidden sm:flex w-9 h-9 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all hover:scale-105 active:scale-95" onClick={() => setShowThemePanel(true)} title="Temas y colores">
           <Palette size={18} className="stroke-[var(--muted-foreground)]" />
         </button>
         {screen === 'projects' && (

@@ -76,7 +76,7 @@ export default function SuperAdminScreen() {
           <Shield size={20} className="text-white" />
         </div>
         <div>
-          <h2 className="text-xl font-bold">Super Admin</h2>
+          <h2 className="text-lg font-semibold">Super Admin</h2>
           <p className="text-xs text-[var(--muted-foreground)]">Gestión global de la plataforma</p>
         </div>
         <div className="ml-auto flex items-center gap-2">

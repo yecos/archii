@@ -110,28 +110,53 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
+    const assignees: string[] = Array.isArray(data.taskAssignees) ? data.taskAssignees : (data.taskAssignee ? [data.taskAssignee] : []);
+    const subtasks = Array.isArray(data.taskSubtasks) ? data.taskSubtasks.filter((s: any) => s.text?.trim()).map((s: any) => ({ text: String(s.text || ''), done: Boolean(s.done) })) : [];
+    const newStatus = data.taskStatus || 'Por hacer';
+    const isCompleting = editingId && newStatus === 'Completado';
+    const isUncompleting = editingId && newStatus !== 'Completado';
     if (editingId) {
-      await db.collection('tasks').doc(editingId).update(scrubUndefined({
+      const updateData: Record<string, any> = {
         title: data.taskTitle,
-        projectId: data.taskProject,
-        assigneeId: data.taskAssignee,
-        priority: data.taskPriority,
-        status: data.taskStatus,
+        description: data.taskDescription || '',
+        projectId: data.taskProject || '',
+        assigneeId: assignees[0] || '',
+        assigneeIds: assignees,
+        priority: data.taskPriority || 'Media',
+        status: newStatus,
         dueDate: data.taskDue || '',
-      }));
+        phaseId: data.taskPhase || '',
+        subtasks,
+        estimatedHours: data.taskEstimatedHours || null,
+        tags: Array.isArray(data.taskTags) && data.taskTags.length > 0 ? data.taskTags : null,
+        updatedAt: ts,
+        updatedBy: authUser?.uid,
+      };
+      if (isCompleting) updateData.completedAt = ts;
+      if (isUncompleting) updateData.completedAt = fb.firestore.FieldValue.delete();
+      await db.collection('tasks').doc(editingId).update(scrubUndefined(updateData));
       showToast('Tarea actualizada');
     } else {
-      await db.collection('tasks').add(scrubUndefined({
+      const createData: Record<string, any> = {
         title: data.taskTitle,
-        projectId: data.taskProject,
-        assigneeId: data.taskAssignee,
-        priority: data.taskPriority,
-        status: data.taskStatus,
+        description: data.taskDescription || '',
+        projectId: data.taskProject || '',
+        assigneeId: assignees[0] || '',
+        assigneeIds: assignees,
+        priority: data.taskPriority || 'Media',
+        status: newStatus,
         dueDate: data.taskDue || '',
+        phaseId: data.taskPhase || '',
+        subtasks,
+        estimatedHours: data.taskEstimatedHours || null,
+        tags: Array.isArray(data.taskTags) && data.taskTags.length > 0 ? data.taskTags : null,
         createdAt: ts,
         createdBy: authUser?.uid || '',
         tenantId: tenantId || '',
-      }));
+        updatedAt: ts,
+      };
+      if (newStatus === 'Completado') createData.completedAt = ts;
+      await db.collection('tasks').add(scrubUndefined(createData));
       showToast('✅ Tarea creada');
     }
   }, showToast);
@@ -140,12 +165,16 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
 export async function toggleTask(taskId: string, currentStatus: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('cambiar estado tarea', async () => {
     const nextStatus = currentStatus === 'Completado' ? 'Por hacer' : 'Completado';
-    await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus });
+    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
+    if (nextStatus === 'Completado') {
+      await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus, completedAt: ts, updatedAt: ts });
+    } else {
+      await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus, completedAt: getFirebase().firestore.FieldValue.delete(), updatedAt: ts });
+    }
   }, showToast);
 }
 
 export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta tarea?')) return;
   return fbAction('eliminar tarea', async () => {
     await getFirebase().firestore().collection('tasks').doc(taskId).delete();
     showToast('Tarea eliminada');
@@ -154,7 +183,7 @@ export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: s
 
 /* ===== CHAT MESSAGES ===== */
 
-export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: FirebaseUser | null, showToast: ToastFn, tenantId: string | null) {
+export async function sendMessage(chatProjectId: string, msgData: Record<string, any>, authUser: FirebaseUser | null, showToast: ToastFn, tenantId: string | null, chatDmUser?: string | null) {
   return fbAction('enviar mensaje', async () => {
     requireAuth(authUser, 'enviar mensaje');
     const fb = getFirebase();
@@ -170,6 +199,11 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
     };
     if (chatProjectId === '__general__') {
       await db.collection('generalMessages').add(msg);
+    } else if (chatProjectId === '__dm__' && chatDmUser && authUser) {
+      const ids = [authUser.uid, chatDmUser].sort();
+      const dmId = `dm_${ids[0]}_${ids[1]}`;
+      msg.recipientId = chatDmUser;
+      await db.collection('directMessages').doc(dmId).collection('messages').add(msg);
     } else {
       await db.collection('projects').doc(chatProjectId).collection('messages').add(msg);
     }

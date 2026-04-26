@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtDate, statusColor } from '@/lib/helpers';
 import type { Submittal } from '@/lib/types';
+import { Globe } from 'lucide-react';
 
 export default function PortalScreen() {
   const {
@@ -38,9 +39,11 @@ export default function PortalScreen() {
       {/* Header */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-xl">👥</div>
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+            <Globe size={20} />
+          </div>
           <div>
-            <div className="text-[15px] font-semibold">Portal del cliente</div>
+            <div className="text-lg font-semibold">Portal del cliente</div>
             <div className="text-[11px] text-[var(--af-text3)]">Accede al progreso y documentos de cada proyecto</div>
           </div>
         </div>

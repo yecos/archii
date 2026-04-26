@@ -5,6 +5,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import { getFirebaseIdToken } from '@/lib/firebase-service';
 import { fmtSize } from '@/lib/helpers';
 import { useTenantOneDrive, usePersonalOneDrive, getFileIcon, formatTimeAgo, type ODItem, type TabKey } from '@/lib/onedrive-hooks';
+import { FolderOpen } from 'lucide-react';
 
 /* ===== File Browser Component (shared) ===== */
 function FileBrowser({
@@ -540,11 +541,11 @@ export default function FilesScreen() {
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[var(--af-accent)]/10 flex items-center justify-center text-lg">
-              📁
+            <div className="w-9 h-9 rounded-xl bg-[var(--af-accent)]/10 flex items-center justify-center">
+              <FolderOpen size={20} className="text-[var(--af-accent)]" />
             </div>
             <div>
-              <div className="text-[15px] font-semibold">Archivos</div>
+              <div className="text-lg font-semibold">Archivos</div>
               <div className="text-[11px] text-[var(--muted-foreground)]">Gestiona archivos del equipo y personales</div>
             </div>
           </div>
