@@ -46,26 +46,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar firma HMAC si existe
+    // SECURITY: HMAC signature is mandatory for SCIM events
     const signature = request.headers.get('x-webhook-signature');
-    if (signature) {
-      const config = await getSSOConfig(tenantId);
-      if (!config?.scimSecret) {
-        return NextResponse.json(
-          { error: 'SCIM no configurado para este tenant' },
-          { status: 400 }
-        );
-      }
-
-      const verified = verifySCIMSignature(rawBody, signature, config.scimSecret);
-      if (!verified) {
-        console.error(`[SCIM] Firma inválida para tenant ${tenantId}`);
-        return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
-      }
-      body.verified = true;
-    } else {
-      body.verified = false;
+    if (!signature) {
+      console.error(`[SCIM] Missing signature for tenant ${tenantId} — rejected`);
+      return NextResponse.json({ error: 'Firma HMAC requerida' }, { status: 401 });
     }
+
+    const config = await getSSOConfig(tenantId);
+    if (!config?.scimSecret) {
+      return NextResponse.json(
+        { error: 'SCIM no configurado para este tenant' },
+        { status: 400 }
+      );
+    }
+
+    const verified = verifySCIMSignature(rawBody, signature, config.scimSecret);
+    if (!verified) {
+      console.error(`[SCIM] Firma inválida para tenant ${tenantId}`);
+      return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
+    }
+    body.verified = true;
 
     body.timestamp = new Date().toISOString();
 

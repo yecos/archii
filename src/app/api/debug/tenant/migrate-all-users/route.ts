@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
 
 /**
  * POST /api/debug/tenant/migrate-all-users
  * TEMPORAL — migra TODOS los usuarios de la coleccion 'users' al tenant indicado.
- * Busca el tenant por nombre (case-insensitive partial match).
+ * REQUIRES: Admin authentication (requireAdmin)
  *
  * Body: { tenantName?: string, tenantId?: string }
- *   - Si envia tenantName, busca el tenant que contenga ese nombre
- *   - Si envia tenantId, lo usa directamente
- *   - Si no envia nada, busca un tenant llamado "TEMPLO"
- *
- * Eliminar despues de usar.
  */
 export async function POST(request: NextRequest) {
   let user: any;
   try {
-    user = await requireAuth(request);
+    // SECURITY: Upgraded from requireAuth to requireAdmin
+    user = await requireAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

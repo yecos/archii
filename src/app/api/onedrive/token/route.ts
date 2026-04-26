@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, AuthError } from '@/lib/api-auth';
 
 const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
 
@@ -13,6 +14,9 @@ const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication before refreshing tokens
+    await requireAuth(request);
+
     const body = await request.json();
     const { refreshToken } = body;
 
