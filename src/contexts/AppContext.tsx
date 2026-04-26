@@ -325,6 +325,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   }, []);
 
   // === NOTIFICATION COALESCENCE (stays in AppContext — for external channel notifications) ===
+  // Buffers rapid events of the same type, then dispatches them via notifyExternal.
   const bufferedNotify = useCallback((type: string, data: any) => {
     const existing = notificationBufferRef.current.get(type);
     if (existing) {
@@ -333,8 +334,49 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       notificationBufferRef.current.set(type, { type, data, count: 1 });
     }
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-    flushTimerRef.current = setTimeout(() => {
+    flushTimerRef.current = setTimeout(async () => {
+      const entries = Array.from(notificationBufferRef.current.values());
       notificationBufferRef.current.clear();
+      for (const entry of entries) {
+        try {
+          switch (entry.type) {
+            case 'taskAssigned': {
+              const d = entry.data;
+              await notifyExternal.taskAssigned(d.uid, d.title, d.projName, d.priority, d.dueDate, d.by);
+              break;
+            }
+            case 'taskUpdated': {
+              const d = entry.data;
+              await notifyExternal.taskUpdated(d.uid, d.title, d.status);
+              break;
+            }
+            case 'meetingReminder': {
+              const d = entry.data;
+              await notifyExternal.meetingReminder(d.uid, d.title, d.date, d.time, d.projName);
+              break;
+            }
+            case 'approvalPending': {
+              const d = entry.data;
+              await notifyExternal.approvalPending(d.uid, d.title, d.projName, d.by);
+              break;
+            }
+            case 'approvalResolved': {
+              const d = entry.data;
+              await notifyExternal.approvalResolved(d.uid, d.title, d.status, d.by);
+              break;
+            }
+            case 'custom': {
+              const d = entry.data;
+              await notifyExternal.custom(d.uid, d.message);
+              break;
+            }
+            default:
+              console.warn('[ArchiFlow Notif] Unknown buffered type:', entry.type);
+          }
+        } catch (err) {
+          console.error('[ArchiFlow Notif] Error flushing notification:', entry.type, err);
+        }
+      }
     }, 800);
   }, []);
 
@@ -904,17 +946,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Mark each collection as hydrated when its data first arrives.
   // Once ALL collections have loaded at least once, arm notifications.
+  // Note: once loading=false, all collections have received their first Firestore
+  // snapshot (even if empty), so we mark them all as loaded.
   useEffect(() => {
     if (loading || allCollectionsLoadedRef.current) return;
-    if (tasks.length > 0) collectionsLoadedRef.current.tasks = true;
-    if (approvals.length > 0) collectionsLoadedRef.current.approvals = true;
-    if (meetings.length > 0) collectionsLoadedRef.current.meetings = true;
-    if (projects.length > 0) collectionsLoadedRef.current.projects = true;
-    if (rfis.length > 0) collectionsLoadedRef.current.rfis = true;
-    if (submittals.length > 0) collectionsLoadedRef.current.submittals = true;
-    if (punchItems.length > 0) collectionsLoadedRef.current.punchItems = true;
-    const allLoaded = Object.values(collectionsLoadedRef.current).every(Boolean);
-    if (allLoaded && !allCollectionsLoadedRef.current) {
+    // Once Firebase is ready, every onSnapshot has fired at least once.
+    // Empty collections (0 items) are still "loaded" — just empty.
+    if (!loading) {
+      collectionsLoadedRef.current.tasks = true;
+      collectionsLoadedRef.current.approvals = true;
+      collectionsLoadedRef.current.meetings = true;
+      collectionsLoadedRef.current.projects = true;
+      collectionsLoadedRef.current.rfis = true;
+      collectionsLoadedRef.current.submittals = true;
+      collectionsLoadedRef.current.punchItems = true;
       allCollectionsLoadedRef.current = true;
       // Seed all known ID sets with current data (mark as "seen")
       knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
@@ -924,6 +969,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
       knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
       knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
+      // Also seed status maps for change detection
+      tasks.forEach(t => { prevTaskStatusRef.current.set(t.id, { status: t.data.status, priority: t.data.priority, assigneeId: t.data.assigneeId }); });
+      approvals.forEach(a => { prevApprovalStatusRef.current.set(a.id, a.data.status); });
+      projects.forEach(p => { prevProjectStatusRef.current.set(p.id, p.data.status); });
+      rfis.forEach(r => { prevRfiStatusRef.current.set(r.id, r.data.status); });
+      submittals.forEach(s => { prevSubmittalStatusRef.current.set(s.id, s.data.status); });
+      punchItems.forEach(p => { prevPunchStatusRef.current.set(p.id, p.data.status); });
       firstLoadDoneRef.current = true;
     }
   }, [loading, tasks, meetings, approvals, projects, rfis, submittals, punchItems]);
@@ -2147,6 +2199,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
   // Wire navigate function to NotificationProvider (for OS notification click navigation)
   notifCtx.setNavigateFn(navigateTo);
+
+  // Listen for service worker navigation messages (push notification clicks)
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.screen) {
+        navigateTo(detail.screen, detail.itemId || undefined);
+      }
+    };
+    window.addEventListener('sw-navigate', handler);
+    return () => window.removeEventListener('sw-navigate', handler);
+  }, [navigateTo]);
 
   // Meeting functions
   const saveMeeting = async () => {
