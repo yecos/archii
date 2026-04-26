@@ -388,6 +388,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Modals
   const [modals, setModals] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Global confirm dialog for deleteCompany (replaces native confirm())
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
   const openModal = useCallback((n: string) => setModals(p => ({ ...p, [n]: true })), []);
   const closeModal = useCallback((n: string) => { setModals(p => ({ ...p, [n]: false })); setEditingId(null); }, []);
 
@@ -1825,7 +1833,23 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error('[ArchiFlow] saveCompany error:', err); showToast('Error al guardar', 'error'); }
   };
 
-  const deleteCompany = async (id: string) => { if (!confirm('¿Eliminar esta empresa?')) return; try { await getFirebase().firestore().collection('companies').doc(id).delete(); showToast('Empresa eliminada'); } catch (err) { console.error("[ArchiFlow]", err); showToast('Error', 'error'); } };
+  const deleteCompany = (id: string) => {
+    setPendingDeleteAction({
+      open: true,
+      title: 'Eliminar empresa',
+      description: '¿Estás seguro de que deseas eliminar esta empresa? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        setPendingDeleteAction(null);
+        try {
+          await getFirebase().firestore().collection('companies').doc(id).delete();
+          showToast('Empresa eliminada');
+        } catch (err) {
+          console.error("[ArchiFlow]", err);
+          showToast('Error', 'error');
+        }
+      },
+    });
+  };
 
   const fileToBase64 = (file: any): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -2654,6 +2678,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     deleteSupplier,
     saveCompany,
     deleteCompany,
+    pendingDeleteAction,
+    setPendingDeleteAction,
     uploadFile,
     deleteFile,
     initDefaultPhases,

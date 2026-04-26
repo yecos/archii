@@ -40,6 +40,7 @@ import SubmittalModal from '@/components/modals/SubmittalModal';
 import PunchItemModal from '@/components/modals/PunchItemModal';
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import AIFloatingWrapper from '@/components/archiflow/AIFloatingWrapper';
 import KeyboardShortcutsInitializer from '@/components/archiflow/KeyboardShortcutsInitializer';
 
@@ -87,6 +88,7 @@ function AppContent() {
     modals,
     galleryPhotos,
     screenTitles,
+    pendingDeleteAction, setPendingDeleteAction,
     tenantReady, activeTenantName, activeTenantRole, showTenantSelector, setShowTenantSelector,
   } = useApp();
   const {
@@ -304,6 +306,18 @@ function AppContent() {
       <PunchItemModal open={!!modals.punchItem} onClose={() => closeModal('punchItem')} />
 
       <LightboxViewer />
+
+      {/* Global Confirm Dialog — for deleteCompany and future destructive actions */}
+      <ConfirmDialog
+        open={!!pendingDeleteAction?.open}
+        onOpenChange={(open) => { if (!open) setPendingDeleteAction(null); }}
+        title={pendingDeleteAction?.title || ''}
+        description={pendingDeleteAction?.description}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        destructive
+        onConfirm={() => { pendingDeleteAction?.onConfirm(); }}
+      />
 
       {/* Tenant switcher overlay */}
       {showTenantSelector && <TenantSelectionScreen />}

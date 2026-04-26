@@ -48,8 +48,6 @@ export interface ProjectData {
   endDate?: string;
   progress?: number;
   companyId?: string;
-  clientId?: string;
-  clientName?: string;
   tenantId: string;
   createdAt: string | { toDate: () => Date };
   updatedAt?: string | { toDate: () => Date };

@@ -132,7 +132,13 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
             value={forms.projClient || ''}
             onChange={(e) => setForms(p => ({ ...p, projClient: e.target.value }))}
             placeholder="Nombre del cliente"
+            list="company-names-datalist"
           />
+          <datalist id="company-names-datalist">
+            {companies.map((c: Company) => (
+              <option key={c.id} value={c.data.name} />
+            ))}
+          </datalist>
         </FormField>
 
         <FormField label="Ubicación">
@@ -146,7 +152,14 @@ export default function ProjectModal({ open, onClose }: { open: boolean; onClose
         <FormField label="Empresa">
           <FormSelect
             value={forms.projCompany || ''}
-            onChange={(e) => setForms(p => ({ ...p, projCompany: e.target.value }))}
+            onChange={(e) => {
+              const comp = companies.find((c: Company) => c.id === e.target.value);
+              setForms(p => ({
+                ...p,
+                projCompany: e.target.value,
+                projClient: comp?.data?.name || p.projClient || '',
+              }));
+            }}
           >
             <option value="">— Sin empresa —</option>
             {companies.map((c: Company) => (

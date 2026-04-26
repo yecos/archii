@@ -231,7 +231,7 @@ export default function ProjectDetailScreen() {
               </div>
             </div>
 
-            {/* 3. TAB BAR (8 tabs) */}
+            {/* 3. TAB BAR (9 tabs) */}
             <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
               {[
                 { id: 'Resumen', icon: '' },
@@ -242,6 +242,7 @@ export default function ProjectDetailScreen() {
                 { id: 'Archivos', icon: '' },
                 { id: 'Obra', icon: '' },
                 { id: 'Reportes', icon: '' },
+                { id: 'Portal', icon: '🌐' },
               ].map(tab => (
                 <button key={tab.id} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all flex items-center gap-1 ${forms.detailTab === tab.id ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab.id }))}>
                   {tab.icon && <span className="text-[11px]">{tab.icon}</span>}{tab.id}
@@ -1477,6 +1478,159 @@ export default function ProjectDetailScreen() {
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Progreso por fase</div>{enabledPhases.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin fases</div>) : (<div className="space-y-2.5">{enabledPhases.map((phase: WorkPhase) => { const pp = getPhaseProgress(phase.id) ?? (phase.data.status === 'Completado' ? 100 : phase.data.status === 'En progreso' ? 50 : 0); const tc = projectTasks.filter((t: Task) => t.data.phaseId === phase.id).length; return (<div key={phase.id} className="flex items-center gap-3"><div className={"w-32 text-[11px] shrink-0 truncate " + (phase.data.status === 'Completado' ? 'text-emerald-400' : phase.data.status === 'En progreso' ? 'text-[var(--af-accent)] font-medium' : 'text-[var(--muted-foreground)]')}>{phase.data.name}</div><div className="flex-1 h-3 bg-[var(--af-bg3)] rounded-full overflow-hidden"><div className={"h-full rounded-full transition-all " + (pp >= 80 ? 'bg-emerald-500' : pp >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500')} style={{ width: pp + '%' }} /></div><div className="w-20 text-[11px] text-right font-medium">{pp}%</div><div className="w-16 text-[9px] text-[var(--muted-foreground)] text-right">{tc} tareas</div></div>); })}</div>)}</div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Registros de tiempo recientes</div>{projTimeEntries.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin registros</div>) : (<div className="space-y-2">{projTimeEntries.slice(0, 8).map((te: TimeEntry) => (<div key={te.id} className="flex items-center gap-3 py-1.5"><div className={"w-2 h-2 rounded-full " + (te.data.billable ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]')} /><div className="flex-1 text-[11px] truncate">{te.data.description || te.data.phaseName}</div><div className="text-[10px] text-[var(--muted-foreground)]">{te.data.userName}</div><div className="text-[10px] font-medium w-14 text-right">{(te.data.duration || 0) / 60}h</div></div>))}{projTimeEntries.length > 8 && <div className="text-[10px] text-[var(--af-text3)]">+{projTimeEntries.length - 8} mas...</div>}</div>)}</div>
             </div>)}
+
+            {/* 12. TAB: Portal (Client-facing full view) */}
+            {forms.detailTab === 'Portal' && (() => {
+              const completedTasks = projectTasks.filter((t: Task) => t.data.status === 'Completado').length;
+              const punchDone = projPunch.filter((pi: PunchItem) => pi.data.status === 'Completado').length;
+              const punchPct = projPunch.length > 0 ? Math.round((punchDone / projPunch.length) * 100) : 0;
+              const projApprovals = approvals.filter((a: any) => a.data?.projectId === selectedProjectId);
+              const pendingApprovals = projApprovals.filter((a: any) => a.data?.status === 'Pendiente').length;
+              return (
+              <div className="space-y-5">
+                {/* Project header card */}
+                <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusColor(currentProject.data.status)}`}>{currentProject.data.status}</span>
+                    {currentProject.data.projectType && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PROJECT_TYPE_COLORS[currentProject.data.projectType] || PROJECT_TYPE_COLORS['Ejecución']}`}>{currentProject.data.projectType}</span>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-bold" style={{ fontFamily: "'DM Serif Display', serif" }}>{currentProject.data.name}</h2>
+                  <p className="text-sm text-[var(--muted-foreground)] mt-1">{currentProject.data.description || ''}</p>
+                  {/* General progress */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] text-[var(--muted-foreground)]">Progreso general</span>
+                      <span className="text-[11px] font-medium">{computedProgress}%</span>
+                    </div>
+                    <div className="h-2.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${computedProgress >= 80 ? 'bg-emerald-500' : computedProgress >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: `${computedProgress}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+                    <div className="text-lg font-bold">{projectTasks.length}</div>
+                    <div className="text-[10px] text-[var(--muted-foreground)]">Tareas totales</div>
+                    <div className="text-[9px] text-[var(--af-text3)]">{completedTasks} completadas</div>
+                  </div>
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
+                    <div className="text-lg font-bold text-blue-400">{projRFIs.length}</div>
+                    <div className="text-[10px] text-blue-400/70">RFIs</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: RFI) => r.data.status === 'Abierto').length} abiertos</div>
+                  </div>
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
+                    <div className="text-lg font-bold text-purple-400">{projSubs.length}</div>
+                    <div className="text-[10px] text-purple-400/70">Submittals</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: Submittal) => s.data.status === 'Aprobado').length} aprobados</div>
+                  </div>
+                  <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3">
+                    <div className="text-lg font-bold text-teal-400">{punchPct}%</div>
+                    <div className="text-[10px] text-teal-400/70">Punch List</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)]">{punchDone}/{projPunch.length} items</div>
+                  </div>
+                </div>
+
+                {/* Phases with progress */}
+                {enabledPhases.length > 0 && (
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="text-[13px] font-semibold mb-3">Fases del proyecto</div>
+                    <div className="space-y-3">
+                      {enabledPhases.map((phase: WorkPhase) => {
+                        const phaseProg = getPhaseProgress(phase.id);
+                        const isActive = phase.data.status === 'En progreso';
+                        const isDone = phase.data.status === 'Completado';
+                        return (
+                          <div key={phase.id}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[12px] font-medium">{phase.data.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDone ? 'bg-emerald-500/10 text-emerald-400' : isActive ? 'bg-[var(--af-accent)]/10 text-[var(--af-accent)]' : 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]'}`}>
+                                {isDone ? 'Completado' : isActive ? `En progreso${phaseProg !== null ? ` · ${phaseProg}%` : ''}` : 'Pendiente'}
+                              </span>
+                            </div>
+                            {phaseProg !== null && (
+                              <div className="h-1.5 bg-[var(--af-bg3)] rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${phaseProg >= 80 ? 'bg-emerald-500' : phaseProg >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'}`} style={{ width: `${phaseProg}%` }} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Budget */}
+                {projectBudget > 0 && (
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="text-[13px] font-semibold mb-3">Presupuesto</div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-[var(--muted-foreground)]">Gastado de {fmtCOP(projectBudget)}</span>
+                      <span className={`font-semibold ${budgetExceeded ? 'text-red-400' : ''}`}>{fmtCOP(projectSpent)} ({budgetPct}%)</span>
+                    </div>
+                    <div className="h-2 bg-[var(--af-bg4)] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${projectSpent > projectBudget ? 'bg-red-500' : projectSpent > projectBudget * 0.8 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, budgetPct)}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent activity (daily logs / bitacora) */}
+                {dailyLogs.length > 0 && (
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="text-[13px] font-semibold mb-3">Actividad reciente</div>
+                    <div className="space-y-2">
+                      {dailyLogs.slice(0, 5).map((log: DailyLog) => (
+                        <div key={log.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-medium">{log.data.date}</div>
+                            <div className="text-[10px] text-[var(--af-text3)]">{log.data.activities?.slice(0, 2).join(', ') || 'Sin actividades registradas'}</div>
+                          </div>
+                          {log.data.weather && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--af-bg3)] text-[var(--muted-foreground)]">{log.data.weather} {log.data.temperature}°C</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Shared documents (files) */}
+                {projectFiles.length > 0 && (
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="text-[13px] font-semibold mb-3">Documentos compartidos ({projectFiles.length})</div>
+                    <div className="space-y-2">
+                      {projectFiles.slice(0, 5).map((f: any) => (
+                        <div key={f.id} className="flex items-center gap-3 py-1.5">
+                          <div className="text-[var(--af-text3)]">{f.data?.type === 'image' ? '🖼️' : '📄'}</div>
+                          <div className="flex-1 min-w-0 text-[12px] truncate">{f.data?.name || 'Documento'}</div>
+                          <span className="text-[9px] text-[var(--af-text3)]">{f.data?.size ? fmtSize(f.data.size) : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Approvals */}
+                {projApprovals.length > 0 && (
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[13px] font-semibold">Aprobaciones</div>
+                      {pendingApprovals > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">{pendingApprovals} pendiente{pendingApprovals !== 1 ? 's' : ''}</span>}
+                    </div>
+                    <div className="space-y-2">
+                      {projApprovals.slice(0, 5).map((a: any) => (
+                        <div key={a.id} className="flex items-center gap-3 py-1.5">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${a.data?.status === 'Aprobado' ? 'bg-emerald-500/15 text-emerald-400' : a.data?.status === 'Rechazado' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>{a.data?.status || 'N/A'}</span>
+                          <span className="text-[12px] truncate flex-1">{a.data?.title || 'Sin titulo'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              );
+            })()}
           </div>
   );
 }
