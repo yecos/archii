@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
+import { useNotificationsContext } from '@/hooks/useNotifications';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
@@ -32,11 +33,12 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function DashboardScreen() {
   const {
     loading, projects, tasks, pendingCount, navigateTo, openProject, getUserName,
-    activeTasks, completedTasks, unreadCount, notifHistory, expenses, invoices, teamUsers, authUser,
+    activeTasks, completedTasks, expenses, invoices, teamUsers, authUser,
     timeEntries, showToast, visibleProjects, companies, meetings,
     rfis, submittals, punchItems, overdueTasks, userName,
     approvals, dailyLogs, invLowStock, invAlerts, openModal, setForms, timeSession, suppliers,
   } = useApp();
+  const { unreadCount, notifHistory } = useNotificationsContext();
 
   // ─── Date Range State ───
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'quarter' | 'year' | 'custom'>('month');
