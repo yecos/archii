@@ -1035,7 +1035,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     let cancelled = false;
     const loadPhases = async () => {
       try {
-        const res = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`);
+        const token = await getFirebaseIdToken();
+        const res = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) { setWorkPhases([]); return; }
         const data = await res.json();
         const phases = data.phases || [];
@@ -1064,7 +1067,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!ready || !activeTenantId || !projectId) return;
     if (projectPhasesCache[projectId]) return; // Already cached
     try {
-      const res = await fetch(`/api/project-phases?projectId=${projectId}&tenantId=${activeTenantId}`);
+      const token = await getFirebaseIdToken();
+      const res = await fetch(`/api/project-phases?projectId=${projectId}&tenantId=${activeTenantId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) return;
       const data = await res.json();
       const phases = data.phases || [];
@@ -2011,9 +2017,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const refreshMsToken = useCallback(async () => {
     if (!msRefreshToken) return null;
     try {
+      const fbToken = await getFirebaseIdToken();
       const res = await fetch('/api/onedrive/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${fbToken}` },
         body: JSON.stringify({ refreshToken: msRefreshToken })
       });
       if (res.ok) {
@@ -2882,7 +2889,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (!res.ok) throw new Error(data.error || 'Error');
       showToast('✅ Fases inicializadas (Diseño + Ejecución)');
       // Immediately reload phases via API
-      const reloadRes = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`);
+      const reloadRes = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`, {
+        headers: { 'Authorization': `Bearer ${await authUser.getIdToken()}` }
+      });
       if (reloadRes.ok) {
         const reloadData = await reloadRes.json();
         setWorkPhases(reloadData.phases || []);
