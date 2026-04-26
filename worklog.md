@@ -873,3 +873,30 @@ Stage Summary:
 - Build limpio, 50 rutas sin errores
 - Commit: c66941b
 - Tags: backup-pre-fase3-202604262220, fase3-completed-20260426
+
+---
+Task ID: 2
+Agent: Super Z (Main)
+Task: Fix bug — project phases stopped working (regression from P0 auth security fix)
+
+Work Log:
+- User reported: "las fases de los proyectos dejaron de funcionar"
+- Investigated: git log showed commit 64c2011 (P0 security fix) added `requireAuth(req)` to `/api/project-phases/route.ts`
+- Root cause: 3 fetch calls in AppContext.tsx to `/api/project-phases` did NOT send Authorization header
+  - Line 1038: main useEffect polling phases every 5s
+  - Line 1067: loadPhasesForProject helper (used by TaskModal)
+  - Line 2885: initDefaultPhases reload
+- Result: all calls returned 401 → `res.ok` false → `setWorkPhases([])` → phases disappeared
+- Full audit found 1 additional critical bug:
+  - `refreshMsToken()` (line 2020): missing Authorization header to `/api/onedrive/token` which also uses requireAuth
+  - OneDrive auto-refresh token completely broken since the same P0 commit
+- Fix: Added `getFirebaseIdToken()` + Authorization header to all 4 fetch calls
+- Verified: tsc 0 errors (src/), next build successful
+- Committed: 8aeebc4, pushed to origin/main
+
+Stage Summary:
+- **Root cause**: P0 security commit (64c2011) added requireAuth to /api/project-phases and /api/onedrive/token but client-side fetch calls were never updated to send Bearer token
+- **Fix**: 4 fetch calls in AppContext.tsx now properly send Authorization header
+- **Impact**: Project phases and OneDrive token auto-refresh restored
+- **Commit**: 8aeebc4
+---
