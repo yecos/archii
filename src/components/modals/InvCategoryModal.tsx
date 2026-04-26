@@ -2,11 +2,13 @@
 import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useApp } from '@/contexts/AppContext';
+import { useInventoryContext } from '@/hooks/useInventory';
 import { FormField, FormInput, FormTextarea, ModalFooter } from '@/components/common/FormField';
 import { CAT_COLORS } from '@/lib/types';
 
 export default function InvCategoryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, invCategories, editingId, saveInvCategory, closeModal } = useApp();
+  const { forms, setForms, editingId, closeModal } = useApp();
+  const { invCategories, saveInvCategory } = useInventoryContext();
 
   return (
     <CenterModal open={open} onClose={onClose} maxWidth={420}>

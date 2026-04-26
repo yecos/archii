@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useInventoryContext } from '@/hooks/useInventory';
 import { SkeletonKPI, SkeletonTableRow } from '@/components/ui/SkeletonLoaders';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -13,15 +14,16 @@ import InventoryTransfers from '@/components/inventory/InventoryTransfers';
 import InventoryReports from '@/components/inventory/InventoryReports';
 
 export default function InventoryScreen() {
+  const { openModal, setEditingId, setForms, showToast } = useApp();
   const {
     deleteInvCategory, deleteInvMovement, deleteInvProduct, deleteInvTransfer, getInvCategoryColor,
     getInvCategoryName, getInvProductName, getTotalStock, getWarehouseStock, invAlerts,
     invCategories, invFilterCat, invMovFilterType, invMovements, invPendingTransfers,
     invProducts, invSearch, invTab, invTotalStock, invTotalValue,
     invTransferFilterStatus, invTransfers, invWarehouseFilter, openEditInvCategory, openEditInvProduct,
-    openModal, setEditingId, setForms, setInvFilterCat, setInvMovFilterType,
-    setInvSearch, setInvTab, setInvTransferFilterStatus, setInvWarehouseFilter, showToast,
-  } = useApp();
+    setInvFilterCat, setInvMovFilterType, setInvSearch, setInvTab, setInvTransferFilterStatus,
+    setInvWarehouseFilter,
+  } = useInventoryContext();
 
   const confirmDialog = useConfirmDialog();
   const confirm = confirmDialog.confirm;

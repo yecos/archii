@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
 import { useNotificationsContext } from '@/hooks/useNotifications';
+import { useInventoryContext } from '@/hooks/useInventory';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
@@ -36,9 +37,10 @@ export default function DashboardScreen() {
     activeTasks, completedTasks, expenses, invoices, teamUsers, authUser,
     timeEntries, showToast, visibleProjects, companies, meetings,
     rfis, submittals, punchItems, overdueTasks, userName,
-    approvals, dailyLogs, invLowStock, invAlerts, openModal, setForms, timeSession, suppliers,
+    approvals, dailyLogs, openModal, setForms, timeSession, suppliers,
   } = useApp();
   const { unreadCount, notifHistory } = useNotificationsContext();
+  const { invLowStock, invAlerts } = useInventoryContext();
 
   // ─── Date Range State ───
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'quarter' | 'year' | 'custom'>('month');
@@ -382,9 +384,9 @@ export default function DashboardScreen() {
             <AlertTriangle size={12} /> {pendingApprovals} aprobación{pendingApprovals !== 1 ? 'es' : ''}
           </button>
         )}
-        {invLowStock > 0 && (
+        {invLowStock.length > 0 && (
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/15 transition-colors" onClick={() => navigateTo('inventory')}>
-            <AlertTriangle size={12} /> {invLowStock} stock bajo
+            <AlertTriangle size={12} /> {invLowStock.length} stock bajo
           </button>
         )}
       </div>

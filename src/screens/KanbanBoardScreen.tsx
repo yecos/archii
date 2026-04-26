@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useUIStore } from '@/stores/ui-store';
+import { useInventoryContext } from '@/hooks/useInventory';
 import KanbanToolbar from '@/components/kanban/KanbanToolbar';
 import KanbanBoard from '@/components/kanban/KanbanBoard';
 import KanbanCardModal from '@/components/modals/KanbanCardModal';
@@ -25,7 +26,6 @@ export default function KanbanBoardScreen() {
     teamUsers,
     approvals,
     invoices,
-    invTransfers,
     activeTenantId,
     selectedProjectId,
     authUser,
@@ -37,6 +37,7 @@ export default function KanbanBoardScreen() {
     getUserName,
     comments,
   } = useApp();
+  const { invTransfers } = useInventoryContext();
 
   const {
     kanbanEntityType,

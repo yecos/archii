@@ -3,6 +3,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '@/contexts/AppContext';
 import { useNotificationsContext } from '@/hooks/useNotifications';
+import { useInventoryContext } from '@/hooks/useInventory';
 import { Toaster } from 'sonner';
 import { Bell, X } from 'lucide-react';
 
@@ -83,7 +84,7 @@ function AppContent() {
     doLogin, doRegister, doGoogleLogin, doMicrosoftLogin,
     forms, setForms,
     modals,
-    galleryPhotos, invLowStock,
+    galleryPhotos,
     screenTitles,
     tenantReady, activeTenantName, activeTenantRole, showTenantSelector, setShowTenantSelector,
   } = useApp();
@@ -91,6 +92,7 @@ function AppContent() {
     showNotifBanner, requestNotifPermission, dismissNotifBanner,
     inAppNotifs, setInAppNotifs, markNotifRead,
   } = useNotificationsContext();
+  const { invLowStock } = useInventoryContext();
 
   if (!ready || loading) return <LoadingScreen />;
   if (!authUser) return (
