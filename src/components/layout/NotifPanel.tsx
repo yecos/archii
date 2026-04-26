@@ -1,17 +1,19 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useNotificationsContext } from '@/hooks/useNotifications';
 import { Bell, MessageCircle, ClipboardList, Calendar, Package, Folder, CheckCircle, Clock, Volume2, Check, Loader, XCircle, CircleHelp, FileCheck, ListChecks, Mail, Smartphone, Radio, Settings } from 'lucide-react';
 import { getExternalChannelPrefs, setExternalChannelPref } from '@/lib/notify-unified';
 import { registerPushSubscription, unregisterPushSubscription, isPushSupported } from '@/lib/push-service';
 
 export default function NotifPanel() {
+  const { navigateTo } = useApp();
   const {
     showNotifPanel, setShowNotifPanel, notifFilterCat, setNotifFilterCat,
     notifHistory, notifPrefs, toggleNotifPref, notifSound, setNotifSound,
     notifPermission, requestNotifPermission, markNotifRead, markAllNotifRead,
-    clearNotifHistory, unreadCount, navigateTo,
-  } = useApp();
+    clearNotifHistory, unreadCount,
+  } = useNotificationsContext();
 
   // Canales externos
   const [channelPrefs, setChannelPrefs] = useState({ whatsapp: true, email: true, push: true });

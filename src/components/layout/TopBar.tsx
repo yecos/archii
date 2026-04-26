@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useNotificationsContext } from '@/hooks/useNotifications';
 import { avatarColor } from '@/lib/helpers';
 import { ChevronLeft, Bell, Sun, Moon, Plus, Menu, LayoutGrid, Building2, ChevronDown, Crown, Users, Shield, Palette } from 'lucide-react';
 import ManageMembersModal from './ManageMembersModal';
@@ -11,11 +12,12 @@ export default function TopBar() {
   const {
     screen, navigateTo, setSidebarOpen, currentProject, darkMode, toggleTheme,
     modals, setForms, setEditingId, openModal, editingId, authUser, isAdmin,
-    initials, pendingCount, setShowNotifPanel, unreadCount, notifPermission,
-    projects, userName, companies, showNotifPanel, screenTitles,
+    initials, pendingCount,
+    projects, userName, companies, screenTitles,
     activeTenantName, activeTenantRole, activeTenantId, setShowTenantSelector, doLogout, isEmailAdmin,
     showToast,
   } = useApp();
+  const { setShowNotifPanel, unreadCount, notifPermission, showNotifPanel } = useNotificationsContext();
 
   const [showTenantMenu, setShowTenantMenu] = React.useState(false);
   const [showManageMembers, setShowManageMembers] = React.useState(false);

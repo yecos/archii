@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, InvoiceItem, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog, Meeting } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, InvoiceItem, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -12,10 +12,10 @@ import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioCo
 import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 import { OneDriveProvider } from '@/hooks/useOneDrive';
+import { useNotificationsContext } from '@/hooks/useNotifications';
 
 // Custom hooks available for future extraction:
 // import { useFirestoreData } from '@/hooks/useFirestoreData';
-// import { useNotifications } from '@/hooks/useNotifications';
 // import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 import { notifyExternal } from '@/lib/notify-unified';
@@ -272,23 +272,11 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  // Browser notifications state
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
-  const [notifHistory, setNotifHistory] = useState<(NotifEntry & { ts?: number })[]>([]);
-  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
-    chat: true,
-    tasks: true,
-    meetings: true,
-    approvals: true,
-    inventory: true,
-    projects: true,
-    rfis: true,
-    submittals: true,
-    punchList: true,
-  });
-  const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notifSound, setNotifSound] = useState(true);
+  // ===== NOTIFICATION CONTEXT (extracted to useNotifications.tsx) =====
+  // AppContext consumes the NotificationProvider for detection effects.
+  // Components that render notification UI should use useNotificationsContext() directly.
+  const notifCtx = useNotificationsContext();
+
   // Set-based known IDs for O(1) change detection (replaces O(n) array comparison)
   const knownTaskIdsRef = useRef<Set<string>>(new Set());
   const knownApprovalIdsRef = useRef<Set<string>>(new Set());
@@ -300,8 +288,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const knownRfiIdsRef = useRef<Set<string>>(new Set());
   const knownSubmittalIdsRef = useRef<Set<string>>(new Set());
   const knownPunchItemIdsRef = useRef<Set<string>>(new Set());
-  const navigateToRef = useRef<(s: string, projId?: string | null) => void>(() => {});
-  const isTabVisibleRef = useRef(true);
   const overdueCheckedRef = useRef<string>('');
   // Track first data load to avoid re-notifying existing items
   const firstLoadDoneRef = useRef(false);
@@ -320,12 +306,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const prevRfiStatusRef = useRef<Map<string, string>>(new Map());
   const prevSubmittalStatusRef = useRef<Map<string, string>>(new Map());
   const prevPunchStatusRef = useRef<Map<string, string>>(new Map());
-  // Notification coalescencia buffer
+  // Notification coalescencia buffer (for external channel notifications)
   const notificationBufferRef = useRef<Map<string, { type: string; data: any; count: number }>>(new Map());
   const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [inAppNotifs, setInAppNotifs] = useState<(NotifEntry & { ts: number })[]>([]);
-  const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
-  const [showNotifBanner, setShowNotifBanner] = useState(false);
 
   // ===== TENANT STATE =====
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
@@ -426,21 +409,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     else toast.success(msg, opts);
   }, []);
 
-  // ===== NOTIFICATION ENGINE v2 =====
-
-  // Track document visibility for dual strategy
-  useEffect(() => {
-    const handler = () => { isTabVisibleRef.current = document.visibilityState === 'visible'; };
-    document.addEventListener('visibilitychange', handler);
-    isTabVisibleRef.current = document.visibilityState === 'visible';
-    return () => document.removeEventListener('visibilitychange', handler);
-  }, []);
-
-  // Vibrate on mobile
-  const vibrateNotif = useCallback(() => {
-    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (err) { console.error("[ArchiFlow]", err); }
-  }, []);
-
   // Load saved role permissions from localStorage
   useEffect(() => {
     try {
@@ -449,104 +417,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error("[ArchiFlow]", err); }
   }, []);
 
-  // Request notification permission
-  const requestNotifPermission = async () => {
-    if (!('Notification' in window)) { showToast('Tu navegador no soporta notificaciones', 'error'); return; }
-    const perm = await Notification.requestPermission();
-    setNotifPermission(perm);
-    setShowNotifBanner(false);
-    if (perm === 'granted') {
-      showToast('🔔 Notificaciones activadas');
-      localStorage.setItem('archiflow-notif-perm', 'granted');
-      localStorage.setItem('archiflow-notif-dismissed', String(Date.now()));
-    } else {
-      showToast('Notificaciones bloqueadas por el navegador', 'error');
-    }
-  };
-
-  // Dismiss notification banner (don't show again for 3 days)
-  const dismissNotifBanner = () => {
-    setShowNotifBanner(false);
-    localStorage.setItem('archiflow-notif-dismissed', String(Date.now()));
-  };
-
-  // Play notification sound with different tones per type
-  const playNotifSound = useCallback((type?: string) => {
-    if (!notifSound) return;
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.value = 0.07;
-      // Different tones for different notification types
-      const tones: Record<string, [number, number]> = {
-        chat: [587.33, 880],
-        task: [659.25, 783.99],
-        meeting: [523.25, 659.25],
-        approval: [698.46, 880],
-        inventory: [440, 554.37],
-        project: [493.88, 659.25],
-        reminder: [880, 1046.5],
-      };
-      const [f1, f2] = tones[type || ''] || [587.33, 880];
-      osc.frequency.value = f1;
-      osc.start();
-      setTimeout(() => { osc.frequency.value = f2; }, 100);
-      setTimeout(() => { gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25); osc.stop(ctx.currentTime + 0.25); }, 200);
-    } catch (err) { console.error("[ArchiFlow]", err); }
-  }, [notifSound]);
-
-  // UNIFIED NOTIFICATION: sends both in-app toast AND OS notification
-  const sendNotif = useCallback((title: string, body: string, icon?: string, tag?: string, data?: any) => {
-    const type = data?.type || 'info';
-    const notifEntry = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-      title,
-      body,
-      icon: icon || '🔔',
-      type,
-      read: false,
-      timestamp: new Date(),
-      screen: data?.screen || null,
-      itemId: data?.itemId || null,
-    };
-
-    // ALWAYS add to history
-    setNotifHistory(prev => [notifEntry, ...prev].slice(0, 100));
-
-    // ALWAYS show in-app toast (even when tab is active)
-    setInAppNotifs(prev => [...prev, { ...notifEntry, ts: Date.now() }]);
-    setTimeout(() => setInAppNotifs(prev => prev.filter(n => Date.now() - n.ts < 5000)), 5500);
-
-    // ALWAYS play sound + vibrate
-    playNotifSound(type);
-    vibrateNotif();
-
-    // Send OS/Browser notification (when tab is NOT visible, or permission granted)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const n = new Notification(title, {
-          body,
-          icon: icon || '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: tag || `archiflow-${Date.now()}`,
-          requireInteraction: false,
-          silent: true, // We play our own sound
-          data,
-        });
-        n.onclick = () => { window.focus(); n.close(); if (data?.screen) navigateToRef.current(data.screen, data.itemId); };
-        setTimeout(() => n.close(), 8000);
-      } catch { /* OS notification not available */ }
-    }
-  }, [playNotifSound, vibrateNotif]);
-
-  // Keep backward compat alias
-  const sendBrowserNotif = sendNotif;
-
-  // === NOTIFICATION COALESCENCE ===
-  // Buffers rapid-fire notifications of the same type and flushes in 800ms windows
+  // === NOTIFICATION COALESCENCE (stays in AppContext — for external channel notifications) ===
   const bufferedNotify = useCallback((type: string, data: any) => {
     const existing = notificationBufferRef.current.get(type);
     if (existing) {
@@ -556,31 +427,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     flushTimerRef.current = setTimeout(() => {
-      // Notifications are sent by the specific CRUD functions below (via notifyWhatsApp directly)
-      // This buffer only coalesces in-app toasts
       notificationBufferRef.current.clear();
     }, 800);
   }, []);
 
-  // Toggle notification pref
-  const toggleNotifPref = (key: string) => {
-    setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  // Mark notification as read
-  const markNotifRead = (id: string) => {
-    setNotifHistory(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const markAllNotifRead = () => {
-    setNotifHistory(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const clearNotifHistory = () => {
-    setNotifHistory([]);
-    setInAppNotifs([]);
-    showToast('Historial de notificaciones limpiado');
-  };
+  // Destructure notification context for detection effects
+  const { sendNotif, playNotifSound, vibrateNotif, notifPrefs, isTabVisibleRef } = notifCtx;
+  // Alias for backward compat in detection effects
+  const sendBrowserNotif = sendNotif;
 
   // Modals
   const [modals, setModals] = useState<Record<string, boolean>>({});
@@ -1242,42 +1096,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  /* ===== NOTIFICATION EFFECTS ===== */
-
-  // Init notification permission + auto-show banner
-  useEffect(() => {
-    if (!('Notification' in window)) return;
-    setNotifPermission(Notification.permission);
-    // Restore notification prefs
-    try {
-      const savedPrefs = localStorage.getItem('archiflow-notif-prefs');
-      if (savedPrefs) setNotifPrefs(JSON.parse(savedPrefs));
-      const savedSound = localStorage.getItem('archiflow-notif-sound');
-      if (savedSound !== null) setNotifSound(savedSound === 'true');
-    } catch (err) { console.error("[ArchiFlow]", err); }
-    // Auto-show permission banner after 5 seconds if not granted and not recently dismissed
-    if (Notification.permission === 'default') {
-      const dismissed = localStorage.getItem('archiflow-notif-dismissed');
-      if (dismissed) {
-        const diff = Date.now() - parseInt(dismissed);
-        if (diff < 3 * 24 * 60 * 60 * 1000) return; // Don't show if dismissed within 3 days
-      }
-      const timer = setTimeout(() => {
-        if (Notification.permission === 'default') setShowNotifBanner(true);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  // Save notif sound pref
-  useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-sound', String(notifSound)); } catch (err) { console.error("[ArchiFlow]", err); }
-  }, [notifSound]);
-
-  // Save notification preferences
-  useEffect(() => {
-    try { localStorage.setItem('archiflow-notif-prefs', JSON.stringify(notifPrefs)); } catch (err) { console.error("[ArchiFlow]", err); };
-  }, [notifPrefs]);
+  /* ===== NOTIFICATION DETECTION EFFECTS ===== */
+  // (Notification engine — state, sound, OS notifications — extracted to NotificationProvider)
+  // These effects detect domain changes and call sendNotif/sendBrowserNotif from notifCtx.
 
   // Mark each collection as hydrated when its data first arrives.
   // Once ALL collections have loaded at least once, arm notifications.
@@ -1333,11 +1154,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }, 5000);
     return () => clearTimeout(timer);
   }, [loading, tasks, approvals, meetings, messages, invMovements, invTransfers, projects, rfis, submittals, punchItems]);
-
-  // Calculate unread notification count
-  useEffect(() => {
-    setUnreadCount(notifHistory.filter(n => !n.read).length);
-  }, [notifHistory]);
 
   // Detect new chat messages and notify (Set-based O(1) lookup)
   useEffect(() => {
@@ -3008,7 +2824,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (s !== 'chat') { setChatMobileShow(false); setShowEmojiPicker(false); }
     useUIStore.getState().setCurrentScreen(s);
   };
-  navigateToRef.current = navigateTo;
+  // Wire navigate function to NotificationProvider (for OS notification click navigation)
+  notifCtx.setNavigateFn(navigateTo);
 
   // Meeting functions
   const saveMeeting = async () => {
@@ -3619,31 +3436,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     handleInstall,
     dismissInstallBanner,
     platform,
-    notifPermission,
-    setNotifPermission,
-    notifHistory,
-    setNotifHistory,
-    notifPrefs,
-    setNotifPrefs,
-    showNotifPanel,
-    setShowNotifPanel,
-    unreadCount,
-    notifSound,
-    setNotifSound,
-    inAppNotifs,
-    setInAppNotifs,
-    notifFilterCat,
-    setNotifFilterCat,
-    showNotifBanner,
-    setShowNotifBanner,
-    requestNotifPermission,
-    dismissNotifBanner,
-    markNotifRead,
-    markAllNotifRead,
-    clearNotifHistory,
-    toggleNotifPref,
-    sendNotif,
-    sendBrowserNotif,
     msConnected,
     msLoading,
     disconnectMicrosoft,
@@ -3759,7 +3551,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     postComment,
     calcGanttDays,
     calcGanttOffset,
-    navigateToRef,
     screenTitles,
     dailyLogs,
     dailyLogTab,
