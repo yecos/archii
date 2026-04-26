@@ -952,6 +952,36 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // (Notification engine — state, sound, OS notifications — extracted to NotificationProvider)
   // These effects detect domain changes and call sendNotif/sendBrowserNotif from notifCtx.
 
+  // RESET notification tracking when tenant changes.
+  // Without this, switching tenants treats all new tenant data as "new/changed"
+  // and fires notifications for every task, approval, meeting, etc.
+  const prevTenantIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeTenantId && activeTenantId !== prevTenantIdRef.current) {
+      prevTenantIdRef.current = activeTenantId;
+      // Reset all tracking — new tenant data is a fresh "first load"
+      allCollectionsLoadedRef.current = false;
+      firstLoadDoneRef.current = false;
+      collectionsLoadedRef.current = { tasks: false, approvals: false, meetings: false, projects: false, rfis: false, submittals: false, punchItems: false };
+      knownTaskIdsRef.current = new Set();
+      knownApprovalIdsRef.current = new Set();
+      knownMeetingIdsRef.current = new Set();
+      knownProjectIdsRef.current = new Set();
+      knownRfiIdsRef.current = new Set();
+      knownSubmittalIdsRef.current = new Set();
+      knownPunchItemIdsRef.current = new Set();
+      prevTaskStatusRef.current = new Map();
+      prevApprovalStatusRef.current = new Map();
+      prevProjectStatusRef.current = new Map();
+      prevRfiStatusRef.current = new Map();
+      prevSubmittalStatusRef.current = new Map();
+      prevPunchStatusRef.current = new Map();
+      // Clear notification buffer
+      notificationBufferRef.current.clear();
+      if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+    }
+  }, [activeTenantId]);
+
   // Mark each collection as hydrated when its data first arrives.
   // Once ALL collections have loaded at least once, arm notifications.
   // Note: once loading=false, all collections have received their first Firestore
@@ -1746,7 +1776,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error("[ArchiFlow]", err); }
   };
 
-  const deleteTask = async (id: string) => { try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteTask = async (id: string) => { try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Tarea eliminada'); } catch (err: any) { console.error("[ArchiFlow]", err); showToast('Error al eliminar: ' + (err?.message || err?.code || 'sin permiso'), 'error'); } };
 
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
