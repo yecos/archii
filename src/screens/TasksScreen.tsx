@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import type { Task, Project } from '@/lib/types';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTasks } from '@/components/ui/SkeletonLoaders';
 import { fmtDate, getInitials, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
@@ -28,7 +29,7 @@ const STATUS_CHART_COLORS: Record<string, string> = {
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-function ChartTooltipContent({ active, payload }: any) {
+function ChartTooltipContent({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; value: number; dataKey?: string }> }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
@@ -38,7 +39,7 @@ function ChartTooltipContent({ active, payload }: any) {
   );
 }
 
-function StatusPieTooltip({ active, payload }: any) {
+function StatusPieTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
@@ -48,13 +49,13 @@ function StatusPieTooltip({ active, payload }: any) {
   );
 }
 
-function getAssigneeIds(t: any): string[] {
+function getAssigneeIds(t: Task): string[] {
   if (Array.isArray(t.data.assigneeIds) && t.data.assigneeIds.length > 0) return t.data.assigneeIds;
   if (t.data.assigneeId) return [t.data.assigneeId];
   return [];
 }
 
-function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: any; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
+function AssigneeAvatars({ task, getUserName, size = 'sm' }: { task: Task; getUserName: (uid: string) => string; size?: 'sm' | 'md' }) {
   const ids = getAssigneeIds(task);
   if (ids.length === 0) {
     return (
@@ -97,7 +98,7 @@ export default function TasksScreen() {
     openEditTask, openModal, projects, setForms, tasks,
     timeEntries, showToast, teamUsers, toggleTask,
     getPhaseName, loadPhasesForProject, projectPhasesCache, authUser,
-  } = useApp() as any;
+  } = useApp();
 
   const confirmDialog = useConfirmDialog();
 
@@ -115,21 +116,21 @@ export default function TasksScreen() {
   // Pick up incoming status/assignee filter set by navigation (e.g. from ProfileScreen)
   React.useEffect(() => {
     const incoming = forms.taskFilterStatus;
-    if (incoming) { setFilterStatus(incoming); setForms((p: any) => ({ ...p, taskFilterStatus: '' })); }
+    if (incoming) { setFilterStatus(incoming); setForms((p: Record<string, any>) => ({ ...p, taskFilterStatus: '' })); }
     const incomingAssignee = forms.taskFilterAssignee;
-    if (incomingAssignee) { setFilterAssignee(incomingAssignee); setForms((p: any) => ({ ...p, taskFilterAssignee: '' })); }
+    if (incomingAssignee) { setFilterAssignee(incomingAssignee); setForms((p: Record<string, any>) => ({ ...p, taskFilterAssignee: '' })); }
   }, []);
   const dragCounterRef = useRef<Record<string, number>>({});
 
   const taskFilterProject = forms.taskFilterProject || '';
 
   const handleNewTask = () => {
-    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer', taskTags: [], taskEstimatedHours: null }));
+    setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer', taskTags: [], taskEstimatedHours: null }));
     openModal('task');
   };
 
   const handleNewTaskInColumn = (status: string) => {
-    setForms((p: any) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: taskFilterProject, taskTags: [], taskEstimatedHours: null }));
+    setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskAssignees: [], taskDue: new Date().toISOString().split('T')[0], taskStatus: status, taskProject: taskFilterProject, taskTags: [], taskEstimatedHours: null }));
     openModal('task');
   };
 
@@ -181,28 +182,28 @@ export default function TasksScreen() {
 
   // Multi-filter
   const filteredTasks = useMemo(() => {
-    let result = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
-    if (filterStatus) result = result.filter((t: any) => t.data.status === filterStatus);
+    let result = taskFilterProject ? tasks.filter((t: Task) => t.data.projectId === taskFilterProject) : tasks;
+    if (filterStatus) result = result.filter((t: Task) => t.data.status === filterStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((t: any) =>
+      result = result.filter((t: Task) =>
         t.data.title.toLowerCase().includes(q) ||
-        (t.data as any).description?.toLowerCase().includes(q) ||
-        (Array.isArray((t.data as any).tags) && (t.data as any).tags.some((tag: string) => tag.toLowerCase().includes(q)))
+        t.data.description?.toLowerCase().includes(q) ||
+        (Array.isArray(t.data.tags) && t.data.tags.some((tag: string) => tag.toLowerCase().includes(q)))
       );
     }
-    if (filterPriority) result = result.filter((t: any) => t.data.priority === filterPriority);
-    if (filterAssignee) result = result.filter((t: any) => getAssigneeIds(t).includes(filterAssignee));
-    if (filterPhase) result = result.filter((t: any) => t.data.phaseId === filterPhase);
-    if (filterDateFrom) result = result.filter((t: any) => t.data.dueDate && t.data.dueDate >= filterDateFrom);
-    if (filterDateTo) result = result.filter((t: any) => t.data.dueDate && t.data.dueDate <= filterDateTo);
+    if (filterPriority) result = result.filter((t: Task) => t.data.priority === filterPriority);
+    if (filterAssignee) result = result.filter((t: Task) => getAssigneeIds(t).includes(filterAssignee));
+    if (filterPhase) result = result.filter((t: Task) => t.data.phaseId === filterPhase);
+    if (filterDateFrom) result = result.filter((t: Task) => t.data.dueDate && t.data.dueDate >= filterDateFrom);
+    if (filterDateTo) result = result.filter((t: Task) => t.data.dueDate && t.data.dueDate <= filterDateTo);
     return result;
   }, [tasks, taskFilterProject, filterStatus, searchQuery, filterPriority, filterAssignee, filterPhase, filterDateFrom, filterDateTo]);
 
   // Get unique assignees for filter
   const assignees = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       getAssigneeIds(t).forEach((uid: string) => {
         if (uid) {
           const name = getUserName(uid);
@@ -216,8 +217,8 @@ export default function TasksScreen() {
   // Get unique phases for filter (from tasks with phaseId)
   const phaseOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
-    const sourceTasks = taskFilterProject ? tasks.filter((t: any) => t.data.projectId === taskFilterProject) : tasks;
-    sourceTasks.forEach((t: any) => {
+    const sourceTasks = taskFilterProject ? tasks.filter((t: Task) => t.data.projectId === taskFilterProject) : tasks;
+    sourceTasks.forEach((t: Task) => {
       if (t.data.phaseId && t.data.projectId) {
         const name = getPhaseName(t.data.phaseId, t.data.projectId);
         if (name) map.set(t.data.phaseId, { id: t.data.phaseId, name });
@@ -229,18 +230,19 @@ export default function TasksScreen() {
   // === KPI Calculations ===
   const kpis = useMemo(() => {
     const total = tasks.length;
-    const completed = tasks.filter((t: any) => t.data.status === 'Completado').length;
-    const inProgress = tasks.filter((t: any) => t.data.status === 'En progreso').length;
-    const overdue = tasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
-    const highPrioActive = tasks.filter((t: any) => t.data.priority === 'Alta' && t.data.status !== 'Completado').length;
+    const completed = tasks.filter((t: Task) => t.data.status === 'Completado').length;
+    const inProgress = tasks.filter((t: Task) => t.data.status === 'En progreso').length;
+    const overdue = tasks.filter((t: Task) => t.data.status !== 'Completado' && t.data.dueDate && new Date(t.data.dueDate) < new Date()).length;
+    const highPrioActive = tasks.filter((t: Task) => t.data.priority === 'Alta' && t.data.status !== 'Completado').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     // Tasks created this week
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
     weekStart.setHours(0, 0, 0, 0);
-    const createdThisWeek = tasks.filter((t: any) => {
-      const created = t.data.createdAt?.toDate ? t.data.createdAt.toDate() : t.data.createdAt ? new Date(t.data.createdAt) : null;
+    const createdThisWeek = tasks.filter((t: Task) => {
+      const raw = t.data.createdAt;
+      const created = raw && typeof raw === 'object' ? raw.toDate() : raw ? new Date(raw) : null;
       return created && created >= weekStart;
     }).length;
 
@@ -254,12 +256,14 @@ export default function TasksScreen() {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const created = tasks.filter((t: any) => {
-        const created = t.data.createdAt?.toDate ? t.data.createdAt.toDate() : t.data.createdAt ? new Date(t.data.createdAt) : null;
+      const created = tasks.filter((t: Task) => {
+        const rawC = t.data.createdAt;
+        const created = rawC && typeof rawC === 'object' ? rawC.toDate() : rawC ? new Date(rawC) : null;
         return created && `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}` === key;
       }).length;
-      const completed = tasks.filter((t: any) => {
-        const completed = (t.data as any).completedAt?.toDate ? (t.data as any).completedAt.toDate() : (t.data as any).completedAt ? new Date((t.data as any).completedAt) : null;
+      const completed = tasks.filter((t: Task) => {
+        const rawComp = t.data.completedAt;
+        const completed = rawComp && typeof rawComp === 'object' ? rawComp.toDate() : rawComp ? new Date(rawComp) : null;
         return completed && `${completed.getFullYear()}-${String(completed.getMonth() + 1).padStart(2, '0')}` === key;
       }).length;
       data.push({ name: MONTHS[d.getMonth()], creadas: created, completadas: completed });
@@ -270,7 +274,7 @@ export default function TasksScreen() {
   // === Status distribution for pie chart ===
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       const s = t.data.status || 'Por hacer';
       counts[s] = (counts[s] || 0) + 1;
     });
@@ -284,7 +288,7 @@ export default function TasksScreen() {
   // === Per-member productivity ===
   const memberProductivity = useMemo(() => {
     const map: Record<string, { total: number; done: number; overdue: number; highPrio: number }> = {};
-    tasks.forEach((t: any) => {
+    tasks.forEach((t: Task) => {
       getAssigneeIds(t).forEach((uid: string) => {
         if (!uid) return;
         if (!map[uid]) map[uid] = { total: 0, done: 0, overdue: 0, highPrio: 0 };
@@ -320,26 +324,26 @@ export default function TasksScreen() {
   const exportCSV = () => {
     const q = '"';
     const dq = '""';
-    const getAssigneeNames = (t: any): string => getAssigneeIds(t).map((uid: string) => getUserName(uid)).join(', ') || '-';
+    const getAssigneeNames = (t: Task): string => getAssigneeIds(t).map((uid: string) => getUserName(uid)).join(', ') || '-';
     const headers = ['Tarea', 'Proyecto', 'Prioridad', 'Estado', 'Asignado', 'Fecha Limite', 'Horas Est.', 'Subtareas', 'Etiquetas'];
-    const esc = (v: string) => q + String(v).split(q).join(dq) + q;
-    const rows = filteredTasks.map((t: any) => {
-      const sts: any[] = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks : [];
-      const stDone = sts.filter((s: any) => s.done).length;
-      const tags = Array.isArray((t.data as any).tags) ? (t.data as any).tags.join(', ') : '-';
+    const esc = (v: string | number) => q + String(v).split(q).join(dq) + q;
+    const rows = filteredTasks.map((t: Task) => {
+      const sts: { text: string; done: boolean }[] = Array.isArray(t.data.subtasks) ? t.data.subtasks : [];
+      const stDone = sts.filter((s: { text: string; done: boolean }) => s.done).length;
+      const tags = Array.isArray(t.data.tags) ? t.data.tags.join(', ') : '-';
       return [
         t.data.title,
-        projects.find((p: any) => p.id === t.data.projectId)?.data?.name || '-',
+        projects.find((p: Project) => p.id === t.data.projectId)?.data?.name || '-',
         t.data.priority,
         t.data.status,
         getAssigneeNames(t),
         t.data.dueDate || '-',
-        (t.data as any).estimatedHours || '-',
+        t.data.estimatedHours || '-',
         sts.length > 0 ? `${stDone}/${sts.length}` : '-',
         tags,
       ];
     });
-    const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r: (string | number)[]) => r.map(esc).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'tareas_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
@@ -383,13 +387,13 @@ export default function TasksScreen() {
           <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1">
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'list' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms((p: any) => ({ ...p, taskView: 'list' }))}
+              onClick={() => setForms((p: Record<string, any>) => ({ ...p, taskView: 'list' }))}
             >
               <LayoutList size={14} /> Lista
             </button>
             <button
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all ${viewMode === 'kanban' ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)]'}`}
-              onClick={() => setForms((p: any) => ({ ...p, taskView: 'kanban' }))}
+              onClick={() => setForms((p: Record<string, any>) => ({ ...p, taskView: 'kanban' }))}
             >
               <KanbanSquare size={14} /> Kanban
             </button>
@@ -428,10 +432,10 @@ export default function TasksScreen() {
           <select
             className="text-[13px] bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-2 text-[var(--foreground)] outline-none cursor-pointer"
             value={taskFilterProject}
-            onChange={e => setForms((p: any) => ({ ...p, taskFilterProject: e.target.value }))}
+            onChange={e => setForms((p: Record<string, any>) => ({ ...p, taskFilterProject: e.target.value }))}
           >
             <option value="">Todos los proyectos</option>
-            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
+            {projects.map((p: Project) => <option key={p.id} value={p.id}>{p.data.name}</option>)}
           </select>
 
           {/* Filter button */}
@@ -550,13 +554,13 @@ export default function TasksScreen() {
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
                   <Pie data={statusDistribution} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" stroke="none">
-                    {statusDistribution.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                    {statusDistribution.map((entry: { name: string; value: number; color: string }, i: number) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip content={<StatusPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
-                {statusDistribution.map((d: any, i: number) => (
+                {statusDistribution.map((d: { name: string; value: number; color: string }, i: number) => (
                   <div key={i} className="flex items-center gap-1 text-[10px]">
                     <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
                     <span className="text-[var(--muted-foreground)]">{d.name}</span>
@@ -652,7 +656,7 @@ export default function TasksScreen() {
           </div>
         ) : (
           ['Alta', 'Media', 'Baja'].map(prio => {
-            const group = filteredTasks.filter((t: any) => t.data.priority === prio);
+            const group = filteredTasks.filter((t: Task) => t.data.priority === prio);
             if (!group.length) return null;
             const prioColorBg = prio === 'Alta' ? 'bg-red-500/10 text-red-400' : prio === 'Media' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400';
             const prioDot = prio === 'Alta' ? 'bg-red-400' : prio === 'Media' ? 'bg-amber-400' : 'bg-emerald-400';
@@ -663,10 +667,10 @@ export default function TasksScreen() {
                   Prioridad {prio}
                   <span className="text-[var(--af-text3)] ml-1">({group.length})</span>
                 </div>
-                {group.map((t: any) => {
-                  const proj = projects.find((p: any) => p.id === t.data.projectId);
+                {group.map((t: Task) => {
+                  const proj = projects.find((p: Project) => p.id === t.data.projectId);
                   const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
-                  const tTags: string[] = Array.isArray((t.data as any).tags) ? (t.data as any).tags : [];
+                  const tTags: string[] = Array.isArray(t.data.tags) ? t.data.tags : [];
                   return (
                     <div key={t.id} className="flex items-start gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
                       <div
@@ -678,7 +682,7 @@ export default function TasksScreen() {
                       <div className="flex-1 min-w-0">
                         <div className={`text-[13.5px] font-medium ${t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : ''}`}>{t.data.title}</div>
                         {(() => {
-                          const sts = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks as { text: string; done: boolean }[] : [];
+                          const sts = Array.isArray(t.data.subtasks) ? t.data.subtasks as { text: string; done: boolean }[] : [];
                           if (sts.length === 0) return null;
                           const done = sts.filter(s => s.done).length;
                           const pct = Math.round((done / sts.length) * 100);
@@ -709,10 +713,10 @@ export default function TasksScreen() {
                               {fmtDate(t.data.dueDate)}
                             </span>
                           )}
-                          {(t.data as any).estimatedHours > 0 && (
+                          {(t.data.estimatedHours ?? 0) > 0 && (
                             <span className="inline-flex items-center gap-0.5 text-blue-400">
                               <Clock size={9} className="flex-shrink-0" />
-                              {(t.data as any).estimatedHours}h
+                              {t.data.estimatedHours}h
                             </span>
                           )}
                           {tTags.length > 0 && (
@@ -778,7 +782,7 @@ export default function TasksScreen() {
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1" style={{ minHeight: 'calc(100vh - 280px)' }}>
             {KANBAN_COLS.map(col => {
-              const colTasks = filteredTasks.filter((t: any) => t.data.status === col.status);
+              const colTasks = filteredTasks.filter((t: Task) => t.data.status === col.status);
               const isDragOver = dragOverCol === col.status;
               return (
                 <div
@@ -837,11 +841,11 @@ export default function TasksScreen() {
                           Soltar aqui
                         </div>
                       )}
-                      {colTasks.map((t: any) => {
-                        const proj = projects.find((p: any) => p.id === t.data.projectId);
+                      {colTasks.map((t: Task) => {
+                        const proj = projects.find((p: Project) => p.id === t.data.projectId);
                         const isDragging = dragTaskId === t.id;
                         const isOverdue = t.data.dueDate && new Date(t.data.dueDate) < new Date() && t.data.status !== 'Completado';
-                        const tTags: string[] = Array.isArray((t.data as any).tags) ? (t.data as any).tags : [];
+                        const tTags: string[] = Array.isArray(t.data.tags) ? t.data.tags : [];
                         return (
                           <div
                             key={t.id}
@@ -905,16 +909,16 @@ export default function TasksScreen() {
                                   {fmtDate(t.data.dueDate)}
                                 </span>
                               )}
-                              {(t.data as any).estimatedHours > 0 && (
+                              {(t.data.estimatedHours ?? 0) > 0 && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 bg-blue-500/10 text-blue-400">
                                   <Clock size={9} className="flex-shrink-0" />
-                                  {(t.data as any).estimatedHours}h
+                                  {t.data.estimatedHours}h
                                 </span>
                               )}
                             </div>
                             {/* Subtask progress pill */}
                             {(() => {
-                              const sts = Array.isArray((t.data as any).subtasks) ? (t.data as any).subtasks as { text: string; done: boolean }[] : [];
+                              const sts = Array.isArray(t.data.subtasks) ? t.data.subtasks as { text: string; done: boolean }[] : [];
                               if (sts.length === 0) return null;
                               const done = sts.filter(s => s.done).length;
                               const pct = Math.round((done / sts.length) * 100);

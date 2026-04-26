@@ -17,6 +17,9 @@ export function toDate(ts: FirestoreTimestamp | undefined): Date {
   return new Date();
 }
 
+/** Generic wrapper for Firestore documents: { id: string; data: T } */
+export type FirestoreDoc<T> = { id: string; data: T };
+
 /* ===== INTERFACES ===== */
 
 export interface User {
@@ -68,6 +71,7 @@ export interface Task {
     priority: string;   // 'Alta' | 'Media' | 'Baja'
     status: string;     // 'Por hacer' | 'En progreso' | 'Revision' | 'Completado'
     dueDate: string;
+    startDate?: string;
     phaseId?: string;
     estimatedHours?: number;
     tags?: string[];

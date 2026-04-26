@@ -35,7 +35,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   }, [open]);
 
   const toggleAssignee = (uid: string) => {
-    setForms((p: any) => {
+    setForms((p: Record<string, any>) => {
       const current = Array.isArray(p.taskAssignees) ? p.taskAssignees : [];
       const updated = current.includes(uid) ? current.filter((id: string) => id !== uid) : [...current, uid];
       return { ...p, taskAssignees: updated, taskAssignee: updated[0] || '' };
@@ -43,7 +43,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const removeAssignee = (uid: string) => {
-    setForms((p: any) => {
+    setForms((p: Record<string, any>) => {
       const current = Array.isArray(p.taskAssignees) ? p.taskAssignees : [];
       const updated = current.filter((id: string) => id !== uid);
       return { ...p, taskAssignees: updated, taskAssignee: updated[0] || '' };
@@ -51,14 +51,14 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const addSubtask = () => {
-    setForms((p: any) => ({
+    setForms((p: Record<string, any>) => ({
       ...p,
       taskSubtasks: [...(Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []), { text: '', done: false }],
     }));
   };
 
   const updateSubtask = (index: number, field: 'text' | 'done', value: string | boolean) => {
-    setForms((p: any) => {
+    setForms((p: Record<string, any>) => {
       const current = Array.isArray(p.taskSubtasks) ? [...p.taskSubtasks] : [];
       current[index] = { ...current[index], [field]: value };
       return { ...p, taskSubtasks: current };
@@ -66,22 +66,22 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   const removeSubtask = (index: number) => {
-    setForms((p: any) => ({
+    setForms((p: Record<string, any>) => ({
       ...p,
-      taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).filter((_: any, i: number) => i !== index),
+      taskSubtasks: (Array.isArray(p.taskSubtasks) ? p.taskSubtasks : []).filter((_: unknown, i: number) => i !== index),
     }));
   };
 
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !tags.includes(t)) {
-      setForms((p: any) => ({ ...p, taskTags: [...tags, t] }));
+      setForms((p: Record<string, any>) => ({ ...p, taskTags: [...tags, t] }));
       setTagInput('');
     }
   };
 
   const removeTag = (tag: string) => {
-    setForms((p: any) => ({ ...p, taskTags: tags.filter((t: string) => t !== tag) }));
+    setForms((p: Record<string, any>) => ({ ...p, taskTags: tags.filter((t: string) => t !== tag) }));
   };
 
   const doneSubtasks = subtasks.filter(s => s.done).length;
@@ -94,7 +94,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Titulo" required>
           <FormInput
             value={forms.taskTitle || ''}
-            onChange={(e) => setForms((p: any) => ({ ...p, taskTitle: e.target.value }))}
+            onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskTitle: e.target.value }))}
             placeholder="Titulo de la tarea"
           />
         </FormField>
@@ -102,7 +102,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Descripcion">
           <FormTextarea
             value={forms.taskDescription || ''}
-            onChange={(e) => setForms((p: any) => ({ ...p, taskDescription: e.target.value }))}
+            onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskDescription: e.target.value }))}
             placeholder="Descripcion de la tarea"
             rows={3}
           />
@@ -111,7 +111,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
         <FormField label="Proyecto">
           <FormSelect
             value={forms.taskProject || ''}
-            onChange={(e) => setForms((p: any) => ({ ...p, taskProject: e.target.value, taskPhase: '' }))}
+            onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskProject: e.target.value, taskPhase: '' }))}
           >
             <option value="">— Sin proyecto —</option>
             {projects.map((p: any) => (
@@ -125,7 +125,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormField label="Fase">
             <FormSelect
               value={forms.taskPhase || ''}
-              onChange={(e) => setForms((p: any) => ({ ...p, taskPhase: e.target.value }))}
+              onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskPhase: e.target.value }))}
             >
               <option value="">— Sin fase —</option>
               {effectivePhases
@@ -203,7 +203,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormField label="Prioridad">
             <FormSelect
               value={forms.taskPriority || 'Media'}
-              onChange={(e) => setForms((p: any) => ({ ...p, taskPriority: e.target.value }))}
+              onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskPriority: e.target.value }))}
             >
               <option value="Alta">Alta</option>
               <option value="Media">Media</option>
@@ -214,7 +214,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormField label="Estado">
             <FormSelect
               value={forms.taskStatus || 'Por hacer'}
-              onChange={(e) => setForms((p: any) => ({ ...p, taskStatus: e.target.value }))}
+              onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskStatus: e.target.value }))}
             >
               <option value="Por hacer">Por hacer</option>
               <option value="En progreso">En progreso</option>
@@ -229,7 +229,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
               min="0"
               step="0.5"
               value={forms.taskEstimatedHours ?? ''}
-              onChange={(e) => setForms((p: any) => ({ ...p, taskEstimatedHours: e.target.value ? Number(e.target.value) : null }))}
+              onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskEstimatedHours: e.target.value ? Number(e.target.value) : null }))}
               placeholder="0"
             />
           </FormField>
@@ -239,7 +239,7 @@ export default function TaskModal({ open, onClose }: { open: boolean; onClose: (
           <FormInput
             type="date"
             value={forms.taskDue || ''}
-            onChange={(e) => setForms((p: any) => ({ ...p, taskDue: e.target.value }))}
+            onChange={(e) => setForms((p: Record<string, any>) => ({ ...p, taskDue: e.target.value }))}
           />
         </FormField>
 

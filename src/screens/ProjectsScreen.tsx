@@ -18,6 +18,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
+import type { Project, Task, Expense } from '@/lib/types';
 
 const STATUS_COLORS: Record<string, string> = {
   Concepto: '#828282',
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
   Terminado: 'Terminado',
 };
 
-function ChartTooltipContent({ active, payload }: any) {
+function ChartTooltipContent({ active, payload }: { active?: boolean; payload?: { name?: string; dataKey?: string; value: number | string }[] }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
@@ -51,7 +52,7 @@ function ChartTooltipContent({ active, payload }: any) {
 // ─── Health Score Computation ───
 type HealthLevel = 'excelente' | 'bueno' | 'riesgo' | 'critico';
 
-function computeHealth(p: any, tasks: any[], expenses: any[], today: string): { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } {
+function computeHealth(p: Project, tasks: Task[], expenses: Expense[], today: string): { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } {
   const d = p.data;
   let budgetPts = 25;
   let schedulePts = 25;
@@ -60,7 +61,7 @@ function computeHealth(p: any, tasks: any[], expenses: any[], today: string): { 
 
   // --- Budget health ---
   const budget = d.budget || 0;
-  const spent = expenses.filter((e: any) => e.data.projectId === p.id).reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+  const spent = expenses.filter((e: Expense) => e.data.projectId === p.id).reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
   if (budget > 0) {
     const pct = spent / budget;
     if (pct > 1) budgetPts = 0;
@@ -87,9 +88,9 @@ function computeHealth(p: any, tasks: any[], expenses: any[], today: string): { 
   }
 
   // --- Task health ---
-  const projTasks = tasks.filter((t: any) => t.data.projectId === p.id);
+  const projTasks = tasks.filter((t: Task) => t.data.projectId === p.id);
   const totalTasks = projTasks.length;
-  const overdueTasks = projTasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today).length;
+  const overdueTasks = projTasks.filter((t: Task) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today).length;
   if (totalTasks > 0) {
     const overdueRatio = overdueTasks / totalTasks;
     if (overdueRatio > 0.5) tasksPts = 0;
@@ -132,12 +133,12 @@ const HEALTH_CONFIG: Record<HealthLevel, { color: string; bg: string; label: str
 };
 
 // ─── Timeline / Gantt Component ───
-function TimelineView({ projects, getHealth }: { projects: any[]; getHealth: (p: any) => any }) {
+function TimelineView({ projects, getHealth }: { projects: Project[]; getHealth: (p: Project) => { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayMs = new Date(todayStr + 'T12:00:00').getTime();
 
   // Determine date range
-  const allDates = projects.flatMap((p: any) => {
+  const allDates = projects.flatMap((p: Project) => {
     const dates: number[] = [];
     if (p.data.startDate) dates.push(new Date(p.data.startDate + 'T00:00:00').getTime());
     if (p.data.endDate) dates.push(new Date(p.data.endDate + 'T23:59:59').getTime());
@@ -197,7 +198,7 @@ function TimelineView({ projects, getHealth }: { projects: any[]; getHealth: (p:
 
       {/* Project bars */}
       <div className="divide-y divide-[var(--border)]">
-        {projects.map((p: any) => {
+        {projects.map((p: Project) => {
           const d = p.data;
           const hasDates = d.startDate && d.endDate;
           const health = getHealth(p);
@@ -336,16 +337,16 @@ export default function ProjectsScreen() {
   // --- Filtered projects ---
   const filteredProjects = useMemo(() => {
     let projs = visibleProjects();
-    if (forms.projFilter) projs = projs.filter((p: any) => p.data.status === forms.projFilter);
-    if (forms.projCompanyFilter) projs = projs.filter((p: any) => p.data.companyId === forms.projCompanyFilter);
-    if (filterType) projs = projs.filter((p: any) => (p.data.projectType || 'Ejecución') === filterType);
-    if (filterBudgetMin) projs = projs.filter((p: any) => (p.data.budget || 0) >= Number(filterBudgetMin));
-    if (filterBudgetMax) projs = projs.filter((p: any) => (p.data.budget || 0) <= Number(filterBudgetMax));
-    if (filterDateFrom) projs = projs.filter((p: any) => p.data.startDate && p.data.startDate >= filterDateFrom);
-    if (filterDateTo) projs = projs.filter((p: any) => p.data.startDate && p.data.startDate <= filterDateTo);
+    if (forms.projFilter) projs = projs.filter((p: Project) => p.data.status === forms.projFilter);
+    if (forms.projCompanyFilter) projs = projs.filter((p: Project) => p.data.companyId === forms.projCompanyFilter);
+    if (filterType) projs = projs.filter((p: Project) => (p.data.projectType || 'Ejecución') === filterType);
+    if (filterBudgetMin) projs = projs.filter((p: Project) => (p.data.budget || 0) >= Number(filterBudgetMin));
+    if (filterBudgetMax) projs = projs.filter((p: Project) => (p.data.budget || 0) <= Number(filterBudgetMax));
+    if (filterDateFrom) projs = projs.filter((p: Project) => p.data.startDate && p.data.startDate >= filterDateFrom);
+    if (filterDateTo) projs = projs.filter((p: Project) => p.data.startDate && p.data.startDate <= filterDateTo);
     const q = search.toLowerCase();
     if (q) {
-      projs = projs.filter((p: any) =>
+      projs = projs.filter((p: Project) =>
         (p.data.name || '').toLowerCase().includes(q) ||
         (p.data.client || '').toLowerCase().includes(q) ||
         (p.data.location || '').toLowerCase().includes(q) ||
@@ -356,23 +357,23 @@ export default function ProjectsScreen() {
   }, [forms.projFilter, forms.projCompanyFilter, projects, search, filterType, filterBudgetMin, filterBudgetMax, filterDateFrom, filterDateTo]);
 
   // --- KPI computations ---
-  const totalBudget = useMemo(() => projects.reduce((s: number, p: any) => s + (p.data.budget || 0), 0), [projects]);
-  const totalSpent = useMemo(() => expenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [expenses]);
+  const totalBudget = useMemo(() => projects.reduce((s: number, p: Project) => s + (p.data.budget || 0), 0), [projects]);
+  const totalSpent = useMemo(() => expenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [expenses]);
   const avgProgress = useMemo(() => projects.length > 0
-    ? Math.round(projects.reduce((s: number, p: any) => s + (p.data.progress || 0), 0) / projects.length)
+    ? Math.round(projects.reduce((s: number, p: Project) => s + (p.data.progress || 0), 0) / projects.length)
     : 0, [projects]);
-  const completedCount = useMemo(() => projects.filter((p: any) => p.data.status === 'Terminado').length, [projects]);
+  const completedCount = useMemo(() => projects.filter((p: Project) => p.data.status === 'Terminado').length, [projects]);
   const projectsWithOverdue = useMemo(() => {
-    return filteredProjects.filter((p: any) => {
-      const projTasks = tasks.filter((t: any) => t.data.projectId === p.id);
-      return projTasks.some((t: any) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today);
+    return filteredProjects.filter((p: Project) => {
+      const projTasks = tasks.filter((t: Task) => t.data.projectId === p.id);
+      return projTasks.some((t: Task) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today);
     }).length;
   }, [filteredProjects, tasks, today]);
   const overBudgetCount = useMemo(() => {
-    return projects.filter((p: any) => {
+    return projects.filter((p: Project) => {
       const budget = p.data.budget || 0;
       if (budget <= 0) return false;
-      const spent = expenses.filter((e: any) => e.data.projectId === p.id).reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+      const spent = expenses.filter((e: Expense) => e.data.projectId === p.id).reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
       return spent > budget;
     }).length;
   }, [projects, expenses]);
@@ -380,17 +381,17 @@ export default function ProjectsScreen() {
   // ─── Health score per project ───
   const healthMap = useMemo(() => {
     const map: Record<string, any> = {};
-    projects.forEach((p: any) => { map[p.id] = computeHealth(p, tasks, expenses, today); });
+    projects.forEach((p: Project) => { map[p.id] = computeHealth(p, tasks, expenses, today); });
     return map;
   }, [projects, tasks, expenses, today]);
 
-  const getHealth = (p: any): { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } => healthMap[p.id] || { score: 100, level: 'excelente' as HealthLevel, details: { budget: 25, schedule: 25, tasks: 25, progress: 25 } };
+  const getHealth = (p: Project): { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } => healthMap[p.id] || { score: 100, level: 'excelente' as HealthLevel, details: { budget: 25, schedule: 25, tasks: 25, progress: 25 } };
 
   // Health KPI summary
   const healthSummary = useMemo(() => {
-    const active = projects.filter((p: any) => p.data.status !== 'Terminado');
+    const active = projects.filter((p: Project) => p.data.status !== 'Terminado');
     let excelente = 0, bueno = 0, riesgo = 0, critico = 0;
-    active.forEach((p: any) => {
+    active.forEach((p: Project) => {
       const h = healthMap[p.id];
       if (!h) return;
       if (h.level === 'excelente') excelente++;
@@ -415,7 +416,7 @@ export default function ProjectsScreen() {
   // --- Status distribution for pie chart ---
   const statusDist = useMemo(() => {
     const map: Record<string, number> = {};
-    projects.forEach((p: any) => {
+    projects.forEach((p: Project) => {
       const s = p.data.status || 'Concepto';
       map[s] = (map[s] || 0) + 1;
     });
@@ -435,10 +436,10 @@ export default function ProjectsScreen() {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const monthTotal = projects.filter((p: any) => {
+      const monthTotal = projects.filter((p: Project) => {
         const created = p.data.createdAt;
         if (!created) return false;
-        const dateStr = created.toDate ? created.toDate() : new Date(created);
+        const dateStr = typeof created === 'object' && 'toDate' in created ? created.toDate() : new Date(created as string);
         const ck = `${dateStr.getFullYear()}-${String(dateStr.getMonth() + 1).padStart(2, '0')}`;
         return ck === key;
       }).length;
@@ -450,10 +451,10 @@ export default function ProjectsScreen() {
   // --- Budget per project ---
   const projectBudgetData = useMemo(() => {
     return projects
-      .map((p: any) => {
+      .map((p: Project) => {
         const budget = p.data.budget || 0;
-        const spent = expenses.filter((e: any) => e.data.projectId === p.id)
-          .reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+        const spent = expenses.filter((e: Expense) => e.data.projectId === p.id)
+          .reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
         return { id: p.id, name: p.data.name, budget, spent, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0 };
       })
       .filter(p => p.budget > 0 || p.spent > 0)
@@ -462,16 +463,16 @@ export default function ProjectsScreen() {
 
   // --- Helpers ---
   const getProjectStats = (projectId: string) => {
-    const projTasks = tasks.filter((t: any) => t.data.projectId === projectId);
-    const pending = projTasks.filter((t: any) => t.data.status !== 'Completado').length;
-    const overdue = projTasks.filter((t: any) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today).length;
-    const completed = projTasks.filter((t: any) => t.data.status === 'Completado').length;
+    const projTasks = tasks.filter((t: Task) => t.data.projectId === projectId);
+    const pending = projTasks.filter((t: Task) => t.data.status !== 'Completado').length;
+    const overdue = projTasks.filter((t: Task) => t.data.status !== 'Completado' && t.data.dueDate && t.data.dueDate < today).length;
+    const completed = projTasks.filter((t: Task) => t.data.status === 'Completado').length;
     return { pending, overdue, completed, total: projTasks.length };
   };
 
   const getProjectSpent = (projectId: string) => {
-    return expenses.filter((e: any) => e.data.projectId === projectId)
-      .reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+    return expenses.filter((e: Expense) => e.data.projectId === projectId)
+      .reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
   };
 
   const getDaysRemaining = (endDate: string) => {
@@ -501,13 +502,13 @@ export default function ProjectsScreen() {
   ];
 
   // --- Exports ---
-  const exportCSV = (projList?: any[]) => {
+  const exportCSV = (projList?: Project[]) => {
     const list = projList || filteredProjects;
     const q = '"';
     const dq = '""';
     const headers = ['Proyecto', 'Estado', 'Tipo', 'Cliente', 'Ubicación', 'Presupuesto', 'Gastado', 'Saldo', 'Progreso', 'Tareas', 'Completadas', 'Fecha Inicio', 'Fecha Entrega', 'Salud'];
-    const esc = (v: string) => q + String(v).split(q).join(dq) + q;
-    const rows = list.map((p: any) => {
+    const esc = (v: string | number) => q + String(v).split(q).join(dq) + q;
+    const rows = list.map((p: Project) => {
       const d = p.data;
       const stats = getProjectStats(p.id);
       const spent = getProjectSpent(p.id);
@@ -519,7 +520,7 @@ export default function ProjectsScreen() {
         `${h.score} (${HEALTH_CONFIG[h.level].label})`,
       ];
     });
-    const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r: (string | number)[]) => r.map(esc).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'proyectos_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
@@ -545,14 +546,14 @@ export default function ProjectsScreen() {
     if (selectedIds.size === filteredProjects.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredProjects.map((p: any) => p.id)));
+      setSelectedIds(new Set(filteredProjects.map((p: Project) => p.id)));
     }
   };
 
   const clearSelection = () => setSelectedIds(new Set());
 
   const batchExportPDF = () => {
-    const selected = projects.filter((p: any) => selectedIds.has(p.id));
+    const selected = projects.filter((p: Project) => selectedIds.has(p.id));
     if (selected.length === 0) return;
     try {
       exportProjectsPDF({ projects: selected, tasks, expenses });
@@ -561,13 +562,13 @@ export default function ProjectsScreen() {
   };
 
   const batchExportCSV = () => {
-    const selected = projects.filter((p: any) => selectedIds.has(p.id));
+    const selected = projects.filter((p: Project) => selectedIds.has(p.id));
     if (selected.length === 0) return;
     exportCSV(selected);
   };
 
   const batchChangeStatus = async (newStatus: string) => {
-    const selected = projects.filter((p: any) => selectedIds.has(p.id));
+    const selected = projects.filter((p: Project) => selectedIds.has(p.id));
     if (selected.length === 0) return;
     const confirmed = await confirmDialog.confirm({
       title: 'Cambiar estado en lote',
@@ -579,15 +580,15 @@ export default function ProjectsScreen() {
       const app = getFirebase();
       const db = app.firestore();
       const batch = db.batch();
-      selected.forEach((p: any) => {
+      selected.forEach((p: Project) => {
         const ref = db.collection('projects').doc(p.id);
         batch.update(ref, { status: newStatus, updatedAt: new Date() });
       });
       await batch.commit();
       showToast(`${selected.length} proyectos actualizados a "${STATUS_LABELS[newStatus] || newStatus}"`);
       clearSelection();
-    } catch (err: any) {
-      showToast('Error al actualizar proyectos: ' + (err.message || ''), 'error');
+    } catch (err: unknown) {
+      showToast('Error al actualizar proyectos: ' + (err instanceof Error ? err.message : ''), 'error');
     }
   };
 
@@ -722,9 +723,9 @@ export default function ProjectsScreen() {
       <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 overflow-x-auto mb-1 scrollbar-none">
         {statusTabs.map(tab => {
           const projs = visibleProjects();
-          const count = tab.v ? projs.filter((p: any) => p.data.status === tab.v).length : projs.length;
+          const count = tab.v ? projs.filter((p: Project) => p.data.status === tab.v).length : projs.length;
           return (
-            <button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms((p: any) => ({ ...p, projFilter: tab.v }))}>
+            <button key={tab.k} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all whitespace-nowrap ${(forms.projFilter || '') === tab.v ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms((p: Record<string, any>) => ({ ...p, projFilter: tab.v }))}>
               {tab.k} ({count})
             </button>
           );
@@ -734,11 +735,11 @@ export default function ProjectsScreen() {
       {/* ===== COMPANY FILTER PILLS ===== */}
       {(getMyRole() === 'Admin' || getMyRole() === 'Director') && companies.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
-          <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.projCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms((p: any) => ({ ...p, projCompanyFilter: '' }))}>
+          <button className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${!forms.projCompanyFilter ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms((p: Record<string, any>) => ({ ...p, projCompanyFilter: '' }))}>
             Todas las empresas
           </button>
           {companies.map(c => (
-            <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.projCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms((p: any) => ({ ...p, projCompanyFilter: c.id }))}>
+            <button key={c.id} className={`px-3 py-1.5 rounded-full text-[12px] cursor-pointer transition-all whitespace-nowrap border ${forms.projCompanyFilter === c.id ? 'bg-[var(--af-accent)] text-background border-[var(--af-accent)]' : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`} onClick={() => setForms((p: Record<string, any>) => ({ ...p, projCompanyFilter: c.id }))}>
               {c.data.name}
             </button>
           ))}
@@ -983,7 +984,7 @@ export default function ProjectsScreen() {
       {/* ===== PROJECT CARDS ===== */}
       {!loading && viewMode === 'cards' && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map((p: any) => {
+          {filteredProjects.map((p: Project) => {
             const d = p.data;
             const prog = d.progress || 0;
             const compName = companies.find((c: any) => c.id === d.companyId)?.data?.name;

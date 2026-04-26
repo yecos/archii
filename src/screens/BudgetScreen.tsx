@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
-import { EXPENSE_CATS } from '@/lib/types';
+import { EXPENSE_CATS, Expense, Project } from '@/lib/types';
 import { DollarSign, Download, Plus, TrendingDown, TrendingUp, Receipt, Trash2, FileText, Search, Filter, Edit3, AlertTriangle, Calendar, BarChart3 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
@@ -25,12 +25,12 @@ const CAT_COLORS: Record<string, string> = {
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-function ChartTooltipContent({ active, payload }: any) {
+function ChartTooltipContent({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; dataKey?: string; value: number | string }> }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-2 shadow-lg text-[12px]">
       <div className="font-semibold">{payload[0].name || payload[0].dataKey}</div>
-      <div className="text-[var(--af-accent)]">{fmtCOP(payload[0].value)}</div>
+      <div className="text-[var(--af-accent)]">{fmtCOP(Number(payload[0].value))}</div>
     </div>
   );
 }
@@ -52,7 +52,7 @@ export default function BudgetScreen() {
 
   // --- Filtered expenses ---
   const filtered = useMemo(() => {
-    return expenses.filter((e: any) => {
+    return expenses.filter((e: Expense) => {
       if (search && !e.data.concept?.toLowerCase().includes(search.toLowerCase()) && !e.data.vendor?.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterProject && e.data.projectId !== filterProject) return false;
       if (filterCategory && e.data.category !== filterCategory) return false;
@@ -62,12 +62,12 @@ export default function BudgetScreen() {
     });
   }, [expenses, search, filterProject, filterCategory, filterDateFrom, filterDateTo]);
 
-  const totalExpenses = useMemo(() => filtered.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [filtered]);
+  const totalExpenses = useMemo(() => filtered.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [filtered]);
 
   // --- Category aggregation ---
   const byCategory = useMemo(() => {
     const cats: Record<string, number> = {};
-    filtered.forEach((e: any) => {
+    filtered.forEach((e: Expense) => {
       const cat = e.data.category || 'Otro';
       cats[cat] = (cats[cat] || 0) + (Number(e.data.amount) || 0);
     });
@@ -84,8 +84,8 @@ export default function BudgetScreen() {
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const monthTotal = expenses
-        .filter((e: any) => e.data.date && e.data.date.startsWith(key))
-        .reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+        .filter((e: Expense) => e.data.date && e.data.date.startsWith(key))
+        .reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
       data.push({ name: MONTHS[d.getMonth()], total: monthTotal });
     }
     return data;
@@ -94,11 +94,11 @@ export default function BudgetScreen() {
   // --- Project budget cards ---
   const projectBudgetData = useMemo(() => {
     return projects
-      .map((p: any) => {
+      .map((p: Project) => {
         const budget = p.data.budget || 0;
         const spent = expenses
-          .filter((e: any) => e.data.projectId === p.id)
-          .reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+          .filter((e: Expense) => e.data.projectId === p.id)
+          .reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
         return { id: p.id, name: p.data.name, budget, spent, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0 };
       })
       .filter(p => p.budget > 0 || p.spent > 0)
@@ -110,14 +110,14 @@ export default function BudgetScreen() {
 
   // --- Expenses grouped by project ---
   const byProject = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    filtered.forEach((e: any) => {
+    const map: Record<string, Expense[]> = {};
+    filtered.forEach((e: Expense) => {
       const k = e.data.projectId || '_none';
       if (!map[k]) map[k] = [];
       map[k].push(e);
     });
     // Sort each group by date desc
-    Object.values(map).forEach(arr => arr.sort((a: any, b: any) => (b.data.date || '').localeCompare(a.data.date || '')));
+    Object.values(map).forEach(arr => arr.sort((a: Expense, b: Expense) => (b.data.date || '').localeCompare(a.data.date || '')));
     return map;
   }, [filtered]);
 
@@ -147,17 +147,17 @@ export default function BudgetScreen() {
     const q = '"';
     const dq = '""';
     const headers = ['Concepto', 'Proyecto', 'Categoría', 'Monto', 'Fecha', 'Método de pago', 'Proveedor'];
-    const esc = (v: string) => q + String(v).split(q).join(dq) + q;
-    const rows = filtered.map((e: any) => [
+    const esc = (v: string | number) => q + String(v).split(q).join(dq) + q;
+    const rows = filtered.map((e: Expense) => [
       e.data.concept,
-      projects.find((p: any) => p.id === e.data.projectId)?.data?.name || '—',
+      projects.find((p: Project) => p.id === e.data.projectId)?.data?.name || '—',
       e.data.category,
       e.data.amount,
       e.data.date,
       e.data.paymentMethod || '',
       e.data.vendor || '',
     ]);
-    const csv = [headers, ...rows].map((r: any) => r.map(esc).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r: (string | number)[]) => r.map(esc).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'presupuesto_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
@@ -196,7 +196,7 @@ export default function BudgetScreen() {
           </button>
           <button
             className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-            onClick={() => { setEditingId(null); setForms((p: any) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' })); openModal('expense'); }}
+            onClick={() => { setEditingId(null); setForms((p: Record<string, any>) => ({ ...p, expConcept: '', expProject: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' })); openModal('expense'); }}
           >
             <Plus size={15} /> Registrar gasto
           </button>
@@ -233,7 +233,7 @@ export default function BudgetScreen() {
                 <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Proyecto</label>
                 <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-[12px] text-[var(--foreground)] outline-none cursor-pointer">
                   <option value="">Todos los proyectos</option>
-                  {projects.map((p: any) => <option key={p.id} value={p.id}>{p.data?.name}</option>)}
+                  {projects.map((p: Project) => <option key={p.id} value={p.id}>{p.data?.name}</option>)}
                 </select>
               </div>
               <div>
@@ -404,7 +404,7 @@ export default function BudgetScreen() {
           <div className="space-y-3">
             {byCategory.map((cat: any, i: number) => {
               const pct = totalExpenses > 0 ? (cat.value / totalExpenses) * 100 : 0;
-              const count = filtered.filter((e: any) => (e.data.category || 'Otro') === cat.name).length;
+              const count = filtered.filter((e: Expense) => (e.data.category || 'Otro') === cat.name).length;
               return (
                 <div key={i}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -431,9 +431,9 @@ export default function BudgetScreen() {
       {/* Expenses by Project */}
       {Object.keys(byProject).length > 0 && (
         <div className="space-y-3">
-          {Object.entries(byProject).map(([pid, exps]: [string, any]) => {
-            const proj = projects.find((p: any) => p.id === pid);
-            const total = exps.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0);
+          {Object.entries(byProject).map(([pid, exps]: [string, Expense[]]) => {
+            const proj = projects.find((p: Project) => p.id === pid);
+            const total = exps.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0);
             return (
               <div key={pid} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
                 <div className="flex justify-between items-center mb-3">
@@ -444,7 +444,7 @@ export default function BudgetScreen() {
                   </div>
                   <span className="text-[14px] font-semibold text-[var(--af-accent)]">{fmtCOP(total)}</span>
                 </div>
-                {exps.map((e: any) => (
+                {exps.map((e: Expense) => (
                   <div key={e.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0 group">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CAT_COLORS[e.data.category] || '#9a9b9e' }} />
                     <div className="flex-1 min-w-0">

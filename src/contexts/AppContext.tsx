@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
-import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog, Meeting } from '@/lib/types';
+import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, InvProduct, InvCategory, InvMovement, InvTransfer, TimeEntry, Invoice, InvoiceItem, Comment, RFI, Submittal, PunchItem, Company, NotifEntry, DailyLog, Meeting } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, INV_UNITS, INV_WAREHOUSES, TRANSFER_STATUSES, CAT_COLORS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
@@ -48,7 +48,7 @@ interface AppContextValue {
   comments: Comment[];
   timeEntries: TimeEntry[];
   generalMessages: any[];
-  dailyLogs: any[];
+  dailyLogs: DailyLog[];
   approvals: Approval[];
   rfis: RFI[];
   submittals: Submittal[];
@@ -63,10 +63,10 @@ interface AppContextValue {
   saveInvMovement: () => Promise<void>;
   saveInvTransfer: () => Promise<void>;
   saveInvCategory: () => Promise<void>;
-  getWarehouseStock: (product: any, warehouse?: string) => number;
-  getTotalStock: (product: any) => number;
+  getWarehouseStock: (product: InvProduct, warehouse?: string) => number;
+  getTotalStock: (product: InvProduct) => number;
   saveManualTimeEntry: () => Promise<void>;
-  buildWarehouseStock: (product: any) => Record<string, number>;
+  buildWarehouseStock: (product: InvProduct) => Record<string, number>;
 }
 const AppContext = createContext<AppContextValue & Record<string, any>>(null!);
 
@@ -121,7 +121,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [odDragOver, setOdDragOver] = useState(false);
   const [odTab, setOdTab] = useState<'files' | 'gallery'>('files');
   const [galleryLoading, setGalleryLoading] = useState(false);
-  const [odGalleryPhotos, setOdGalleryPhotos] = useState<any[]>([]);
+  const [odGalleryPhotos, setOdGalleryPhotos] = useState<OneDriveFile[]>([]);
 
   // Calendar state
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -134,7 +134,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [galleryFilterProject, setGalleryFilterProject] = useState<string>('all');
   const [galleryFilterCat, setGalleryFilterCat] = useState<string>('all');
-  const [lightboxPhoto, setLightboxPhoto] = useState<any>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<GalleryPhoto | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   // Inventory state
@@ -160,7 +160,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Invoices state
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceTab, setInvoiceTab] = useState<'list' | 'create'>('list');
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
 
   // Comments state
@@ -262,7 +262,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [chatDmUser, setChatDmUser] = useState<string | null>(null);
 
   // Chat reply state
-  const [chatReplyingTo, setChatReplyingTo] = useState<any>(null);
+  const [chatReplyingTo, setChatReplyingTo] = useState<{ id: string; text: string; userName: string; uid: string } | null>(null);
 
   // Chat reactions
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, string[]>>>({});
@@ -292,7 +292,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Browser notifications state
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
-  const [notifHistory, setNotifHistory] = useState<any[]>([]);
+  const [notifHistory, setNotifHistory] = useState<(NotifEntry & { ts?: number })[]>([]);
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
     chat: true,
     tasks: true,
@@ -341,7 +341,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Notification coalescencia buffer
   const notificationBufferRef = useRef<Map<string, { type: string; data: any; count: number }>>(new Map());
   const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [inAppNotifs, setInAppNotifs] = useState<any[]>([]);
+  const [inAppNotifs, setInAppNotifs] = useState<(NotifEntry & { ts: number })[]>([]);
   const [notifFilterCat, setNotifFilterCat] = useState<string>('all');
   const [showNotifBanner, setShowNotifBanner] = useState(false);
 
@@ -2497,7 +2497,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Tarea creada');
         // Notification handled by the centralized detector in the useEffect above
       }
-      closeModal('task'); setEditingId(null); setForms((p: any) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [], taskTags: [], taskEstimatedHours: null }));
+      closeModal('task'); setEditingId(null); setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [], taskTags: [], taskEstimatedHours: null }));
     } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
     finally { setIsSavingTask(false); }
   };
@@ -2571,7 +2571,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       analyserRef.current = analyser;
       const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
       const recorder = new MediaRecorder(stream, { mimeType });
-      recorder.ondataavailable = (e: any) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       recorder.start(100);
       mediaRecRef.current = recorder;
       setIsRecording(true);
@@ -2799,7 +2799,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
   };
 
-  const openEditExpense = (e: any) => {
+  const openEditExpense = (e: Expense) => {
     setEditingId(e.id);
     setForms(p => ({
       ...p,
@@ -3054,7 +3054,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err) { console.error('[ArchiFlow] deleteDailyLog error:', err); showToast('Error al eliminar', 'error'); }
   };
 
-  const openEditLog = (log: any) => {
+  const openEditLog = (log: DailyLog) => {
     setSelectedLogId(log.id);
     setLogForm({
       date: log.data.date || '',
@@ -3087,22 +3087,22 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   // ===== INVENTORY ACTIONS =====
-  const getWarehouseStock = (product: any, warehouse: string) => {
+  const getWarehouseStock = (product: InvProduct, warehouse?: string) => {
     if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') {
-      return Number(product.data.warehouseStock[warehouse]) || 0;
+      return Number(product.data.warehouseStock[warehouse || '']) || 0;
     }
     // Backward compat: if no warehouseStock map, use single warehouse field
     return product.data.warehouse === warehouse ? (Number(product.data.stock) || 0) : 0;
   };
 
-  const getTotalStock = (product: any) => {
+  const getTotalStock = (product: InvProduct) => {
     if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') {
       return Object.values(product.data.warehouseStock).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
     }
     return Number(product.data.stock) || 0;
   };
 
-  const buildWarehouseStock = (product: any) => {
+  const buildWarehouseStock = (product: InvProduct) => {
     if (product.data.warehouseStock && typeof product.data.warehouseStock === 'object') {
       const ws = { ...product.data.warehouseStock };
       // Ensure all warehouses have entries
@@ -3138,7 +3138,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
 
-  const openEditInvProduct = (p: any) => {
+  const openEditInvProduct = (p: InvProduct) => {
     setEditingId(p.id);
     const ws = buildWarehouseStock(p);
     const f: Record<string, any> = { invProdName: p.data.name, invProdSku: p.data.sku || '', invProdCat: p.data.categoryId || '', invProdUnit: p.data.unit || 'Unidad', invProdPrice: String(p.data.price || ''), invProdMinStock: String(p.data.minStock || '5'), invProdDesc: p.data.description || '', invProdImage: p.data.imageData || '', invProdWarehouse: p.data.warehouse || 'Almacén Principal' };
@@ -3161,7 +3161,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
-  const openEditInvCategory = (c: any) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
+  const openEditInvCategory = (c: InvCategory) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   const saveInvMovement = async () => {
     const productId = forms.invMovProduct || '';
@@ -3267,7 +3267,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return days;
   };
 
-  const getTaskBar = (task: any, days: Date[]) => {
+  const getTaskBar = (task: Task, days: Date[]) => {
     if (!task.data.dueDate) return null;
     const tStart = task.data.dueDate ? new Date(task.data.startDate || task.data.dueDate) : new Date();
     const tEnd = new Date(task.data.dueDate);
@@ -3278,7 +3278,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return { left: leftPct, width: Math.min(widthPct, 100 - leftPct) };
   };
 
-  const buildGanttRows = (memberTasks: any[]) => {
+  const buildGanttRows = (memberTasks: Task[]) => {
     const rows: any[][] = [];
     memberTasks.forEach((t: any) => {
       if (!t.data.dueDate) return;
@@ -3295,7 +3295,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return rows;
   };
 
-  const findOverlaps = (memberTasks: any[]) => {
+  const findOverlaps = (memberTasks: Task[]) => {
     const overlapIds = new Set<string>();
     for (let i = 0; i < memberTasks.length; i++) {
       for (let j = i + 1; j < memberTasks.length; j++) {
@@ -3511,7 +3511,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch { showToast('Error al procesar', 'error'); }
   };
 
-  const openLightbox = (photo: any, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); };
+  const openLightbox = (photo: GalleryPhoto, idx: number) => { setLightboxPhoto(photo); setLightboxIndex(idx); };
   const closeLightbox = () => { setLightboxPhoto(null); setLightboxIndex(0); };
   const lightboxPrev = () => {
     const filtered = getFilteredGalleryPhotos();
@@ -3660,7 +3660,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   };
 
-  const openEditRFI = (r: any) => {
+  const openEditRFI = (r: RFI) => {
     setEditingId(r.id);
     setForms(f => ({ ...f, rfiSubject: r.data.subject, rfiQuestion: r.data.question, rfiResponse: r.data.response || '', rfiPriority: r.data.priority || 'Media', rfiAssignedTo: r.data.assignedTo || '', rfiDueDate: r.data.dueDate || '', rfiStatus: r.data.status || 'Abierto', rfiProject: r.data.projectId || '' }));
     openModal('rfi');
@@ -3674,7 +3674,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   };
 
-  const openEditSubmittal = (s: any) => {
+  const openEditSubmittal = (s: Submittal) => {
     setEditingId(s.id);
     setForms(f => ({ ...f, subTitle: s.data.title, subDescription: s.data.description || '', subSpecification: s.data.specification || '', subStatus: s.data.status || 'Borrador', subReviewer: s.data.reviewer || '', subDueDate: s.data.dueDate || '', subReviewNotes: s.data.reviewNotes || '', subProject: s.data.projectId || '' }));
     openModal('submittal');
@@ -3688,7 +3688,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   };
 
-  const openEditPunchItem = (p: any) => {
+  const openEditPunchItem = (p: PunchItem) => {
     setEditingId(p.id);
     setForms(f => ({ ...f, punchTitle: p.data.title, punchDescription: p.data.description || '', punchLocation: p.data.location || 'Otro', punchStatus: p.data.status || 'Pendiente', punchPriority: p.data.priority || 'Media', punchAssignedTo: p.data.assignedTo || '', punchDueDate: p.data.dueDate || '', punchProject: p.data.projectId || '' }));
     openModal('punchItem');

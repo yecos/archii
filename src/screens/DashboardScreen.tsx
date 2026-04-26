@@ -8,6 +8,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer, Plus } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
+import type { Task, Expense, Invoice, TimeEntry, RFI, Submittal, PunchItem, Meeting, Approval, TeamUser, NotifEntry, Project, Company, FirestoreTimestamp } from '@/lib/types';
+import { toDate } from '@/lib/types';
 
 const CHART_COLORS = ['#c8a96e', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6', '#ec4899'];
 
@@ -79,35 +81,35 @@ export default function DashboardScreen() {
   const todayOnly = new Date(new Date().toDateString());
 
   // ─── Computed data (filtered by date range) ───
-  const rangeTasks = useMemo(() => tasks.filter((t: any) => inRange(t.data.dueDate) || (t.data.status === 'Completado' && inRange(t.data.updatedAt?.toDate?.().toISOString().split('T')[0])) || (t.data.createdAt && inRange(t.data.createdAt?.toDate?.().toISOString().split('T')[0]))), [tasks, startDate, endDate]);
-  const rangeExpenses = useMemo(() => expenses.filter((e: any) => inRange(e.data.date)), [expenses, startDate, endDate]);
-  const rangeInvoices = useMemo(() => invoices.filter((inv: any) => inRange(inv.data.issueDate)), [invoices, startDate, endDate]);
-  const rangeTimeEntries = useMemo(() => timeEntries.filter((te: any) => inRange(te.data.date)), [timeEntries, startDate, endDate]);
-  const totalExpenses = useMemo(() => rangeExpenses.reduce((s: number, e: any) => s + (Number(e.data.amount) || 0), 0), [rangeExpenses]);
-  const totalInvoiced = useMemo(() => rangeInvoices.reduce((s: number, inv: any) => s + (Number(inv.data.total) || 0), 0), [rangeInvoices]);
-  const totalPaid = useMemo(() => rangeInvoices.filter((i: any) => i.data.status === 'Pagada').reduce((s: number, i: any) => s + (Number(i.data.total) || 0), 0), [rangeInvoices]);
-  const overdueCount = overdueTasks.filter((t: any) => inRange(t.data.dueDate)).length;
+  const rangeTasks = useMemo(() => tasks.filter((t: Task) => inRange(t.data.dueDate) || (t.data.status === 'Completado' && t.data.updatedAt && inRange(toDate(t.data.updatedAt).toISOString().split('T')[0])) || (t.data.createdAt && inRange(toDate(t.data.createdAt).toISOString().split('T')[0]))), [tasks, startDate, endDate]);
+  const rangeExpenses = useMemo(() => expenses.filter((e: Expense) => inRange(e.data.date)), [expenses, startDate, endDate]);
+  const rangeInvoices = useMemo(() => invoices.filter((inv: Invoice) => inRange(inv.data.issueDate)), [invoices, startDate, endDate]);
+  const rangeTimeEntries = useMemo(() => timeEntries.filter((te: TimeEntry) => inRange(te.data.date)), [timeEntries, startDate, endDate]);
+  const totalExpenses = useMemo(() => rangeExpenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [rangeExpenses]);
+  const totalInvoiced = useMemo(() => rangeInvoices.reduce((s: number, inv: Invoice) => s + (Number(inv.data.total) || 0), 0), [rangeInvoices]);
+  const totalPaid = useMemo(() => rangeInvoices.filter((i: Invoice) => i.data.status === 'Pagada').reduce((s: number, i: Invoice) => s + (Number(i.data.total) || 0), 0), [rangeInvoices]);
+  const overdueCount = overdueTasks.filter((t: Task) => inRange(t.data.dueDate)).length;
 
   // Quick access metrics
-  const openRFIs = useMemo(() => rfis.filter((r: any) => (r.data.status === 'Abierto' || r.data.status === 'En revisión') && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
-  const pendingSubmittals = useMemo(() => submittals.filter((s: any) => s.data.status === 'En revisión' && inRange(s.data.createdAt?.toDate?.().toISOString().split('T')[0])).length, [submittals, startDate, endDate]);
-  const openPunchItems = useMemo(() => punchItems.filter((p: any) => p.data.status === 'Pendiente' && inRange(p.data.createdAt?.toDate?.().toISOString().split('T')[0])).length, [punchItems, startDate, endDate]);
-  const overdueRFIs = useMemo(() => rfis.filter((r: any) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date() && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
-  const execProjects = useMemo(() => projects.filter((p: any) => p.data.status === 'Ejecucion').length, [projects]);
+  const openRFIs = useMemo(() => rfis.filter((r: RFI) => (r.data.status === 'Abierto' || r.data.status === 'En revisión') && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
+  const pendingSubmittals = useMemo(() => submittals.filter((s: Submittal) => s.data.status === 'En revisión' && s.data.createdAt && inRange(toDate(s.data.createdAt).toISOString().split('T')[0])).length, [submittals, startDate, endDate]);
+  const openPunchItems = useMemo(() => punchItems.filter((p: PunchItem) => p.data.status === 'Pendiente' && p.data.createdAt && inRange(toDate(p.data.createdAt).toISOString().split('T')[0])).length, [punchItems, startDate, endDate]);
+  const overdueRFIs = useMemo(() => rfis.filter((r: RFI) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && new Date(r.data.dueDate) < new Date() && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
+  const execProjects = useMemo(() => projects.filter((p: Project) => p.data.status === 'Ejecucion').length, [projects]);
 
   // Today's meetings
-  const todayMeetings = useMemo(() => meetings.filter((m: any) => m.data.date === todayStr).sort((a: any, b: any) => (a.data.time || '').localeCompare(b.data.time || '')), [meetings, todayStr]);
+  const todayMeetings = useMemo(() => meetings.filter((m: Meeting) => m.data.date === todayStr).sort((a: Meeting, b: Meeting) => (a.data.time || '').localeCompare(b.data.time || '')), [meetings, todayStr]);
 
   // Tasks due today (not completed)
-  const todayDueTasks = useMemo(() => tasks.filter((t: any) => t.data.dueDate === todayStr && t.data.status !== 'Completado'), [tasks, todayStr]);
+  const todayDueTasks = useMemo(() => tasks.filter((t: Task) => t.data.dueDate === todayStr && t.data.status !== 'Completado'), [tasks, todayStr]);
 
   // Range-filtered KPI counts
-  const rangeCompletedTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'Completado').length, [rangeTasks]);
-  const rangeActiveTasks = useMemo(() => rangeTasks.filter((t: any) => t.data.status === 'En progreso' || t.data.status === 'Revision').length, [rangeTasks]);
-  const rangeTotalTime = useMemo(() => rangeTimeEntries.reduce((s: number, te: any) => s + (te.data.duration || 0), 0), [rangeTimeEntries]);
+  const rangeCompletedTasks = useMemo(() => rangeTasks.filter((t: Task) => t.data.status === 'Completado').length, [rangeTasks]);
+  const rangeActiveTasks = useMemo(() => rangeTasks.filter((t: Task) => t.data.status === 'En progreso' || t.data.status === 'Revision').length, [rangeTasks]);
+  const rangeTotalTime = useMemo(() => rangeTimeEntries.reduce((s: number, te: TimeEntry) => s + (te.data.duration || 0), 0), [rangeTimeEntries]);
 
   // Pending approvals
-  const pendingApprovals = useMemo(() => approvals.filter((a: any) => a.data.status === 'Pendiente').length, [approvals]);
+  const pendingApprovals = useMemo(() => approvals.filter((a: Approval) => a.data.status === 'Pendiente').length, [approvals]);
 
   // Time formatting helper
   const fmtHours = (mins: number) => {
@@ -117,16 +119,16 @@ export default function DashboardScreen() {
   };
 
   // Overdue invoices count
-  const overdueInvoices = useMemo(() => invoices.filter((inv: any) => {
+  const overdueInvoices = useMemo(() => invoices.filter((inv: Invoice) => {
     if (inv.data.status !== 'Enviada' || !inv.data.dueDate) return false;
     return new Date(inv.data.dueDate) < new Date();
   }).length, [invoices]);
 
   // Total budget across all projects
-  const totalBudget = useMemo(() => projects.reduce((s: number, p: any) => s + (p.data.budget || 0), 0), [projects]);
+  const totalBudget = useMemo(() => projects.reduce((s: number, p: Project) => s + (p.data.budget || 0), 0), [projects]);
 
   // Tasks due this week (within 7 days, not completed, not overdue)
-  const weekTasks = useMemo(() => tasks.filter((t: any) => {
+  const weekTasks = useMemo(() => tasks.filter((t: Task) => {
     if (!t.data.dueDate || t.data.status === 'Completado') return false;
     const diff = Math.ceil((new Date(t.data.dueDate).getTime() - today.getTime()) / 86400000);
     return diff >= 0 && diff <= 7;
@@ -139,9 +141,9 @@ export default function DashboardScreen() {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(); d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const monthInvoiced = invoices.filter((inv: any) => inv.data.issueDate && inv.data.status !== 'Cancelada' && inv.data.issueDate.startsWith(key)).reduce((s, inv) => s + (inv.data.total || 0), 0);
-      const monthPaid = invoices.filter((inv: any) => inv.data.paidDate).reduce((s, inv: any) => {
-        try { const pd = inv.data.paidDate?.toDate ? inv.data.paidDate.toDate() : new Date(inv.data.paidDate); return `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}` === key ? s + (inv.data.total || 0) : s; } catch { return s; }
+      const monthInvoiced = invoices.filter((inv: Invoice) => inv.data.issueDate && inv.data.status !== 'Cancelada' && inv.data.issueDate.startsWith(key)).reduce((s, inv) => s + (inv.data.total || 0), 0);
+      const monthPaid = invoices.filter((inv: Invoice) => inv.data.paidDate).reduce((s, inv: Invoice) => {
+        try { const pd = toDate(inv.data.paidDate); return `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}` === key ? s + (inv.data.total || 0) : s; } catch { return s; }
       }, 0);
       data.push({ name: monthNames[d.getMonth()], facturado: monthInvoiced, cobrado: monthPaid });
     }
@@ -152,7 +154,7 @@ export default function DashboardScreen() {
   const teamWorkload = useMemo(() => {
     const byUser: Record<string, { total: number; active: number; done: number }> = {};
     teamUsers.forEach(u => { byUser[u.id] = { total: 0, active: 0, done: 0 }; });
-    rangeTasks.forEach((t: any) => {
+    rangeTasks.forEach((t: Task) => {
       if (t.data.assigneeId && byUser[t.data.assigneeId]) {
         byUser[t.data.assigneeId].total++;
         if (t.data.status === 'En progreso' || t.data.status === 'Revision') byUser[t.data.assigneeId].active++;
@@ -160,7 +162,7 @@ export default function DashboardScreen() {
       }
     });
     return Object.entries(byUser).filter(([_, v]) => v.total > 0).sort((a, b) => b[1].active - a[1].active).slice(0, 8).map(([uid, data]) => {
-      const user = teamUsers.find((u: any) => u.id === uid);
+      const user = teamUsers.find((u: TeamUser) => u.id === uid);
       return { name: (user?.data.name || 'Sin nombre').split(' ')[0], activas: data.active, completadas: data.done, pendientes: data.total - data.active - data.done };
     });
   }, [rangeTasks, teamUsers]);
@@ -168,39 +170,39 @@ export default function DashboardScreen() {
   // Task status distribution (for donut, filtered by range)
   const taskStatusData = useMemo(() => {
     const statuses: Record<string, number> = {};
-    rangeTasks.forEach((t: any) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
+    rangeTasks.forEach((t: Task) => { statuses[t.data.status] = (statuses[t.data.status] || 0) + 1; });
     return Object.entries(statuses).map(([name, value]) => ({ name, value }));
   }, [rangeTasks]);
 
   // Recent activity
   const recentActivity = useMemo(() => {
-    const items: { id: string; type: string; title: string; subtitle: string; time: any; icon: string; color: string }[] = [];
-    tasks.filter((t: any) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 4).forEach((t: any) => {
-      const proj = projects.find((p: any) => p.id === t.data.projectId);
+    const items: { id: string; type: string; title: string; subtitle: string; time: FirestoreTimestamp | undefined; icon: string; color: string }[] = [];
+    tasks.filter((t: Task) => t.data.status === 'Completado' && t.data.updatedAt).slice(0, 4).forEach((t: Task) => {
+      const proj = projects.find((p: Project) => p.id === t.data.projectId);
       items.push({ id: t.id, type: 'task', title: t.data.title, subtitle: `Completada · ${proj?.data?.name || ''}`, time: t.data.updatedAt, icon: '✓', color: 'bg-emerald-500' });
     });
-    rfis.filter((r: any) => r.data.status !== 'Cerrado').slice(0, 3).forEach((r: any) => {
-      const proj = projects.find((p: any) => p.id === r.data.projectId);
+    rfis.filter((r: RFI) => r.data.status !== 'Cerrado').slice(0, 3).forEach((r: RFI) => {
+      const proj = projects.find((p: Project) => p.id === r.data.projectId);
       items.push({ id: r.id, type: 'rfi', title: r.data.subject || r.data.number, subtitle: `RFI ${r.data.status} · ${proj?.data?.name || ''}`, time: r.data.createdAt, icon: '?', color: 'bg-blue-500' });
     });
-    submittals.filter((s: any) => s.data.status === 'En revisión').slice(0, 2).forEach((s: any) => {
-      const proj = projects.find((p: any) => p.id === s.data.projectId);
+    submittals.filter((s: Submittal) => s.data.status === 'En revisión').slice(0, 2).forEach((s: Submittal) => {
+      const proj = projects.find((p: Project) => p.id === s.data.projectId);
       items.push({ id: s.id, type: 'submittal', title: s.data.title || s.data.number, subtitle: `Submittal en revisión · ${proj?.data?.name || ''}`, time: s.data.createdAt, icon: '📋', color: 'bg-purple-500' });
     });
-    punchItems.filter((p: any) => p.data.status !== 'Completado').slice(0, 2).forEach((p: any) => {
+    punchItems.filter((p: PunchItem) => p.data.status !== 'Completado').slice(0, 2).forEach((p: PunchItem) => {
       items.push({ id: p.id, type: 'punch', title: p.data.title, subtitle: `Punch ${p.data.status} · ${p.data.location || ''}`, time: p.data.createdAt, icon: '✅', color: 'bg-teal-500' });
     });
     items.sort((a, b) => {
-      const ta = a.time?.toDate?.() || new Date(a.time) || new Date(0);
-      const tb = b.time?.toDate?.() || new Date(b.time) || new Date(0);
+      const ta = a.time ? toDate(a.time) : new Date(0);
+      const tb = b.time ? toDate(b.time) : new Date(0);
       return tb.getTime() - ta.getTime();
     });
     return items.slice(0, 8);
   }, [tasks, projects, rfis, submittals, punchItems]);
 
   // Unread notifications (most recent first)
-  const unreadNotifs = useMemo(() => notifHistory.filter((n: any) => !n.read).slice(0, 5), [notifHistory]);
-  const readNotifs = useMemo(() => notifHistory.filter((n: any) => n.read).slice(0, 3), [notifHistory]);
+  const unreadNotifs = useMemo(() => notifHistory.filter((n: NotifEntry) => !n.read).slice(0, 5), [notifHistory]);
+  const readNotifs = useMemo(() => notifHistory.filter((n: NotifEntry) => n.read).slice(0, 3), [notifHistory]);
 
   // Greeting based on time of day
   const greeting = useMemo(() => {
@@ -344,7 +346,7 @@ export default function DashboardScreen() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-3">
         {[
           { val: projects.length, lbl: 'Proyectos', icon: <FolderKanban size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${execProjects} en ejecución`, click: 'projects' },
-          { val: rangeTasks.filter((t: any) => t.data.status !== 'Completado').length, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${rangeActiveTasks} activas`, click: 'tasks' },
+          { val: rangeTasks.filter((t: Task) => t.data.status !== 'Completado').length, lbl: 'Pendientes', icon: <Clock size={15} />, bg: 'bg-orange-500/10', iconC: 'text-orange-400', sub: `${rangeActiveTasks} activas`, click: 'tasks' },
           { val: overdueCount, lbl: 'Vencidas', icon: <AlertTriangle size={15} />, bg: overdueCount > 0 ? 'bg-red-500/10' : 'bg-[var(--af-bg4)]', iconC: overdueCount > 0 ? 'text-red-400' : 'text-emerald-400', sub: overdueCount > 0 ? 'Requieren atención' : 'Sin vencidas', click: 'tasks', alert: overdueCount > 0 },
           { val: todayMeetings.length, lbl: 'Reuniones hoy', icon: <CalendarDays size={15} />, bg: 'bg-purple-500/10', iconC: 'text-purple-400', sub: weekTasks.length > 0 ? `${weekTasks.length} tareas esta semana` : '', click: 'calendar' },
           { val: openRFIs + pendingSubmittals, lbl: 'RFIs + Subs', icon: <CircleHelp size={15} />, bg: 'bg-blue-500/10', iconC: 'text-blue-400', sub: `${openRFIs} RFIs · ${pendingSubmittals} subs`, click: 'rfis', alert: overdueRFIs > 0 },
@@ -414,8 +416,8 @@ export default function DashboardScreen() {
                     <AlertTriangle size={10} /> {overdueCount} vencida{overdueCount !== 1 ? 's' : ''}
                   </div>
                   <div className="space-y-1">
-                    {overdueTasks.slice(0, 4).map((t: any) => {
-                      const proj = projects.find((p: any) => p.id === t.data.projectId);
+                    {overdueTasks.slice(0, 4).map((t: Task) => {
+                      const proj = projects.find((p: Project) => p.id === t.data.projectId);
                       const daysOver = Math.floor((todayOnly.getTime() - new Date(t.data.dueDate).getTime()) / 86400000);
                       return (
                         <div key={t.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-red-500/5 border border-red-500/15 cursor-pointer hover:bg-red-500/10 transition-colors" onClick={() => navigateTo('tasks')}>
@@ -440,8 +442,8 @@ export default function DashboardScreen() {
                     <CalendarDays size={10} /> {todayMeetings.length} reunión{todayMeetings.length !== 1 ? 'es' : ''}
                   </div>
                   <div className="space-y-1">
-                    {todayMeetings.map((m: any) => {
-                      const proj = projects.find((p: any) => p.id === m.data.projectId);
+                    {todayMeetings.map((m: Meeting) => {
+                      const proj = projects.find((p: Project) => p.id === m.data.projectId);
                       return (
                         <div key={m.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-purple-500/5 border border-purple-500/15 cursor-pointer hover:bg-purple-500/10 transition-colors" onClick={() => navigateTo('calendar')}>
                           <div className="w-6 h-6 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 text-[10px] font-bold">{m.data.time ? m.data.time.split(':')[0] : '📅'}</div>
@@ -466,8 +468,8 @@ export default function DashboardScreen() {
                     <Timer size={10} /> {todayDueTasks.length} vence{todayDueTasks.length !== 1 ? 'n' : ''} hoy
                   </div>
                   <div className="space-y-1">
-                    {todayDueTasks.map((t: any) => {
-                      const proj = projects.find((p: any) => p.id === t.data.projectId);
+                    {todayDueTasks.map((t: Task) => {
+                      const proj = projects.find((p: Project) => p.id === t.data.projectId);
                       return (
                         <div key={t.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-amber-500/5 border border-amber-500/15 cursor-pointer hover:bg-amber-500/10 transition-colors" onClick={() => navigateTo('tasks')}>
                           <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 text-[10px]">📝</div>
@@ -503,9 +505,9 @@ export default function DashboardScreen() {
               <div className="text-center py-8 text-[var(--af-text3)] text-sm">Crea tu primer proyecto</div>
             ) : (
               <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
-                {projs.map((p: any) => {
+                {projs.map((p: Project) => {
                   const d = p.data, prog = d.progress || 0;
-                  const compName = companies.find((c: any) => c.id === d.companyId)?.data?.name;
+                  const compName = companies.find((c: Company) => c.id === d.companyId)?.data?.name;
                   return (
                     <div key={p.id} className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-3 cursor-pointer transition-all hover:border-[var(--input)] hover:-translate-y-0.5" onClick={() => openProject(p.id)}>
                       <div className="flex justify-between items-start mb-1.5">
@@ -565,7 +567,7 @@ export default function DashboardScreen() {
           {/* Task distribution legend */}
           {taskStatusData.length > 0 && (
             <div className="flex flex-wrap gap-x-2.5 gap-y-1 mt-3 pt-3 border-t border-[var(--border)] justify-center">
-              {taskStatusData.map((d: any, i: number) => (
+              {taskStatusData.map((d: { name: string; value: number }, i: number) => (
                 <div key={i} className="flex items-center gap-1 text-[9px]">
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                   <span className="text-[var(--muted-foreground)]">{d.name}</span>
@@ -763,7 +765,7 @@ export default function DashboardScreen() {
               <div className="text-center py-8 text-[var(--af-text3)] text-sm">Sin notificaciones</div>
             ) : (
               <>
-                {unreadNotifs.map((n: any) => (
+                {unreadNotifs.map((n: NotifEntry) => (
                   <div key={n.id} className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--af-accent)]/5 border border-[var(--af-accent)]/10 cursor-pointer hover:bg-[var(--af-accent)]/8 transition-colors">
                     <span className="text-[13px] mt-0.5 flex-shrink-0">{n.icon || '🔔'}</span>
                     <div className="flex-1 min-w-0">
@@ -773,7 +775,7 @@ export default function DashboardScreen() {
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--af-accent)] mt-2 flex-shrink-0" />
                   </div>
                 ))}
-                {readNotifs.map((n: any) => (
+                {readNotifs.map((n: NotifEntry) => (
                   <div key={n.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors cursor-pointer">
                     <span className="text-[13px] mt-0.5 flex-shrink-0 opacity-60">{n.icon || '🔔'}</span>
                     <div className="flex-1 min-w-0">

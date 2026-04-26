@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send } from 'lucide-react';
-import { PROJECT_TYPE_COLORS, EXPENSE_CATS } from '@/lib/types';
+import { PROJECT_TYPE_COLORS, EXPENSE_CATS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
 
 
 
@@ -40,27 +40,27 @@ export default function ProjectDetailScreen() {
 
   // Computed values
   const today = new Date().toISOString().split('T')[0];
-  const pendingTasks = projectTasks.filter((t: any) => t.data.status !== 'Completado');
-  const overdueCount = pendingTasks.filter((t: any) => t.data.dueDate && t.data.dueDate < today).length;
+  const pendingTasks = projectTasks.filter((t: Task) => t.data.status !== 'Completado');
+  const overdueCount = pendingTasks.filter((t: Task) => t.data.dueDate && t.data.dueDate < today).length;
   const pendingCount = pendingTasks.length;
-  const projRFIs = rfis.filter((r: any) => r.data.projectId === selectedProjectId);
-  const projSubs = submittals.filter((s: any) => s.data.projectId === selectedProjectId);
-  const projPunch = punchItems.filter((p: any) => p.data.projectId === selectedProjectId);
-  const openRFIs = projRFIs.filter((r: any) => r.data.status === 'Abierto').length;
+  const projRFIs = rfis.filter((r: RFI) => r.data.projectId === selectedProjectId);
+  const projSubs = submittals.filter((s: Submittal) => s.data.projectId === selectedProjectId);
+  const projPunch = punchItems.filter((pi: PunchItem) => pi.data.projectId === selectedProjectId);
+  const openRFIs = projRFIs.filter((r: RFI) => r.data.status === 'Abierto').length;
   const budgetPct = projectBudget > 0 ? Math.min(100, Math.round((projectSpent / projectBudget) * 100)) : 0;
   const budgetExceeded = projectSpent > projectBudget && projectBudget > 0;
 
   // --- Computed progress from enabled phases ---
-  const enabledPhases = workPhases.filter((p: any) => p.data.enabled !== false);
+  const enabledPhases = workPhases.filter((p: WorkPhase) => p.data.enabled !== false);
   const getPhaseProgress = useCallback((phaseId: string) => {
-    const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phaseId);
+    const phaseTasks = projectTasks.filter((t: Task) => t.data.phaseId === phaseId);
     if (phaseTasks.length === 0) return null;
-    const completed = phaseTasks.filter((t: any) => t.data.status === 'Completado').length;
+    const completed = phaseTasks.filter((t: Task) => t.data.status === 'Completado').length;
     return Math.round((completed / phaseTasks.length) * 100);
   }, [projectTasks]);
   const computedProgress = enabledPhases.length > 0
     ? Math.round(
-        enabledPhases.map((p: any) => {
+        enabledPhases.map((p: WorkPhase) => {
           const fromTasks = getPhaseProgress(p.id);
           return fromTasks !== null ? fromTasks : (p.data.status === 'Completado' ? 100 : p.data.status === 'En progreso' ? 50 : 0);
         }).reduce((a: number, b: number) => a + b, 0) / enabledPhases.length
@@ -86,43 +86,43 @@ export default function ProjectDetailScreen() {
   const [editingProgress, setEditingProgress] = useState(false);
 
   // Computed: project comments
-  const projComments = (comments || []).filter((c: any) => c.data.projectId === selectedProjectId && !c.data.parentId);
-  const projReplies = (comments || []).filter((c: any) => c.data.projectId === selectedProjectId && c.data.parentId);
+  const projComments = (comments || []).filter((c: Comment) => c.data.projectId === selectedProjectId && !c.data.parentId);
+  const projReplies = (comments || []).filter((c: Comment) => c.data.projectId === selectedProjectId && c.data.parentId);
 
   // Computed: project time entries
-  const projTimeEntries = (timeEntries || []).filter((te: any) => te.data.projectId === selectedProjectId);
-  const totalProjectHours = projTimeEntries.reduce((acc: number, te: any) => acc + (te.data.duration || 0), 0) / 60;
-  const billableHours = projTimeEntries.filter((te: any) => te.data.billable).reduce((acc: number, te: any) => acc + (te.data.duration || 0), 0) / 60;
+  const projTimeEntries = (timeEntries || []).filter((te: TimeEntry) => te.data.projectId === selectedProjectId);
+  const totalProjectHours = projTimeEntries.reduce((acc: number, te: TimeEntry) => acc + (te.data.duration || 0), 0) / 60;
+  const billableHours = projTimeEntries.filter((te: TimeEntry) => te.data.billable).reduce((acc: number, te: TimeEntry) => acc + (te.data.duration || 0), 0) / 60;
 
   // Computed: expense categories breakdown
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    projectExpenses.forEach((e: any) => { map[e.data.category] = (map[e.data.category] || 0) + (e.data.amount || 0); });
+    projectExpenses.forEach((e: Expense) => { map[e.data.category] = (map[e.data.category] || 0) + (e.data.amount || 0); });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [projectExpenses]);
 
   // Computed: task status distribution
   const taskStatusDist = useMemo(() => {
     const map: Record<string, number> = {};
-    projectTasks.forEach((t: any) => { map[t.data.status] = (map[t.data.status] || 0) + 1; });
+    projectTasks.forEach((t: Task) => { map[t.data.status] = (map[t.data.status] || 0) + 1; });
     return map;
   }, [projectTasks]);
 
   // Gantt computed data
   const ganttData = useMemo(() => {
     if (enabledPhases.length === 0) return { phases: [], totalDays: 0, timelineStart: '' };
-    const withDates = enabledPhases.filter((p: any) => p.data.startDate && p.data.endDate);
-    if (withDates.length === 0) return { phases: enabledPhases.map((p: any) => ({ ...p, days: 0, offset: 0, tasks: [] })), totalDays: 1, timelineStart: '' };
-    const allStarts = withDates.map((p: any) => new Date(p.data.startDate).getTime());
-    const allEnds = withDates.map((p: any) => new Date(p.data.endDate).getTime());
+    const withDates = enabledPhases.filter((p: WorkPhase) => p.data.startDate && p.data.endDate);
+    if (withDates.length === 0) return { phases: enabledPhases.map((p: WorkPhase) => ({ ...p, days: 0, offset: 0, tasks: [] })), totalDays: 1, timelineStart: '' };
+    const allStarts = withDates.map((p: WorkPhase) => new Date(p.data.startDate).getTime());
+    const allEnds = withDates.map((p: WorkPhase) => new Date(p.data.endDate).getTime());
     const timelineStart = new Date(Math.min(...allStarts)).toISOString().split('T')[0];
     const timelineEnd = new Date(Math.max(...allEnds)).toISOString().split('T')[0];
     const totalDays = Math.max(1, calcGanttDays(timelineStart, timelineEnd));
-    const phases = withDates.map((p: any) => ({
+    const phases = withDates.map((p: WorkPhase) => ({
       ...p,
       days: calcGanttDays(p.data.startDate, p.data.endDate),
       offset: calcGanttOffset(p.data.startDate, timelineStart),
-      tasks: projectTasks.filter((t: any) => t.data.phaseId === p.id).sort((a: any, b: any) => {
+      tasks: projectTasks.filter((t: Task) => t.data.phaseId === p.id).sort((a: Task, b: Task) => {
         if (!a.data.dueDate) return 1; if (!b.data.dueDate) return -1;
         return new Date(a.data.dueDate).getTime() - new Date(b.data.dueDate).getTime();
       }),
@@ -138,7 +138,7 @@ export default function ProjectDetailScreen() {
     const mentions: string[] = [];
     while ((match = mentionRegex.exec(commentText)) !== null) {
       const mentionedName = match[1];
-      const mentionedUser = (teamUsers || []).find((u: any) => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
+      const mentionedUser = (teamUsers || []).find((u: TeamUser) => u.data.name.toLowerCase().includes(mentionedName.toLowerCase()));
       if (mentionedUser) mentions.push(mentionedUser.id);
     }
     getFirebase().firestore().collection('comments').add({
@@ -287,7 +287,7 @@ export default function ProjectDetailScreen() {
                   <div className="text-[13px] font-semibold mb-3">Fases del proyecto</div>
                   <div className="relative pl-5">
                     <div className="absolute left-[7px] top-1 bottom-1 w-px bg-[var(--input)]" />
-                    {enabledPhases.map((phase: any) => {
+                    {enabledPhases.map((phase: WorkPhase) => {
                       const isActive = phase.data.status === 'En progreso';
                       const isDone = phase.data.status === 'Completado';
                       return (
@@ -311,13 +311,13 @@ export default function ProjectDetailScreen() {
                   <div className="text-center py-4 text-[var(--af-text3)] text-sm">Sin tareas pendientes</div>
                 ) : (
                   <div className="space-y-2">
-                    {[...pendingTasks].sort((a: any, b: any) => {
+                    {[...pendingTasks].sort((a: Task, b: Task) => {
                       const aOverdue = a.data.dueDate && a.data.dueDate < today;
                       const bOverdue = b.data.dueDate && b.data.dueDate < today;
                       if (aOverdue && !bOverdue) return -1;
                       if (!aOverdue && bOverdue) return 1;
                       return 0;
-                    }).slice(0, 8).map((t: any) => (
+                    }).slice(0, 8).map((t: Task) => (
                       <div key={t.id} className="flex items-center gap-3 py-1.5">
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                         <div className="flex-1 text-sm truncate">{t.data.title}</div>
@@ -347,7 +347,7 @@ export default function ProjectDetailScreen() {
                 <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none" onClick={() => { setForms(p => ({ ...p, taskTitle: '', taskProject: selectedProjectId, taskDue: new Date().toISOString().split('T')[0], taskStatus: 'Por hacer' })); openModal('task'); }}>+ Nueva tarea</button>
               </div>
               {projectTasks.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">✅</div><div className="text-sm">Sin tareas en este proyecto</div></div> :
-              projectTasks.map((t: any) => (
+              projectTasks.map((t: Task) => (
                 <div key={t.id} className="flex items-start gap-3 py-3 border-b border-[var(--border)] last:border-0">
                   <div className={`w-2 h-2 rounded-full mt-1.5 ${t.data.priority === 'Alta' ? 'bg-red-500' : t.data.priority === 'Media' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <div className="w-4 h-4 rounded border border-[var(--input)] flex-shrink-0 mt-0.5 cursor-pointer flex items-center justify-center hover:border-[var(--af-accent)] ${t.data.status === 'Completado' ? 'bg-emerald-500 border-emerald-500' : ''}" onClick={() => toggleTask(t.id, t.data.status)}>{t.data.status === 'Completado' && <span className="text-white text-[10px] font-bold">✓</span>}</div>
@@ -378,7 +378,7 @@ export default function ProjectDetailScreen() {
 
             {/* 6. TAB: Calidad (with Calidad | Finanzas sub-tabs) */}
             {forms.detailTab === 'Calidad' && (() => {
-              const punchDone = projPunch.filter((p: any) => p.data.status === 'Completado').length;
+              const punchDone = projPunch.filter((pi: PunchItem) => pi.data.status === 'Completado').length;
               const punchPct = projPunch.length > 0 ? Math.round((punchDone / projPunch.length) * 100) : 0;
               return (<div>
                 {/* Sub-tab switcher */}
@@ -397,12 +397,12 @@ export default function ProjectDetailScreen() {
                     <div className="bg-blue-500/10 rounded-xl p-3 text-center">
                       <div className="text-lg font-bold text-blue-400">{projRFIs.length}</div>
                       <div className="text-[10px] text-blue-400/70">RFIs</div>
-                      <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: any) => r.data.status === 'Abierto').length} abiertos</div>
+                      <div className="text-[9px] text-[var(--muted-foreground)]">{projRFIs.filter((r: RFI) => r.data.status === 'Abierto').length} abiertos</div>
                     </div>
                     <div className="bg-purple-500/10 rounded-xl p-3 text-center">
                       <div className="text-lg font-bold text-purple-400">{projSubs.length}</div>
                       <div className="text-[10px] text-purple-400/70">Submittals</div>
-                      <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: any) => s.data.status === 'Aprobado').length} aprobados</div>
+                      <div className="text-[9px] text-[var(--muted-foreground)]">{projSubs.filter((s: Submittal) => s.data.status === 'Aprobado').length} aprobados</div>
                     </div>
                     <div className="bg-teal-500/10 rounded-xl p-3 text-center">
                       <div className="text-lg font-bold text-teal-400">{punchPct}%</div>
@@ -419,7 +419,7 @@ export default function ProjectDetailScreen() {
                     </div>
                     {projRFIs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin RFIs</div> : (
                       <div className="space-y-2">
-                        {projRFIs.slice(0, 5).map((r: any) => (
+                        {projRFIs.slice(0, 5).map((r: RFI) => (
                           <div key={r.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
                             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">{r.data.number}</span>
                             <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{r.data.subject}</div>
@@ -439,7 +439,7 @@ export default function ProjectDetailScreen() {
                     </div>
                     {projSubs.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin submittals</div> : (
                       <div className="space-y-2">
-                        {projSubs.slice(0, 5).map((s: any) => (
+                        {projSubs.slice(0, 5).map((s: Submittal) => (
                           <div key={s.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
                             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">{s.data.number}</span>
                             <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{s.data.title}</div>
@@ -463,11 +463,11 @@ export default function ProjectDetailScreen() {
                     <div className="text-[11px] text-[var(--muted-foreground)] mb-3 text-right">{punchPct}% completado ({punchDone}/{projPunch.length})</div>
                     {projPunch.length === 0 ? <div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin items de punch list</div> : (
                       <div className="space-y-2">
-                        {projPunch.slice(0, 5).map((p: any) => (
-                          <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${p.data.status === 'Completado' ? 'bg-emerald-500/15 text-emerald-400' : p.data.status === 'En progreso' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>{p.data.status}</span>
-                            <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{p.data.title}</div>
-                            <span className="text-[10px] text-[var(--af-text3)]">{p.data.location}</span>
+                        {projPunch.slice(0, 5).map((pi: PunchItem) => (
+                          <div key={pi.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${pi.data.status === 'Completado' ? 'bg-emerald-500/15 text-emerald-400' : pi.data.status === 'En progreso' ? 'bg-amber-500/15 text-amber-400' : 'bg-red-500/15 text-red-400'}`}>{pi.data.status}</span>
+                            <div className="flex-1 min-w-0 text-[13px] font-medium truncate">{pi.data.title}</div>
+                            <span className="text-[10px] text-[var(--af-text3)]">{pi.data.location}</span>
                           </div>
                         ))}
                         {projPunch.length > 5 && <div className="text-[11px] text-[var(--af-accent)] cursor-pointer text-center hover:underline">+{projPunch.length - 5} más...</div>}
@@ -488,7 +488,7 @@ export default function ProjectDetailScreen() {
                   </div>}
                   {projectExpenses.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">💰</div><div className="text-sm">Sin gastos registrados</div></div> :
                   <div className="space-y-2">
-                    {projectExpenses.map((e: any) => (
+                    {projectExpenses.map((e: Expense) => (
                       <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 bg-[var(--card)] border border-[var(--border)] rounded-lg">
                         <div className="flex-1 min-w-0"><div className="text-sm font-medium">{e.data.concept}</div><div className="text-[11px] text-[var(--af-text3)]">{e.data.category} · {e.data.date}{e.data.vendor ? ` · ${e.data.vendor}` : ''}</div></div>
                         <div className="text-sm font-semibold text-[var(--af-accent)]">{fmtCOP(e.data.amount)}</div>
@@ -579,7 +579,7 @@ export default function ProjectDetailScreen() {
                             {/* Breadcrumbs */}
                             <div className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)] min-w-0 flex-1 overflow-hidden">
                               <button onClick={() => { if (odProjectFolder) { setOdCurrentFolder(odProjectFolder); setOdBreadcrumbs([]); loadOneDriveFiles(odProjectFolder); } }} className="hover:text-[#00a4ef] truncate shrink-0 cursor-pointer bg-transparent border-none text-inherit">OneDrive</button>
-                              {odBreadcrumbs.map((crumb: any, i: any) => (
+                              {odBreadcrumbs.map((crumb: { id: string; name: string }, i: number) => (
                                 <React.Fragment key={crumb.id}>
                                   <span className="shrink-0">/</span>
                                   <button onClick={() => navigateToFolder(crumb.id, i)} className="hover:text-[#00a4ef] truncate max-w-[80px] sm:max-w-[120px] cursor-pointer bg-transparent border-none text-inherit">{crumb.name}</button>
@@ -666,7 +666,7 @@ export default function ProjectDetailScreen() {
                               /* Grid view */
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {oneDriveFiles.map((f: any) => (
-                                  <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any) => [...prev, { id: f.id, name: f.name }]); } }}>
+                                  <div key={f.id} className={`bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 hover:border-[#00a4ef]/30 transition-all group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any[]) => [...prev, { id: f.id, name: f.name }]); } }}>
                                     <div className="w-9 h-9 bg-[var(--af-bg4)] rounded-lg flex items-center justify-center text-base mb-2">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                                     <div className="text-[11px] font-medium truncate mb-0.5">
                                       {odRenaming === f.id ? (
@@ -705,7 +705,7 @@ export default function ProjectDetailScreen() {
                                   <div className="w-[60px] shrink-0"></div>
                                 </div>
                                 {oneDriveFiles.map((f: any) => (
-                                  <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any) => [...prev, { id: f.id, name: f.name }]); } }}>
+                                  <div key={f.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--af-bg3)] transition-colors group ${f.folder ? 'cursor-pointer' : ''}`} onClick={() => { if (f.folder) { navigateToFolder(f.id); setOdBreadcrumbs((prev: any[]) => [...prev, { id: f.id, name: f.name }]); } }}>
                                     <div className="w-7 h-7 bg-[var(--af-bg3)] rounded-md flex items-center justify-center text-sm flex-shrink-0">{getFileIcon(f.file?.mimeType || f.mimeType || '', f.name)}</div>
                                     <div className="flex-1 min-w-0">
                                       {odRenaming === f.id ? (
@@ -821,30 +821,30 @@ export default function ProjectDetailScreen() {
               {/* Helper: calculate phase progress from tasks */}
               {(() => {
                 const getPhaseProgress = (phaseId: string) => {
-                  const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phaseId);
+                  const phaseTasks = projectTasks.filter((t: Task) => t.data.phaseId === phaseId);
                   if (phaseTasks.length === 0) return null;
-                  const completed = phaseTasks.filter((t: any) => t.data.status === 'Completado').length;
+                  const completed = phaseTasks.filter((t: Task) => t.data.status === 'Completado').length;
                   return Math.round((completed / phaseTasks.length) * 100);
                 };
 
                 // Group phases by type
-                const enabledPhases = workPhases.filter((p: any) => p.data.enabled !== false);
-                const designPhases = enabledPhases.filter((p: any) => p.data.type === 'Diseño');
-                const executionPhases = enabledPhases.filter((p: any) => p.data.type === 'Ejecución');
-                const otherPhases = enabledPhases.filter((p: any) => !p.data.type || p.data.type === 'Otro');
+                const enabledPhases = workPhases.filter((p: WorkPhase) => p.data.enabled !== false);
+                const designPhases = enabledPhases.filter((p: WorkPhase) => p.data.type === 'Diseño');
+                const executionPhases = enabledPhases.filter((p: WorkPhase) => p.data.type === 'Ejecución');
+                const otherPhases = enabledPhases.filter((p: WorkPhase) => !p.data.type || p.data.type === 'Otro');
                 // Legacy phases without type — assign to Ejecución
-                const legacyPhases = enabledPhases.filter((p: any) => !p.data.type);
+                const legacyPhases = enabledPhases.filter((p: WorkPhase) => !p.data.type);
                 const effectiveExecPhases = [...executionPhases, ...legacyPhases];
                 const allPhases = [...designPhases, ...effectiveExecPhases];
 
                 // Overall progress from phases
-                const phasePcts = allPhases.map((p: any) => {
+                const phasePcts = allPhases.map((p: WorkPhase) => {
                   const manual = p.data.status === 'Completado' ? 100 : p.data.status === 'En progreso' ? 50 : 0;
                   const fromTasks = getPhaseProgress(p.id);
                   return fromTasks !== null ? fromTasks : manual;
                 });
                 const overallPct = phasePcts.length > 0 ? Math.round(phasePcts.reduce((a: number, b: number) => a + b, 0) / phasePcts.length) : 0;
-                const completedPhases = allPhases.filter((p: any) => p.data.status === 'Completado').length;
+                const completedPhases = allPhases.filter((p: WorkPhase) => p.data.status === 'Completado').length;
 
                 return (
                   <>
@@ -859,7 +859,7 @@ export default function ProjectDetailScreen() {
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
                         <span>{completedPhases} de {allPhases.length} fases completadas</span>
-                        <span>{allPhases.filter((p: any) => p.data.status === 'En progreso').length} en progreso</span>
+                        <span>{allPhases.filter((p: WorkPhase) => p.data.status === 'En progreso').length} en progreso</span>
                       </div>
                     </div>
 
@@ -878,15 +878,15 @@ export default function ProjectDetailScreen() {
                               <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-sm">📐</div>
                               <div className="flex-1">
                                 <div className="text-[13px] font-semibold text-violet-400">Diseño</div>
-                                <div className="text-[10px] text-[var(--muted-foreground)]">{designPhases.length} fases · {designPhases.filter((p: any) => p.data.status === 'Completado').length} completadas</div>
+                                <div className="text-[10px] text-[var(--muted-foreground)]">{designPhases.length} fases · {designPhases.filter((p: WorkPhase) => p.data.status === 'Completado').length} completadas</div>
                               </div>
                             </div>
                             <div className="relative pl-6 pr-4 py-3">
                               <div className="absolute left-[7px] top-3 bottom-3 w-px bg-[var(--input)]" />
-                              {designPhases.map((phase: any) => {
+                              {designPhases.map((phase: WorkPhase) => {
                                 const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
                                 const pct = getPhaseProgress(phase.id);
-                                const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phase.id);
+                                const phaseTasks = projectTasks.filter((t: Task) => t.data.phaseId === phase.id);
                                 const enabled = phase.data.enabled !== false;
                                 return (
                                   <div key={phase.id} className={`relative mb-4 last:mb-0 ${!enabled ? 'opacity-40' : ''}`}>
@@ -911,7 +911,7 @@ export default function ProjectDetailScreen() {
                                       {pct !== null && (
                                         <div className="mb-2">
                                           <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-                                            <span>{phaseTasks.filter((t: any) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
+                                            <span>{phaseTasks.filter((t: Task) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
                                             <span>{pct}%</span>
                                           </div>
                                           <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
@@ -922,14 +922,14 @@ export default function ProjectDetailScreen() {
                                       {/* Tasks preview */}
                                       {phaseTasks.length > 0 && (
                                         <div className="mt-2 space-y-1">
-                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 3).map((t: any) => (
+                                          {phaseTasks.filter((t: Task) => t.data.status !== 'Completado').slice(0, 3).map((t: Task) => (
                                             <div key={t.id} className="flex items-center gap-2 text-[11px] text-[var(--muted-foreground)]">
                                               <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-violet-400'}`} />
                                               {t.data.title}
                                             </div>
                                           ))}
-                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').length > 3 && (
-                                            <div className="text-[10px] text-violet-400">+{phaseTasks.filter((t: any) => t.data.status !== 'Completado').length - 3} más</div>
+                                          {phaseTasks.filter((t: Task) => t.data.status !== 'Completado').length > 3 && (
+                                            <div className="text-[10px] text-violet-400">+{phaseTasks.filter((t: Task) => t.data.status !== 'Completado').length - 3} más</div>
                                           )}
                                         </div>
                                       )}
@@ -963,15 +963,15 @@ export default function ProjectDetailScreen() {
                               <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-sm">🔨</div>
                               <div className="flex-1">
                                 <div className="text-[13px] font-semibold text-amber-400">Ejecución</div>
-                                <div className="text-[10px] text-[var(--muted-foreground)]">{effectiveExecPhases.length} fases · {effectiveExecPhases.filter((p: any) => p.data.status === 'Completado').length} completadas</div>
+                                <div className="text-[10px] text-[var(--muted-foreground)]">{effectiveExecPhases.length} fases · {effectiveExecPhases.filter((p: WorkPhase) => p.data.status === 'Completado').length} completadas</div>
                               </div>
                             </div>
                             <div className="relative pl-6 pr-4 py-3">
                               <div className="absolute left-[7px] top-3 bottom-3 w-px bg-[var(--input)]" />
-                              {effectiveExecPhases.map((phase: any) => {
+                              {effectiveExecPhases.map((phase: WorkPhase) => {
                                 const isActive = phase.data.status === 'En progreso', isDone = phase.data.status === 'Completado';
                                 const pct = getPhaseProgress(phase.id);
-                                const phaseTasks = projectTasks.filter((t: any) => t.data.phaseId === phase.id);
+                                const phaseTasks = projectTasks.filter((t: Task) => t.data.phaseId === phase.id);
                                 const enabled = phase.data.enabled !== false;
                                 return (
                                   <div key={phase.id} className={`relative mb-4 last:mb-0 ${!enabled ? 'opacity-40' : ''}`}>
@@ -995,7 +995,7 @@ export default function ProjectDetailScreen() {
                                       {pct !== null && (
                                         <div className="mb-2">
                                           <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-                                            <span>{phaseTasks.filter((t: any) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
+                                            <span>{phaseTasks.filter((t: Task) => t.data.status === 'Completado').length}/{phaseTasks.length} tareas</span>
                                             <span>{pct}%</span>
                                           </div>
                                           <div className="h-1.5 bg-[var(--af-bg4)] rounded-full overflow-hidden">
@@ -1005,14 +1005,14 @@ export default function ProjectDetailScreen() {
                                       )}
                                       {phaseTasks.length > 0 && (
                                         <div className="mt-2 space-y-1">
-                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').slice(0, 3).map((t: any) => (
+                                          {phaseTasks.filter((t: Task) => t.data.status !== 'Completado').slice(0, 3).map((t: Task) => (
                                             <div key={t.id} className="flex items-center gap-2 text-[11px] text-[var(--muted-foreground)]">
                                               <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                                               {t.data.title}
                                             </div>
                                           ))}
-                                          {phaseTasks.filter((t: any) => t.data.status !== 'Completado').length > 3 && (
-                                            <div className="text-[10px] text-amber-400">+{phaseTasks.filter((t: any) => t.data.status !== 'Completado').length - 3} más</div>
+                                          {phaseTasks.filter((t: Task) => t.data.status !== 'Completado').length > 3 && (
+                                            <div className="text-[10px] text-amber-400">+{phaseTasks.filter((t: Task) => t.data.status !== 'Completado').length - 3} más</div>
                                           )}
                                         </div>
                                       )}
@@ -1046,8 +1046,8 @@ export default function ProjectDetailScreen() {
                     ) : (
                       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 overflow-x-auto">
                         {(() => {
-                          const phasesWithDates = allPhases.filter((ph: any) => ph.data.startDate || ph.data.endDate);
-                          const allDates = allPhases.filter((ph: any) => ph.data.startDate).map((ph: any) => new Date(ph.data.startDate).getTime()).concat(allPhases.filter((ph: any) => ph.data.endDate).map((ph: any) => new Date(ph.data.endDate).getTime()));
+                          const phasesWithDates = allPhases.filter((ph: WorkPhase) => ph.data.startDate || ph.data.endDate);
+                          const allDates = allPhases.filter((ph: WorkPhase) => ph.data.startDate).map((ph: WorkPhase) => new Date(ph.data.startDate).getTime()).concat(allPhases.filter((ph: WorkPhase) => ph.data.endDate).map((ph: WorkPhase) => new Date(ph.data.endDate).getTime()));
                           const timelineStart = allDates.length > 0 ? new Date(Math.min(...allDates)) : new Date();
                           const timelineEnd = allDates.length > 0 ? new Date(Math.max(...allDates)) : new Date(timelineStart.getTime() + 30 * 86400000);
                           const totalDays = Math.max(1, Math.ceil((timelineEnd.getTime() - timelineStart.getTime()) / 86400000) + 7);
@@ -1058,7 +1058,7 @@ export default function ProjectDetailScreen() {
                           ) : (
                             <div>
                               {/* Group headers */}
-                              {designPhases.some((p: any) => p.data.startDate || p.data.endDate) && effectiveExecPhases.some((p: any) => p.data.startDate || p.data.endDate) && (
+                              {designPhases.some((p: WorkPhase) => p.data.startDate || p.data.endDate) && effectiveExecPhases.some((p: WorkPhase) => p.data.startDate || p.data.endDate) && (
                                 <div className="flex items-center gap-2 mb-3">
                                   <div className="w-[130px] flex items-center gap-1.5 text-[10px] font-semibold text-violet-400">
                                     <div className="w-2 h-2 rounded-full bg-violet-500" /> DISEÑO
@@ -1076,7 +1076,7 @@ export default function ProjectDetailScreen() {
                                   return <div key={i} className="flex-shrink-0 text-center" style={{ width: dayWidth }}>{d.getDate()}/{d.getMonth() + 1}</div>;
                                 })}
                               </div>
-                              {allPhases.map((phase: any, idx: any) => {
+                              {allPhases.map((phase: WorkPhase, idx: number) => {
                                 const days = calcGanttDays(phase.data.startDate, phase.data.endDate);
                                 const offset = calcGanttOffset(phase.data.startDate, timelineStart.toISOString());
                                 const isDesign = phase.data.type === 'Diseño';
@@ -1205,7 +1205,7 @@ export default function ProjectDetailScreen() {
 
                 {/* Bitácora: Detail view */}
                 {dailyLogTab === 'detail' && selectedLogId && (() => {
-                  const log = dailyLogs.find((l: any) => l.id === selectedLogId);
+                  const log = dailyLogs.find((l: DailyLog) => l.id === selectedLogId);
                   if (!log) return <div className="text-center py-8 text-[var(--af-text3)]">Registro no encontrado</div>;
                   const d = log.data;
                   return (
@@ -1448,21 +1448,21 @@ export default function ProjectDetailScreen() {
                   <div className="relative" style={{ minWidth: Math.max(600, ganttData.totalDays * 8) + 'px' }}>
                     {(() => { const months: string[] = []; if (ganttData.timelineStart) { const s = new Date(ganttData.timelineStart); for (let i = 0; i < ganttData.totalDays; i += 30) { const d = new Date(s); d.setDate(d.getDate() + i); months.push(d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' })); } } return months.length > 0 && <div className="flex mb-2 ml-[200px] border-b border-[var(--border)] pb-1">{months.map((m: string, i: number) => <div key={i} className="text-[9px] text-[var(--muted-foreground)] shrink-0" style={{ width: (30 / ganttData.totalDays * 100) + '%' }}>{m}</div>)}</div>; })()}
                     {(() => { if (!ganttData.timelineStart) return null; const off = calcGanttOffset(today, ganttData.timelineStart); if (off < 0 || off > ganttData.totalDays) return null; const tw = Math.max(600, ganttData.totalDays * 8); return <div className="absolute top-0 bottom-0 z-10 pointer-events-none" style={{ left: (200 + (off / ganttData.totalDays) * tw) + 'px' }}><div className="w-px h-full bg-red-500/40" /><div className="text-[8px] text-red-400 font-medium -ml-[14px] mt-1">Hoy</div></div>; })()}
-                    {ganttData.phases.map((phase: any) => { const pp = getPhaseProgress(phase.id) ?? (phase.data.status === 'Completado' ? 100 : phase.data.status === 'En progreso' ? 50 : 0); const bw = (phase.days / ganttData.totalDays) * 100; const bl = (phase.offset / ganttData.totalDays) * 100; const bc = phase.data.status === 'Completado' ? 'bg-emerald-500' : phase.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-violet-500/40'; return (<div key={phase.id} className="flex items-center mb-2"><div className="w-[200px] shrink-0 pr-3 text-right"><div className="text-[11px] font-medium truncate">{phase.data.name}</div><div className="text-[9px] text-[var(--muted-foreground)]">{phase.data.startDate} — {phase.data.endDate}</div></div><div className="flex-1 relative h-6 bg-[var(--af-bg3)] rounded-sm overflow-hidden"><div className={"absolute top-0 left-0 h-full rounded-sm opacity-80 " + bc} style={{ width: bw + '%', left: bl + '%' }} /><div className={"absolute top-0 left-0 h-full bg-white/20 rounded-sm"} style={{ width: (bw * pp / 100) + '%', left: bl + '%' }} /><div className="absolute inset-0 flex items-center justify-center"><span className="text-[8px] font-bold text-white drop-shadow">{pp}%</span></div></div></div>); })}
+                    {ganttData.phases.map((phase: WorkPhase & { days: number; offset: number; tasks: Task[] }) => { const pp = getPhaseProgress(phase.id) ?? (phase.data.status === 'Completado' ? 100 : phase.data.status === 'En progreso' ? 50 : 0); const bw = (phase.days / ganttData.totalDays) * 100; const bl = (phase.offset / ganttData.totalDays) * 100; const bc = phase.data.status === 'Completado' ? 'bg-emerald-500' : phase.data.status === 'En progreso' ? 'bg-[var(--af-accent)]' : 'bg-violet-500/40'; return (<div key={phase.id} className="flex items-center mb-2"><div className="w-[200px] shrink-0 pr-3 text-right"><div className="text-[11px] font-medium truncate">{phase.data.name}</div><div className="text-[9px] text-[var(--muted-foreground)]">{phase.data.startDate} — {phase.data.endDate}</div></div><div className="flex-1 relative h-6 bg-[var(--af-bg3)] rounded-sm overflow-hidden"><div className={"absolute top-0 left-0 h-full rounded-sm opacity-80 " + bc} style={{ width: bw + '%', left: bl + '%' }} /><div className={"absolute top-0 left-0 h-full bg-white/20 rounded-sm"} style={{ width: (bw * pp / 100) + '%', left: bl + '%' }} /><div className="absolute inset-0 flex items-center justify-center"><span className="text-[8px] font-bold text-white drop-shadow">{pp}%</span></div></div></div>); })}
                   </div>
                 </div>
               )}
               {ganttData.phases.length > 0 && (
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-4"><div className="text-[13px] font-semibold">Tareas por fase</div>{ganttData.phases.map((phase: any) => phase.tasks.length > 0 && (<div key={phase.id}><div className="text-[11px] font-medium text-[var(--muted-foreground)] mb-1.5 flex items-center gap-1"><Layers size={10} /> {phase.data.name} ({phase.tasks.length})</div>{phase.tasks.slice(0, 5).map((t: any) => (<div key={t.id} className="flex items-center gap-2 py-1 ml-3"><div className={"w-1.5 h-1.5 rounded-full " + (t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]')} /><span className={"text-[11px] flex-1 truncate " + (t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : '')}>{t.data.title}</span>{t.data.dueDate && <span className="text-[9px] text-[var(--af-text3)]">{fmtDate(t.data.dueDate)}</span>}</div>))}{phase.tasks.length > 5 && <div className="text-[10px] text-[var(--af-accent)] ml-3">+{phase.tasks.length - 5} mas...</div>}</div>))}</div>
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-4"><div className="text-[13px] font-semibold">Tareas por fase</div>{ganttData.phases.map((phase: WorkPhase & { days: number; offset: number; tasks: Task[] }) => phase.tasks.length > 0 && (<div key={phase.id}><div className="text-[11px] font-medium text-[var(--muted-foreground)] mb-1.5 flex items-center gap-1"><Layers size={10} /> {phase.data.name} ({phase.tasks.length})</div>{phase.tasks.slice(0, 5).map((t: Task) => (<div key={t.id} className="flex items-center gap-2 py-1 ml-3"><div className={"w-1.5 h-1.5 rounded-full " + (t.data.status === 'Completado' ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]')} /><span className={"text-[11px] flex-1 truncate " + (t.data.status === 'Completado' ? 'line-through text-[var(--af-text3)]' : '')}>{t.data.title}</span>{t.data.dueDate && <span className="text-[9px] text-[var(--af-text3)]">{fmtDate(t.data.dueDate)}</span>}</div>))}{phase.tasks.length > 5 && <div className="text-[10px] text-[var(--af-accent)] ml-3">+{phase.tasks.length - 5} mas...</div>}</div>))}</div>
               )}
             </div>)}
 
             {/* 10. TAB: Comentarios */}
             {forms.detailTab === 'Comentarios' && (<div className="space-y-4">
               <div className="flex items-center gap-3"><div className="bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-2 flex items-center gap-2"><MessageSquare size={14} className="text-[var(--af-accent)]" /><span className="text-sm font-bold">{projComments.length}</span><span className="text-[11px] text-[var(--muted-foreground)]">comentarios</span></div></div>
-              {replyingTo && (<div className="bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/20 rounded-lg px-3 py-2 flex items-center justify-between"><span className="text-[11px] text-[var(--af-accent)]">Respondiendo a {(comments || []).find((c: any) => c.id === replyingTo)?.data?.userName || '...'}</span><button className="text-[10px] text-red-400 cursor-pointer hover:underline" onClick={() => setReplyingTo(null)}>Cancelar</button></div>)}
+              {replyingTo && (<div className="bg-[var(--af-accent)]/10 border border-[var(--af-accent)]/20 rounded-lg px-3 py-2 flex items-center justify-between"><span className="text-[11px] text-[var(--af-accent)]">Respondiendo a {(comments || []).find((c: Comment) => c.id === replyingTo)?.data?.userName || '...'}</span><button className="text-[10px] text-red-400 cursor-pointer hover:underline" onClick={() => setReplyingTo(null)}>Cancelar</button></div>)}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3"><textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] resize-none" rows={3} placeholder="Escribe un comentario... Usa @ para mencionar" value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleProjectComment(); }} /><div className="flex justify-end mt-2"><button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 disabled:opacity-40" disabled={!commentText.trim()} onClick={handleProjectComment}><Send size={12} /> Enviar</button></div></div>
-              {projComments.length === 0 ? (<div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">💬</div><div className="text-sm font-medium">Sin comentarios</div><div className="text-xs mt-1">Inicia la conversacion sobre este proyecto</div></div>) : (<div className="space-y-3">{projComments.map((c: any) => { const replies = (projReplies || []).filter((r: any) => r.data.parentId === c.id); return (<div key={c.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3"><div className="flex items-start gap-2.5"><div className="w-7 h-7 rounded-full bg-[var(--af-bg4)] flex items-center justify-center text-[11px] font-bold text-[var(--af-accent)] shrink-0 overflow-hidden">{c.data.userPhoto ? <img src={c.data.userPhoto} className="w-full h-full object-cover rounded-full" /> : (c.data.userName || '?')[0].toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="text-[12px] font-semibold">{c.data.userName || 'Usuario'}</span>{c.data.createdAt && <span className="text-[9px] text-[var(--muted-foreground)]">{timeAgo(c.data.createdAt)}</span>}</div><div className="text-[12px] text-[var(--foreground)] leading-relaxed whitespace-pre-wrap break-words">{c.data.text}</div>{c.data.mentions && c.data.mentions.length > 0 && <div className="text-[9px] text-blue-400 mt-1">Menciona: {(c.data.mentions || []).map((m: string) => getUserName(m)).filter(Boolean).join(', ')}</div>}<button className="text-[9px] text-[var(--muted-foreground)] mt-1.5 cursor-pointer hover:text-[var(--af-accent)]" onClick={() => setReplyingTo(c.id)}>Responder</button>{replies.length > 0 && (<div className="mt-2 pl-3 border-l-2 border-[var(--af-bg4)] space-y-2">{replies.map((r: any) => (<div key={r.id} className="flex items-start gap-2"><div className="w-5 h-5 rounded-full bg-[var(--af-bg4)] flex items-center justify-center text-[9px] font-bold text-[var(--muted-foreground)] shrink-0">{(r.data.userName || '?')[0].toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex items-center gap-2"><span className="text-[11px] font-medium">{r.data.userName}</span>{r.data.createdAt && <span className="text-[8px] text-[var(--muted-foreground)]">{timeAgo(r.data.createdAt)}</span>}</div><div className="text-[11px] leading-relaxed whitespace-pre-wrap">{r.data.text}</div></div></div>))}</div>)}</div></div></div>); })}</div>)}
+              {projComments.length === 0 ? (<div className="text-center py-16 text-[var(--af-text3)]"><div className="text-4xl mb-3">💬</div><div className="text-sm font-medium">Sin comentarios</div><div className="text-xs mt-1">Inicia la conversacion sobre este proyecto</div></div>) : (<div className="space-y-3">{projComments.map((c: Comment) => { const replies = (projReplies || []).filter((r: Comment) => r.data.parentId === c.id); return (<div key={c.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3"><div className="flex items-start gap-2.5"><div className="w-7 h-7 rounded-full bg-[var(--af-bg4)] flex items-center justify-center text-[11px] font-bold text-[var(--af-accent)] shrink-0 overflow-hidden">{c.data.userPhoto ? <img src={c.data.userPhoto} className="w-full h-full object-cover rounded-full" /> : (c.data.userName || '?')[0].toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="text-[12px] font-semibold">{c.data.userName || 'Usuario'}</span>{c.data.createdAt && <span className="text-[9px] text-[var(--muted-foreground)]">{timeAgo(c.data.createdAt)}</span>}</div><div className="text-[12px] text-[var(--foreground)] leading-relaxed whitespace-pre-wrap break-words">{c.data.text}</div>{c.data.mentions && c.data.mentions.length > 0 && <div className="text-[9px] text-blue-400 mt-1">Menciona: {(c.data.mentions || []).map((m: string) => getUserName(m)).filter(Boolean).join(', ')}</div>}<button className="text-[9px] text-[var(--muted-foreground)] mt-1.5 cursor-pointer hover:text-[var(--af-accent)]" onClick={() => setReplyingTo(c.id)}>Responder</button>{replies.length > 0 && (<div className="mt-2 pl-3 border-l-2 border-[var(--af-bg4)] space-y-2">{replies.map((r: Comment) => (<div key={r.id} className="flex items-start gap-2"><div className="w-5 h-5 rounded-full bg-[var(--af-bg4)] flex items-center justify-center text-[9px] font-bold text-[var(--muted-foreground)] shrink-0">{(r.data.userName || '?')[0].toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex items-center gap-2"><span className="text-[11px] font-medium">{r.data.userName}</span>{r.data.createdAt && <span className="text-[8px] text-[var(--muted-foreground)]">{timeAgo(r.data.createdAt)}</span>}</div><div className="text-[11px] leading-relaxed whitespace-pre-wrap">{r.data.text}</div></div></div>))}</div>)}</div></div></div>); })}</div>)}
             </div>)}
 
             {/* 11. TAB: Reportes */}
@@ -1475,8 +1475,8 @@ export default function ProjectDetailScreen() {
               </div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Distribucion de tareas</div>{projectTasks.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin tareas</div>) : (<div className="space-y-2">{Object.entries(taskStatusDist).map(([status, count]) => { const pct = Math.round((count / projectTasks.length) * 100); const colors: Record<string, string> = { 'Por hacer': 'bg-slate-400', 'En progreso': 'bg-blue-500', 'Revision': 'bg-amber-500', 'Completado': 'bg-emerald-500' }; return (<div key={status} className="flex items-center gap-3"><div className="w-20 text-[11px] text-[var(--muted-foreground)] shrink-0">{status}</div><div className="flex-1 h-3 bg-[var(--af-bg3)] rounded-full overflow-hidden"><div className={"h-full rounded-full " + (colors[status] || 'bg-gray-400')} style={{ width: pct + '%' }} /></div><div className="w-14 text-[11px] text-right font-medium">{count} ({pct}%)</div></div>); })}</div>)}</div>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Gastos por categoria</div>{expenseByCategory.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin gastos</div>) : (<div className="space-y-2">{expenseByCategory.map(([cat, amount], idx) => { const pct = projectSpent > 0 ? Math.round((amount / projectSpent) * 100) : 0; const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500']; return (<div key={cat} className="flex items-center gap-3"><div className="w-24 text-[11px] text-[var(--muted-foreground)] shrink-0 truncate">{cat}</div><div className="flex-1 h-3 bg-[var(--af-bg3)] rounded-full overflow-hidden"><div className={"h-full rounded-full " + colors[idx % colors.length]} style={{ width: pct + '%' }} /></div><div className="w-28 text-[11px] text-right font-medium">{fmtCOP(amount)} ({pct}%)</div></div>); })}</div>)}</div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Progreso por fase</div>{enabledPhases.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin fases</div>) : (<div className="space-y-2.5">{enabledPhases.map((phase: any) => { const pp = getPhaseProgress(phase.id) ?? (phase.data.status === 'Completado' ? 100 : phase.data.status === 'En progreso' ? 50 : 0); const tc = projectTasks.filter((t: any) => t.data.phaseId === phase.id).length; return (<div key={phase.id} className="flex items-center gap-3"><div className={"w-32 text-[11px] shrink-0 truncate " + (phase.data.status === 'Completado' ? 'text-emerald-400' : phase.data.status === 'En progreso' ? 'text-[var(--af-accent)] font-medium' : 'text-[var(--muted-foreground)]')}>{phase.data.name}</div><div className="flex-1 h-3 bg-[var(--af-bg3)] rounded-full overflow-hidden"><div className={"h-full rounded-full transition-all " + (pp >= 80 ? 'bg-emerald-500' : pp >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500')} style={{ width: pp + '%' }} /></div><div className="w-20 text-[11px] text-right font-medium">{pp}%</div><div className="w-16 text-[9px] text-[var(--muted-foreground)] text-right">{tc} tareas</div></div>); })}</div>)}</div>
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Registros de tiempo recientes</div>{projTimeEntries.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin registros</div>) : (<div className="space-y-2">{projTimeEntries.slice(0, 8).map((te: any) => (<div key={te.id} className="flex items-center gap-3 py-1.5"><div className={"w-2 h-2 rounded-full " + (te.data.billable ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]')} /><div className="flex-1 text-[11px] truncate">{te.data.description || te.data.phaseName}</div><div className="text-[10px] text-[var(--muted-foreground)]">{te.data.userName}</div><div className="text-[10px] font-medium w-14 text-right">{(te.data.duration || 0) / 60}h</div></div>))}{projTimeEntries.length > 8 && <div className="text-[10px] text-[var(--af-text3)]">+{projTimeEntries.length - 8} mas...</div>}</div>)}</div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Progreso por fase</div>{enabledPhases.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin fases</div>) : (<div className="space-y-2.5">{enabledPhases.map((phase: WorkPhase) => { const pp = getPhaseProgress(phase.id) ?? (phase.data.status === 'Completado' ? 100 : phase.data.status === 'En progreso' ? 50 : 0); const tc = projectTasks.filter((t: Task) => t.data.phaseId === phase.id).length; return (<div key={phase.id} className="flex items-center gap-3"><div className={"w-32 text-[11px] shrink-0 truncate " + (phase.data.status === 'Completado' ? 'text-emerald-400' : phase.data.status === 'En progreso' ? 'text-[var(--af-accent)] font-medium' : 'text-[var(--muted-foreground)]')}>{phase.data.name}</div><div className="flex-1 h-3 bg-[var(--af-bg3)] rounded-full overflow-hidden"><div className={"h-full rounded-full transition-all " + (pp >= 80 ? 'bg-emerald-500' : pp >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500')} style={{ width: pp + '%' }} /></div><div className="w-20 text-[11px] text-right font-medium">{pp}%</div><div className="w-16 text-[9px] text-[var(--muted-foreground)] text-right">{tc} tareas</div></div>); })}</div>)}</div>
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"><div className="text-[13px] font-semibold mb-3">Registros de tiempo recientes</div>{projTimeEntries.length === 0 ? (<div className="text-center py-6 text-[var(--af-text3)] text-sm">Sin registros</div>) : (<div className="space-y-2">{projTimeEntries.slice(0, 8).map((te: TimeEntry) => (<div key={te.id} className="flex items-center gap-3 py-1.5"><div className={"w-2 h-2 rounded-full " + (te.data.billable ? 'bg-emerald-500' : 'bg-[var(--af-bg4)]')} /><div className="flex-1 text-[11px] truncate">{te.data.description || te.data.phaseName}</div><div className="text-[10px] text-[var(--muted-foreground)]">{te.data.userName}</div><div className="text-[10px] font-medium w-14 text-right">{(te.data.duration || 0) / 60}h</div></div>))}{projTimeEntries.length > 8 && <div className="text-[10px] text-[var(--af-text3)]">+{projTimeEntries.length - 8} mas...</div>}</div>)}</div>
             </div>)}
           </div>
   );

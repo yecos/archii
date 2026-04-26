@@ -58,8 +58,8 @@ export default function SuperAdminScreen() {
       const result = await apiCall(action, body);
       if (successMsg) showToast(successMsg);
       return result;
-    } catch (err: any) {
-      const msg = err.message || 'Error desconocido';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
       setError(msg);
       showToast(msg, 'error');
       return null;

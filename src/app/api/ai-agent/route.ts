@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Firestore } from "firebase-admin/firestore";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
-import { chatCompletionWithTools } from "@/lib/gemini-helper";
+import { chatCompletionWithTools, type ChatMessage } from "@/lib/gemini-helper";
 
 /**
  * POST /api/ai-agent
@@ -840,28 +841,30 @@ function formatCOP(amount: number): string {
   }).format(amount);
 }
 
-function findProjectByName(projects: any[], name: string): any | null {
+type FirestoreDoc = { id: string; data: Record<string, any> };
+
+function findProjectByName(projects: FirestoreDoc[], name: string): FirestoreDoc | null {
   if (!name) return null;
   const lower = name.toLowerCase();
   return (
-    projects.find((p: any) => p.data?.name?.toLowerCase() === lower) ||
-    projects.find((p: any) => p.data?.name?.toLowerCase().includes(lower))
-  );
+    projects.find((p) => p.data?.name?.toLowerCase() === lower) ??
+    projects.find((p) => p.data?.name?.toLowerCase().includes(lower))
+  ) ?? null;
 }
 
-function findTaskByTitle(tasks: any[], title: string): any | null {
+function findTaskByTitle(tasks: FirestoreDoc[], title: string): FirestoreDoc | null {
   if (!title) return null;
   const lower = title.toLowerCase();
   return (
-    tasks.find((t: any) => t.data?.title?.toLowerCase() === lower) ||
-    tasks.find((t: any) => t.data?.title?.toLowerCase().includes(lower))
-  );
+    tasks.find((t) => t.data?.title?.toLowerCase() === lower) ??
+    tasks.find((t) => t.data?.title?.toLowerCase().includes(lower))
+  ) ?? null;
 }
 
 async function executeToolCall(
   name: string,
   args: Record<string, any>,
-  db: any,
+  db: Firestore,
   userUid: string,
   actions: ExecutedAction[],
   tenantId: string
@@ -1288,9 +1291,9 @@ async function executeToolCall(
         const tasksSnap = await db.collection("tasks").where("tenantId", "==", tenantId).limit(100).get();
         const allTasks = tasksSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
-        let task: any = null;
+        let task: FirestoreDoc | null = null;
         if (args.task_id) {
-          task = allTasks.find((t: any) => t.id === args.task_id);
+          task = allTasks.find((t: any) => t.id === args.task_id) ?? null;
         } else if (args.task_title) {
           task = findTaskByTitle(allTasks, args.task_title);
         }
@@ -1616,14 +1619,14 @@ async function executeToolCall(
       }
 
       case "update_invoice_status": {
-        let invoice: any = null;
+        let invoice: FirestoreDoc | null = null;
         if (args.invoice_id) {
           const doc = await db.collection("invoices").doc(args.invoice_id).get();
-          if (doc.exists) invoice = { id: doc.id, data: doc.data() };
+          if (doc.exists) invoice = { id: doc.id, data: doc.data()! };
         } else if (args.invoice_number) {
           const invSnap = await db.collection("invoices").where("tenantId", "==", tenantId).limit(50).get();
           const allInvoices = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
-          invoice = allInvoices.find((i: any) => i.data.number === args.invoice_number);
+          invoice = allInvoices.find((i: any) => i.data.number === args.invoice_number) ?? null;
         }
 
         if (!invoice) {
@@ -2012,9 +2015,9 @@ async function executeToolCall(
         const tasksSnap = await db.collection("tasks").where("tenantId", "==", tenantId).limit(100).get();
         const allTasks = tasksSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
 
-        let task: any = null;
+        let task: FirestoreDoc | null = null;
         if (args.task_id) {
-          task = allTasks.find((t: any) => t.id === args.task_id);
+          task = allTasks.find((t: any) => t.id === args.task_id) ?? null;
         } else if (args.task_title) {
           task = findTaskByTitle(allTasks, args.task_title);
         }
@@ -2041,8 +2044,8 @@ async function executeToolCall(
       default:
         return `Función "${name}" no reconocida.`;
     }
-  } catch (error: any) {
-    const errMsg = error?.message || "Error desconocido";
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Error desconocido";
     actions.push({
       type: "error",
       label: `Error en ${name}`,
@@ -2089,7 +2092,7 @@ export async function POST(request: NextRequest) {
     const actions: ExecutedAction[] = [];
 
     // Build messages
-    const apiMessages: any[] = [
+    const apiMessages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },
     ];
 
@@ -2104,7 +2107,7 @@ export async function POST(request: NextRequest) {
     const recentMessages = messages.slice(-20);
     for (const msg of recentMessages) {
       if (msg.role === "user" || msg.role === "assistant") {
-        const apiMsg: any = { role: msg.role, content: msg.content };
+        const apiMsg: ChatMessage = { role: msg.role, content: msg.content };
         if (msg.images && msg.images.length > 0) {
           apiMsg.images = msg.images;
         }
@@ -2119,8 +2122,9 @@ export async function POST(request: NextRequest) {
         max_tokens: 2048,
         temperature: 0.7,
       });
-    } catch (error: any) {
-      console.error("[AI Agent] SDK error:", error?.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("[AI Agent] SDK error:", msg);
       return NextResponse.json({
         error: "Error en la API de IA",
         message: `⚠️ Error de la IA. Intenta de nuevo.`,
@@ -2141,7 +2145,7 @@ export async function POST(request: NextRequest) {
     // If the model wants to call tools, execute them
     if (finishReason === "tool_calls" && assistantMessage.tool_calls) {
       // Add assistant message with tool calls to history
-      apiMessages.push(assistantMessage);
+      apiMessages.push({ role: "assistant", content: assistantMessage.content || "", tool_calls: assistantMessage.tool_calls });
 
       // Execute each tool call
       for (const toolCall of assistantMessage.tool_calls as ToolCall[]) {
@@ -2178,8 +2182,8 @@ export async function POST(request: NextRequest) {
           message: finalMessage || "Acciones ejecutadas correctamente.",
           actions: actions.length > 0 ? actions : undefined,
         });
-      } catch (error: any) {
-        console.error("[AI Agent] Follow-up error:", error?.message);
+      } catch (error: unknown) {
+        console.error("[AI Agent] Follow-up error:", error instanceof Error ? error.message : String(error));
         return NextResponse.json({
           message: "Acciones ejecutadas correctamente.",
           actions: actions.length > 0 ? actions : undefined,
