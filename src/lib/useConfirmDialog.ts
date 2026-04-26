@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface ConfirmState {
   open: boolean;
@@ -24,8 +24,7 @@ type ResolveFn = (confirmed: boolean) => void;
 
 export function useConfirmDialog() {
   const [state, setState] = useState<ConfirmState>(initialState);
-  const resolveRef = useState<ResolveFn | null>(null);
-  const setResolve = resolveRef[1];
+  const resolveRef = useRef<ResolveFn | null>(null);
 
   const confirm = useCallback((options: {
     title: string;
@@ -35,7 +34,7 @@ export function useConfirmDialog() {
     destructive?: boolean;
   }): Promise<boolean> => {
     return new Promise((resolve) => {
-      setResolve(() => resolve);
+      resolveRef.current = resolve;
       setState({
         open: true,
         title: options.title,
@@ -49,18 +48,24 @@ export function useConfirmDialog() {
 
   const handleConfirm = useCallback(() => {
     setState(initialState);
-    resolveRef[0]?.(true);
+    const fn = resolveRef.current;
+    resolveRef.current = null;
+    fn?.(true);
   }, []);
 
   const handleCancel = useCallback(() => {
     setState(initialState);
-    resolveRef[0]?.(false);
+    const fn = resolveRef.current;
+    resolveRef.current = null;
+    fn?.(false);
   }, []);
 
   const handleOpenChange = useCallback((open: boolean) => {
     if (!open) {
       setState(prev => ({ ...prev, open: false }));
-      resolveRef[0]?.(false);
+      const fn = resolveRef.current;
+      resolveRef.current = null;
+      fn?.(false);
     }
   }, []);
 
