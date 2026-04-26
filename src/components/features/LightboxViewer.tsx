@@ -1,14 +1,15 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useOneDrive } from '@/hooks/useOneDrive';
 import { X, Download, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 export default function LightboxViewer() {
   const {
     lightboxPhoto, closeLightbox, lightboxIndex, setLightboxIndex, setLightboxPhoto,
-    odGalleryPhotos, downloadOneDriveFile,
     lightboxPrev, lightboxNext, getFilteredGalleryPhotos, projects,
   } = useApp();
+  const { odGalleryPhotos, downloadOneDriveFile, msAccessToken } = useOneDrive();
 
   if (!lightboxPhoto) return null;
 

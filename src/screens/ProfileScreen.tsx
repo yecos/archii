@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useOneDrive } from '@/hooks/useOneDrive';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, USER_ROLES, toDate } from '@/lib/types';
 
@@ -88,11 +89,12 @@ async function exportProfilePDF(data: { name: string; email: string; role: strin
 export default function ProfileScreen() {
   const {
     approvals, authUser, disconnectMicrosoft, doLogout, doMicrosoftLogin,
-    expenses, initials, meetings, msConnected, myRole,
-    navigateTo, openOneDriveForProject, projects, tasks, teamUsers, userName,
+    expenses, initials, meetings, myRole,
+    navigateTo, projects, tasks, teamUsers, userName,
     rfis, submittals, punchItems, timeEntries, getUserName, setForms,
     updateUserName, updateUserRole, updateUserCompany, companies, showToast,
   } = useApp();
+  const od = useOneDrive();
 
   const today = new Date();
   const [activeTab, setActiveTab] = useState<ProfileTab>('resumen');
@@ -746,10 +748,10 @@ export default function ProfileScreen() {
                 <div className="text-[14px] font-semibold">Microsoft OneDrive</div>
                 <div className="text-[11px] text-[var(--muted-foreground)]">Almacenamiento en la nube para tus proyectos</div>
               </div>
-              {msConnected && <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Conectado</span>}
+              {od.msConnected && <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Conectado</span>}
             </div>
 
-            {msConnected ? (
+            {od.msConnected ? (
               <div className="space-y-3">
                 <div className="text-[11px] text-[var(--af-text3)]">Accede a los archivos de tus proyectos directamente desde OneDrive.</div>
                 <button className="w-full p-3 rounded-lg bg-[#00a4ef]/5 border border-[#00a4ef]/20 text-left cursor-pointer hover:bg-[#00a4ef]/10 transition-all group" onClick={() => navigateTo('files')}>
@@ -765,7 +767,7 @@ export default function ProfileScreen() {
                   <div className="space-y-1.5">
                     <div className="text-[11px] font-semibold text-[var(--muted-foreground)]">Carpetas de proyectos:</div>
                     {computed.activeProjects.slice(0, 5).map(p => (
-                      <button key={p.id} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef]/30 transition-all" onClick={() => openOneDriveForProject(p.data.name)}>
+                      <button key={p.id} className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg p-2.5 text-left cursor-pointer hover:border-[#00a4ef]/30 transition-all" onClick={() => od.openOneDriveForProject(p.data.name)}>
                         <div className="flex items-center gap-2"><span className="text-sm">📁</span><span className="text-[12px]">{p.data.name}</span></div>
                       </button>
                     ))}
