@@ -4,7 +4,7 @@
  * Extraído de page.tsx para modularización.
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { fmtRecTime } from '@/lib/helpers';
 
 interface UseVoiceRecordingReturn {
@@ -174,6 +174,25 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
       currentAudioRef.current = null;
     });
   }, [playingAudio]);
+
+  // Cleanup on unmount — stop recording, revoke blob URLs, pause audio
+  useEffect(() => {
+    return () => {
+      if (mediaRecRef.current && mediaRecRef.current.state === 'recording') {
+        try { mediaRecRef.current.stop(); } catch { /* already stopped */ }
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+      }
+      if (recTimerRef.current) { clearInterval(recTimerRef.current); }
+      if (recAnimRef.current) { cancelAnimationFrame(recAnimRef.current); }
+      if (currentAudioRef.current) { currentAudioRef.current.pause(); currentAudioRef.current = null; }
+      if (audioPreviewBlobRef.current) {
+        // Revoke is handled by discardPreview or stopRecording, but safety net
+        audioPreviewBlobRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     isRecording, recDuration, recVolume,
