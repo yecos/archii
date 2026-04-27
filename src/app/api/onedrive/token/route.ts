@@ -106,13 +106,19 @@ export async function POST(request: NextRequest) {
     // Calculate expiry time from expires_in (seconds)
     const expiresIn = tokenData.expires_in || 3600; // Default 1 hour
 
+    // SECURITY: Never return refresh tokens to the client.
+    // Store new refresh token server-side if we had one before.
+    // Personal tokens are managed client-side via MSAL, so we only
+    // return the access token and metadata.
+    if (tokenData.refresh_token) {
+      console.warn('[OneDrive Token POST] New refresh token received but not returned to client (security).');
+    }
+
     return NextResponse.json({
       accessToken: tokenData.access_token,
       expiresIn: Number(expiresIn),
       tokenType: tokenData.token_type,
       scope: tokenData.scope,
-      // Also return the new refresh token if one was issued
-      refreshToken: tokenData.refresh_token || null,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';

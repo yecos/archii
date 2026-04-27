@@ -254,7 +254,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 });
     }
 
+    // Max file size: 250 MB for serverless safety (prevents OOM)
     const fileSize = file.size;
+    const MAX_FILE_SIZE = 250 * 1024 * 1024;
+    if (fileSize > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'Archivo demasiado grande. Máximo 250 MB.' },
+        { status: 413 }
+      );
+    }
+
     const SMALL_FILE_LIMIT = 4 * 1024 * 1024; // 4 MB
     const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB chunks
     const filename = file.name;

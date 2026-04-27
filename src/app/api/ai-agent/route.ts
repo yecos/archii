@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Firestore } from "firebase-admin/firestore";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
+import { getNextSequentialNumber, atomicStockUpdate } from "@/app/api/_lib/counter";
 import { chatCompletionWithTools, type ChatMessage } from "@/lib/gemini-helper";
 
 /**
@@ -1383,8 +1384,7 @@ async function executeToolCall(
           const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
           if (found) assigneeId = found.id;
         }
-        const countSnap = await db.collection("rfis").where("tenantId", "==", tenantId).get();
-        const number = `RFI-${String(countSnap.size + 1).padStart(3, "0")}`;
+        const number = await getNextSequentialNumber("rfis", tenantId, "RFI");
         const docRef = await db.collection("rfis").add({
           number, subject: args.subject, question: args.question, response: "",
           projectId: projectId || "", assignedTo: assigneeId || "",
@@ -1537,13 +1537,9 @@ async function executeToolCall(
           createdBy: userUid,
         });
 
-        // Update product stock
-        const productDoc = await db.collection("invProducts").doc(productId).get();
-        if (productDoc.exists) {
-          const currentStock = productDoc.data()?.stock || 0;
-          const newStock = args.type === "Entrada" ? currentStock + (args.quantity || 0) : Math.max(0, currentStock - (args.quantity || 0));
-          await db.collection("invProducts").doc(productId).update({ stock: newStock });
-        }
+        // Update product stock atomically (race-condition safe)
+        const quantityChange = args.type === "Entrada" ? (args.quantity || 0) : -(args.quantity || 0);
+        const newStock = await atomicStockUpdate(productId, quantityChange);
 
         actions.push({
           type: "inventory_movement_created",
@@ -1608,8 +1604,7 @@ async function executeToolCall(
         const tax = Math.round(subtotal * (taxPercent / 100));
         const total = subtotal + tax;
 
-        const countSnap = await db.collection("invoices").where("tenantId", "==", tenantId).get();
-        const number = `INV-${String(countSnap.size + 1).padStart(3, "0")}`;
+        const number = await getNextSequentialNumber("invoices", tenantId, "INV");
 
         const docRef = await db.collection("invoices").add({
           number,
@@ -1778,8 +1773,7 @@ async function executeToolCall(
           if (found) reviewerId = found.id;
         }
 
-        const countSnap = await db.collection("submittals").where("tenantId", "==", tenantId).get();
-        const number = `SUB-${String(countSnap.size + 1).padStart(3, "0")}`;
+        const number = await getNextSequentialNumber("submittals", tenantId, "SUB");
 
         const docRef = await db.collection("submittals").add({
           number,

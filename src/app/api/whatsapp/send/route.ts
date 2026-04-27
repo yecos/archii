@@ -45,19 +45,19 @@ export async function POST(request: NextRequest) {
         else { errorCount++; errors.push(result.error || "Error"); }
       }
     } else if (type === "broadcast") {
-      let snap;
-      if (tenantId) {
-        snap = await db
-          .collection("whatsappLinks")
-          .where("active", "==", true)
-          .where("tenantId", "==", tenantId)
-          .get();
-      } else {
-        snap = await db
-          .collection("whatsappLinks")
-          .where("active", "==", true)
-          .get();
+      // SECURITY: Broadcast REQUIRES tenantId to prevent cross-tenant leaks
+      if (!tenantId) {
+        return NextResponse.json(
+          { error: "tenantId es requerido para broadcast" },
+          { status: 400 }
+        );
       }
+
+      const snap = await db
+        .collection("whatsappLinks")
+        .where("active", "==", true)
+        .where("tenantId", "==", tenantId)
+        .get();
 
       if (snap.empty) {
         return NextResponse.json({ success: false, sent: 0, message: "No hay usuarios con WhatsApp vinculado" });

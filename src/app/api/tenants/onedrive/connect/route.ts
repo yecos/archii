@@ -209,6 +209,7 @@ export async function POST(request: NextRequest) {
         success: true,
         email: msEmail,
         folderId: rootFolderId,
+        // SECURITY: Don't echo tokens back to client
       });
     }
 
@@ -300,9 +301,10 @@ export async function POST(request: NextRequest) {
         msRefreshToken: newRefreshToken,
       });
 
+      // SECURITY: Don't return the full access token — client doesn't need it.
+      // Token is stored server-side and used by tenant OneDrive endpoints.
       return NextResponse.json({
         success: true,
-        accessToken: newAccessToken,
         expiresIn: tokenData.expires_in || 3600,
       });
     }

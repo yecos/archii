@@ -145,10 +145,23 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
     const userData = userSnap.docs[0].data();
     const userName = userData.name || userData.displayName || email.split("@")[0];
 
-    // Resolve tenantId from user document
-    let userTenantId = '';
-    if (!userSnap.empty) {
-      userTenantId = userData.defaultTenantId || '';
+    // SECURITY: Verify the user belongs to at least one tenant before linking
+    // This prevents account takeover by linking WhatsApp to orphan accounts
+    let userTenantId = userData.defaultTenantId || '';
+
+    // If no defaultTenantId, check tenants where this user is a member
+    if (!userTenantId) {
+      const tenantMemberSnap = await db
+        .collection("tenants")
+        .where("members", "array-contains", userSnap.docs[0].id)
+        .limit(1)
+        .get();
+      if (tenantMemberSnap.empty) {
+        return {
+          text: `La cuenta ${email} no esta activa en ningun equipo de ArchiFlow.\n\nPide al administrador de tu equipo que te agregue como miembro.`
+        };
+      }
+      userTenantId = tenantMemberSnap.docs[0].id;
     }
 
     // Verificar si ya esta vinculado a OTRO numero
