@@ -82,10 +82,11 @@ export async function GET(request: NextRequest) {
     const folderId = searchParams.get('folderId') || 'root';
     const projectId = searchParams.get('projectId') || '';
     const top = searchParams.get('top') || '50';
+    const topParam = Math.min(Math.max(parseInt(top, 10) || 50, 1), 200);
 
     const select =
       'id,name,size,mimeType,lastModifiedDateTime,thumbnails,file,folder,createdDateTime';
-    const graphUrl = `${GRAPH_BASE}/me/drive/items/${folderId}/children?$top=${top}&$orderby=name&$select=${select}`;
+    const graphUrl = `${GRAPH_BASE}/me/drive/items/${folderId}/children?$top=${topParam}&$orderby=name&$select=${select}`;
 
     const res = await fetch(graphUrl, {
       headers: { Authorization: `Bearer ${token}` },
@@ -152,7 +153,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive Files GET]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -180,6 +181,12 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // Max file size: 250 MB for serverless safety
+    const MAX_FILE_SIZE = 250 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'Archivo demasiado grande. Máximo 250 MB.' }, { status: 413 });
     }
 
     const fileSize = file.size;
@@ -345,6 +352,6 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive Files POST]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

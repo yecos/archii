@@ -99,6 +99,12 @@ export async function GET(
     const contentType = res.headers.get('content-type') || 'application/octet-stream';
     const buffer = await res.arrayBuffer();
 
+    // Max download size: 250 MB for serverless safety
+    const MAX_DOWNLOAD_SIZE = 250 * 1024 * 1024;
+    if (buffer.byteLength > MAX_DOWNLOAD_SIZE) {
+      return NextResponse.json({ error: 'Archivo demasiado grande para descargar (máx. 250 MB)' }, { status: 413 });
+    }
+
     return new NextResponse(buffer, {
       status: 200,
       headers: {
@@ -111,7 +117,7 @@ export async function GET(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive File Download GET]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -188,7 +194,7 @@ export async function PATCH(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive File PATCH]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -244,6 +250,6 @@ export async function DELETE(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive File DELETE]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
 
   results.checks.envVars = {
     hasToken: !!token,
-    tokenLength: token ? token.length : 0,
     hasPhoneId: !!phoneId,
     hasVerifyToken: !!verifyToken,
   };
@@ -44,54 +43,82 @@ export async function GET(request: NextRequest) {
   // 2. Verificar token con Meta
   const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v25.0';
 
-  try {
-    const tokenCheck = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/me?access_token=${token}`
-    );
-    const tokenData = await tokenCheck.json();
+  {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const tokenCheck = await fetch(
+        `https://graph.facebook.com/${API_VERSION}/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
+      const tokenData = await tokenCheck.json();
 
-    if (tokenCheck.ok) {
-      results.checks.tokenValid = true;
-      results.checks.tokenInfo = {
-        id: tokenData.id,
-        name: tokenData.name || 'N/A',
-        type: tokenData.type || 'N/A',
-      };
-    } else {
-      results.checks.tokenValid = false;
-      results.checks.tokenError = {
-        status: tokenCheck.status,
-        error: tokenData,
-      };
-      results.error = `Token INVALIDO (error ${tokenCheck.status}). Genera uno nuevo en Meta Developer Console.`;
-      return NextResponse.json(results, { status: 401 });
+      if (tokenCheck.ok) {
+        results.checks.tokenValid = true;
+        results.checks.tokenInfo = {
+          id: tokenData.id,
+          name: tokenData.name || 'N/A',
+          type: tokenData.type || 'N/A',
+        };
+      } else {
+        results.checks.tokenValid = false;
+        results.checks.tokenError = {
+          status: tokenCheck.status,
+          error: tokenData,
+        };
+        results.error = `Token INVALIDO (error ${tokenCheck.status}). Genera uno nuevo en Meta Developer Console.`;
+        return NextResponse.json(results, { status: 401 });
+      }
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') {
+        results.checks.tokenValid = 'timeout';
+      } else {
+        results.checks.tokenValid = 'error';
+        results.checks.tokenNetworkError = err.message;
+      }
     }
-  } catch (err: any) {
-    results.checks.tokenValid = 'error';
-    results.checks.tokenNetworkError = err.message;
   }
 
   // 3. Verificar Phone Number
-  try {
-    const phoneCheck = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/${phoneId}?access_token=${token}&fields=name,display_phone_number,verified_name`
-    );
-    const phoneData = await phoneCheck.json();
+  {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const phoneCheck = await fetch(
+        `https://graph.facebook.com/${API_VERSION}/${phoneId}?fields=name,display_phone_number,verified_name`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
+      const phoneData = await phoneCheck.json();
 
-    if (phoneCheck.ok) {
-      results.checks.phoneValid = true;
-      results.checks.phoneInfo = {
-        name: phoneData.name,
-        displayPhone: phoneData.display_phone_number,
-        verifiedName: phoneData.verified_name || 'N/A',
-      };
-    } else {
-      results.checks.phoneValid = false;
-      results.checks.phoneError = phoneData;
+      if (phoneCheck.ok) {
+        results.checks.phoneValid = true;
+        results.checks.phoneInfo = {
+          name: phoneData.name,
+          displayPhone: phoneData.display_phone_number,
+          verifiedName: phoneData.verified_name || 'N/A',
+        };
+      } else {
+        results.checks.phoneValid = false;
+        results.checks.phoneError = phoneData;
+      }
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') {
+        results.checks.phoneValid = 'timeout';
+      } else {
+        results.checks.phoneValid = 'error';
+        results.checks.phoneNetworkError = err.message;
+      }
     }
-  } catch (err: any) {
-    results.checks.phoneValid = 'error';
-    results.checks.phoneNetworkError = err.message;
   }
 
   // 4. Probar envio de mensaje (solo si se pasa ?to=)
@@ -101,49 +128,68 @@ export async function GET(request: NextRequest) {
   if (testPhone) {
     const cleanPhone = testPhone.replace(/[^0-9]/g, '');
 
-    try {
-      const sendResponse = await fetch(
-        `https://graph.facebook.com/${API_VERSION}/${phoneId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to: cleanPhone,
-            type: 'text',
-            text: {
-              body: 'Prueba desde ArchiFlow - Bot funcionando correctamente!',
-              preview_url: false,
+    // Basic phone number validation: must be 10-15 digits
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      results.checks.sendMessage = { error: 'Número inválido (debe tener 10-15 dígitos)' };
+      results.error = 'Número de teléfono inválido. Debe contener entre 10 y 15 dígitos.';
+      return NextResponse.json(results, { status: 400 });
+    }
+
+    {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const sendResponse = await fetch(
+          `https://graph.facebook.com/${API_VERSION}/${phoneId}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
             },
-          }),
+            signal: controller.signal,
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to: cleanPhone,
+              type: 'text',
+              text: {
+                body: 'Prueba desde ArchiFlow - Bot funcionando correctamente!',
+                preview_url: false,
+              },
+            }),
+          }
+        );
+        clearTimeout(timeout);
+
+        const sendData = await sendResponse.json();
+
+        results.checks.sendMessage = {
+          to: cleanPhone,
+          status: sendResponse.status,
+          ok: sendResponse.ok,
+          data: sendData,
+        };
+
+        if (sendResponse.ok) {
+          results.checks.sendMessageSuccess = true;
+          results.message = 'TODO BIEN - Token valido, telefono verificado y mensaje enviado exitosamente!';
+        } else {
+          results.checks.sendMessageSuccess = false;
+          results.error = `Error enviando mensaje: ${sendData.error?.message || JSON.stringify(sendData)}`;
         }
-      );
-
-      const sendData = await sendResponse.json();
-
-      results.checks.sendMessage = {
-        to: cleanPhone,
-        status: sendResponse.status,
-        ok: sendResponse.ok,
-        data: sendData,
-      };
-
-      if (sendResponse.ok) {
-        results.checks.sendMessageSuccess = true;
-        results.message = 'TODO BIEN - Token valido, telefono verificado y mensaje enviado exitosamente!';
-      } else {
-        results.checks.sendMessageSuccess = false;
-        results.error = `Error enviando mensaje: ${sendData.error?.message || JSON.stringify(sendData)}`;
+      } catch (err: any) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') {
+          results.checks.sendMessage = { to: cleanPhone, error: 'timeout' };
+          results.error = 'La petición de envío excedió el tiempo límite (10s).';
+        } else {
+          results.checks.sendMessage = {
+            to: cleanPhone,
+            error: err.message,
+          };
+          results.error = `Error de red al enviar mensaje: ${err.message}`;
+        }
       }
-    } catch (err: any) {
-      results.checks.sendMessage = {
-        to: cleanPhone,
-        error: err.message,
-      };
-      results.error = `Error de red al enviar mensaje: ${err.message}`;
     }
   } else {
     results.message = 'Configuracion OK. Agrega ?to=TU_NUMERO para enviar un mensaje de prueba.';

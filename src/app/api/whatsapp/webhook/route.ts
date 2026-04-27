@@ -145,6 +145,12 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
     const userData = userSnap.docs[0].data();
     const userName = userData.name || userData.displayName || email.split("@")[0];
 
+    // Resolve tenantId from user document
+    let userTenantId = '';
+    if (!userSnap.empty) {
+      userTenantId = userData.defaultTenantId || '';
+    }
+
     // Verificar si ya esta vinculado a OTRO numero
     const existingLink = await db
       .collection("whatsappLinks")
@@ -186,6 +192,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
         userId: userSnap.docs[0].id,
         userEmail: email,
         userName: userName,
+        tenantId: userTenantId,
         active: true,
         linkedAt: FieldValue.serverTimestamp(),
       });

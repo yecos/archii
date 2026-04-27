@@ -54,6 +54,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Search query "q" is required' }, { status: 400 });
     }
 
+    if (q.trim().length > 200) {
+      return NextResponse.json({ error: 'Query too long (max 200 characters)' }, { status: 400 });
+    }
+
     const encodedQuery = encodeURIComponent(q.trim());
     const select = 'id,name,size,mimeType,file,folder';
     const graphUrl = `${GRAPH_BASE}/me/drive/root/search(q='${encodedQuery}')?$top=20&$select=${select}`;
@@ -108,8 +112,9 @@ export async function GET(request: NextRequest) {
           );
         }
       } catch (firestoreErr) {
-        // Firestore filter failure should not block the response — return all results
-        console.error('[OneDrive Search] Firestore filter warning:', firestoreErr);
+        // If projectId filter fails, return empty results to prevent cross-project leak
+        console.error('[OneDrive Search] Firestore filter error:', firestoreErr);
+        items = [];
       }
     }
 
@@ -121,6 +126,6 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('[OneDrive Search GET]', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
