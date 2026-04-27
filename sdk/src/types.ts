@@ -1,5 +1,5 @@
 // ============================================================================
-// ArchiFlow SDK - Complete TypeScript Types
+// Archii SDK - Complete TypeScript Types
 // ============================================================================
 
 // ---- SDK Version ----
@@ -153,10 +153,10 @@ export enum IntegrationProvider {
 
 // ---- Configuration Types ----
 
-export interface ArchiFlowConfig {
+export interface ArchiiConfig {
   /** API key for authentication */
   apiKey: string;
-  /** Base URL of the ArchiFlow API (default: https://api.archiflow.io) */
+  /** Base URL of the Archii API (default: https://api.archii.io) */
   baseUrl?: string;
   /** Tenant ID for multi-tenant mode */
   tenantId?: string;
@@ -692,6 +692,6 @@ export type ResponseInterceptor = (
 ) => Response;
 
 export type ErrorInterceptor = (
-  error: any, // ArchiflowError (imported from errors.ts) — using any to avoid circular dep
+  error: any, // ArchiiError (imported from errors.ts) — using any to avoid circular dep
   request: RequestInit & { url: string }
 ) => void;

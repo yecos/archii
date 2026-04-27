@@ -1,10 +1,10 @@
 // ============================================================================
-// ArchiFlow SDK - Main Client
+// Archii SDK - Main Client
 // ============================================================================
 
 import { SDK_VERSION } from './types';
 import type {
-  ArchiFlowConfig,
+  ArchiiConfig,
   ListParams,
   TaskFilters,
   PaginatedResponse,
@@ -36,11 +36,11 @@ import type {
   ErrorInterceptor,
 } from './types';
 import {
-  ArchiflowError,
+  ArchiiError,
   AuthenticationError,
   RateLimitError,
   NetworkError,
-  isArchiflowError,
+  isArchiiError,
 } from './errors';
 import {
   buildQueryString,
@@ -51,8 +51,8 @@ import {
 
 // ---- User-Agent ----
 
-const DEFAULT_USER_AGENT = `archiflow-sdk/v${SDK_VERSION}`;
-const DEFAULT_BASE_URL = 'https://api.archiflow.io';
+const DEFAULT_USER_AGENT = `archii-sdk/v${SDK_VERSION}`;
+const DEFAULT_BASE_URL = 'https://api.archii.io';
 const DEFAULT_TIMEOUT = 30_000;
 const DEFAULT_MAX_RETRIES = 3;
 
@@ -67,13 +67,13 @@ interface InternalRequestOptions {
 }
 
 // ============================================================================
-// ArchiFlowClient
+// ArchiiClient
 // ============================================================================
 
-export class ArchiFlowClient {
+export class ArchiiClient {
   private readonly config: Required<
     Pick<
-      ArchiFlowConfig,
+      ArchiiConfig,
       'apiKey' | 'baseUrl' | 'timeout' | 'maxRetries' | 'debug'
     > & { tenantId?: string; webhookSecret?: string; headers: Record<string, string> }
   >;
@@ -87,9 +87,9 @@ export class ArchiFlowClient {
   // Constructor
   // -------------------------------------------------------------------------
 
-  constructor(config: ArchiFlowConfig) {
+  constructor(config: ArchiiConfig) {
     if (!config.apiKey) {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'An API key is required. Pass it via the `apiKey` config option.',
         400,
         'CONFIGURATION_ERROR'
@@ -107,7 +107,7 @@ export class ArchiFlowClient {
       headers: config.headers ?? {},
     };
 
-    this.log('ArchiFlowClient initialized', {
+    this.log('ArchiiClient initialized', {
       baseUrl: this.config.baseUrl,
       tenantId: this.config.tenantId,
     });
@@ -120,7 +120,7 @@ export class ArchiFlowClient {
   private log(...args: unknown[]): void {
     if (this.config.debug) {
       // eslint-disable-next-line no-console
-      console.log('[archiflow-sdk]', ...args);
+      console.log('[archii-sdk]', ...args);
     }
   }
 
@@ -554,7 +554,7 @@ export class ArchiFlowClient {
   // =========================================================================
 
   /**
-   * Send an HTTP request to the ArchiFlow API.
+   * Send an HTTP request to the Archii API.
    *
    * @param method - HTTP method
    * @param path - URL path (e.g. '/projects')
@@ -659,7 +659,7 @@ export class ArchiFlowClient {
             errorBody = undefined;
           }
 
-          const sdkError = await ArchiflowError.fromResponse(
+          const sdkError = await ArchiiError.fromResponse(
             interceptedResponse,
             errorBody
           );
@@ -686,7 +686,7 @@ export class ArchiFlowClient {
         // Only retry on retryable SDK errors or network errors
         if (error instanceof RateLimitError) return true;
         if (error instanceof NetworkError) return true;
-        if (isArchiflowError(error) && isRetryableStatus(error.statusCode))
+        if (isArchiiError(error) && isRetryableStatus(error.statusCode))
           return true;
         return false;
       }
@@ -718,7 +718,7 @@ export class ArchiFlowClient {
       try {
         return JSON.parse(text) as T;
       } catch {
-        throw new ArchiflowError(
+        throw new ArchiiError(
           `Failed to parse JSON response from ${response.url}`,
           502,
           'JSON_PARSE_ERROR'

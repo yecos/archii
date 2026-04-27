@@ -1,16 +1,16 @@
 // ============================================================================
-// ArchiFlow SDK - Custom Error Classes
+// Archii SDK - Custom Error Classes
 // ============================================================================
 
 /**
- * Base error class for all ArchiFlow SDK errors.
+ * Base error class for all Archii SDK errors.
  */
-export class ArchiflowError extends Error {
+export class ArchiiError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
   public readonly requestId?: string;
   public readonly timestamp: string;
-  public readonly isArchiflowError: true = true;
+  public readonly isArchiiError: true = true;
 
   constructor(
     message: string,
@@ -19,7 +19,7 @@ export class ArchiflowError extends Error {
     requestId?: string
   ) {
     super(message);
-    this.name = 'ArchiflowError';
+    this.name = 'ArchiiError';
     this.statusCode = statusCode;
     this.code = code;
     this.requestId = requestId;
@@ -32,12 +32,12 @@ export class ArchiflowError extends Error {
   }
 
   /**
-   * Create an ArchiflowError from an HTTP response.
+   * Create an ArchiiError from an HTTP response.
    */
   static async fromResponse(
     response: Response,
     body?: unknown
-  ): Promise<ArchiflowError> {
+  ): Promise<ArchiiError> {
     const parsed = body as Record<string, unknown> | null;
     const message =
       (parsed?.message as string) ||
@@ -67,7 +67,7 @@ export class ArchiflowError extends Error {
         if (response.status >= 500) {
           return new ServerError(message, response.status, requestId);
         }
-        return new ArchiflowError(message, response.status, code, requestId);
+        return new ArchiiError(message, response.status, code, requestId);
     }
   }
 
@@ -86,7 +86,7 @@ export class ArchiflowError extends Error {
 /**
  * Thrown when authentication fails (401).
  */
-export class AuthenticationError extends ArchiflowError {
+export class AuthenticationError extends ArchiiError {
   constructor(message: string = 'Authentication failed. Check your API key.') {
     super(message, 401, 'AUTHENTICATION_ERROR');
     this.name = 'AuthenticationError';
@@ -96,7 +96,7 @@ export class AuthenticationError extends ArchiflowError {
 /**
  * Thrown when rate limit is exceeded (429).
  */
-export class RateLimitError extends ArchiflowError {
+export class RateLimitError extends ArchiiError {
   public readonly retryAfter?: number;
 
   constructor(message: string = 'Rate limit exceeded. Please retry later.', retryAfter?: number) {
@@ -109,7 +109,7 @@ export class RateLimitError extends ArchiflowError {
 /**
  * Thrown when a resource is not found (404).
  */
-export class NotFoundError extends ArchiflowError {
+export class NotFoundError extends ArchiiError {
   public readonly resourceType?: string;
   public readonly resourceId?: string;
 
@@ -138,7 +138,7 @@ export class NotFoundError extends ArchiflowError {
 /**
  * Thrown when request validation fails (400).
  */
-export class ValidationError extends ArchiflowError {
+export class ValidationError extends ArchiiError {
   public readonly details: ValidationErrorDetail[];
 
   constructor(
@@ -161,7 +161,7 @@ export interface ValidationErrorDetail {
 /**
  * Thrown when the server returns a 5xx error.
  */
-export class ServerError extends ArchiflowError {
+export class ServerError extends ArchiiError {
   constructor(
     message: string = 'Internal server error.',
     statusCode: number = 500,
@@ -175,7 +175,7 @@ export class ServerError extends ArchiflowError {
 /**
  * Thrown on network-level errors (connection refused, timeout, DNS failure).
  */
-export class NetworkError extends ArchiflowError {
+export class NetworkError extends ArchiiError {
   public readonly cause?: Error;
 
   constructor(
@@ -189,9 +189,9 @@ export class NetworkError extends ArchiflowError {
 }
 
 /**
- * Type guard to check if an error is an Archiflow SDK error.
+ * Type guard to check if an error is an Archii SDK error.
  */
-export function isArchiflowError(error: unknown): error is ArchiflowError {
-  return error instanceof ArchiflowError || 
-    (typeof error === 'object' && error !== null && (error as Record<string, unknown>).isArchiflowError === true);
+export function isArchiiError(error: unknown): error is ArchiiError {
+  return error instanceof ArchiiError ||
+    (typeof error === 'object' && error !== null && (error as Record<string, unknown>).isArchiiError === true);
 }

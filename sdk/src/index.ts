@@ -1,15 +1,15 @@
 // ============================================================================
-// ArchiFlow SDK - Public Entry Point
+// Archii SDK - Public Entry Point
 // ============================================================================
 
 export { SDK_VERSION } from './types';
 
-export { ArchiFlowClient } from './client';
+export { ArchiiClient } from './client';
 
 export { WebhookHandler } from './webhooks';
 export {
-  archiflowWebhookMiddleware,
-  handleArchiflowWebhook,
+  archiiWebhookMiddleware,
+  handleArchiiWebhook,
 } from './webhooks';
 export type {
   WebhookEventMap,
@@ -20,14 +20,14 @@ export type {
 } from './webhooks';
 
 export {
-  ArchiflowError,
+  ArchiiError,
   AuthenticationError,
   RateLimitError,
   NotFoundError,
   ValidationError,
   ServerError,
   NetworkError,
-  isArchiflowError,
+  isArchiiError,
 } from './errors';
 export type { ValidationErrorDetail } from './errors';
 
@@ -46,7 +46,7 @@ export {
 
 export type {
   // Configuration
-  ArchiFlowConfig,
+  ArchiiConfig,
   ListParams,
   TaskFilters,
   PaginatedResponse,

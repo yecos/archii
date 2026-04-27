@@ -1,7 +1,7 @@
 {
-  "name": "archiflow-sdk",
+  "name": "archii-sdk",
   "version": "1.0.0",
-  "description": "ArchiFlow SDK - Official client for the ArchiFlow Construction Management API",
+  "description": "Archii SDK - Official client for the Archii Construction Management API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.mjs",
@@ -16,7 +16,7 @@
     "typescript": ">=5.0.0"
   },
   "keywords": [
-    "archiflow",
+    "archii",
     "construction",
     "management",
     "api",
@@ -27,5 +27,5 @@
     "type": "git",
     "url": "https://github.com/yecos/archii"
   },
-  "author": "ArchiFlow Team"
+  "author": "Archii Team"
 }

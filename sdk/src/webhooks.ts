@@ -1,5 +1,5 @@
 // ============================================================================
-// ArchiFlow SDK - Webhook Handler
+// Archii SDK - Webhook Handler
 // ============================================================================
 
 import { createHmac, timingSafeEqual } from 'crypto';
@@ -12,7 +12,7 @@ import type {
   RFI,
   Submittal,
 } from './types';
-import { ArchiflowError } from './errors';
+import { ArchiiError } from './errors';
 
 // ---- Webhook event data type mapping ----
 
@@ -55,14 +55,14 @@ export type WebhookEventHandlers = {
 // ---- WebhookHandler ----
 
 /**
- * Utility class for verifying and parsing incoming ArchiFlow webhooks.
+ * Utility class for verifying and parsing incoming Archii webhooks.
  */
 export class WebhookHandler {
   private readonly secret: string;
 
   constructor(secret: string) {
     if (!secret) {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'A webhook secret is required for signature verification.',
         400,
         'CONFIGURATION_ERROR'
@@ -79,7 +79,7 @@ export class WebhookHandler {
    * Verify the HMAC-SHA256 signature of a webhook payload.
    *
    * @param payload - Raw string body of the webhook request
-   * @param signature - Value of the `X-Archiflow-Signature` header
+   * @param signature - Value of the `X-Archii-Signature` header
    * @returns `true` if the signature is valid, `false` otherwise
    */
   verifySignature(payload: string, signature: string): boolean {
@@ -113,7 +113,7 @@ export class WebhookHandler {
    */
   verifyOrThrow(payload: string, signature: string): void {
     if (!this.verifySignature(payload, signature)) {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Webhook signature verification failed.',
         401,
         'INVALID_SIGNATURE'
@@ -133,7 +133,7 @@ export class WebhookHandler {
     try {
       parsed = JSON.parse(payload);
     } catch {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Invalid webhook payload: could not parse JSON.',
         400,
         'INVALID_PAYLOAD'
@@ -143,7 +143,7 @@ export class WebhookHandler {
     const obj = parsed as Record<string, unknown>;
 
     if (!obj.id || typeof obj.id !== 'string') {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Invalid webhook payload: missing or invalid "id" field.',
         400,
         'INVALID_PAYLOAD'
@@ -151,7 +151,7 @@ export class WebhookHandler {
     }
 
     if (!obj.event || typeof obj.event !== 'string') {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Invalid webhook payload: missing or invalid "event" field.',
         400,
         'INVALID_PAYLOAD'
@@ -159,7 +159,7 @@ export class WebhookHandler {
     }
 
     if (!obj.timestamp || typeof obj.timestamp !== 'string') {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Invalid webhook payload: missing or invalid "timestamp" field.',
         400,
         'INVALID_PAYLOAD'
@@ -167,7 +167,7 @@ export class WebhookHandler {
     }
 
     if (obj.data === undefined) {
-      throw new ArchiflowError(
+      throw new ArchiiError(
         'Invalid webhook payload: missing "data" field.',
         400,
         'INVALID_PAYLOAD'
@@ -242,17 +242,17 @@ export interface WebhookMiddlewareResponse {
 // ---- Express / Connect middleware ----
 
 /**
- * Express/Connect middleware for handling ArchiFlow webhooks.
+ * Express/Connect middleware for handling Archii webhooks.
  *
  * Usage:
  * ```ts
- * app.post('/webhooks', archiflowWebhookMiddleware(secret, {
+ * app.post('/webhooks', archiiWebhookMiddleware(secret, {
  *   'task.created': async (payload) => { ... },
  *   'project.updated': async (payload) => { ... },
  * }));
  * ```
  */
-export function archiflowWebhookMiddleware(
+export function archiiWebhookMiddleware(
   secret: string,
   handlers: WebhookEventHandlers
 ): (
@@ -266,7 +266,7 @@ export function archiflowWebhookMiddleware(
   return async (req, res, next) => {
     try {
       const signature =
-        getHeader(req.headers, 'x-archiflow-signature') ?? '';
+        getHeader(req.headers, 'x-archii-signature') ?? '';
 
       const rawBody =
         typeof req.rawBody === 'string'
@@ -280,7 +280,7 @@ export function archiflowWebhookMiddleware(
       res.statusCode = 200;
       res.body = { received: true, eventId: event.id };
     } catch (error) {
-      if (error instanceof ArchiflowError) {
+      if (error instanceof ArchiiError) {
         res.statusCode = error.statusCode;
         res.body = { error: error.message, code: error.code };
       } else {
@@ -300,13 +300,13 @@ export function archiflowWebhookMiddleware(
  * Usage:
  * ```ts
  * export async function POST(request: Request) {
- *   return handleArchiflowWebhook(request, secret, {
+ *   return handleArchiiWebhook(request, secret, {
  *     'task.created': async (payload) => { ... },
  *   });
  * }
  * ```
  */
-export async function handleArchiflowWebhook(
+export async function handleArchiiWebhook(
   request: Request,
   secret: string,
   handlers: WebhookEventHandlers
@@ -315,7 +315,7 @@ export async function handleArchiflowWebhook(
   const dispatch = handler.createHandler(handlers);
 
   try {
-    const signature = request.headers.get('x-archiflow-signature') ?? '';
+    const signature = request.headers.get('x-archii-signature') ?? '';
     const rawBody = await request.text();
 
     const event = await dispatch(rawBody, signature);
@@ -325,7 +325,7 @@ export async function handleArchiflowWebhook(
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof ArchiflowError) {
+    if (error instanceof ArchiiError) {
       return Response.json(
         { error: error.message, code: error.code },
         { status: error.statusCode }

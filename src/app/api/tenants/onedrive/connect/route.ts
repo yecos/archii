@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // First ensure the Archii parent folder exists
-        let archiFlowFolderId: string | null = null;
+        let archiiFolderId: string | null = null;
         const searchParentUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'Archii'&$select=id,name`;
         const searchParentRes = await fetch(searchParentUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
         if (searchParentRes.ok) {
           const searchData = await searchParentRes.json();
           if (searchData.value && searchData.value.length > 0) {
-            archiFlowFolderId = searchData.value[0].id;
+            archiiFolderId = searchData.value[0].id;
           }
         }
 
-        if (!archiFlowFolderId) {
+        if (!archiiFolderId) {
           // Create Archii parent folder
           const createParentRes = await fetch(`${GRAPH_BASE}/me/drive/root/children`, {
             method: 'POST',
@@ -144,13 +144,13 @@ export async function POST(request: NextRequest) {
           });
           if (createParentRes.ok) {
             const parentData = await createParentRes.json();
-            archiFlowFolderId = parentData.id;
+            archiiFolderId = parentData.id;
           }
         }
 
         // Now find or create the tenant-specific subfolder
-        if (archiFlowFolderId) {
-          const searchTenantUrl = `${GRAPH_BASE}/me/drive/items/${archiFlowFolderId}/children?$filter=name eq '${encodeURIComponent(tenantFolderName)}'&$select=id,name`;
+        if (archiiFolderId) {
+          const searchTenantUrl = `${GRAPH_BASE}/me/drive/items/${archiiFolderId}/children?$filter=name eq '${encodeURIComponent(tenantFolderName)}'&$select=id,name`;
           const searchTenantRes = await fetch(searchTenantUrl, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
 
           if (!rootFolderId) {
             // Create tenant-specific folder inside Archii
-            const createTenantRes = await fetch(`${GRAPH_BASE}/me/drive/items/${archiFlowFolderId}/children`, {
+            const createTenantRes = await fetch(`${GRAPH_BASE}/me/drive/items/${archiiFolderId}/children`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${accessToken}`,

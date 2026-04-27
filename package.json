@@ -17,7 +17,7 @@
     "ai",
     "gemini",
     "multi-tenant",
-    "archichflow"
+    "archii"
   ],
   "scripts": {
     "dev": "next dev -p 3000",
