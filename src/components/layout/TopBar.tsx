@@ -98,6 +98,7 @@ export default function TopBar() {
         <div className="relative">
           {/* Mobile: tap opens tenant selector directly */}
           <button
+            id="onboarding-tenant-trigger"
             onClick={() => {
               if (window.innerWidth < 640) {
                 setShowTenantSelector(true);

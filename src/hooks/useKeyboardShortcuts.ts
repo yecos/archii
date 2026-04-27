@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui-store';
+import { useOnboardingStore } from '@/stores/onboarding-store';
 
 interface KeyboardShortcutsConfig {
   enabled?: boolean;
@@ -18,6 +19,8 @@ export function useKeyboardShortcuts(config: KeyboardShortcutsConfig = {}) {
     setTheme,
     theme,
   } = useUIStore();
+
+  const toggleHelp = useOnboardingStore(s => s.toggleHelp);
 
   useEffect(() => {
     if (!enabled) return;
@@ -43,6 +46,13 @@ export function useKeyboardShortcuts(config: KeyboardShortcutsConfig = {}) {
       // Escape → Cerrar paneles
       if (e.key === 'Escape') {
         return; // Ya manejado por el componente correspondiente
+      }
+
+      // ? → Abrir panel de ayuda
+      if (e.key === '?') {
+        e.preventDefault();
+        toggleHelp();
+        return;
       }
 
       // Alt + A → Abrir chat IA
@@ -82,6 +92,7 @@ export function useKeyboardShortcuts(config: KeyboardShortcutsConfig = {}) {
     toggleQuickActions,
     toggleSidebar,
     toggleCommand,
+    toggleHelp,
     setTheme,
     theme,
   ]);

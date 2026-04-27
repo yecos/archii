@@ -87,6 +87,7 @@ export default function AIFloatingWrapper() {
 
         {/* Main AI Chat Button (golden gradient) */}
         <button
+          id="onboarding-ai-trigger"
           onClick={() => handleChatOpen()}
           className={cn(
             'w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300',

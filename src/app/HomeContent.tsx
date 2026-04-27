@@ -43,6 +43,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import AIFloatingWrapper from '@/components/archii/AIFloatingWrapper';
 import KeyboardShortcutsInitializer from '@/components/archii/KeyboardShortcutsInitializer';
+import OnboardingProvider from '@/components/onboarding/OnboardingProvider';
 
 /* ─── Screens — core screens loaded directly ─── */
 import DashboardScreen from '@/screens/DashboardScreen';
@@ -286,6 +287,8 @@ function AppContent() {
       <AIFloatingWrapper />
       {/* Keyboard Shortcuts - Global initialization (MUST be inside AppProvider) */}
       <KeyboardShortcutsInitializer />
+      {/* Onboarding - Wizard, Spotlight, Help (auto-triggers for first-time users) */}
+      <OnboardingProvider />
 
       {/* ===== Modals — each self-contained ===== */}
       <ProjectModal open={!!modals.project} onClose={() => closeModal('project')} />
