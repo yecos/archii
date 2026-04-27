@@ -70,7 +70,7 @@ When contributing to Archii, follow these security guidelines:
 
 1. **Never commit secrets** — use `.env.local` for local development
 2. **Always verify tenant membership** — use `verifyTenantMembership()` from `@/lib/tenant-utils`
-3. **Encrypt sensitive data** — use `encryptToken()`/`decryptToken()` from `@/lib/crypto` for tokens
+3. **Encrypt sensitive data** — use `encryptToken()`/`decryptToken()` from `@/lib/token-encryption` for tokens
 4. **Apply rate limiting** — use `checkRateLimit()` from `@/lib/rate-limiter` on public endpoints
 5. **Use parameterized queries** — never concatenate user input into Firestore queries
 6. **Validate inputs** — check types, ranges, and allowed values before processing

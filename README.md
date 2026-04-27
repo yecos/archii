@@ -313,9 +313,3 @@ Las contribuciones son bienvenidas. Por favor lee [CONTRIBUTING.md](CONTRIBUTING
 ## Licencia
 
 [MIT](LICENSE) © 2026 Archii
-
----
-
-## Licencia
-
-[MIT](LICENSE) © 2024 Archii
