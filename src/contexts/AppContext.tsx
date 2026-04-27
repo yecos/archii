@@ -229,8 +229,15 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Gate to suppress notifications during tenant switching.
   // Set to true when tenant changes, false only after all onSnapshot listeners
-  // have fired at least once for the new tenant (tracked via collectionsLoadedRef).
+  // have fired at least once for the new tenant.
   const tenantSwitchingRef = useRef(false);
+  // Counter: each onSnapshot callback for the 7 tracked collections increments this.
+  // When it reaches 7, all collections have loaded → arm notifications.
+  const snapshotCountRef = useRef(0);
+  // Track which tenant the snapshot counter is for (avoid cross-tenant counting)
+  const snapshotTenantRef = useRef<string | null>(null);
+  // State trigger: forces re-evaluation of the hydration effect when snapshots arrive
+  const [snapshotTrigger, setSnapshotTrigger] = useState(0);
 
   // ===== TENANT STATE =====
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
@@ -756,12 +763,26 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   }, [allUsersCache, activeTenantId, activeTenantMembers]);
 
+  // Helper: mark a tracked collection as loaded. Called from each onSnapshot callback.
+  // When all 6 tracked collections have loaded, triggers hydration effect.
+  // Note: approvals is scoped by selectedProjectId (not tenantId), so it's excluded.
+  const markCollectionSnapshot = useCallback(() => {
+    if (!tenantSwitchingRef.current) return;
+    if (snapshotCountRef.current < 6) {
+      snapshotCountRef.current += 1;
+      if (snapshotCountRef.current >= 6) {
+        setSnapshotTrigger(t => t + 1); // Force re-evaluation of hydration effect
+      }
+    }
+  }, []);
+
   // Load projects (tenant-filtered)
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setProjects([]); return; }
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -772,6 +793,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('tasks').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -888,6 +910,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('meetings').where('tenantId', '==', activeTenantId).orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -918,6 +941,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('rfis').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setRfis(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -928,6 +952,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('submittals').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSubmittals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -938,6 +963,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('punchItems').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setPunchItems(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
+      markCollectionSnapshot();
     }, () => {});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -965,6 +991,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       prevTenantIdRef.current = activeTenantId;
       // BLOCK all notifications until new tenant data fully loads
       tenantSwitchingRef.current = true;
+      // Reset snapshot counter for new tenant
+      snapshotCountRef.current = 0;
+      snapshotTenantRef.current = activeTenantId;
       // Reset all tracking — new tenant data is a fresh "first load"
       allCollectionsLoadedRef.current = false;
       firstLoadDoneRef.current = false;
@@ -991,56 +1020,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
   }, [activeTenantId]);
 
-  // Mark each collection as hydrated when its data first arrives.
-  // Once ALL collections have loaded at least once, arm notifications.
+  // Mark collections as hydrated and arm notifications.
   // On initial load: when loading flips false, all onSnapshot have fired.
-  // On tenant switch: we wait for at least one non-empty data arrival per collection
-  // to avoid seeding with stale data from the previous tenant.
+  // On tenant switch: wait for snapshotCountRef to reach 6 (each onSnapshot
+  // callback increments it). This guarantees we seed AFTER real data arrives.
+  const TOTAL_TRACKED = 6;
   useEffect(() => {
     if (loading || allCollectionsLoadedRef.current) return;
-    // During tenant switching, do NOT re-arm until new data actually arrives.
-    // The first load guard uses the loading flag (only fires once).
-    // The tenant switch guard requires actual data to have changed.
+    // During tenant switching, wait for all 6 onSnapshot callbacks to fire
+    // before seeding. This guarantees data is from the NEW tenant.
     if (tenantSwitchingRef.current) {
-      // Wait for at least some data to arrive for the new tenant
-      // before seeding. We consider a collection "loaded" when we have
-      // received at least one snapshot for it (even if empty).
-      // Since onSnapshot listeners depend on [ready, authUser, activeTenantId],
-      // they re-subscribe on tenant change. Once they fire, state updates.
-      // We need to wait for the NEXT render cycle with new data.
-      // Use a microtask to defer seeding to after React batches the state updates.
-      const timer = setTimeout(() => {
-        // This fires after React has processed the onSnapshot updates.
-        // By now, tasks/approvals/etc. should reflect the new tenant's data.
-        if (allCollectionsLoadedRef.current) return; // Already armed by another path
-        collectionsLoadedRef.current.tasks = true;
-        collectionsLoadedRef.current.approvals = true;
-        collectionsLoadedRef.current.meetings = true;
-        collectionsLoadedRef.current.projects = true;
-        collectionsLoadedRef.current.rfis = true;
-        collectionsLoadedRef.current.submittals = true;
-        collectionsLoadedRef.current.punchItems = true;
-        allCollectionsLoadedRef.current = true;
-        // Seed with current data (now from the NEW tenant)
-        knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
-        knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
-        knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
-        knownProjectIdsRef.current = new Set(projects.map(p => p.id));
-        knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
-        knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
-        knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
-        tasks.forEach(t => { prevTaskStatusRef.current.set(t.id, { status: t.data.status, priority: t.data.priority, assigneeId: t.data.assigneeId }); });
-        approvals.forEach(a => { prevApprovalStatusRef.current.set(a.id, a.data.status); });
-        projects.forEach(p => { prevProjectStatusRef.current.set(p.id, p.data.status); });
-        rfis.forEach(r => { prevRfiStatusRef.current.set(r.id, r.data.status); });
-        submittals.forEach(s => { prevSubmittalStatusRef.current.set(s.id, s.data.status); });
-        punchItems.forEach(p => { prevPunchStatusRef.current.set(p.id, p.data.status); });
-        firstLoadDoneRef.current = true;
-        tenantSwitchingRef.current = false;
-      }, 150); // 150ms delay to let React batch onSnapshot state updates
-      return () => clearTimeout(timer);
+      if (snapshotCountRef.current < TOTAL_TRACKED) return;
+      // All 6 collections have loaded for the new tenant
     }
-    // Initial load (first time loading goes false)
+    // Initial load (first time loading goes false) — all data is fresh
     if (!loading) {
       collectionsLoadedRef.current.tasks = true;
       collectionsLoadedRef.current.approvals = true;
@@ -1066,8 +1059,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       submittals.forEach(s => { prevSubmittalStatusRef.current.set(s.id, s.data.status); });
       punchItems.forEach(p => { prevPunchStatusRef.current.set(p.id, p.data.status); });
       firstLoadDoneRef.current = true;
+      tenantSwitchingRef.current = false;
     }
-  }, [loading, tasks, meetings, approvals, projects, rfis, submittals, punchItems]);
+  }, [loading, tasks, meetings, approvals, projects, rfis, submittals, punchItems, snapshotTrigger]);
 
   // Safety timeout: arm notifications after 5s even if some collections are empty
   useEffect(() => {
