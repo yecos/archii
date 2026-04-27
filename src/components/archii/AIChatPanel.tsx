@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { HelpCircle, X, Loader2, ImageIcon, Send, Check } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useApp } from '@/contexts/AppContext';
 import { getAuthHeaders } from '@/lib/firebase-service';
@@ -155,9 +156,7 @@ function ActionCard({ action }: { action: ExecutedAction }) {
         <p className="text-[11px] opacity-80 mt-0.5 break-words">{action.details}</p>
       </div>
       {action.success && (
-        <svg className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5 ml-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <Check size={16} className="text-emerald-400 shrink-0 mt-0.5 ml-auto" strokeWidth={2.5} />
       )}
     </div>
   );
@@ -439,11 +438,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--af-accent)] to-amber-600 flex items-center justify-center shadow-lg shadow-[var(--af-accent)]/20">
-                <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2Z" />
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <circle cx="12" cy="17" r="0.5" fill="currentColor" />
-                </svg>
+                <HelpCircle size={20} className="text-black" />
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[var(--af-bg1)]" />
             </div>
@@ -459,10 +454,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
             onClick={onClose}
             className="w-10 h-10 rounded-lg hover:bg-[var(--af-bg4)] active:bg-[var(--af-bg4)] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={16} />
           </button>
         </div>
 
@@ -526,10 +518,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
               <div className="bg-[var(--af-bg3)] rounded-2xl rounded-bl-md px-4 py-3">
                 {executingTools ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <svg className="w-3.5 h-3.5 animate-spin text-[var(--af-accent)]" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
+                    <Loader2 size={14} className="animate-spin text-[var(--af-accent)]" />
                     <span className="text-[var(--af-accent)]">Ejecutando acciones...</span>
                   </div>
                 ) : (
@@ -618,11 +607,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
               className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-[var(--af-bg4)] active:bg-[var(--af-bg4)] transition-all duration-200 shrink-0 text-muted-foreground hover:text-foreground"
               title="Subir imagen"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                <circle cx="9" cy="9" r="2"/>
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-              </svg>
+              <ImageIcon size={20} />
             </button>
 
             {/* Send button */}
@@ -637,15 +622,9 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
               )}
             >
               {isLoading ? (
-                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+                <Loader2 size={20} className="animate-spin" />
               ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2L11 13" />
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
+                <Send size={20} />
               )}
             </button>
           </div>

@@ -186,7 +186,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       name: 'archii-onboarding',
       partialize: (state) => ({
         completedSteps: state.completedSteps,
-        startedAt: state.startedAt,
         completedAt: state.completedAt,
         spotlightTips: state.spotlightTips,
       }),

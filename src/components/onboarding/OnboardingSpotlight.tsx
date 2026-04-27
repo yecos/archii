@@ -154,10 +154,18 @@ export default function OnboardingSpotlight() {
       const el = document.getElementById(activeTip.targetId);
       if (el) {
         setTargetRect(el.getBoundingClientRect());
+        return true;
       }
+      return false;
     };
 
-    measure();
+    if (!measure()) {
+      // Element not found yet — poll until it appears (e.g., delayed render)
+      const poll = setInterval(() => {
+        if (measure()) clearInterval(poll);
+      }, 300);
+      return () => clearInterval(poll);
+    }
 
     // Re-measure on resize
     window.addEventListener('resize', measure);

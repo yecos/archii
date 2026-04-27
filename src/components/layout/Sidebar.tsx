@@ -138,7 +138,7 @@ export default function Sidebar({
           </div>
 
           {/* Navigation */}
-          <div className="overflow-y-auto -mx-1 px-1" style={{ maxHeight: 'calc(80vh - 180px)', WebkitOverflowScrolling: 'touch' }}>
+          <div className="overflow-y-auto -mx-1 px-1" id="onboarding-sidebar-trigger" style={{ maxHeight: 'calc(80vh - 180px)', WebkitOverflowScrolling: 'touch' }}>
             <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-3 mb-1">Principal</div>
             {renderNavList(principalItems, isActive)}
             <div className="text-[10px] font-semibold tracking-wider text-[var(--af-text3)] uppercase px-3 mt-4 mb-1">Gestión</div>

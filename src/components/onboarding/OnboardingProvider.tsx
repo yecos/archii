@@ -18,22 +18,21 @@ export default function OnboardingProvider() {
   const {
     wizardActive,
     completedAt,
-    startedAt,
     spotlightTips,
     startWizard,
     showSpotlight,
   } = useOnboardingStore();
 
-  // Auto-trigger: first time user enters the app
+  // Auto-trigger: first time user enters the app (only if never completed)
   useEffect(() => {
-    if (!completedAt && !startedAt) {
+    if (!completedAt && !wizardActive) {
       // Small delay to let the UI settle after tenant selection
       const timer = setTimeout(() => {
         startWizard();
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [completedAt, startedAt, startWizard]);
+  }, [completedAt, wizardActive, startWizard]);
 
   // Auto-trigger spotlight tips after wizard completion
   useEffect(() => {
