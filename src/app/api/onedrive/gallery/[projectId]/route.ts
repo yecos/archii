@@ -6,11 +6,11 @@ const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Verify ArchiFlow authentication from X-Firebase-Token header.
+ * Verify Archii authentication from X-Firebase-Token header.
  * OneDrive routes use the Authorization header for MS access tokens,
- * so ArchiFlow auth is passed via a separate custom header.
+ * so Archii auth is passed via a separate custom header.
  */
-async function verifyArchiFlowAuth(request: NextRequest): Promise<boolean> {
+async function verifyArchiiAuth(request: NextRequest): Promise<boolean> {
   const fbToken = request.headers.get('x-firebase-token');
   if (!fbToken) return false;
   try {
@@ -54,8 +54,8 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    if (!(await verifyArchiFlowAuth(request))) {
-      return NextResponse.json({ error: 'ArchiFlow authentication required' }, { status: 401 });
+    if (!(await verifyArchiiAuth(request))) {
+      return NextResponse.json({ error: 'Archii authentication required' }, { status: 401 });
     }
 
     const token = getAccessToken(request);

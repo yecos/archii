@@ -5,7 +5,7 @@
  * Cada método llama a POST /api/notifications/push/send con el payload
  * correspondiente. El servidor valida permisos y envía via web-push.
  *
- * Todos los textos en español para ArchiFlow.
+ * Todos los textos en español para Archii.
  */
 
 import { getAuthHeaders } from './firebase-service';
@@ -22,7 +22,7 @@ async function sendPushToUser(
   try {
     const authHeaders = await getAuthHeaders();
     if (!authHeaders['Authorization']) {
-      console.warn('[ArchiFlow Push] No autenticado, no se envía push');
+      console.warn('[Archii Push] No autenticado, no se envía push');
       return false;
     }
 
@@ -34,13 +34,13 @@ async function sendPushToUser(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
-      console.error('[ArchiFlow Push] Error enviando:', err.error);
+      console.error('[Archii Push] Error enviando:', err.error);
       return false;
     }
 
     return true;
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error en sendPushToUser:', err.message);
+    console.error('[Archii Push] Error en sendPushToUser:', err.message);
     return false;
   }
 }
@@ -66,13 +66,13 @@ async function sendPushBroadcast(
     const result = await res.json();
     return { sent: result.sent || 0, failed: result.failed || 0 };
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error en broadcast:', err.message);
+    console.error('[Archii Push] Error en broadcast:', err.message);
     return { sent: 0, failed: 0 };
   }
 }
 
 /**
- * Colección de notificaciones tipadas para los diferentes eventos de ArchiFlow.
+ * Colección de notificaciones tipadas para los diferentes eventos de Archii.
  *
  * Uso:
  *   import { notifyPush } from '@/lib/push-notifications';

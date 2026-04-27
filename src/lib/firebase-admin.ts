@@ -11,7 +11,7 @@ import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
-const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archiflow-prod-2026';
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archii-prod-2026';
 
 // Credenciales para firebase-admin desde variables de entorno o JSON
 function getAdminConfig() {
@@ -21,7 +21,7 @@ function getAdminConfig() {
     try {
       return cert(JSON.parse(credJson));
     } catch (e) {
-      console.error('[ArchiFlow Admin] Error parseando FIREBASE_ADMIN_CREDENTIALS');
+      console.error('[Archii Admin] Error parseando FIREBASE_ADMIN_CREDENTIALS');
     }
   }
 

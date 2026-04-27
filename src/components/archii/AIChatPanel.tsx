@@ -168,7 +168,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! Soy tu **Super IA** de ArchiFlow. 🚀\n\nPuedo **gestionar toda tu app** desde aquí:\n\n**Proyectos y Tareas**\n• ✅ Crear tareas, proyectos y actualizar estados\n• 📊 Consultar presupuestos y gastos\n• 🏗️ Gestionar fases de obra\n\n**Finanzas y Compras**\n• 💰 Registrar gastos y crear facturas\n• 🤝 Agregar proveedores y empresas\n• 🧾 Gestionar facturas (borrador → pagada)\n\n**Obra e Inventario**\n• 📦 Gestionar inventario y movimientos\n• 📓 Registrar bitácoras de obra diarias\n• 🔧 Crear punch items y submittals\n• ❓ Gestionar RFIs\n\n**Equipo y Tiempos**\n• 👥 Consultar equipo y asignar tareas\n• ⏱️ Registrar tiempos de trabajo\n• 📅 Programar reuniones\n\n**Análisis Visual**\n• 📸 Analizar imágenes (planos, obras, cotizaciones)\n\n**Ejemplos:**\n"Crea una tarea para revisar planos eléctricos"\n"¿Cuánto he gastado en materiales este mes?"\n"Agrega cemento Portland al inventario"\n"Crea una factura para el proyecto Torre 3"\n"Registra el tiempo de hoy: 4h en estructura"\n"Analiza esta imagen" (adjunta imagen 📸)\n\n¿En qué te ayudo hoy?',
+      content: '¡Hola! Soy tu **Super IA** de Archii. 🚀\n\nPuedo **gestionar toda tu app** desde aquí:\n\n**Proyectos y Tareas**\n• ✅ Crear tareas, proyectos y actualizar estados\n• 📊 Consultar presupuestos y gastos\n• 🏗️ Gestionar fases de obra\n\n**Finanzas y Compras**\n• 💰 Registrar gastos y crear facturas\n• 🤝 Agregar proveedores y empresas\n• 🧾 Gestionar facturas (borrador → pagada)\n\n**Obra e Inventario**\n• 📦 Gestionar inventario y movimientos\n• 📓 Registrar bitácoras de obra diarias\n• 🔧 Crear punch items y submittals\n• ❓ Gestionar RFIs\n\n**Equipo y Tiempos**\n• 👥 Consultar equipo y asignar tareas\n• ⏱️ Registrar tiempos de trabajo\n• 📅 Programar reuniones\n\n**Análisis Visual**\n• 📸 Analizar imágenes (planos, obras, cotizaciones)\n\n**Ejemplos:**\n"Crea una tarea para revisar planos eléctricos"\n"¿Cuánto he gastado en materiales este mes?"\n"Agrega cemento Portland al inventario"\n"Crea una factura para el proyecto Torre 3"\n"Registra el tiempo de hoy: 4h en estructura"\n"Analiza esta imagen" (adjunta imagen 📸)\n\n¿En qué te ayudo hoy?',
       displayContent: '',
       timestamp: new Date(),
     },
@@ -362,7 +362,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
         };
         setMessages((prev) => [...prev, errorMessage]);
       } else {
-        console.error('[ArchiFlow AI] Error en chat:', error);
+        console.error('[Archii AI] Error en chat:', error);
         const errorMessage: Message = {
           id: `msg-${Date.now() + 1}`,
           role: 'assistant',

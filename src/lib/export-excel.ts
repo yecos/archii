@@ -1,7 +1,7 @@
 /**
  * export-excel.ts
  * Exportación a Excel usando SheetJS (xlsx).
- * ArchiFlow v2.0 — Exportar datos tabulares a .xlsx
+ * Archii v2.0 — Exportar datos tabulares a .xlsx
  */
 
 import * as XLSX from 'xlsx';
@@ -127,7 +127,7 @@ export function exportTasksExcel(tasks: any[], projects: any[], teamUsers: any[]
     XLSX.utils.book_append_sheet(wb, ws3, 'Productividad');
   }
 
-  downloadWorkbook(wb, 'archiflow-tareas');
+  downloadWorkbook(wb, 'archii-tareas');
 }
 
 /* ═══════════════════════════════════════════════
@@ -182,7 +182,7 @@ export function exportExpensesExcel(expenses: any[], projects: any[]) {
   // Move summary to first position
   wb.SheetNames = ['Resumen Categorías', 'Gastos'];
 
-  downloadWorkbook(wb, 'archiflow-gastos');
+  downloadWorkbook(wb, 'archii-gastos');
 }
 
 /* ═══════════════════════════════════════════════
@@ -241,7 +241,7 @@ export function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: 
   XLSX.utils.book_append_sheet(wb, ws2, 'Por Miembro');
 
   wb.SheetNames = ['Registros', 'Por Miembro'];
-  downloadWorkbook(wb, 'archiflow-tiempo');
+  downloadWorkbook(wb, 'archii-tiempo');
 }
 
 /* ═══════════════════════════════════════════════
@@ -303,7 +303,7 @@ export function exportInventoryExcel(products: any[], categories: any[], movemen
     XLSX.utils.book_append_sheet(wb, ws3, 'Stock Bajo');
   }
 
-  downloadWorkbook(wb, 'archiflow-inventario');
+  downloadWorkbook(wb, 'archii-inventario');
 }
 
 /* ═══════════════════════════════════════════════
@@ -343,7 +343,7 @@ export function exportProjectsExcel(projects: any[], tasks: any[], expenses: any
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Proyectos');
 
-  downloadWorkbook(wb, 'archiflow-proyectos');
+  downloadWorkbook(wb, 'archii-proyectos');
 }
 
 /* ═══════════════════════════════════════════════
@@ -390,7 +390,7 @@ export function exportTeamExcel(teamUsers: any[], tasks: any[], timeEntries: any
   ws2['!cols'] = [{ wch: 20 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, ws2, 'Roles');
 
-  downloadWorkbook(wb, 'archiflow-equipo');
+  downloadWorkbook(wb, 'archii-equipo');
 }
 
 /* ═══════════════════════════════════════════════
@@ -474,5 +474,5 @@ export function exportObraExcel(data: { rfis: any[]; submittals: any[]; punchIte
   // Move summary first
   wb.SheetNames = ['Resumen', 'RFIs', 'Submittals', 'Punch List'];
 
-  downloadWorkbook(wb, 'archiflow-obra');
+  downloadWorkbook(wb, 'archii-obra');
 }

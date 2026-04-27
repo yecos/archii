@@ -290,7 +290,7 @@ async function deliverWebhook(
           'X-Webhook-Event': payload.event,
           'X-Webhook-Signature-256': `sha256=${signature}`,
           'X-Webhook-Timestamp': payload.timestamp,
-          'User-Agent': 'ArchiFlow-Webhooks/2.0',
+          'User-Agent': 'Archii-Webhooks/2.0',
           ...(webhook.customHeaders || {}),
         },
         body: payloadString,

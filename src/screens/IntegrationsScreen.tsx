@@ -313,7 +313,7 @@ export default function IntegrationsScreen() {
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2"><Puzzle size={20} className="text-[var(--af-accent)]" /> Marketplace</h2>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Conecta ArchiFlow con tus herramientas favoritas
+            Conecta Archii con tus herramientas favoritas
           </p>
         </div>
         <span className="text-[12px] text-[var(--af-text3)]">

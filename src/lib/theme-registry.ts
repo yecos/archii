@@ -1,5 +1,5 @@
 /**
- * ArchiFlow Theme Registry
+ * Archii Theme Registry
  * 
  * Sistema extensible de temas. Para agregar un nuevo tema:
  * 1. Agregar una entrada en THEME_REGISTRY con su id y CSS variables

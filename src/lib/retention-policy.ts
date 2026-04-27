@@ -1,6 +1,6 @@
 /**
  * retention-policy.ts
- * Data retention policy service for ArchiFlow.
+ * Data retention policy service for Archii.
  *
  * Defines per-collection retention rules:
  *   - Max age before archiving

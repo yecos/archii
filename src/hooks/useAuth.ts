@@ -43,7 +43,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       });
       return () => unsubscribe();
     } catch (err) {
-      console.error('[ArchiFlow] Auth state error:', err);
+      console.error('[Archii] Auth state error:', err);
       setLoading(false);
     }
   }, [ready]);
@@ -51,7 +51,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
   /* ===== Restore Microsoft session ===== */
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem('archiflow-ms-token');
+      const saved = sessionStorage.getItem('archii-ms-token');
       if (saved) {
         setMsAccessToken(saved);
         setMsConnected(true);
@@ -66,7 +66,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       const fb = getFirebase();
       await fb.auth().signInWithEmailAndPassword(email, password);
     } catch (err: any) {
-      console.error('[ArchiFlow] Login error:', err);
+      console.error('[Archii] Login error:', err);
       const msg = err.code === 'auth/user-not-found' ? 'Usuario no encontrado'
         : err.code === 'auth/wrong-password' ? 'Contraseña incorrecta'
         : err.code === 'auth/invalid-email' ? 'Email inválido'
@@ -87,7 +87,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       });
       showToast('✅ Cuenta creada exitosamente');
     } catch (err: any) {
-      console.error('[ArchiFlow] Register error:', err);
+      console.error('[Archii] Register error:', err);
       const msg = err.code === 'auth/email-already-in-use' ? 'Este email ya está registrado'
         : err.code === 'auth/weak-password' ? 'La contraseña es muy débil (mín. 6 caracteres)'
         : 'Error al crear cuenta';
@@ -101,7 +101,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       const provider = new fb.auth.GoogleAuthProvider();
       await fb.auth().signInWithPopup(provider);
     } catch (err: any) {
-      console.error('[ArchiFlow] Google login error:', err);
+      console.error('[Archii] Google login error:', err);
       if (err.code !== 'auth/popup-closed-by-user') {
         showToast('Error al conectar con Google', 'error');
       }
@@ -122,15 +122,15 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
         if (credential?.accessToken) {
           setMsAccessToken(credential.accessToken);
           setMsConnected(true);
-          sessionStorage.setItem('archiflow-ms-token', credential.accessToken);
+          sessionStorage.setItem('archii-ms-token', credential.accessToken);
           showToast('🔗 Microsoft OneDrive conectado');
         }
       } catch (odErr) {
-        console.error('[ArchiFlow] OneDrive token error:', odErr);
+        console.error('[Archii] OneDrive token error:', odErr);
       }
       setMsLoading(false);
     } catch (err: any) {
-      console.error('[ArchiFlow] Microsoft login error:', err);
+      console.error('[Archii] Microsoft login error:', err);
       setMsLoading(false);
       if (err.code !== 'auth/popup-closed-by-user') {
         showToast('Error al conectar con Microsoft', 'error');
@@ -144,7 +144,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       await fb.auth().signOut();
       showToast('Sesión cerrada');
     } catch (err) {
-      console.error('[ArchiFlow] Logout error:', err);
+      console.error('[Archii] Logout error:', err);
       showToast('Error al cerrar sesión', 'error');
     }
   }, [showToast]);
@@ -158,7 +158,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       await fb.firestore().collection('users').doc(user.uid).update({ name });
       showToast('Nombre actualizado');
     } catch (err) {
-      console.error('[ArchiFlow] Update name error:', err);
+      console.error('[Archii] Update name error:', err);
       showToast('Error al actualizar nombre', 'error');
     }
   }, [showToast]);
@@ -169,7 +169,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
       await fb.firestore().collection('users').doc(userId).update({ role });
       showToast(`Rol cambiado a ${role}`);
     } catch (err) {
-      console.error('[ArchiFlow] Change role error:', err);
+      console.error('[Archii] Change role error:', err);
       showToast('Error al cambiar rol', 'error');
     }
   }, [showToast]);
@@ -177,7 +177,7 @@ export function useAuth(ready: boolean, showToast: (msg: string, type?: string) 
   const disconnectMicrosoft = useCallback(() => {
     setMsAccessToken(null);
     setMsConnected(false);
-    sessionStorage.removeItem('archiflow-ms-token');
+    sessionStorage.removeItem('archii-ms-token');
     showToast('Microsoft OneDrive desconectado');
   }, [showToast]);
 

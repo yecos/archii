@@ -1,6 +1,6 @@
 {
-  "name": "ArchiFlow — Gestión de Proyectos de Arquitectura",
-  "short_name": "ArchiFlow",
+  "name": "Archii — Gestión de Proyectos de Arquitectura",
+  "short_name": "Archii",
   "description": "Plataforma integral de gestión de proyectos de arquitectura e interiorismo",
   "start_url": "/",
   "display": "standalone",
@@ -110,14 +110,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "ArchiFlow - Dashboard"
+      "label": "Archii - Dashboard"
     },
     {
       "src": "/icon-1024.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "ArchiFlow - Vista de escritorio"
+      "label": "Archii - Vista de escritorio"
     }
   ],
   "edge_side_panel": {

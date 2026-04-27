@@ -172,7 +172,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const has = current.includes(role);
       const updated = { ...prev, [permName]: has ? current.filter(r => r !== role) : [...current, role] };
       // Save to localStorage
-      try { localStorage.setItem('archiflow-role-perms', JSON.stringify(updated)); } catch (err) { console.error("[ArchiFlow]", err); }
+      try { localStorage.setItem('archii-role-perms', JSON.stringify(updated)); } catch (err) { console.error("[Archii]", err); }
       return updated;
     });
   };
@@ -250,16 +250,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Restore tenant selection from localStorage (will be validated against server after auth)
   useEffect(() => {
     try {
-      const savedTenantId = localStorage.getItem('archiflow-active-tenant');
-      const savedTenantName = localStorage.getItem('archiflow-active-tenant-name');
-      const savedTenantRole = localStorage.getItem('archiflow-active-tenant-role');
+      const savedTenantId = localStorage.getItem('archii-active-tenant');
+      const savedTenantName = localStorage.getItem('archii-active-tenant-name');
+      const savedTenantRole = localStorage.getItem('archii-active-tenant-role');
       if (savedTenantId && savedTenantName) {
         setActiveTenantId(savedTenantId);
         setActiveTenantName(savedTenantName);
         setActiveTenantRole(savedTenantRole || 'Miembro');
         setTenantReady(true);
       }
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch (err) { console.error("[Archii]", err); }
 
     return () => {};
   }, []);
@@ -272,8 +272,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // PWA Install prompt handler
   useEffect(() => {
-    const isDismissed = localStorage.getItem('archiflow-install-dismissed');
-    const alreadyInstalled = localStorage.getItem('archiflow-installed');
+    const isDismissed = localStorage.getItem('archii-install-dismissed');
+    const alreadyInstalled = localStorage.getItem('archii-installed');
     if (alreadyInstalled) {
       setIsInstalled(true);
       return;
@@ -293,8 +293,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       setInstallPrompt(null);
       setShowInstallBanner(false);
       setIsInstalled(true);
-      localStorage.setItem('archiflow-installed', 'true');
-      showToast('ArchiFlow instalado correctamente');
+      localStorage.setItem('archii-installed', 'true');
+      showToast('Archii instalado correctamente');
     };
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', installedHandler);
@@ -316,7 +316,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const dismissInstallBanner = () => {
     setShowInstallBanner(false);
-    localStorage.setItem('archiflow-install-dismissed', String(Date.now()));
+    localStorage.setItem('archii-install-dismissed', String(Date.now()));
   };
 
   // Toast helper (usa Sonner por debajo)
@@ -330,9 +330,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Load saved role permissions from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('archiflow-role-perms');
+      const saved = localStorage.getItem('archii-role-perms');
       if (saved) setRolePerms(JSON.parse(saved));
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch (err) { console.error("[Archii]", err); }
   }, []);
 
   // === NOTIFICATION COALESCENCE (stays in AppContext — for external channel notifications) ===
@@ -382,10 +382,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
               break;
             }
             default:
-              console.warn('[ArchiFlow Notif] Unknown buffered type:', entry.type);
+              console.warn('[Archii Notif] Unknown buffered type:', entry.type);
           }
         } catch (err) {
-          console.error('[ArchiFlow Notif] Error flushing notification:', entry.type, err);
+          console.error('[Archii Notif] Error flushing notification:', entry.type, err);
         }
       }
     }, 800);
@@ -426,13 +426,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           setReady(true);
         } else if (attempts >= maxAttempts) {
           clearInterval(iv);
-          console.error('[ArchiFlow] Firebase ready timeout — SDK may not have loaded');
+          console.error('[Archii] Firebase ready timeout — SDK may not have loaded');
           setReady(true); // Allow auth screen to show even without Firebase
         }
       } catch (e) {
         if (attempts >= maxAttempts) {
           clearInterval(iv);
-          console.error('[ArchiFlow] Firebase ready timeout — getFirebase() keeps throwing:', e);
+          console.error('[Archii] Firebase ready timeout — getFirebase() keeps throwing:', e);
           setReady(true); // Allow auth screen to show with Firebase error indicator
         }
       }
@@ -463,7 +463,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     }).catch((err: any) => {
       if (err.code !== 'auth/no-pending-redirect') {
-        console.error('[ArchiFlow Auth] Redirect result error:', err.code, err.message);
+        console.error('[Archii Auth] Redirect result error:', err.code, err.message);
         // Show error after a short delay so Toaster is rendered
         setTimeout(() => showToast(`Error de autenticación: ${err.code || err.message}`, 'error'), 500);
       }
@@ -563,7 +563,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           }
           // RESTORE TENANT FROM FIRESTORE (survives cache clearing)
           // If localStorage was cleared, check if user has a saved tenant in Firestore
-          const savedTenantId = localStorage.getItem('archiflow-active-tenant');
+          const savedTenantId = localStorage.getItem('archii-active-tenant');
           if (!savedTenantId) {
             try {
               const userData = snap.exists ? snap.data() : null;
@@ -611,9 +611,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                     setActiveTenantRole(role);
                     setTenantReady(true);
                     // Also restore localStorage for future fast loads
-                    localStorage.setItem('archiflow-active-tenant', fsDefaultTenantId);
-                    localStorage.setItem('archiflow-active-tenant-name', tenantName);
-                    localStorage.setItem('archiflow-active-tenant-role', role);
+                    localStorage.setItem('archii-active-tenant', fsDefaultTenantId);
+                    localStorage.setItem('archii-active-tenant-name', tenantName);
+                    localStorage.setItem('archii-active-tenant-role', role);
                   } else {
                     // Saved tenant no longer has this user as member
                   }
@@ -628,7 +628,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
       setLoading(false);
       } catch (authErr: any) {
-        console.error('[ArchiFlow Auth] onAuthStateChanged error:', authErr);
+        console.error('[Archii Auth] onAuthStateChanged error:', authErr);
         setLoading(false);
       }
     });
@@ -648,10 +648,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
       setAllUsersCache(users);
     }, (err: any) => {
-      console.error('[ArchiFlow Team] ERROR loading users collection:', err.code, err.message);
+      console.error('[Archii Team] ERROR loading users collection:', err.code, err.message);
       // If permission denied, try fetching just the current user as fallback
       if (err.code === 'permission-denied') {
-        console.warn('[ArchiFlow Team] Permission denied on users collection — checking Firestore rules');
+        console.warn('[Archii Team] Permission denied on users collection — checking Firestore rules');
         // Fallback: at least show the current user
         db.collection('users').doc(authUser.uid).get().then(doc => {
           if (doc.exists) {
@@ -687,7 +687,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
             // Persist corrected role
             try {
-              localStorage.setItem('archiflow-active-tenant-role', realRole);
+              localStorage.setItem('archii-active-tenant-role', realRole);
               db.collection('users').doc(uid).update({ defaultTenantRole: realRole });
             } catch (_) { /* ignore */ }
           }
@@ -706,10 +706,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                   superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
                 }).then(() => {
 
-                  localStorage.setItem('archiflow-active-tenant-role', 'Super Admin');
+                  localStorage.setItem('archii-active-tenant-role', 'Super Admin');
                   db.collection('users').doc(uid).update({ defaultTenantRole: 'Super Admin' });
                 }).catch(err => {
-                  console.error('[ArchiFlow Team] AUTO-FIX failed:', err);
+                  console.error('[Archii Team] AUTO-FIX failed:', err);
                 });
               }
             }
@@ -720,7 +720,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         setActiveTenantMembers([]);
       }
     }, (err: any) => {
-      console.error('[ArchiFlow Team] ERROR loading tenant document:', err.code, err.message);
+      console.error('[Archii Team] ERROR loading tenant document:', err.code, err.message);
     });
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
@@ -745,7 +745,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           setTimeout(() => window.location.reload(), 2000);
         }
       } catch (err) {
-        console.error('[ArchiFlow] AUTO-FIX error:', err);
+        console.error('[Archii] AUTO-FIX error:', err);
       }
     }, 3000); // Wait 3s to let the tenant onSnapshot listener try first
     return () => clearTimeout(timer);
@@ -1375,7 +1375,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
       await getFirebase().auth().signInWithEmailAndPassword(email, pass);
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Login error:', e.code, e.message);
+      console.error('[Archii Auth] Login error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/invalid-credential': 'Correo o contraseña incorrectos',
         'auth/user-not-found': 'No existe cuenta con ese correo',
@@ -1399,7 +1399,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       await db.collection('users').doc(cred.user.uid).set({ name, email, photoURL: '', role: 'Miembro', createdAt: getFirebase().firestore.FieldValue.serverTimestamp() });
 
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Register error:', e.code, e.message);
+      console.error('[Archii Auth] Register error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/email-already-in-use': 'Ese correo ya está registrado. Intenta iniciar sesión.',
         'auth/weak-password': 'La contraseña es muy débil. Mínimo 6 caracteres.',
@@ -1423,7 +1423,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const result = await fb.auth().signInWithPopup(provider);
 
     } catch (e: any) {
-      console.error('[ArchiFlow Auth] Google login error:', e.code, e.message);
+      console.error('[Archii Auth] Google login error:', e.code, e.message);
       if (e.code === 'auth/popup-closed-by-user') return;
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
@@ -1445,7 +1445,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           await fb2.auth().signInWithRedirect(provider2);
           return;
         } catch (redirectErr: any) {
-          console.error('[ArchiFlow Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
+          console.error('[Archii Auth] Google redirect also failed:', redirectErr.code, redirectErr.message);
         }
       }
       showToast(msgs[e.code] || `Error con Google: ${e.code || e.message || 'Verifica Firebase Console > Authentication > Google'}`, 'error');
@@ -1549,7 +1549,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 showToast('Microsoft ya está vinculado a tu cuenta. OneDrive debería funcionar.', 'warning');
                 return;
               }
-              console.error('[ArchiFlow Auth] Basic Microsoft link also failed:', basicLinkErr.code);
+              console.error('[Archii Auth] Basic Microsoft link also failed:', basicLinkErr.code);
             }
           }
           throw linkErr;
@@ -1611,7 +1611,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       }
     } catch (e: any) {
       if (e.code === 'auth/popup-closed-by-user') return;
-      console.error('[ArchiFlow Auth] Microsoft login error:', e.code, e.message);
+      console.error('[Archii Auth] Microsoft login error:', e.code, e.message);
       const msgs: Record<string, string> = {
         'auth/popup-blocked': 'Ventana emergente bloqueada. Permite popups para este sitio.',
         'auth/cancelled-popup-request': 'Se canceló la solicitud de inicio de sesión.',
@@ -1635,14 +1635,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     localStorage.removeItem('msAccessToken');
     localStorage.removeItem('msConnected');
     localStorage.removeItem('msRefreshToken');
-    window.dispatchEvent(new Event('archiflow-ms-disconnected'));
+    window.dispatchEvent(new Event('archii-ms-disconnected'));
     showToast('Microsoft desconectado');
   };
 
   // Sync MS auth state with OneDriveProvider via custom events
   useEffect(() => {
     if (msConnected && msAccessToken) {
-      window.dispatchEvent(new Event('archiflow-ms-connected'));
+      window.dispatchEvent(new Event('archii-ms-connected'));
     }
   }, [msConnected, msAccessToken]);
 
@@ -1671,14 +1671,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
       showToast(`Rol actualizado a ${newRole}`);
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al cambiar rol', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error al cambiar rol', 'error'); }
   };
 
   const updateUserCompany = async (uid: string, companyId: string) => {
     try {
       await getFirebase().firestore().collection('users').doc(uid).update({ companyId: companyId || null });
       showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al asignar empresa', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error al asignar empresa', 'error'); }
   };
 
   // Get the current user's company ID
@@ -1732,7 +1732,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await fbActions.saveProject({ ...forms, projName: name }, editingId, showToast, authUser, activeTenantId);
       closeModal('project'); setForms(p => ({ ...p, projName: '', projClient: '', projLocation: '', projBudget: '', projDesc: '', projStart: '', projEnd: '', projStatus: 'Concepto', projCompany: '', projType: 'Ejecución', enabledPhases: [] }));
-    } catch (err) { console.error('[ArchiFlow] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
+    } catch (err) { console.error('[Archii] saveProject error:', err); showToast('Error al guardar proyecto', 'error'); }
   };
 
   const deleteProject = async (id: string) => {
@@ -1742,7 +1742,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       showToast('Error: proyecto no pertenece a tu espacio', 'error');
       return;
     }
-    try { await fbActions.deleteProject(id, showToast, activeTenantId); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await fbActions.deleteProject(id, showToast, activeTenantId); } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
   const openEditProject = (p: Project) => {
@@ -1778,7 +1778,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         // Notification handled by the centralized detector in the useEffect above
       }
       closeModal('task'); setEditingId(null); setForms((p: Record<string, any>) => ({ ...p, taskTitle: '', taskProject: '', taskPhase: '', taskAssignees: [], taskAssignee: '', taskPriority: 'Media', taskStatus: 'Por hacer', taskDue: new Date().toISOString().split('T')[0], taskSubtasks: [], taskTags: [], taskEstimatedHours: null }));
-    } catch (err) { console.error('[ArchiFlow] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
+    } catch (err) { console.error('[Archii] saveTask error:', err); showToast('Error al guardar tarea', 'error'); }
     finally { setIsSavingTask(false); }
   };
 
@@ -1791,12 +1791,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const updateProjectProgress = async (val: number) => {
     if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
   const updateUserName = async (newName: string) => {
     if (!newName || !authUser) return;
-    try { await authUser.updateProfile({ displayName: newName }); await getFirebase().firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    try { await authUser.updateProfile({ displayName: newName }); await getFirebase().firestore().collection('users').doc(authUser.uid).update({ name: newName }); showToast('Nombre actualizado'); setForms(p => ({ ...p, editingName: false })); } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
   const toggleTask = async (id: string, status: string) => {
@@ -1808,7 +1808,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       } else {
         await getFirebase().firestore().collection('tasks').doc(id).update({ status: ns, completedAt: getFirebase().firestore.FieldValue.delete(), updatedAt: ts });
       }
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch (err) { console.error("[Archii]", err); }
   };
 
   const changeTaskStatus = async (id: string, newStatus: string) => {
@@ -1819,10 +1819,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       } else {
         await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: ts });
       }
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch (err) { console.error("[Archii]", err); }
   };
 
-  const deleteTask = async (id: string) => { try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Tarea eliminada'); } catch (err: any) { console.error("[ArchiFlow]", err); showToast('Error al eliminar: ' + (err?.message || err?.code || 'sin permiso'), 'error'); } };
+  const deleteTask = async (id: string) => { try { await getFirebase().firestore().collection('tasks').doc(id).delete(); showToast('Tarea eliminada'); } catch (err: any) { console.error("[Archii]", err); showToast('Error al eliminar: ' + (err?.message || err?.code || 'sin permiso'), 'error'); } };
 
   const saveExpense = async () => {
     const concept = forms.expConcept || '';
@@ -1857,7 +1857,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Gasto registrado');
       }
       closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
   const openEditExpense = (e: Expense) => {
@@ -1876,7 +1876,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     openModal('expense');
   };
 
-  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteExpense = async (id: string) => { if (!confirm('¿Eliminar gasto?')) return; try { await getFirebase().firestore().collection('expenses').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[Archii]", err); } };
 
   const saveSupplier = async () => {
     const name = forms.supName || '';
@@ -1889,10 +1889,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (editingId) { await db.collection('suppliers').doc(editingId).update(data); showToast('Proveedor actualizado'); }
       else { await db.collection('suppliers').add(data); showToast('Proveedor creado'); }
       closeModal('supplier'); setForms(p => ({ ...p, supName: '', supCategory: '', supPhone: '', supEmail: '', supAddress: '', supWebsite: '', supNotes: '', supRating: '5' }));
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
-  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteSupplier = async (id: string) => { if (!confirm('¿Eliminar proveedor?')) return; try { await getFirebase().firestore().collection('suppliers').doc(id).delete(); showToast('Eliminado'); } catch (err) { console.error("[Archii]", err); } };
 
   // Company CRUD
   const saveCompany = async () => {
@@ -1906,7 +1906,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (editingId) { await db.collection('companies').doc(editingId).update(data); showToast('Empresa actualizada'); }
       else { await db.collection('companies').add(data); showToast('Empresa creada'); }
       closeModal('company'); setEditingId(null);
-    } catch (err) { console.error('[ArchiFlow] saveCompany error:', err); showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[Archii] saveCompany error:', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteCompany = (id: string) => {
@@ -1920,7 +1920,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           await getFirebase().firestore().collection('companies').doc(id).delete();
           showToast('Empresa eliminada');
         } catch (err) {
-          console.error("[ArchiFlow]", err);
+          console.error("[Archii]", err);
           showToast('Error', 'error');
         }
       },
@@ -1955,7 +1955,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     try {
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete();
       showToast('Archivo eliminado');
-    } catch (err) { console.error('[ArchiFlow] deleteFile error:', err); showToast('Error al eliminar', 'error'); }
+    } catch (err) { console.error('[Archii] deleteFile error:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const initDefaultPhases = async () => {
@@ -1977,16 +1977,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         const reloadData = await reloadRes.json();
         setWorkPhases(reloadData.phases || []);
       }
-    } catch (err: any) { console.error('[ArchiFlow] initDefaultPhases error:', err); showToast('Error al inicializar fases: ' + (err.message || ''), 'error'); }
+    } catch (err: any) { console.error('[Archii] initDefaultPhases error:', err); showToast('Error al inicializar fases: ' + (err.message || ''), 'error'); }
   };
 
   const updatePhaseStatus = async (phaseId: string, status: string) => {
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[ArchiFlow]", err); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[Archii]", err); }
   };
 
   const updatePhaseDates = async (phaseId: string, field: 'startDate' | 'endDate', value: string) => {
     if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('workPhases').doc(phaseId).update({ [field]: value }); } catch (err) { console.error("[ArchiFlow] updatePhaseDates:", err); }
+    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('workPhases').doc(phaseId).update({ [field]: value }); } catch (err) { console.error("[Archii] updatePhaseDates:", err); }
   };
 
   const doTogglePhaseEnabled = async (phaseId: string, enabled: boolean) => {
@@ -2003,7 +2003,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       // Also update project document
       await db.collection('projects').doc(selectedProjectId).update({ projectType: projType });
       showToast('Fases reinicializadas');
-    } catch (err) { console.error('[ArchiFlow] initPhasesByType error:', err); }
+    } catch (err) { console.error('[Archii] initPhasesByType error:', err); }
   };
 
   /* ===== MIGRACIÓN: Inicializar fases en proyectos existentes ===== */
@@ -2029,14 +2029,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast(`ℹ️ ${data.skipped} proyectos ya tenían fases (nada que migrar)`);
       }
       if (data.errors?.length > 0) {
-        console.error('[ArchiFlow] Errores en migración:', data.errors);
+        console.error('[Archii] Errores en migración:', data.errors);
       }
       // Mark as done in localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`archiflow_phases_migrated_${activeTenantId}`, new Date().toISOString());
+        localStorage.setItem(`archii_phases_migrated_${activeTenantId}`, new Date().toISOString());
       }
     } catch (err: any) {
-      console.error('[ArchiFlow] migrateAllProjectPhases error:', err);
+      console.error('[Archii] migrateAllProjectPhases error:', err);
       showToast('Error en migración: ' + (err.message || err), 'error');
     } finally {
       setIsMigratingPhases(false);
@@ -2046,7 +2046,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Auto-run migration once when projects load and none have phases
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId || projects.length === 0 || isMigratingPhases) return;
-    const migrationKey = `archiflow_phases_migrated_${activeTenantId}`;
+    const migrationKey = `archii_phases_migrated_${activeTenantId}`;
     if (typeof window !== 'undefined' && localStorage.getItem(migrationKey)) return;
     // Check if any project has phases in new format
     const hasPhases = projects.some((p: any) => p.data.projectType);
@@ -2072,7 +2072,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').add(scrubUndefined({ title, description: forms.appDesc || '', status: 'Pendiente', createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), createdBy: authUser.uid }));
       showToast('Solicitud creada'); closeModal('approval'); setForms(p => ({ ...p, appTitle: '', appDesc: '' }));
       // Notification handled by the centralized detector in the useEffect above
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
   };
 
   const updateApproval = async (id: string, status: string) => {
@@ -2080,10 +2080,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).update({ status });
       showToast('Estado actualizado');
       // Notification handled by the centralized detector in the useEffect above
-    } catch (err) { console.error("[ArchiFlow]", err); }
+    } catch (err) { console.error("[Archii]", err); }
   };
 
-  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteApproval = async (id: string) => { if (!confirm('¿Eliminar aprobación?')) return; try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('approvals').doc(id).delete(); showToast('Eliminada'); } catch (err) { console.error("[Archii]", err); } };
 
   // Daily Log CRUD
   const saveDailyLog = async () => {
@@ -2118,7 +2118,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       setDailyLogTab('list');
       setSelectedLogId(null);
       resetLogForm();
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error al guardar', 'error'); }
   };
 
   const deleteDailyLog = async (logId: string) => {
@@ -2130,7 +2130,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         setDailyLogTab('list');
         setSelectedLogId(null);
       }
-    } catch (err) { console.error('[ArchiFlow] deleteDailyLog error:', err); showToast('Error al eliminar', 'error'); }
+    } catch (err) { console.error('[Archii] deleteDailyLog error:', err); showToast('Error al eliminar', 'error'); }
   };
 
   const openEditLog = (log: DailyLog) => {
@@ -2360,7 +2360,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         showToast('Reunión creada');
       }
       closeModal('meeting'); setEditingId(null); setForms(p => ({ ...p, meetTitle: '', meetProject: '', meetDate: '', meetTime: '09:00', meetDuration: '60', meetDesc: '', meetAttendees: '', meetRecurring: 'none', meetRecurringDayOfWeek: undefined, meetRecurringEndDate: '', _meetRecurringGroupId: undefined }));
-    } catch (err) { console.error('[ArchiFlow] saveMeeting error:', err); showToast('Error al guardar reunión', 'error'); }
+    } catch (err) { console.error('[Archii] saveMeeting error:', err); showToast('Error al guardar reunión', 'error'); }
   };
   const deleteMeeting = async (id: string, meetingData?: Meeting) => {
     const isRecurring = meetingData?.data?.recurring === 'weekly' && meetingData?.data?.recurringGroupId;
@@ -2389,7 +2389,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         await db.collection('meetings').doc(id).delete();
         showToast('Reunión eliminada');
       }
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error al eliminar reunión', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error al eliminar reunión', 'error'); }
   };
   const openEditMeeting = (m: Meeting) => {
     setEditingId(m.id);
@@ -2419,10 +2419,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (editingId) { await db.collection('galleryPhotos').doc(editingId).update(data); showToast('Foto actualizada'); }
       else { await db.collection('galleryPhotos').add(data); showToast('Foto agregada a galería'); }
       closeModal('gallery'); setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' }));
-    } catch (err) { console.error('[ArchiFlow] saveGalleryPhoto error:', err); showToast('Error al guardar foto', 'error'); }
+    } catch (err) { console.error('[Archii] saveGalleryPhoto error:', err); showToast('Error al guardar foto', 'error'); }
   };
 
-  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteGalleryPhoto = async (id: string) => { if (!confirm('¿Eliminar foto de la galería?')) return; try { await getFirebase().firestore().collection('galleryPhotos').doc(id).delete(); showToast('Foto eliminada'); } catch (err) { console.error("[Archii]", err); } };
 
   const handleGalleryImageSelect = async (e: any) => {
     const file = e.target?.files?.[0];
@@ -2551,7 +2551,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     if (!ready || !authUser || !tenantReady || !activeTenantId || activeTenantRole !== 'Super Admin') return;
 
     // Run at most once per session
-    const dedupDone = sessionStorage.getItem('archiflow-dedup-done');
+    const dedupDone = sessionStorage.getItem('archii-dedup-done');
     if (dedupDone) return;
 
     // Debounce: run 10 seconds after app loads (don't block startup)
@@ -2571,7 +2571,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       } catch (_err) {
         // Silent fail — this is a background task
       }
-      sessionStorage.setItem('archiflow-dedup-done', 'true');
+      sessionStorage.setItem('archii-dedup-done', 'true');
     }, 10000); // 10 seconds after app loads
 
     return () => clearTimeout(timer);
@@ -2585,10 +2585,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     setTenantReady(true);
     setShowTenantSelector(false);
     try {
-      localStorage.setItem('archiflow-active-tenant', tenantId);
-      localStorage.setItem('archiflow-active-tenant-name', tenantName);
-      localStorage.setItem('archiflow-active-tenant-role', role);
-    } catch (err) { console.error("[ArchiFlow]", err); }
+      localStorage.setItem('archii-active-tenant', tenantId);
+      localStorage.setItem('archii-active-tenant-name', tenantName);
+      localStorage.setItem('archii-active-tenant-role', role);
+    } catch (err) { console.error("[Archii]", err); }
     // Persist tenant preference to Firestore (survives cache clearing)
     if (authUser) {
       try {

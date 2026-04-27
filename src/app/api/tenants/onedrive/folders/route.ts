@@ -34,7 +34,7 @@ async function getTenantMsToken(
  *
  * Body: { tenantId: string, folderId?: string, name: string }
  *   - tenantId: Required. The tenant to create the folder in.
- *   - folderId: Optional. Parent folder ID. Defaults to tenant's ArchiFlow root.
+ *   - folderId: Optional. Parent folder ID. Defaults to tenant's Archii root.
  *   - name: Required. Name of the new folder.
  */
 export async function POST(request: NextRequest) {

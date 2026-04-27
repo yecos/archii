@@ -17,7 +17,7 @@ const COLLECTION = 'pushSubscriptions';
 
 /** Configura claves VAPID para web-push (se ejecuta una sola vez) */
 function configureVapid() {
-  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@archiflow.app';
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@archii.app';
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -57,10 +57,10 @@ async function sendToSubscription(
     return 'sent';
   } catch (err: any) {
     if (err.statusCode === 404 || err.statusCode === 410) {
-      console.warn(`[ArchiFlow Push] Suscripción expirada: ${subscription.endpoint}`);
+      console.warn(`[Archii Push] Suscripción expirada: ${subscription.endpoint}`);
       return 'expired';
     }
-    console.error('[ArchiFlow Push] Error enviando push:', err.message);
+    console.error('[Archii Push] Error enviando push:', err.message);
     return 'failed';
   }
 }
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   try {
     configureVapid();
   } catch (err: any) {
-    console.error('[ArchiFlow Push]', err.message);
+    console.error('[Archii Push]', err.message);
     return NextResponse.json({ error: 'Configuración VAPID incompleta' }, { status: 500 });
   }
 
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, sent: 1 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    console.error('[ArchiFlow Push] Error enviando notificación:', message);
+    console.error('[Archii Push] Error enviando notificación:', message);
     return NextResponse.json({ ok: false, error: 'Error interno del servidor' }, { status: 500 });
   }
 }

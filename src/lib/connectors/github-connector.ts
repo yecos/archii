@@ -1,6 +1,6 @@
 /**
  * github-connector.ts
- * GitHub integration connector for ArchiFlow Marketplace.
+ * GitHub integration connector for Archii Marketplace.
  *
  * Supports:
  *   - Personal Access Token authentication
@@ -8,7 +8,7 @@
  *   - Comment on pull requests
  *   - Get repository info
  *   - Webhook receiver for GitHub events (push, issues, pull_request)
- *   - Map ArchiFlow tasks to GitHub issues
+ *   - Map Archii tasks to GitHub issues
  *
  * Auth: Personal Access Token
  */
@@ -67,7 +67,7 @@ function buildHeaders(config: GitHubConfig): HeadersInit {
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'Content-Type': 'application/json',
-    'User-Agent': 'ArchiFlow-Marketplace/1.0',
+    'User-Agent': 'Archii-Marketplace/1.0',
   };
 }
 
@@ -162,7 +162,7 @@ export async function getRepoInfo(
 }
 
 /* ================================================================
-   MAPPERS (ArchiFlow ↔ GitHub)
+   MAPPERS (Archii ↔ GitHub)
    ================================================================ */
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -179,9 +179,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 /**
- * Map an ArchiFlow task to a GitHub issue format.
+ * Map an Archii task to a GitHub issue format.
  */
-export function formatArchiflowToGitHubIssue(task: {
+export function formatArchiiToGitHubIssue(task: {
   title: string;
   description?: string;
   priority?: string;
@@ -191,7 +191,7 @@ export function formatArchiflowToGitHubIssue(task: {
   projectId?: string;
   projectName?: string;
 }): GitHubIssueData {
-  const labels: string[] = ['archiflow'];
+  const labels: string[] = ['archii'];
 
   if (task.priority && PRIORITY_LABELS[task.priority]) {
     labels.push(PRIORITY_LABELS[task.priority]);
@@ -207,19 +207,19 @@ export function formatArchiflowToGitHubIssue(task: {
   if (task.description) body += `${task.description}\n\n`;
   if (task.projectName) body += `**Proyecto:** ${task.projectName}\n`;
   if (task.dueDate) body += `**Fecha límite:** ${task.dueDate}\n`;
-  body += `\n---\n*Sincronizado desde ArchiFlow*`;
+  body += `\n---\n*Sincronizado desde Archii*`;
 
   return {
-    title: `[ArchiFlow] ${task.title}`,
+    title: `[Archii] ${task.title}`,
     body: body.trim() || undefined,
     labels,
   };
 }
 
 /**
- * Map a GitHub issue to an ArchiFlow task format.
+ * Map a GitHub issue to an Archii task format.
  */
-export function formatGitHubToArchiflow(issue: GitHubIssue): {
+export function formatGitHubToArchii(issue: GitHubIssue): {
   title: string;
   description?: string;
   status: string;
@@ -249,10 +249,10 @@ export function formatGitHubToArchiflow(issue: GitHubIssue): {
   const status = allLabels
     .map((l) => reverseStatus[l])
     .find(Boolean) || (issue.state === 'closed' ? 'Completado' : 'Por hacer');
-  const tags = allLabels.filter((l) => !l.startsWith('status:') && !l.startsWith('priority:') && l !== 'archiflow');
+  const tags = allLabels.filter((l) => !l.startsWith('status:') && !l.startsWith('priority:') && l !== 'archii');
 
   return {
-    title: issue.title.replace(/^\[ArchiFlow\]\s*/, ''),
+    title: issue.title.replace(/^\[Archii\]\s*/, ''),
     description: issue.body || undefined,
     status,
     priority,
@@ -322,13 +322,13 @@ const githubConnector: IntegrationConnector = {
 
     switch (event) {
       case 'task.created': {
-        const issueData = formatArchiflowToGitHubIssue(payload as any);
+        const issueData = formatArchiiToGitHubIssue(payload as any);
         const issue = await createGitHubIssue(ghConfig, issueData);
         break;
       }
       case 'task.updated': {
         if (payload.githubIssueNumber) {
-          const issueData = formatArchiflowToGitHubIssue(payload as any);
+          const issueData = formatArchiiToGitHubIssue(payload as any);
           await updateGitHubIssue(ghConfig, Number(payload.githubIssueNumber), {
             title: issueData.title,
             body: issueData.body,

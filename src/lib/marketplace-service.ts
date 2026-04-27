@@ -1,6 +1,6 @@
 /**
  * marketplace-service.ts
- * Core integration management service for the ArchiFlow Marketplace.
+ * Core integration management service for the Archii Marketplace.
  *
  * Manages integration providers (Slack, Jira, GitHub, Calendly, Stripe),
  * tenant installation instances, event dispatching, and delivery logs.
@@ -210,7 +210,7 @@ const BUILTIN_PROVIDERS: IntegrationProvider[] = [
         label: 'Repository',
         type: 'text',
         required: true,
-        placeholder: 'archiflow-tasks',
+        placeholder: 'archii-tasks',
       },
     ],
     eventTypes: [
@@ -223,7 +223,7 @@ const BUILTIN_PROVIDERS: IntegrationProvider[] = [
     id: 'calendly',
     name: 'Calendly',
     icon: '📅',
-    description: 'Sincroniza reuniones y crea enlaces de agendamiento directamente desde ArchiFlow.',
+    description: 'Sincroniza reuniones y crea enlaces de agendamiento directamente desde Archii.',
     category: 'scheduling',
     authType: 'oauth2',
     configSchema: [

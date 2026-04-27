@@ -116,11 +116,11 @@ export function getFirebase(): FirebaseApp {
   // Acceso seguro a window.firebase (SDK compat via CDN)
   const w = typeof window !== 'undefined' ? window : null;
   if (!w) {
-    throw new Error('[ArchiFlow] No estamos en el navegador.');
+    throw new Error('[Archii] No estamos en el navegador.');
   }
   const fb = (w as any).firebase as FirebaseApp | undefined;
   if (!fb || !fb.apps || fb.apps.length === 0) {
-    throw new Error('[ArchiFlow] Firebase no está inicializado. Verifica que los scripts en layout.tsx cargaron correctamente.');
+    throw new Error('[Archii] Firebase no está inicializado. Verifica que los scripts en layout.tsx cargaron correctamente.');
   }
   _fb = fb;
   return _fb;
@@ -158,7 +158,7 @@ export function getStorage() {
 
 /**
  * Returns Authorization headers with the current Firebase ID token.
- * Used for calling ArchiFlow API routes that require authentication.
+ * Used for calling Archii API routes that require authentication.
  * Returns empty headers if user is not logged in or Firebase is not ready.
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {

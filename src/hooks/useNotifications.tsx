@@ -110,7 +110,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     } catch (err) {
-      console.error('[ArchiFlow]', err);
+      console.error('[Archii]', err);
     }
   }, []);
 
@@ -126,10 +126,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (perm === 'granted') {
       showToast('🔔 Notificaciones activadas');
       try {
-        localStorage.setItem('archiflow-notif-perm', 'granted');
-        localStorage.setItem('archiflow-notif-dismissed', String(Date.now()));
+        localStorage.setItem('archii-notif-perm', 'granted');
+        localStorage.setItem('archii-notif-dismissed', String(Date.now()));
       } catch (err) {
-        console.error('[ArchiFlow]', err);
+        console.error('[Archii]', err);
       }
     } else {
       showToast('Notificaciones bloqueadas por el navegador', 'error');
@@ -140,9 +140,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const dismissNotifBanner = useCallback(() => {
     setShowNotifBanner(false);
     try {
-      localStorage.setItem('archiflow-notif-dismissed', String(Date.now()));
+      localStorage.setItem('archii-notif-dismissed', String(Date.now()));
     } catch (err) {
-      console.error('[ArchiFlow]', err);
+      console.error('[Archii]', err);
     }
   }, []);
 
@@ -178,7 +178,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           osc.stop(ctx.currentTime + 0.25);
         }, 200);
       } catch (err) {
-        console.error('[ArchiFlow]', err);
+        console.error('[Archii]', err);
       }
     },
     [notifSound],
@@ -224,7 +224,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             body,
             icon: icon || '/icon-192.png',
             badge: '/icon-192.png',
-            tag: tag || `archiflow-${Date.now()}`,
+            tag: tag || `archii-${Date.now()}`,
             requireInteraction: false,
             silent: true, // We play our own sound
             data,
@@ -287,16 +287,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNotifPermission(Notification.permission);
     // Restore notification prefs
     try {
-      const savedPrefs = localStorage.getItem('archiflow-notif-prefs');
+      const savedPrefs = localStorage.getItem('archii-notif-prefs');
       if (savedPrefs) setNotifPrefs(JSON.parse(savedPrefs));
-      const savedSound = localStorage.getItem('archiflow-notif-sound');
+      const savedSound = localStorage.getItem('archii-notif-sound');
       if (savedSound !== null) setNotifSound(savedSound === 'true');
     } catch (err) {
-      console.error('[ArchiFlow]', err);
+      console.error('[Archii]', err);
     }
     // Auto-show permission banner after 5 seconds if not granted and not recently dismissed
     if (Notification.permission === 'default') {
-      const dismissed = localStorage.getItem('archiflow-notif-dismissed');
+      const dismissed = localStorage.getItem('archii-notif-dismissed');
       if (dismissed) {
         const diff = Date.now() - parseInt(dismissed);
         if (diff < 3 * 24 * 60 * 60 * 1000) return; // Don't show if dismissed within 3 days
@@ -311,9 +311,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   /* 2. Persist sound pref to localStorage */
   useEffect(() => {
     try {
-      localStorage.setItem('archiflow-notif-sound', String(notifSound));
+      localStorage.setItem('archii-notif-sound', String(notifSound));
     } catch (err) {
-      console.error('[ArchiFlow]', err);
+      console.error('[Archii]', err);
     }
   }, [notifSound]);
 
@@ -321,11 +321,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     try {
       localStorage.setItem(
-        'archiflow-notif-prefs',
+        'archii-notif-prefs',
         JSON.stringify(notifPrefs),
       );
     } catch (err) {
-      console.error('[ArchiFlow]', err);
+      console.error('[Archii]', err);
     }
   }, [notifPrefs]);
 

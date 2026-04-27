@@ -6,11 +6,11 @@ const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
 
 /**
- * Verify ArchiFlow authentication from X-Firebase-Token header.
+ * Verify Archii authentication from X-Firebase-Token header.
  * OneDrive routes use the Authorization header for MS access tokens,
- * so ArchiFlow auth is passed via a separate custom header.
+ * so Archii auth is passed via a separate custom header.
  */
-async function verifyArchiFlowAuth(request: NextRequest): Promise<boolean> {
+async function verifyArchiiAuth(request: NextRequest): Promise<boolean> {
   const fbToken = request.headers.get('x-firebase-token');
   if (!fbToken) return false;
   try {
@@ -69,8 +69,8 @@ async function autoRefreshPersonalToken(refreshToken: string): Promise<string | 
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!(await verifyArchiFlowAuth(request))) {
-      return NextResponse.json({ error: 'ArchiFlow authentication required' }, { status: 401 });
+    if (!(await verifyArchiiAuth(request))) {
+      return NextResponse.json({ error: 'Archii authentication required' }, { status: 401 });
     }
 
     const token = getAccessToken(request);
@@ -164,8 +164,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!(await verifyArchiFlowAuth(request))) {
-      return NextResponse.json({ error: 'ArchiFlow authentication required' }, { status: 401 });
+    if (!(await verifyArchiiAuth(request))) {
+      return NextResponse.json({ error: 'Archii authentication required' }, { status: 401 });
     }
 
     const token = getAccessToken(request);

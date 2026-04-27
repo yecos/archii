@@ -1,5 +1,5 @@
 {
-  "name": "archiflow",
+  "name": "archii",
   "version": "2.0.0",
   "private": true,
   "description": "Plataforma integral de gestión de proyectos de construcción — Multi-tenant, AI-powered project management con Next.js, Firebase y Google Gemini",

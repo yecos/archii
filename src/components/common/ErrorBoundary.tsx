@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ArchiFlow] ErrorBoundary caught:', error, errorInfo);
+    console.error('[Archii] ErrorBoundary caught:', error, errorInfo);
   }
 
   handleRetry = () => {

@@ -8,7 +8,7 @@ import { chatCompletionWithTools, type ChatMessage } from "@/lib/gemini-helper";
 /**
  * POST /api/ai-agent
  *
- * Super IA Agent para ArchiFlow.
+ * Super IA Agent para Archii.
  * Usa Google Gemini API con function calling para ejecutar acciones reales en la app:
  * - Crear/editar tareas, proyectos, gastos, proveedores, reuniones
  * - Consultar datos del proyecto, equipo, presupuesto
@@ -777,7 +777,7 @@ const TOOLS = [
 
 // ─── SYSTEM PROMPT ───────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Eres ArchiFlow AI Agent, un asistente inteligente SUPERIOR especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Puedes REALIZAR ACCIONES directamente en la aplicación.
+const SYSTEM_PROMPT = `Eres Archii AI Agent, un asistente inteligente SUPERIOR especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Puedes REALIZAR ACCIONES directamente en la aplicación.
 
 CAPACIDADES:
 - CREAR y EDITAR tareas, proyectos, gastos, proveedores, reuniones, RFIs

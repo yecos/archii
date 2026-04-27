@@ -1,14 +1,14 @@
 /**
  * stripe-connector.ts
- * Stripe integration connector for ArchiFlow Marketplace.
+ * Stripe integration connector for Archii Marketplace.
  *
  * Supports:
  *   - API Key authentication (secret key)
  *   - Create invoices and customers
- *   - Sync ArchiFlow invoices to Stripe
+ *   - Sync Archii invoices to Stripe
  *   - Check payment status
  *   - Webhook receiver for Stripe events
- *   - Map ArchiFlow invoices to Stripe format
+ *   - Map Archii invoices to Stripe format
  *
  * Auth: Secret API Key
  */
@@ -160,7 +160,7 @@ export async function createStripeCustomer(
 }
 
 /**
- * Create an invoice in Stripe from ArchiFlow invoice data.
+ * Create an invoice in Stripe from Archii invoice data.
  */
 export async function createStripeInvoice(
   config: StripeConfig,
@@ -234,13 +234,13 @@ export async function finalizeStripeInvoice(
 }
 
 /* ================================================================
-   MAPPERS (ArchiFlow ↔ Stripe)
+   MAPPERS (Archii ↔ Stripe)
    ================================================================ */
 
 /**
- * Map an ArchiFlow invoice to Stripe invoice format.
+ * Map an Archii invoice to Stripe invoice format.
  */
-export function formatArchiflowInvoice(invoice: {
+export function formatArchiiInvoice(invoice: {
   number: string;
   projectName: string;
   clientName: string;
@@ -263,8 +263,8 @@ export function formatArchiflowInvoice(invoice: {
       name: invoice.clientName || 'Cliente',
       email: invoice.clientEmail || '',
       metadata: {
-        archiflow_invoice_number: invoice.number,
-        source: 'archiflow',
+        archii_invoice_number: invoice.number,
+        source: 'archii',
       },
     },
     invoiceData: {
@@ -276,7 +276,7 @@ export function formatArchiflowInvoice(invoice: {
         currency: invoice.currency || 'cop',
       })),
       metadata: {
-        archiflow_invoice_id: invoice.number,
+        archii_invoice_id: invoice.number,
         project_name: invoice.projectName,
       },
     },
@@ -284,10 +284,10 @@ export function formatArchiflowInvoice(invoice: {
 }
 
 /**
- * Sync an ArchiFlow invoice to Stripe.
+ * Sync an Archii invoice to Stripe.
  * Creates customer if needed, then invoice.
  */
-export async function syncArchiflowInvoice(
+export async function syncArchiiInvoice(
   invoice: {
     number: string;
     projectName: string;
@@ -300,7 +300,7 @@ export async function syncArchiflowInvoice(
   },
   config: StripeConfig
 ): Promise<{ invoiceId: string; customerId: string; hostedUrl?: string }> {
-  const mapped = formatArchiflowInvoice(invoice);
+  const mapped = formatArchiiInvoice(invoice);
 
   // Create or use existing customer
   let customerId = invoice.stripeCustomerId || '';
@@ -391,7 +391,7 @@ const stripeConnector: IntegrationConnector = {
 
     switch (event) {
       case 'invoice.created': {
-        const result = await syncArchiflowInvoice(payload as any, stripeConfig);
+        const result = await syncArchiiInvoice(payload as any, stripeConfig);
         break;
       }
       case 'invoice.paid':

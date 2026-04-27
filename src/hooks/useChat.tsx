@@ -264,7 +264,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       else { await db.collection('projects').doc(chatProjectId).collection('messages').add(msgData); }
       setForms(p => ({ ...p, chatInput: '' }));
       setChatReplyingTo(null);
-    } catch (err) { console.error('[ArchiFlow] sendMessage error:', err); showToast('Error al enviar', 'error'); }
+    } catch (err) { console.error('[Archii] sendMessage error:', err); showToast('Error al enviar', 'error'); }
   };
 
   // Voice recording functions
@@ -421,7 +421,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       } else {
         await reactionRef.set({ users: [uid] });
       }
-    } catch (err) { console.error('[ArchiFlow] Reaction error:', err); }
+    } catch (err) { console.error('[Archii] Reaction error:', err); }
   };
 
   // Delete a chat message (only own messages)

@@ -1,6 +1,6 @@
 /**
  * gdpr-service.ts
- * GDPR compliance service for ArchiFlow.
+ * GDPR compliance service for Archii.
  *
  * Implements GDPR Article 17 (Right to Erasure) and Article 20 (Data Portability):
  *   - exportUserData — export ALL user data as JSON
@@ -648,7 +648,7 @@ Responsable del tratamiento: ${tenantName}
    Se aplican las Cláusulas Contractuales Tipo de la Comisión Europea.
 
 8. Encargado del tratamiento
-   ArchiFlow es el encargado del tratamiento de datos conforme al Art. 28 GDPR.`,
+   Archii es el encargado del tratamiento de datos conforme al Art. 28 GDPR.`,
   };
 }
 

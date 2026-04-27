@@ -124,7 +124,7 @@ export default function QuickActions({ isOpen, onClose, onOpenChat }: QuickActio
         actions: data.actions || undefined,
       });
     } catch (err) {
-      console.error('[ArchiFlow AI] Error en sugerencias:', err);
+      console.error('[Archii AI] Error en sugerencias:', err);
       setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
     } finally {
       setLoadingId(null);

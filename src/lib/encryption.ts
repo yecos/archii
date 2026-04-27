@@ -1,6 +1,6 @@
 /**
  * encryption.ts
- * Field-level encryption service for ArchiFlow.
+ * Field-level encryption service for Archii.
  *
  * Uses AES-256-GCM via Node.js crypto (server-side only).
  * Provides:

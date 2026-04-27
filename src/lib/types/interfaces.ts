@@ -1,6 +1,6 @@
 /**
  * interfaces.ts
- * TypeScript interfaces for all main entities in Archiflow.
+ * TypeScript interfaces for all main entities in Archii.
  * Uses the Firestore document pattern: { id: string; data: T }
  */
 

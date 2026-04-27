@@ -1,6 +1,6 @@
 /**
  * slack-connector.ts
- * Slack integration connector for ArchiFlow Marketplace.
+ * Slack integration connector for Archii Marketplace.
  *
  * Supports:
  *   - Incoming Webhook (primary): send rich Block Kit messages to channels
@@ -33,7 +33,7 @@ interface SlackAttachment {
 }
 
 /**
- * Build a header block with the ArchiFlow branding.
+ * Build a header block with the Archii branding.
  */
 function headerBlock(text: string): SlackBlock {
   return {
@@ -115,7 +115,7 @@ export function formatTaskEvent(
   };
 
   const blocks: SlackBlock[] = [
-    headerBlock(`${eventLabels[event] || event} — ArchiFlow`),
+    headerBlock(`${eventLabels[event] || event} — Archii`),
     dividerBlock(),
     {
       type: 'section',
@@ -174,7 +174,7 @@ export function formatProjectEvent(
   };
 
   const blocks: SlackBlock[] = [
-    headerBlock(`${eventLabels[event] || event} — ArchiFlow`),
+    headerBlock(`${eventLabels[event] || event} — Archii`),
     dividerBlock(),
     {
       type: 'section',
@@ -218,7 +218,7 @@ export function formatExpenseEvent(
   }
 ): { blocks: SlackBlock[]; color: string } {
   const blocks: SlackBlock[] = [
-    headerBlock('Nuevo Gasto Registrado — ArchiFlow'),
+    headerBlock('Nuevo Gasto Registrado — Archii'),
     dividerBlock(),
     {
       type: 'section',
@@ -258,7 +258,7 @@ export async function sendSlackMessage(
 
   const body: any = {
     blocks: payload.blocks,
-    text: payload.text || 'Notificación de ArchiFlow',
+    text: payload.text || 'Notificación de Archii',
   };
 
   if (payload.color) {
@@ -351,7 +351,7 @@ const slackConnector: IntegrationConnector = {
 
     const testPayload = {
       blocks: [
-        headerBlock('Prueba de Conexión — ArchiFlow'),
+        headerBlock('Prueba de Conexión — Archii'),
         dividerBlock(),
         {
           type: 'section',

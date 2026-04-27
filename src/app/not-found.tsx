@@ -35,7 +35,7 @@ export default function NotFound() {
             lineHeight: 1.2,
           }}
         >
-          ArchiFlow
+          Archii
         </h1>
 
         {/* Divider */}

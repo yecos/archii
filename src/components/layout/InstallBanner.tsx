@@ -16,7 +16,7 @@ export default function InstallBanner() {
             <HomeIcon size={24} className="stroke-background" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[15px] font-semibold">Instalar ArchiFlow</div>
+            <div className="text-[15px] font-semibold">Instalar Archii</div>
             <div className="text-[12.5px] text-[var(--muted-foreground)] mt-0.5">Accede más rápido desde tu pantalla de inicio o escritorio</div>
             <div className="flex gap-2 mt-3">
               <button className="flex-1 bg-[var(--af-accent)] text-background px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={handleInstall}>

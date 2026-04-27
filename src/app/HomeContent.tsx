@@ -41,8 +41,8 @@ import PunchItemModal from '@/components/modals/PunchItemModal';
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
-import AIFloatingWrapper from '@/components/archiflow/AIFloatingWrapper';
-import KeyboardShortcutsInitializer from '@/components/archiflow/KeyboardShortcutsInitializer';
+import AIFloatingWrapper from '@/components/archii/AIFloatingWrapper';
+import KeyboardShortcutsInitializer from '@/components/archii/KeyboardShortcutsInitializer';
 
 /* ─── Screens — core screens loaded directly ─── */
 import DashboardScreen from '@/screens/DashboardScreen';

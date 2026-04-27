@@ -1,14 +1,14 @@
 /**
  * export-pdf.ts
  * Exportación a PDF profesional usando jsPDF + jspdf-autotable.
- * ArchiFlow v2.0 — Todos los reportes en PDF.
+ * Archii v2.0 — Todos los reportes en PDF.
  */
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { fmtCOP, fmtDate, fmtDuration } from './helpers';
 
-// Colores de marca ArchiFlow
+// Colores de marca Archii
 const BRAND = {
   primary: [200, 169, 110] as [number, number, number], // #c8a96e (oro)
   dark: [26, 26, 32] as [number, number, number],       // #1a1a20
@@ -49,7 +49,7 @@ function addHeader(doc: jsPDF, title: string, subtitle?: string) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(...BRAND.primary);
-  doc.text('ArchiFlow', pageW - 14, 18, { align: 'right' });
+  doc.text('Archii', pageW - 14, 18, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...BRAND.muted);
@@ -72,7 +72,7 @@ function addFooter(doc: jsPDF) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...BRAND.muted);
-  doc.text('ArchiFlow v2.0 — Plataforma de Gestión de Proyectos', pageW / 2, pageH - 8, { align: 'center' });
+  doc.text('Archii v2.0 — Plataforma de Gestión de Proyectos', pageW / 2, pageH - 8, { align: 'center' });
   doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageW - 14, pageH - 8, { align: 'right' });
 }
 
@@ -102,7 +102,7 @@ export function exportInvoicePDF(invoice: any, project?: any) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.setTextColor(...BRAND.white);
-  doc.text('ArchiFlow', 14, 22);
+  doc.text('Archii', 14, 22);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...BRAND.muted);
@@ -404,7 +404,7 @@ export function exportGeneralReportPDF(data: {
   }
 
   addFooter(doc);
-  doc.save(`archiflow-reporte-general-${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`archii-reporte-general-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 /* ═══════════════════════════════════════════════
@@ -829,7 +829,7 @@ export function exportTeamPDF(data: { teamUsers: any[]; tasks: any[]; timeEntrie
   });
 
   addFooter(doc);
-  doc.save(`archiflow-equipo-${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`archii-equipo-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 /* ═══════════════════════════════════════════════
@@ -1122,7 +1122,7 @@ export function exportProjectsPDF(data: {
   }
 
   addFooter(doc);
-  doc.save(`archiflow-proyectos-${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`archii-proyectos-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 /* ═══════════════════════════════════════════════
@@ -1245,5 +1245,5 @@ export function exportObraPDF(data: { rfis: any[]; submittals: any[]; punchItems
   }
 
   addFooter(doc);
-  doc.save(`archiflow-obra-${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`archii-obra-${new Date().toISOString().split('T')[0]}.pdf`);
 }

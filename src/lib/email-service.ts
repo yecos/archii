@@ -1,5 +1,5 @@
 /**
- * ArchiFlow — Email Service (Server-side)
+ * Archii — Email Service (Server-side)
  * Conexion con Resend API para enviar correos electronicos.
  * Este modulo es PURO (no importa firebase-admin) para evitar problemas
  * de bundling con Turbopack.
@@ -12,7 +12,7 @@
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_API_URL = 'https://api.resend.com/emails';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notificaciones@archiflow.app';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notificaciones@archii.app';
 
 export interface EmailOptions {
   to: string;
@@ -29,7 +29,7 @@ export async function sendEmail({
   html,
 }: EmailOptions): Promise<{ success: boolean; error?: string; messageId?: string }> {
   if (!RESEND_API_KEY) {
-    console.error('[ArchiFlow Email] RESEND_API_KEY no configurada');
+    console.error('[Archii Email] RESEND_API_KEY no configurada');
     return { success: false, error: 'Email no configurado.' };
   }
 
@@ -41,7 +41,7 @@ export async function sendEmail({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `ArchiFlow <${FROM_EMAIL}>`,
+        from: `Archii <${FROM_EMAIL}>`,
         to: [to],
         subject,
         html,
@@ -50,14 +50,14 @@ export async function sendEmail({
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('[ArchiFlow Email] Error:', response.status, err);
+      console.error('[Archii Email] Error:', response.status, err);
       return { success: false, error: `Error ${response.status}` };
     }
 
     const data = await response.json();
     return { success: true, messageId: data.id };
   } catch (err: any) {
-    console.error('[ArchiFlow Email] Error:', err.message);
+    console.error('[Archii Email] Error:', err.message);
     return { success: false, error: err.message };
   }
 }

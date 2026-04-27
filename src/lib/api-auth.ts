@@ -40,14 +40,14 @@ export async function authenticateRequest(
     const authHeader = request.headers.get("authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
-      console.warn("[ArchiFlow Auth] Missing or malformed Authorization header");
+      console.warn("[Archii Auth] Missing or malformed Authorization header");
       return null;
     }
 
     const idToken = authHeader.split("Bearer ")[1];
 
     if (!idToken) {
-      console.warn("[ArchiFlow Auth] Empty Bearer token");
+      console.warn("[Archii Auth] Empty Bearer token");
       return null;
     }
 
@@ -65,17 +65,17 @@ export async function authenticateRequest(
         error.message.includes("auth/id-token-expired") ||
         error.message.includes("token expired")
       ) {
-        console.warn("[ArchiFlow Auth] Token expired");
+        console.warn("[Archii Auth] Token expired");
       } else if (
         error.message.includes("auth/invalid-id-token") ||
         error.message.includes("invalid token")
       ) {
-        console.warn("[ArchiFlow Auth] Invalid token");
+        console.warn("[Archii Auth] Invalid token");
       } else {
-        console.warn("[ArchiFlow Auth] Verification failed:", error.message);
+        console.warn("[Archii Auth] Verification failed:", error.message);
       }
     } else {
-      console.warn("[ArchiFlow Auth] Unknown verification error");
+      console.warn("[Archii Auth] Unknown verification error");
     }
     return null;
   }
@@ -109,7 +109,7 @@ export async function requireAdmin(
 
   if (!ADMIN_EMAILS.includes(user.email)) {
     console.warn(
-      `[ArchiFlow Auth] Non-admin access attempt by ${user.email}`
+      `[Archii Auth] Non-admin access attempt by ${user.email}`
     );
     throw new AuthError("No autorizado. Se requieren permisos de administrador.", 403);
   }

@@ -40,7 +40,7 @@ export async function GET(_request: NextRequest) {
           maxRowsPerRequest: 10000,
           supportedFormats: ['csv', 'json', 'parquet'],
           authMethods: ['api_key', 'bearer_token'],
-          documentationUrl: 'https://docs.archiflow.co/bi-connector',
+          documentationUrl: 'https://docs.archii.co/bi-connector',
         },
       },
       {

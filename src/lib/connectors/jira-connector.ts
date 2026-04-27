@@ -1,11 +1,11 @@
 /**
  * jira-connector.ts
- * Jira integration connector for ArchiFlow Marketplace.
+ * Jira integration connector for Archii Marketplace.
  *
  * Supports:
  *   - API Key / Basic Auth authentication
  *   - Create, update, and get Jira issues
- *   - Bidirectional task sync (ArchiFlow ↔ Jira)
+ *   - Bidirectional task sync (Archii ↔ Jira)
  *   - Webhook receiver for Jira events
  *
  * Auth: email + API token (Basic Auth)
@@ -217,13 +217,13 @@ export async function getJiraIssue(
 }
 
 /* ================================================================
-   MAPPERS (ArchiFlow ↔ Jira)
+   MAPPERS (Archii ↔ Jira)
    ================================================================ */
 
 /**
- * Map an ArchiFlow task to a Jira issue format.
+ * Map an Archii task to a Jira issue format.
  */
-export function formatArchiflowToJira(task: {
+export function formatArchiiToJira(task: {
   title: string;
   description?: string;
   priority?: string;
@@ -232,19 +232,19 @@ export function formatArchiflowToJira(task: {
   tags?: string[];
 }): JiraIssueData {
   return {
-    summary: `[ArchiFlow] ${task.title}`,
+    summary: `[Archii] ${task.title}`,
     description: task.description || '',
     priority: task.priority || 'Media',
     issueType: 'Task',
     dueDate: task.dueDate,
-    labels: (task.tags || []).concat('archiflow'),
+    labels: (task.tags || []).concat('archii'),
   };
 }
 
 /**
- * Map a Jira issue to an ArchiFlow task format.
+ * Map a Jira issue to an Archii task format.
  */
-export function formatJiraToArchiflow(jiraIssue: JiraIssue): {
+export function formatJiraToArchii(jiraIssue: JiraIssue): {
   title: string;
   description?: string;
   priority?: string;
@@ -269,7 +269,7 @@ export function formatJiraToArchiflow(jiraIssue: JiraIssue): {
   };
 
   return {
-    title: jiraIssue.fields.summary.replace(/^\[ArchiFlow\]\s*/, ''),
+    title: jiraIssue.fields.summary.replace(/^\[Archii\]\s*/, ''),
     description: jiraIssue.fields.description && typeof jiraIssue.fields.description === 'object'
       ? (jiraIssue.fields.description as any).content
           ?.map((c: any) => c.content?.map((t: any) => t.text).join('') || '')
@@ -280,7 +280,7 @@ export function formatJiraToArchiflow(jiraIssue: JiraIssue): {
     priority: priorityMap[jiraIssue.fields.priority?.name || ''] || 'Media',
     status: statusMap[jiraIssue.fields.status?.name || ''] || 'Por hacer',
     dueDate: jiraIssue.fields.duedate || undefined,
-    tags: jiraIssue.fields.labels?.filter((l: string) => l !== 'archiflow'),
+    tags: jiraIssue.fields.labels?.filter((l: string) => l !== 'archii'),
     externalKey: jiraIssue.key,
   };
 }
@@ -290,7 +290,7 @@ export function formatJiraToArchiflow(jiraIssue: JiraIssue): {
    ================================================================ */
 
 /**
- * Sync a task from ArchiFlow to Jira.
+ * Sync a task from Archii to Jira.
  * If the task has a jiraIssueKey, it updates; otherwise creates.
  */
 export async function syncTaskToJira(
@@ -305,7 +305,7 @@ export async function syncTaskToJira(
   },
   jiraConfig: JiraConfig
 ): Promise<{ key: string; created: boolean }> {
-  const issueData = formatArchiflowToJira(task);
+  const issueData = formatArchiiToJira(task);
 
   if (task.jiraIssueKey) {
     await updateJiraIssue(jiraConfig, task.jiraIssueKey, issueData);
@@ -351,7 +351,7 @@ export function handleJiraWebhook(payload: any): {
 const jiraConnector: IntegrationConnector = {
   async dispatch(config, event, payload) {
     const jiraConfig = config as unknown as JiraConfig;
-    const taskData = formatArchiflowToJira(payload as any);
+    const taskData = formatArchiiToJira(payload as any);
 
     switch (event) {
       case 'task.created': {

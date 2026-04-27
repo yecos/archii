@@ -10,7 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[ArchiFlow]', error);
+    console.error('[Archii]', error);
   }, [error]);
 
   return (
@@ -47,7 +47,7 @@ export default function Error({
             lineHeight: 1.2,
           }}
         >
-          ArchiFlow
+          Archii
         </h1>
 
         {/* Divider */}

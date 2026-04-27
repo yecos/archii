@@ -5,11 +5,11 @@ import { authenticateRequest } from '@/lib/api-auth';
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
 /**
- * Verify ArchiFlow authentication from X-Firebase-Token header.
+ * Verify Archii authentication from X-Firebase-Token header.
  * OneDrive routes use the Authorization header for MS access tokens,
- * so ArchiFlow auth is passed via a separate custom header.
+ * so Archii auth is passed via a separate custom header.
  */
-async function verifyArchiFlowAuth(request: NextRequest): Promise<boolean> {
+async function verifyArchiiAuth(request: NextRequest): Promise<boolean> {
   const fbToken = request.headers.get('x-firebase-token');
   if (!fbToken) return false;
   try {
@@ -45,7 +45,7 @@ type FolderType = (typeof PROJECT_SUBFOLDERS)[number];
 
 /**
  * POST — Create a project folder structure in OneDrive:
- *   ArchiFlow / {projectName} / planos
+ *   Archii / {projectName} / planos
  *                                   / fotos
  *                                   / contratos
  *                                   / presupuestos
@@ -55,8 +55,8 @@ type FolderType = (typeof PROJECT_SUBFOLDERS)[number];
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!(await verifyArchiFlowAuth(request))) {
-      return NextResponse.json({ error: 'ArchiFlow authentication required' }, { status: 401 });
+    if (!(await verifyArchiiAuth(request))) {
+      return NextResponse.json({ error: 'Archii authentication required' }, { status: 401 });
     }
 
     const token = getAccessToken(request);
@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
       'Content-Type': 'application/json',
     };
 
-    // ── Step 1: Ensure ArchiFlow root folder exists ───────────────────
-    let archiflowId: string | undefined;
+    // ── Step 1: Ensure Archii root folder exists ───────────────────
+    let archiiId: string | undefined;
 
     try {
-      // Search for existing ArchiFlow folder
-      const searchUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'ArchiFlow'&$select=id,name`;
+      // Search for existing Archii folder
+      const searchUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'Archii'&$select=id,name`;
       const searchRes = await fetch(searchUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -92,21 +92,21 @@ export async function POST(request: NextRequest) {
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         if (searchData.value && searchData.value.length > 0) {
-          archiflowId = searchData.value[0].id;
+          archiiId = searchData.value[0].id;
         }
       }
     } catch {
       // Ignore search errors, will create below
     }
 
-    if (!archiflowId) {
-      // Create ArchiFlow root folder
+    if (!archiiId) {
+      // Create Archii root folder
       const createRootUrl = `${GRAPH_BASE}/me/drive/root/children`;
       const createRootRes = await fetch(createRootUrl, {
         method: 'POST',
         headers: graphHeaders,
         body: JSON.stringify({
-          name: 'ArchiFlow',
+          name: 'Archii',
           folder: {},
           '@microsoft.graph.conflictBehavior': 'fail',
         }),
@@ -114,37 +114,37 @@ export async function POST(request: NextRequest) {
 
       if (createRootRes.status === 409) {
         // Already exists — fetch it
-        const searchUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'ArchiFlow'&$select=id,name`;
+        const searchUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'Archii'&$select=id,name`;
         const searchRes = await fetch(searchUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (searchRes.ok) {
           const searchData = await searchRes.json();
           if (searchData.value && searchData.value.length > 0) {
-            archiflowId = searchData.value[0].id;
+            archiiId = searchData.value[0].id;
           }
         }
-        if (!archiflowId) {
+        if (!archiiId) {
           return NextResponse.json(
-            { error: 'ArchiFlow folder conflict could not be resolved' },
+            { error: 'Archii folder conflict could not be resolved' },
             { status: 409 }
           );
         }
       } else if (!createRootRes.ok) {
         const errBody = await createRootRes.text();
         return NextResponse.json(
-          { error: `Failed to create ArchiFlow folder: ${errBody}` },
+          { error: `Failed to create Archii folder: ${errBody}` },
           { status: createRootRes.status }
         );
       } else {
         const rootData = await createRootRes.json();
-        archiflowId = rootData.id;
+        archiiId = rootData.id;
       }
     }
 
-    // ── Step 2: Create project folder inside ArchiFlow ────────────────
+    // ── Step 2: Create project folder inside Archii ────────────────
     const encodedProjectName = encodeURIComponent(projectName);
-    const projectFolderUrl = `${GRAPH_BASE}/me/drive/items/${archiflowId}/children`;
+    const projectFolderUrl = `${GRAPH_BASE}/me/drive/items/${archiiId}/children`;
 
     const projectFolderRes = await fetch(projectFolderUrl, {
       method: 'POST',
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
         projectId,
         folderName: projectName,
         driveItemId: projectFolderId,
-        parentFolderId: archiflowId,
+        parentFolderId: archiiId,
         folderType: 'root',
         createdAt: new Date(),
       }, { merge: true });
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       rootFolderId: projectFolderId,
-      archiflowFolderId: archiflowId,
+      archiiFolderId: archiiId,
       subfolders,
       projectName,
     });

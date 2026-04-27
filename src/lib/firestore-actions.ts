@@ -14,7 +14,7 @@ type ToastFn = (msg: string, type?: string) => void;
 /** Guard: verifica que el usuario esté autenticado antes de cualquier write */
 function requireAuth(authUser: FirebaseUser | null, action: string): void {
   if (!authUser?.uid) {
-    console.error(`[ArchiFlow] WRITE_BLOCKED: ${action} — usuario no autenticado`);
+    console.error(`[Archii] WRITE_BLOCKED: ${action} — usuario no autenticado`);
     throw new Error(`WRITE_BLOCKED: No se puede ${action} sin usuario autenticado`);
   }
 }
@@ -37,7 +37,7 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
   try {
     return await fn();
   } catch (err) {
-    console.error(`[ArchiFlow] ${action} error:`, err);
+    console.error(`[Archii] ${action} error:`, err);
     if (showToast) showToast(`Error: ${action}`, 'error');
     return null;
   }

@@ -1,6 +1,6 @@
 /**
  * collaboration-service.ts
- * Real-time collaboration service for ArchiFlow.
+ * Real-time collaboration service for Archii.
  *
  * Firestore-based optimistic sync for multi-user document editing.
  * Provides presence tracking, cursor sharing, anchored comments, and

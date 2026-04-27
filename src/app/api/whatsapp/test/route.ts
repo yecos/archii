@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
               to: cleanPhone,
               type: 'text',
               text: {
-                body: 'Prueba desde ArchiFlow - Bot funcionando correctamente!',
+                body: 'Prueba desde Archii - Bot funcionando correctamente!',
                 preview_url: false,
               },
             }),

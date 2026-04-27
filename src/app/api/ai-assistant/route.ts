@@ -5,13 +5,13 @@ import { chatCompletion } from "@/lib/gemini-helper";
 /**
  * POST /api/ai-assistant
  *
- * Asistente IA real para ArchiFlow.
+ * Asistente IA real para Archii.
  * Usa Google Gemini API — requiere GEMINI_API_KEY como variable de entorno.
  *
  * Powered by Google Gemini (gemini-2.0-flash)
  */
 
-const SYSTEM_PROMPT = `Eres ArchiFlow AI, un asistente inteligente especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Tu tono es profesional pero cercano, y siempre respondes en español.
+const SYSTEM_PROMPT = `Eres Archii AI, un asistente inteligente especializado en gestión de proyectos de construcción, arquitectura e interiorismo. Tu tono es profesional pero cercano, y siempre respondes en español.
 
 Conocimientos principales:
 - Planificación y cronogramas de obra
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor";
-    console.error("[ArchiFlow AI] Error en asistente:", message);
+    console.error("[Archii AI] Error en asistente:", message);
     return NextResponse.json(
       { error: "Error de conexión", message: "⚠️ Error de conexión con la IA. Intenta de nuevo." },
       { status: 500 }

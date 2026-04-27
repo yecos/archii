@@ -820,7 +820,7 @@ export default function ProfileScreen() {
                 <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-base">🚪</div>
                 <div>
                   <div className="text-[13px] font-medium">Cerrar Sesión</div>
-                  <div className="text-[10px] text-[var(--muted-foreground)]">Salir de tu cuenta en ArchiFlow</div>
+                  <div className="text-[10px] text-[var(--muted-foreground)]">Salir de tu cuenta en Archii</div>
                 </div>
               </div>
               <button className="px-5 py-2.5 rounded-lg border border-red-500/30 text-red-400 text-[13px] font-medium cursor-pointer hover:bg-red-500/10 transition-colors flex items-center gap-2" onClick={() => setLogoutOpen(true)}>

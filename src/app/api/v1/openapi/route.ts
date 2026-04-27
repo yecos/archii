@@ -11,10 +11,10 @@ import { NextResponse } from 'next/server';
 const OPENAPI_SPEC = {
   openapi: '3.0.3',
   info: {
-    title: 'ArchiFlow API',
+    title: 'Archii API',
     version: '2.0.0',
-    description: 'API pública de ArchiFlow para gestión de proyectos de arquitectura y construcción.',
-    contact: { name: 'ArchiFlow', email: 'api@archiflow.app' },
+    description: 'API pública de Archii para gestión de proyectos de arquitectura y construcción.',
+    contact: { name: 'Archii', email: 'api@archii.app' },
   },
   servers: [
     { url: 'https://archii-theta.vercel.app/api/v1', description: 'Producción' },

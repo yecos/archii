@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
           resourceId: 'test-id',
           resourceType: 'test',
           payload: {
-            message: 'Webhook de prueba desde ArchiFlow',
+            message: 'Webhook de prueba desde Archii',
             timestamp: new Date().toISOString(),
           },
           timestamp: new Date().toISOString(),

@@ -36,7 +36,7 @@ export interface SSOConfig {
   idpSsoUrl: string;
   /** X.509 Certificate del IdP (para verificar firmas) */
   idpCertificate: string;
-  /** Attribute mapping: IdP claim → ArchiFlow field */
+  /** Attribute mapping: IdP claim → Archii field */
   attributeMapping: {
     email: string;    // ej: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
     displayName: string;
@@ -161,7 +161,7 @@ export async function disableSSO(tenantId: string): Promise<void> {
 /* ---- Role Mapping ---- */
 
 /**
- * Mapea un rol del IdP a roles internos de ArchiFlow.
+ * Mapea un rol del IdP a roles internos de Archii.
  * Si no hay mapeo específico, asigna 'Miembro' por defecto.
  */
 export function mapIdPRoleToInternal(
@@ -394,7 +394,7 @@ export async function processSCIMEvent(event: SCIMEvent): Promise<{
 /* ---- SAML Metadata Helpers ---- */
 
 /**
- * Genera la metadata del Service Provider (SP) para ArchiFlow.
+ * Genera la metadata del Service Provider (SP) para Archii.
  * Esta metadata se registra en el IdP (Azure AD, Okta, etc.).
  */
 export function generateSPMetadata(

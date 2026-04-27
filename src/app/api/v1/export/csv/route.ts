@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
 
     // Build filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `archiflow-export-${timestamp}.csv`;
+    const filename = `archii-export-${timestamp}.csv`;
 
     // Return CSV with proper headers
     return new NextResponse(result.csv, {

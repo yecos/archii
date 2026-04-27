@@ -17,7 +17,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'ok',
-    service: 'ArchiFlow API',
+    service: 'Archii API',
     version: '2.0.0',
     uptime: `${hours}h ${minutes}m`,
     timestamp: new Date().toISOString(),

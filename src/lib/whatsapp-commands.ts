@@ -1,5 +1,5 @@
 /**
- * ArchiFlow — WhatsApp Commands
+ * Archii — WhatsApp Commands
  * Parsea comandos del usuario y genera respuestas con datos de Firestore.
  */
 
@@ -13,7 +13,7 @@ interface CommandResult {
 // ─── MAIN MENU ───
 export function getMainMenu(): CommandResult {
   return {
-    text: `*ArchiFlow Bot*\n\nElige una opcion:\n\n1. Mis tareas pendientes\n2. Estado de proyectos\n3. Presupuesto\n4. Equipo\n5. Proximos vencimientos`,
+    text: `*Archii Bot*\n\nElige una opcion:\n\n1. Mis tareas pendientes\n2. Estado de proyectos\n3. Presupuesto\n4. Equipo\n5. Proximos vencimientos`,
     buttons: [
       { id: 'cmd_tareas', title: 'Mis tareas' },
       { id: 'cmd_proyectos', title: 'Proyectos' },
@@ -103,7 +103,7 @@ async function cmdMisTareas(link: any, db: any): Promise<CommandResult> {
 
     return { text };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd tareas:', err.message);
+    console.error('[Archii WhatsApp] Error cmd tareas:', err.message);
     return { text: 'Error al obtener tus tareas. Intenta de nuevo.' };
   }
 }
@@ -136,7 +136,7 @@ async function cmdProyectos(db: any): Promise<CommandResult> {
 
     return { text };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd proyectos:', err.message);
+    console.error('[Archii WhatsApp] Error cmd proyectos:', err.message);
     return { text: 'Error al obtener proyectos. Intenta de nuevo.' };
   }
 }
@@ -183,7 +183,7 @@ async function cmdPresupuesto(db: any): Promise<CommandResult> {
 
     return { text };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd presupuesto:', err.message);
+    console.error('[Archii WhatsApp] Error cmd presupuesto:', err.message);
     return { text: 'Error al obtener presupuesto. Intenta de nuevo.' };
   }
 }
@@ -215,7 +215,7 @@ async function cmdEquipo(db: any): Promise<CommandResult> {
 
     return { text };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd equipo:', err.message);
+    console.error('[Archii WhatsApp] Error cmd equipo:', err.message);
     return { text: 'Error al obtener equipo. Intenta de nuevo.' };
   }
 }
@@ -256,7 +256,7 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
 
     return { text };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error cmd vencimientos:', err.message);
+    console.error('[Archii WhatsApp] Error cmd vencimientos:', err.message);
     return { text: 'Error al obtener vencimientos. Intenta de nuevo.' };
   }
 }
@@ -265,7 +265,7 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
 
 export function getWelcomeMessage(): CommandResult {
   return {
-    text: `Bienvenido a *ArchiFlow Bot*!\n\nPara usar el bot necesitas vincular tu cuenta de ArchiFlow.\n\n*Paso 1:* Escribe tu email registrado en ArchiFlow.\n\nEjemplo: juan@email.com`,
+    text: `Bienvenido a *Archii Bot*!\n\nPara usar el bot necesitas vincular tu cuenta de Archii.\n\n*Paso 1:* Escribe tu email registrado en Archii.\n\nEjemplo: juan@email.com`,
     buttons: [{ id: 'link_start', title: 'Vincular cuenta' }],
   };
 }

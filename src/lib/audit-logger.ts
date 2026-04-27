@@ -1,6 +1,6 @@
 /**
  * audit-logger.ts
- * Sistema de audit logs para ArchiFlow.
+ * Sistema de audit logs para Archii.
  *
  * Registra operaciones de escritura en colecciones críticas
  * de Firestore (tasks, projects, expenses, etc.) para trazabilidad

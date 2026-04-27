@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     // Determine the folder path to use
     let actualFolderId = folderId;
 
-    // If root, use the tenant's ArchiFlow folder if configured
+    // If root, use the tenant's Archii folder if configured
     if (folderId === 'root' && tenantData.msRootFolderId) {
       actualFolderId = tenantData.msRootFolderId;
     } else if (folderId === 'root') {
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
     });
 
     const folderName = folderId === 'root'
-      ? `ArchiFlow/${(tenantData.name || tenantId).replace(/[/\\:*?"<>|]/g, '-')}`
+      ? `Archii/${(tenantData.name || tenantId).replace(/[/\\:*?"<>|]/g, '-')}`
       : undefined;
 
     return NextResponse.json({

@@ -97,7 +97,7 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
         setRecDuration(sec);
       }, 1000);
     } catch (err) {
-      console.error('[ArchiFlow] Error starting recording:', err);
+      console.error('[Archii] Error starting recording:', err);
       throw new Error('No se pudo acceder al micrófono. Verifica los permisos.');
     }
   }, []);
@@ -164,12 +164,12 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
       currentAudioRef.current = null;
     };
     audio.onerror = () => {
-      console.error('[ArchiFlow] Error playing audio');
+      console.error('[Archii] Error playing audio');
       setPlayingAudio(null);
       currentAudioRef.current = null;
     };
     audio.play().catch(err => {
-      console.error('[ArchiFlow] Audio play error:', err);
+      console.error('[Archii] Audio play error:', err);
       setPlayingAudio(null);
       currentAudioRef.current = null;
     });

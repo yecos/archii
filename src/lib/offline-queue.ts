@@ -1,6 +1,6 @@
 /**
  * offline-queue.ts
- * Offline-first support for ArchiFlow.
+ * Offline-first support for Archii.
  *
  * Cuando el usuario está sin conexión, las operaciones de escritura
  * se encolan en IndexedDB y se sincronizan automáticamente al
@@ -57,7 +57,7 @@ let dbPromise: Promise<IDBPDatabase<OfflineDBSchema>> | null = null;
 
 function getDB(): Promise<IDBPDatabase<OfflineDBSchema>> {
   if (!dbPromise) {
-    dbPromise = openDB<OfflineDBSchema>('archiflow-offline', 1, {
+    dbPromise = openDB<OfflineDBSchema>('archii-offline', 1, {
       upgrade(db) {
         const store = db.createObjectStore('queue', {
           keyPath: 'id',
@@ -280,7 +280,7 @@ export function initOfflineSync(): () => void {
       if (result.synced > 0) {
         // Dispatch custom event para que la UI pueda reaccionar
         window.dispatchEvent(
-          new CustomEvent('archiflow:offline-sync', {
+          new CustomEvent('archii:offline-sync', {
             detail: result,
           })
         );

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'archiflow-v6';
+const CACHE_NAME = 'archii-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -132,7 +132,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'ArchiFlow', body: 'Nueva notificación', icon: '/icon-192.png' };
+  let data = { title: 'Archii', body: 'Nueva notificación', icon: '/icon-192.png' };
   if (event.data) {
     try { data = { ...data, ...event.data.json() }; } catch (e) { data.body = event.data.text(); }
   }

@@ -114,7 +114,7 @@ export default function SettingsPanel() {
               </div>
               <div>
                 <h2 className="text-lg font-bold">Configuración</h2>
-                <p className="text-[11px] text-[var(--muted-foreground)]">Personaliza tu experiencia en ArchiFlow</p>
+                <p className="text-[11px] text-[var(--muted-foreground)]">Personaliza tu experiencia en Archii</p>
               </div>
             </div>
             <button

@@ -18,7 +18,7 @@ export default function InstallScreen() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-emerald-400">App instalada correctamente</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mt-0.5">ArchiFlow se está ejecutando como aplicación instalada. Puedes cerrar esta guía.</div>
+                  <div className="text-xs text-[var(--muted-foreground)] mt-0.5">Archii se está ejecutando como aplicación instalada. Puedes cerrar esta guía.</div>
                 </div>
               </div>
             ) : installPrompt ? (
@@ -66,7 +66,7 @@ export default function InstallScreen() {
                       {platform === 'android' && <span className="text-[10px] bg-[var(--af-accent)]/20 text-[var(--af-accent)] px-1.5 py-0.5 rounded-full">Tu dispositivo</span>}
                     </div>
                     <ol className="text-[12px] text-[var(--muted-foreground)] space-y-1 pl-4 list-decimal">
-                      <li>Abre ArchiFlow en Chrome</li>
+                      <li>Abre Archii en Chrome</li>
                       <li>Toca el menú (⋮) arriba a la derecha</li>
                       <li>Selecciona <strong>"Instalar app"</strong> o <strong>"Agregar a pantalla de inicio"</strong></li>
                       <li>Confirma tocando <strong>"Instalar"</strong></li>
@@ -79,7 +79,7 @@ export default function InstallScreen() {
                       {platform === 'ios' && <span className="text-[10px] bg-[var(--af-accent)]/20 text-[var(--af-accent)] px-1.5 py-0.5 rounded-full">Tu dispositivo</span>}
                     </div>
                     <ol className="text-[12px] text-[var(--muted-foreground)] space-y-1 pl-4 list-decimal">
-                      <li>Abre ArchiFlow en <strong>Safari</strong> (no funciona en Chrome)</li>
+                      <li>Abre Archii en <strong>Safari</strong> (no funciona en Chrome)</li>
                       <li>Toca el botón <strong>Compartir</strong> (cuadro con flecha ↑)</li>
                       <li>Desliza y selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
                       <li>Toca <strong>"Agregar"</strong> en la esquina superior derecha</li>
@@ -106,8 +106,8 @@ export default function InstallScreen() {
                       {platform === 'windows' && <span className="text-[10px] bg-[var(--af-accent)]/20 text-[var(--af-accent)] px-1.5 py-0.5 rounded-full">Tu equipo</span>}
                     </div>
                     <ol className="text-[12px] text-[var(--muted-foreground)] space-y-1 pl-4 list-decimal">
-                      <li>Abre ArchiFlow en Chrome o Edge</li>
-                      <li>Haz clic en el <strong>ícono de instalar</strong> en la barra de direcciones ( junto al candado), o menú ⋮ → <strong>"Instalar ArchiFlow"</strong></li>
+                      <li>Abre Archii en Chrome o Edge</li>
+                      <li>Haz clic en el <strong>ícono de instalar</strong> en la barra de direcciones ( junto al candado), o menú ⋮ → <strong>"Instalar Archii"</strong></li>
                       <li>Confirma la instalación</li>
                       <li>Se crea un acceso directo en escritorio y menú inicio</li>
                     </ol>
@@ -119,7 +119,7 @@ export default function InstallScreen() {
                       {platform === 'mac' && <span className="text-[10px] bg-[var(--af-accent)]/20 text-[var(--af-accent)] px-1.5 py-0.5 rounded-full">Tu equipo</span>}
                     </div>
                     <ol className="text-[12px] text-[var(--muted-foreground)] space-y-1 pl-4 list-decimal">
-                      <li><strong>Chrome:</strong> Menú ⋮ → <strong>"Instalar ArchiFlow"</strong> → Crear acceso directo</li>
+                      <li><strong>Chrome:</strong> Menú ⋮ → <strong>"Instalar Archii"</strong> → Crear acceso directo</li>
                       <li><strong>Safari:</strong> Archivo → <strong>"Agregar al Dock"</strong></li>
                       <li>Se abre como ventana independiente sin barra de navegación</li>
                       <li>Funciona offline para datos en caché</li>
@@ -164,8 +164,8 @@ export default function InstallScreen() {
                   Actualizar cache
                 </button>
                 <button className="px-4 py-2 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] text-[13px] text-[var(--foreground)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors flex items-center gap-2" onClick={() => {
-                  localStorage.removeItem('archiflow-install-dismissed');
-                  localStorage.removeItem('archiflow-installed');
+                  localStorage.removeItem('archii-install-dismissed');
+                  localStorage.removeItem('archii-installed');
                   setIsInstalled(false);
                   setShowInstallBanner(true);
                   showToast('Recordatorio de instalación restablecido');

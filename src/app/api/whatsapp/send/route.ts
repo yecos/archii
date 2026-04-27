@@ -5,7 +5,7 @@ import { requireAdmin, AuthError } from "@/lib/api-auth";
 
 /**
  * POST /api/whatsapp/send
- * Envia notificaciones de ArchiFlow a WhatsApp.
+ * Envia notificaciones de Archii a WhatsApp.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     const message = error instanceof Error ? error.message : "Error interno";
-    console.error("[ArchiFlow WhatsApp] Error en send:", message);
+    console.error("[Archii WhatsApp] Error en send:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

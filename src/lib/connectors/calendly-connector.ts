@@ -1,13 +1,13 @@
 /**
  * calendly-connector.ts
- * Calendly integration connector for ArchiFlow Marketplace.
+ * Calendly integration connector for Archii Marketplace.
  *
  * Supports:
  *   - OAuth2 flow (access/refresh tokens)
  *   - Create scheduling links / events
  *   - List upcoming events
  *   - Get webhook events
- *   - Map ArchiFlow meetings to Calendly events
+ *   - Map Archii meetings to Calendly events
  *   - Bidirectional sync of meetings
  *
  * Auth: OAuth2 (access token + refresh token)
@@ -276,18 +276,18 @@ export async function cancelCalendlyEvent(
   eventUri: string
 ): Promise<void> {
   await calendlyRequest(config, 'POST', `${eventUri}/cancellation`, {
-    reason: 'Cancelado desde ArchiFlow',
+    reason: 'Cancelado desde Archii',
   });
 }
 
 /* ================================================================
-   MAPPERS (ArchiFlow ↔ Calendly)
+   MAPPERS (Archii ↔ Calendly)
    ================================================================ */
 
 /**
- * Map an ArchiFlow meeting to Calendly event data.
+ * Map an Archii meeting to Calendly event data.
  */
-export function formatArchiflowToCalendly(meeting: {
+export function formatArchiiToCalendly(meeting: {
   title: string;
   description?: string;
   date: string;
@@ -312,9 +312,9 @@ export function formatArchiflowToCalendly(meeting: {
 }
 
 /**
- * Map a Calendly event to an ArchiFlow meeting format.
+ * Map a Calendly event to an Archii meeting format.
  */
-export function formatCalendlyToArchiflow(event: CalendlyEvent): {
+export function formatCalendlyToArchii(event: CalendlyEvent): {
   title: string;
   description?: string;
   date: string;
@@ -372,7 +372,7 @@ const calendlyConnector: IntegrationConnector = {
 
     switch (event) {
       case 'meeting.created': {
-        const eventData = formatArchiflowToCalendly(payload as any);
+        const eventData = formatArchiiToCalendly(payload as any);
         if (eventData.eventTypeId) {
           await createCalendlyEvent(calConfig, eventData);
         }

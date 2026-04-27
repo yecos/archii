@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  console.error("[ArchiFlow WhatsApp] Verificacion fallida:", { mode, tokenValid: mode === 'subscribe' });
+  console.error("[Archii WhatsApp] Verificacion fallida:", { mode, tokenValid: mode === 'subscribe' });
   return NextResponse.json({ error: "Verificacion fallida" }, { status: 403 });
 }
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (!config.token || !config.phoneId || !config.verifyToken) {
-      console.error("[ArchiFlow WhatsApp] No configurado - faltan variables de entorno:", {
+      console.error("[Archii WhatsApp] No configurado - faltan variables de entorno:", {
         hasToken: !!config.token,
         hasPhoneId: !!config.phoneId,
         hasVerifyToken: !!config.verifyToken,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en webhook POST:", error.message, error.stack);
+    console.error("[Archii WhatsApp] Error en webhook POST:", error.message, error.stack);
     return NextResponse.json({ ok: true }); // Siempre 200 para Meta
   }
 }
@@ -99,7 +99,7 @@ async function safeReply(message: any) {
         return;
       }
       // Si botones fallan, hacer fallback a texto plano
-      console.warn("[ArchiFlow WhatsApp] Botones fallaron, haciendo fallback a texto. Error:", btnResult.error);
+      console.warn("[Archii WhatsApp] Botones fallaron, haciendo fallback a texto. Error:", btnResult.error);
     }
 
     // Enviar como texto plano
@@ -107,10 +107,10 @@ async function safeReply(message: any) {
     if (textResult.success) {
       // success
     } else {
-      console.error("[ArchiFlow WhatsApp] FALLO envio de texto a:", message.from, "Error:", textResult.error);
+      console.error("[Archii WhatsApp] FALLO envio de texto a:", message.from, "Error:", textResult.error);
     }
   } catch (error: any) {
-    console.error("[ArchiFlow WhatsApp] Error en safeReply:", error.message, error.stack);
+    console.error("[Archii WhatsApp] Error en safeReply:", error.message, error.stack);
   }
 }
 
@@ -138,7 +138,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
 
     if (userSnap.empty) {
       return {
-        text: `No encontramos una cuenta con el email ${email}\n\nVerifica que este registrado en ArchiFlow o intenta con otro email.`
+        text: `No encontramos una cuenta con el email ${email}\n\nVerifica que este registrado en Archii o intenta con otro email.`
       };
     }
 
@@ -158,7 +158,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
         .get();
       if (tenantMemberSnap.empty) {
         return {
-          text: `La cuenta ${email} no esta activa en ningun equipo de ArchiFlow.\n\nPide al administrador de tu equipo que te agregue como miembro.`
+          text: `La cuenta ${email} no esta activa en ningun equipo de Archii.\n\nPide al administrador de tu equipo que te agregue como miembro.`
         };
       }
       userTenantId = tenantMemberSnap.docs[0].id;
@@ -213,7 +213,7 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
 
       return getLinkedSuccess(userName);
     } catch (err: any) {
-      console.error("[ArchiFlow WhatsApp] Error vinculando:", err.message);
+      console.error("[Archii WhatsApp] Error vinculando:", err.message);
       return { text: "Error al vincular la cuenta. Intenta de nuevo." };
     }
   }

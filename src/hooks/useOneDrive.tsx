@@ -152,11 +152,11 @@ export function OneDriveProvider({
       setShowOneDrive(false);
     };
 
-    window.addEventListener('archiflow-ms-connected', onMsConnected);
-    window.addEventListener('archiflow-ms-disconnected', onMsDisconnected);
+    window.addEventListener('archii-ms-connected', onMsConnected);
+    window.addEventListener('archii-ms-disconnected', onMsDisconnected);
     return () => {
-      window.removeEventListener('archiflow-ms-connected', onMsConnected);
-      window.removeEventListener('archiflow-ms-disconnected', onMsDisconnected);
+      window.removeEventListener('archii-ms-connected', onMsConnected);
+      window.removeEventListener('archii-ms-disconnected', onMsDisconnected);
     };
   }, []);
 
@@ -174,7 +174,7 @@ export function OneDriveProvider({
         const data = await res.json();
         if (data.accessToken) {
           setMsAccessToken(data.accessToken);
-          sessionStorage.setItem('archiflow-ms-token', data.accessToken);
+          sessionStorage.setItem('archii-ms-token', data.accessToken);
           localStorage.setItem('msAccessToken', data.accessToken);
           setMsTokenExpiry(Date.now() + 55 * 60 * 1000);
           if (data.refreshToken) {
@@ -228,7 +228,7 @@ export function OneDriveProvider({
     try {
       const root = await graphApiGet('/me/drive/root/children');
       if (!root) { setMsLoading(false); return null; }
-      const archiFolder = root.value?.find((f: any) => f.name === 'ArchiFlow' && f.folder);
+      const archiFolder = root.value?.find((f: any) => f.name === 'Archii' && f.folder);
       let archiFolderId: string;
       if (archiFolder) {
         archiFolderId = archiFolder.id;
@@ -236,7 +236,7 @@ export function OneDriveProvider({
         const created = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children', {
           method: 'POST',
           headers: { Authorization: `Bearer ${msAccessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'ArchiFlow', folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
+          body: JSON.stringify({ name: 'Archii', folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
         });
         if (!created.ok) { setMsLoading(false); return null; }
         const createdData = await created.json();
@@ -308,7 +308,7 @@ export function OneDriveProvider({
       });
       if (res.ok) { showToast('Eliminado de OneDrive'); loadOneDriveFiles(folderId); }
       else { showToast('Error al eliminar', 'error'); }
-    } catch (err) { console.error('[ArchiFlow]', err); showToast('Error', 'error'); }
+    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
     setMsLoading(false);
   }, [msAccessToken, loadOneDriveFiles, showToast]);
 
@@ -488,11 +488,11 @@ export function OneDriveProvider({
     setMsAccessToken(null);
     setMsConnected(false);
     setMsRefreshToken(null);
-    sessionStorage.removeItem('archiflow-ms-token');
+    sessionStorage.removeItem('archii-ms-token');
     localStorage.removeItem('msAccessToken');
     localStorage.removeItem('msConnected');
     localStorage.removeItem('msRefreshToken');
-    window.dispatchEvent(new Event('archiflow-ms-disconnected'));
+    window.dispatchEvent(new Event('archii-ms-disconnected'));
     showToast('Microsoft OneDrive desconectado');
   }, [showToast]);
 

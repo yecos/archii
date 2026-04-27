@@ -106,16 +106,16 @@ export async function POST(request: NextRequest) {
         msEmail = user.email; // fallback
       }
 
-      // Try to find or create ArchiFlow/<tenantName> folder
+      // Try to find or create Archii/<tenantName> folder
       // Each tenant gets its own subfolder to isolate files
       let rootFolderId: string | null = null;
       const tenantName = (tenantData.name || tenantId).replace(/[/\\:*?"<>|]/g, '-').substring(0, 50);
-      const tenantFolderName = `ArchiFlow_${tenantName}`;
+      const tenantFolderName = `Archii_${tenantName}`;
 
       try {
-        // First ensure the ArchiFlow parent folder exists
+        // First ensure the Archii parent folder exists
         let archiFlowFolderId: string | null = null;
-        const searchParentUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'ArchiFlow'&$select=id,name`;
+        const searchParentUrl = `${GRAPH_BASE}/me/drive/root/children?$filter=name eq 'Archii'&$select=id,name`;
         const searchParentRes = await fetch(searchParentUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!archiFlowFolderId) {
-          // Create ArchiFlow parent folder
+          // Create Archii parent folder
           const createParentRes = await fetch(`${GRAPH_BASE}/me/drive/root/children`, {
             method: 'POST',
             headers: {
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              name: 'ArchiFlow',
+              name: 'Archii',
               folder: {},
               '@microsoft.graph.conflictBehavior': 'fail',
             }),
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
           }
 
           if (!rootFolderId) {
-            // Create tenant-specific folder inside ArchiFlow
+            // Create tenant-specific folder inside Archii
             const createTenantRes = await fetch(`${GRAPH_BASE}/me/drive/items/${archiFlowFolderId}/children`, {
               method: 'POST',
               headers: {

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    console.error('[ArchiFlow Push] Error guardando suscripción:', message);
+    console.error('[Archii Push] Error guardando suscripción:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -92,7 +92,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    console.error('[ArchiFlow Push] Error eliminando suscripción:', message);
+    console.error('[Archii Push] Error eliminando suscripción:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

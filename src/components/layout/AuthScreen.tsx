@@ -249,7 +249,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
           <div className="w-10 h-10 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-xl shadow-lg af-glow-accent flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
-          <span style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl">ArchiFlow</span>
+          <span style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl">Archii</span>
         </div>
 
         {/* Firebase error banner */}
@@ -318,7 +318,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
           <div className="text-center mt-5 text-sm text-[var(--af-text3)]">¿No tienes cuenta? <a className="text-[var(--af-accent)] cursor-pointer hover:underline" onClick={() => setForms(p => ({ ...p, showRegister: true }))}>Regístrate</a></div>
         </>) : (<>
           <div className="text-xl font-semibold mb-1">Crear cuenta</div>
-          <div className="text-sm text-[var(--muted-foreground)] mb-7">Únete a tu equipo en ArchiFlow</div>
+          <div className="text-sm text-[var(--muted-foreground)] mb-7">Únete a tu equipo en Archii</div>
           <div className="mb-3">
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1.5">Nombre completo</label>
             <input

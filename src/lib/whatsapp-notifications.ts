@@ -1,7 +1,7 @@
 /**
- * ArchiFlow — WhatsApp Notifications
+ * Archii — WhatsApp Notifications
  * Funciones para enviar notificaciones automaticas a WhatsApp
- * cuando ocurren eventos en ArchiFlow (tareas, gastos, aprobaciones, etc.)
+ * cuando ocurren eventos en Archii (tareas, gastos, aprobaciones, etc.)
  *
  * Uso desde page.tsx:
  *   import { notifyWhatsApp } from '@/lib/whatsapp-notifications';
@@ -27,7 +27,7 @@ async function sendToUser(userId: string, message: string): Promise<void> {
       body: JSON.stringify({ userId, message }),
     });
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp Notify] Error:', err.message);
+    console.error('[Archii WhatsApp Notify] Error:', err.message);
   }
 }
 
@@ -41,7 +41,7 @@ async function sendBroadcast(message: string): Promise<void> {
       body: JSON.stringify({ broadcast: true, message }),
     });
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp Notify] Error broadcast:', err.message);
+    console.error('[Archii WhatsApp Notify] Error broadcast:', err.message);
   }
 }
 
@@ -57,7 +57,7 @@ export const notifyWhatsApp = {
     const prio = priority === 'Alta' ? '🔴' : priority === 'Media' ? '🟡' : '🟢';
     const due = dueDate ? `\n📅 Vence: ${fmtDate(dueDate)}` : '';
     await sendToUser(userId,
-      `📋 *Nueva tarea asignada*\n\n${prio} *${taskTitle}*\n📁 Proyecto: ${projectName}${due}\n\n_Abre ArchiFlow para mas detalles._`
+      `📋 *Nueva tarea asignada*\n\n${prio} *${taskTitle}*\n📁 Proyecto: ${projectName}${due}\n\n_Abre Archii para mas detalles._`
     );
   },
 
@@ -80,7 +80,7 @@ export const notifyWhatsApp = {
   ) {
     const urgent = daysLeft <= 1 ? '🔴 ¡URGENTE!' : daysLeft <= 3 ? '🟡 Proximo a vencer' : '📅 Recordatorio';
     await sendToUser(userId,
-      `${urgent}\n\n📋 *${taskTitle}*\n📁 ${projectName}\n⏰ ${daysLeft === 0 ? 'Vence HOY' : daysLeft === 1 ? 'Vence MAÑANA' : `Vence en ${daysLeft} dias`}\n\n_Abre ArchiFlow para mas detalles._`
+      `${urgent}\n\n📋 *${taskTitle}*\n📁 ${projectName}\n⏰ ${daysLeft === 0 ? 'Vence HOY' : daysLeft === 1 ? 'Vence MAÑANA' : `Vence en ${daysLeft} dias`}\n\n_Abre Archii para mas detalles._`
     );
   },
 
@@ -92,7 +92,7 @@ export const notifyWhatsApp = {
     category?: string
   ) {
     await sendToUser(userId,
-      `💰 *Nuevo gasto registrado*\n\n*${concept}*\n💵 ${fmtCOP(amount)}\n📁 ${projectName}${category ? `\n🏷️ ${category}` : ''}\n\n_Abre ArchiFlow para ver detalles._`
+      `💰 *Nuevo gasto registrado*\n\n*${concept}*\n💵 ${fmtCOP(amount)}\n📁 ${projectName}${category ? `\n🏷️ ${category}` : ''}\n\n_Abre Archii para ver detalles._`
     );
   },
 
@@ -105,7 +105,7 @@ export const notifyWhatsApp = {
   ) {
     const emoji = percentage >= 100 ? '🔴' : percentage >= 90 ? '🟠' : '🟡';
     await sendToUser(userId,
-      `${emoji} *Alerta de presupuesto*\n\n📁 *${projectName}*\n💵 Gastado: ${fmtCOP(spent)} de ${fmtCOP(budget)} (${percentage}%)\n_${percentage >= 100 ? '¡Presupuesto agotado!' : 'Revisa los gastos del proyecto.'}_\n\n_Abre ArchiFlow para mas detalles._`
+      `${emoji} *Alerta de presupuesto*\n\n📁 *${projectName}*\n💵 Gastado: ${fmtCOP(spent)} de ${fmtCOP(budget)} (${percentage}%)\n_${percentage >= 100 ? '¡Presupuesto agotado!' : 'Revisa los gastos del proyecto.'}_\n\n_Abre Archii para mas detalles._`
     );
   },
 
@@ -116,7 +116,7 @@ export const notifyWhatsApp = {
     requestedBy: string
   ) {
     await sendToUser(userId,
-      `👀 *Nueva aprobacion pendiente*\n\n*${title}*\n📁 ${projectName}\n👤 Solicitada por: ${requestedBy}\n\n_Abre ArchiFlow para revisar y aprobar._`
+      `👀 *Nueva aprobacion pendiente*\n\n*${title}*\n📁 ${projectName}\n👤 Solicitada por: ${requestedBy}\n\n_Abre Archii para revisar y aprobar._`
     );
   },
 
@@ -128,7 +128,7 @@ export const notifyWhatsApp = {
   ) {
     const emoji = status === 'Aprobado' ? '✅' : '❌';
     await sendToUser(userId,
-      `${emoji} *Aprobacion ${status}*\n\n*${title}*${resolvedBy ? `\n👤 ${resolvedBy}` : ''}\n\n_Abre ArchiFlow para mas detalles._`
+      `${emoji} *Aprobacion ${status}*\n\n*${title}*${resolvedBy ? `\n👤 ${resolvedBy}` : ''}\n\n_Abre Archii para mas detalles._`
     );
   },
 
@@ -138,7 +138,7 @@ export const notifyWhatsApp = {
     update: string
   ) {
     await sendToUser(userId,
-      `📊 *Actualizacion de proyecto*\n\n📁 *${projectName}*\n${update}\n\n_Abre ArchiFlow para mas detalles._`
+      `📊 *Actualizacion de proyecto*\n\n📁 *${projectName}*\n${update}\n\n_Abre Archii para mas detalles._`
     );
   },
 
@@ -150,12 +150,12 @@ export const notifyWhatsApp = {
     pendingApprovals: number;
   }) {
     await sendBroadcast(
-      `📊 *Resumen semanal ArchiFlow*\n\n` +
+      `📊 *Resumen semanal Archii*\n\n` +
       `📁 Proyectos activos: ${data.totalProjects}\n` +
       `✅ Tareas completadas: ${data.completedTasks}\n` +
       `💰 Gastos nuevos: ${data.newExpenses} (${fmtCOP(data.totalSpent)})\n` +
       `👀 Aprobaciones pendientes: ${data.pendingApprovals}\n\n` +
-      `_Abre ArchiFlow para ver detalles._`
+      `_Abre Archii para ver detalles._`
     );
   },
 

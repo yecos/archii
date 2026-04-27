@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determinar subject y htmlBody con fallback a message
-    const emailSubject = subject || message || 'Notificación ArchiFlow';
+    const emailSubject = subject || message || 'Notificación Archii';
     const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const emailHtml = htmlBody || (message ? `<p style="font-family:sans-serif;font-size:15px;color:#1f2937;">${escapeHtml(message).replace(/\n/g, '<br>')}</p>` : '');
 
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error interno del servidor";
-    console.error("[ArchiFlow Email Notify] Error:", message);
+    console.error("[Archii Email Notify] Error:", message);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

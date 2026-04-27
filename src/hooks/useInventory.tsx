@@ -245,10 +245,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const resetForms: Record<string, any> = { invProdName: '', invProdSku: '', invProdCat: '', invProdUnit: 'Unidad', invProdPrice: '', invProdMinStock: '5', invProdDesc: '', invProdImage: '', invProdWarehouse: 'Almacén Principal' };
       INV_WAREHOUSES.forEach(w => { resetForms[`invProdWS_${w.replace(/\s/g, '_')}`] = '0'; });
       setForms(p => ({ ...p, ...resetForms }));
-    } catch (err) { console.error('[ArchiFlow] saveInvProduct error:', err); showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[Archii] saveInvProduct error:', err); showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvProduct = async (id: string) => { if (!confirm('¿Eliminar este producto del inventario?')) return; try { await getFirebase().firestore().collection('invProducts').doc(id).delete(); showToast('Producto eliminado'); } catch (err) { console.error("[Archii]", err); } };
 
   const openEditInvProduct = (p: InvProduct) => {
     setEditingId(p.id);
@@ -269,10 +269,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       if (editingId) { await db.collection('invCategories').doc(editingId).update(data); showToast('Categoría actualizada'); }
       else { await db.collection('invCategories').add(data); showToast('Categoría creada'); }
       closeModal('invCategory'); setEditingId(null); setForms(p => ({ ...p, invCatName: '', invCatColor: '', invCatDesc: '' }));
-    } catch (err) { console.error('[ArchiFlow] saveInvCategory error:', err); showToast('Error al guardar', 'error'); }
+    } catch (err) { console.error('[Archii] saveInvCategory error:', err); showToast('Error al guardar', 'error'); }
   };
 
-  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvCategory = async (id: string) => { if (!confirm('¿Eliminar categoría?')) return; try { await getFirebase().firestore().collection('invCategories').doc(id).delete(); showToast('Categoría eliminada'); } catch (err) { console.error("[Archii]", err); } };
   const openEditInvCategory = (c: InvCategory) => { setEditingId(c.id); setForms(f => ({ ...f, invCatName: c.data.name, invCatColor: c.data.color || '', invCatDesc: c.data.description || '' })); openModal('invCategory'); };
 
   const saveInvMovement = async () => {
@@ -302,7 +302,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) { showToast(err.message || 'Error al registrar movimiento', 'error'); }
   };
 
-  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvMovement = async (id: string) => { if (!confirm('¿Eliminar movimiento?')) return; try { await getFirebase().firestore().collection('invMovements').doc(id).delete(); showToast('Movimiento eliminado'); } catch (err) { console.error("[Archii]", err); } };
 
   const saveInvTransfer = async () => {
     const productId = forms.invTrProduct || '';
@@ -339,7 +339,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) { showToast(err.message || 'Error en transferencia', 'error'); }
   };
 
-  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[ArchiFlow]", err); } };
+  const deleteInvTransfer = async (id: string) => { if (!confirm('¿Eliminar registro de transferencia?')) return; try { await getFirebase().firestore().collection('invTransfers').doc(id).delete(); showToast('Transferencia eliminada'); } catch (err) { console.error("[Archii]", err); } };
 
   const getInvCategoryName = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.name : 'Sin categoría'; };
   const getInvCategoryColor = (catId: string) => { const c = invCategories.find(x => x.id === catId); return c ? c.data.color : '#6b7280'; };

@@ -1,5 +1,5 @@
 /**
- * ArchiFlow — WhatsApp Service
+ * Archii — WhatsApp Service
  * Conexion con Meta Cloud API para enviar/recibir mensajes de WhatsApp.
  * Este modulo es PURO (no importa firebase-admin) para evitar problemas
  * de bundling con Turbopack.
@@ -18,7 +18,7 @@ function getConfig() {
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
 
   if (!token || !phoneId || !verifyToken) {
-    console.error('[ArchiFlow WhatsApp] Variables de entorno faltantes:', {
+    console.error('[Archii WhatsApp] Variables de entorno faltantes:', {
       hasToken: !!token,
       hasPhoneId: !!phoneId,
       hasVerifyToken: !!verifyToken,
@@ -56,14 +56,14 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<{ s
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[ArchiFlow WhatsApp] Error enviando mensaje:', response.status, err);
+      console.error('[Archii WhatsApp] Error enviando mensaje:', response.status, err);
       return { success: false, error: `Error ${response.status} enviando mensaje` };
     }
 
     const data = await response.json();
     return { success: true };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error de conexion:', err.message);
+    console.error('[Archii WhatsApp] Error de conexion:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -105,13 +105,13 @@ export async function sendWhatsAppButtons(
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[ArchiFlow WhatsApp] Error enviando botones:', response.status, err);
+      console.error('[Archii WhatsApp] Error enviando botones:', response.status, err);
       return { success: false, error: `Error ${response.status}` };
     }
 
     return { success: true };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error conexion botones:', err.message);
+    console.error('[Archii WhatsApp] Error conexion botones:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -178,7 +178,7 @@ export function parseWebhookPayload(body: any): WhatsAppMessage | null {
 
     return { from, name, body: msgBody, messageId, timestamp, type: msgType, buttonId };
   } catch (err: any) {
-    console.error('[ArchiFlow WhatsApp] Error parseando webhook:', err.message);
+    console.error('[Archii WhatsApp] Error parseando webhook:', err.message);
     return null;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * ArchiFlow — Servicio Unificado de Notificaciones Externas
+ * Archii — Servicio Unificado de Notificaciones Externas
  *
  * Centraliza el envío de notificaciones a los 3 canales externos:
  *   1. WhatsApp (Meta Cloud API) — ya existente
@@ -28,7 +28,7 @@ interface ChannelPrefs {
   push: boolean;
 }
 
-const CHANNEL_PREFS_KEY = 'archiflow-channel-prefs';
+const CHANNEL_PREFS_KEY = 'archii-channel-prefs';
 
 function getChannelPrefs(): ChannelPrefs {
   try {
@@ -249,9 +249,9 @@ export const notifyExternal = {
     if (isChannelEnabled('whatsapp'))
       promises.push(notifyWhatsApp.custom(userId, message).catch(() => {}));
     if (isChannelEnabled('email'))
-      promises.push(notifyEmail.custom(userId, 'Notificación de ArchiFlow', `<p>${message.replace(/\n/g, '<br>')}</p>`).catch(() => {}));
+      promises.push(notifyEmail.custom(userId, 'Notificación de Archii', `<p>${message.replace(/\n/g, '<br>')}</p>`).catch(() => {}));
     if (isChannelEnabled('push'))
-      promises.push(notifyPush.custom(userId, 'ArchiFlow', message).catch(() => {}));
+      promises.push(notifyPush.custom(userId, 'Archii', message).catch(() => {}));
     await Promise.allSettled(promises);
   },
 
@@ -263,9 +263,9 @@ export const notifyExternal = {
     if (isChannelEnabled('whatsapp'))
       promises.push(notifyWhatsApp.customBroadcast(message).catch(() => {}));
     if (isChannelEnabled('email'))
-      promises.push(notifyEmail.customBroadcast('Comunicado de ArchiFlow', `<p>${message.replace(/\n/g, '<br>')}</p>`).catch(() => {}));
+      promises.push(notifyEmail.customBroadcast('Comunicado de Archii', `<p>${message.replace(/\n/g, '<br>')}</p>`).catch(() => {}));
     if (isChannelEnabled('push'))
-      promises.push(notifyPush.broadcast('Comunicado ArchiFlow', message).catch(() => {}));
+      promises.push(notifyPush.broadcast('Comunicado Archii', message).catch(() => {}));
     await Promise.allSettled(promises);
   },
 };

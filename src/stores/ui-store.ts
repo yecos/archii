@@ -81,7 +81,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   initTheme: () => {
     if (typeof window === 'undefined') return;
     try {
-      const saved = localStorage.getItem('archiflow-theme') || 'dark';
+      const saved = localStorage.getItem('archii-theme') || 'dark';
       set({ theme: saved });
       // Apply .dark class + CSS variables
       const themeDef = THEME_REGISTRY.find(t => t.id === saved);
@@ -104,7 +104,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ theme: themeId });
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem('archiflow-theme', themeId);
+      localStorage.setItem('archii-theme', themeId);
       const themeDef = THEME_REGISTRY.find(t => t.id === themeId);
       const isDark = themeDef?.isDark ?? (themeId === 'dark');
       document.documentElement.classList.toggle('dark', isDark);

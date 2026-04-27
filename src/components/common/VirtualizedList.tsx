@@ -1,6 +1,6 @@
 /**
  * VirtualizedList.tsx
- * Componente reutilizable de lista virtualizada para ArchiFlow.
+ * Componente reutilizable de lista virtualizada para Archii.
  *
  * Usa @tanstack/react-virtual para renderizar solo los items visibles,
  * mejorando rendimiento en listas de 50+ items.

@@ -1,6 +1,6 @@
 /**
  * feature-flags.ts
- * Sistema de feature flags para ArchiFlow.
+ * Sistema de feature flags para Archii.
  *
  * Permite habilitar/deshabilitar features sin redeploy.
  * Usa variables de entorno NEXT_PUBLIC_FLAG_* para configuración,

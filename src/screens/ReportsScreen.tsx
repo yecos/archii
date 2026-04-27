@@ -112,7 +112,7 @@ export default function ReportsScreen() {
               projects.forEach(p => { csv += `Proyecto,"${p.data.name}",Presupuesto: ${p.data.budget}, Progreso: ${p.data.progress}%\n`; });
               const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement('a'); a.href = url; a.download = `archiflow-reporte-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+              const a = document.createElement('a'); a.href = url; a.download = `archii-reporte-${new Date().toISOString().split('T')[0]}.csv`; a.click();
               URL.revokeObjectURL(url);
               showToast('Reporte CSV descargado');
             } catch (err) { showToast('Error al exportar', 'error'); }

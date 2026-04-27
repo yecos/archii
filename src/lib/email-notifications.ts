@@ -1,7 +1,7 @@
 /**
- * ArchiFlow — Email Notifications
+ * Archii — Email Notifications
  * Funciones para enviar notificaciones automaticas por email
- * cuando ocurren eventos en ArchiFlow (tareas, gastos, aprobaciones, etc.)
+ * cuando ocurren eventos en Archii (tareas, gastos, aprobaciones, etc.)
  *
  * Uso desde page.tsx:
  *   import { notifyEmail } from '@/lib/email-notifications';
@@ -61,7 +61,7 @@ function buildEmailHtml(subject: string, bodyHtml: string): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,${BRAND.gradientStart},${BRAND.gradientEnd});border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-              <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em;">🏗️ ArchiFlow</h1>
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em;">🏗️ Archii</h1>
               <p style="margin:6px 0 0;font-size:13px;color:${BRAND.accent};opacity:0.9;">Gestión de Obras Inteligente</p>
             </td>
           </tr>
@@ -79,7 +79,7 @@ function buildEmailHtml(subject: string, bodyHtml: string): string {
                   <td align="center">
                     <a href="${CTA_URL}" target="_blank" style="display:inline-block;background-color:${BRAND.ctaBg};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:600;mso-padding-alt:0;text-align:center;">
                       <!--[if mso]><i style="mso-font-width:300%;mso-text-raise:21pt" hidden>&emsp;</i><![endif]-->
-                      <span style="mso-text-raise:10pt;">Abrir ArchiFlow</span>
+                      <span style="mso-text-raise:10pt;">Abrir Archii</span>
                       <!--[if mso]><i style="mso-font-width:300%;" hidden>&emsp;&#8203;</i><![endif]-->
                     </a>
                   </td>
@@ -91,7 +91,7 @@ function buildEmailHtml(subject: string, bodyHtml: string): string {
           <tr>
             <td style="background:${BRAND.white};border-radius:0 0 12px 12px;padding:20px 32px;border:1px solid ${BRAND.border};border-top:none;text-align:center;">
               <p style="margin:0;font-size:12px;color:${BRAND.muted};">
-                Recibiste este correo porque estás registrado en ArchiFlow.<br>
+                Recibiste este correo porque estás registrado en Archii.<br>
                 <a href="${CTA_URL}" style="color:${BRAND.accent};text-decoration:none;">Configurar notificaciones</a> en tu perfil.
               </p>
             </td>
@@ -131,7 +131,7 @@ async function sendToUser(userId: string, subject: string, htmlBody: string): Pr
       body: JSON.stringify({ userId, subject, htmlBody }),
     });
   } catch (err: any) {
-    console.error('[ArchiFlow Email Notify] Error:', err.message);
+    console.error('[Archii Email Notify] Error:', err.message);
   }
 }
 
@@ -145,7 +145,7 @@ async function sendBroadcast(subject: string, htmlBody: string): Promise<void> {
       body: JSON.stringify({ broadcast: true, subject, htmlBody }),
     });
   } catch (err: any) {
-    console.error('[ArchiFlow Email Notify] Error broadcast:', err.message);
+    console.error('[Archii Email Notify] Error broadcast:', err.message);
   }
 }
 
@@ -176,7 +176,7 @@ export const notifyEmail = {
         ${dueDate ? infoRow('📅', 'Fecha límite', fmtDate(dueDate)) : ''}
         ${assignedBy ? infoRow('👤', 'Asignado por', assignedBy) : ''}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa los detalles y empieza a trabajar en esta tarea desde ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa los detalles y empieza a trabajar en esta tarea desde Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -203,7 +203,7 @@ export const notifyEmail = {
         ${infoRow('📁', 'Proyecto', projectName)}
         ${infoRow('⏰', 'Estado', dueText, color)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">No olvides completar esta tarea a tiempo. ¡Ábre ArchiFlow para actualizar su estado!</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">No olvides completar esta tarea a tiempo. ¡Ábre Archii para actualizar su estado!</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -226,7 +226,7 @@ export const notifyEmail = {
         ${infoRow('📁', 'Proyecto', projectName)}
         ${infoRow('👤', 'Solicitada por', requestedBy)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Se necesita tu aprobación para continuar. Revisa los detalles en ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Se necesita tu aprobación para continuar. Revisa los detalles en Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -252,7 +252,7 @@ export const notifyEmail = {
         ${infoRow('📊', 'Estado', status, color)}
         ${resolvedBy ? infoRow('👤', 'Resuelta por', resolvedBy) : ''}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">${approved ? '¡Tu solicitud fue aprobada! Puedes continuar con el siguiente paso.' : 'Tu solicitud fue rechazada. Revisa los comentarios en ArchiFlow para más detalles.'}</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">${approved ? '¡Tu solicitud fue aprobada! Puedes continuar con el siguiente paso.' : 'Tu solicitud fue rechazada. Revisa los comentarios en Archii para más detalles.'}</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -277,7 +277,7 @@ export const notifyEmail = {
         ${infoRow('📁', 'Proyecto', projectName)}
         ${category ? infoRow('🏷️', 'Categoría', category) : ''}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Se registró un nuevo gasto en tu proyecto. Revisa los detalles en ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Se registró un nuevo gasto en tu proyecto. Revisa los detalles en Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -344,7 +344,7 @@ export const notifyEmail = {
         ${infoRow('⏰', 'Hora', time)}
         ${infoRow('📁', 'Proyecto', project)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Tienes una reunión próxima. Prepárate y únete a tiempo desde ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Tienes una reunión próxima. Prepárate y únete a tiempo desde Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -359,7 +359,7 @@ export const notifyEmail = {
     totalSpent: number;
     pendingApprovals: number;
   }) {
-    const subject = '📊 Resumen semanal — ArchiFlow';
+    const subject = '📊 Resumen semanal — Archii';
     const now = new Date();
     const weekLabel = now.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -373,7 +373,7 @@ export const notifyEmail = {
         ${infoRow('💰', 'Gastos nuevos', `${data.newExpenses} (${fmtCOP(data.totalSpent)})`)}
         ${infoRow('👀', 'Aprobaciones pendientes', String(data.pendingApprovals), data.pendingApprovals > 0 ? BRAND.warning : BRAND.success)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa el detalle completo de tu semana en ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa el detalle completo de tu semana en Archii.</p>`;
 
     await sendBroadcast(subject, buildEmailHtml(subject, body));
   },
@@ -396,7 +396,7 @@ export const notifyEmail = {
         ${infoRow('📋', 'Tarea', taskTitle)}
         ${infoRow('📊', 'Nuevo estado', newStatus, color)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">El estado de esta tarea ha cambiado. Revisa los detalles en ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">El estado de esta tarea ha cambiado. Revisa los detalles en Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },
@@ -417,7 +417,7 @@ export const notifyEmail = {
         ${infoRow('📁', 'Proyecto', projectName)}
         ${infoRow('📝', 'Detalle', update)}
       </table>
-      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa los detalles completos en ArchiFlow.</p>`;
+      <p style="color:${BRAND.muted};font-size:14px;margin:0;">Revisa los detalles completos en Archii.</p>`;
 
     await sendToUser(userId, subject, buildEmailHtml(subject, body));
   },

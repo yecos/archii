@@ -213,7 +213,7 @@ export async function POST(
               blocks: [
                 {
                   type: 'section',
-                  text: { type: 'mrkdwn', text: '✅ *Prueba de conexión desde ArchiFlow*' },
+                  text: { type: 'mrkdwn', text: '✅ *Prueba de conexión desde Archii*' },
                 },
               ],
               color: '#2eb67d',
@@ -296,15 +296,15 @@ export async function POST(
           }
           case 'github': {
             const { createGitHubIssue } = await import('@/lib/connectors/github-connector');
-            const { formatArchiflowToGitHubIssue } = await import('@/lib/connectors/github-connector');
-            const issueData = formatArchiflowToGitHubIssue(body.payload);
+            const { formatArchiiToGitHubIssue } = await import('@/lib/connectors/github-connector');
+            const issueData = formatArchiiToGitHubIssue(body.payload);
             const issue = await createGitHubIssue(instData.config as any, issueData);
             syncResult = { success: true, message: `Issue #${issue.number} creado en GitHub` };
             break;
           }
           case 'stripe': {
-            const { syncArchiflowInvoice } = await import('@/lib/connectors/stripe-connector');
-            const result = await syncArchiflowInvoice(body.payload, instData.config as any);
+            const { syncArchiiInvoice } = await import('@/lib/connectors/stripe-connector');
+            const result = await syncArchiiInvoice(body.payload, instData.config as any);
             syncResult = {
               success: true,
               message: `Factura creada en Stripe`,

@@ -1,23 +1,23 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import ClientProviders from "./ClientProviders";
-import AIFloatingWrapper from "@/components/archiflow/AIFloatingWrapper";
-import KeyboardShortcutsInitializer from "@/components/archiflow/KeyboardShortcutsInitializer";
+import AIFloatingWrapper from "@/components/archii/AIFloatingWrapper";
+import KeyboardShortcutsInitializer from "@/components/archii/KeyboardShortcutsInitializer";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "ArchiFlow — Gestión de Proyectos",
-    template: "%s | ArchiFlow",
+    default: "Archii — Gestión de Proyectos",
+    template: "%s | Archii",
   },
   description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo. Planifica, ejecuta y controla todos tus proyectos en un solo lugar.",
   keywords: ["arquitectura", "interiorismo", "gestión de proyectos", "construcción", "presupuestos", "planificación de obra", "colombia", "diseño", "obras"],
-  authors: [{ name: "ArchiFlow" }],
+  authors: [{ name: "Archii" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ArchiFlow",
+    title: "Archii",
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -25,13 +25,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_CO",
-    siteName: "ArchiFlow",
-    title: "ArchiFlow — Gestión de Proyectos de Arquitectura",
+    siteName: "Archii",
+    title: "Archii — Gestión de Proyectos de Arquitectura",
     description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo. Planifica, ejecuta y controla todos tus proyectos en un solo lugar.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ArchiFlow — Gestión de Proyectos",
+    title: "Archii — Gestión de Proyectos",
     description: "Plataforma integral de gestión de proyectos de arquitectura e interiorismo.",
   },
   robots: {
@@ -79,7 +79,7 @@ export default function RootLayout({
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ArchiFlow" />
+        <meta name="apple-mobile-web-app-title" content="Archii" />
         {/* PWA Icons */}
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
@@ -107,7 +107,7 @@ export default function RootLayout({
             }
             window.__AF_FB = true;
           } catch(err) {
-            console.error('[ArchiFlow] Firebase init failed:', err);
+            console.error('[Archii] Firebase init failed:', err);
             window.__AF_FB = false;
           }
         ` }} />
@@ -115,7 +115,7 @@ export default function RootLayout({
         {/* Theme init — prevent FOUC (dark/light only) */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            var t = localStorage.getItem('archiflow-theme') || 'dark';
+            var t = localStorage.getItem('archii-theme') || 'dark';
             if (t === 'dark') {
               document.documentElement.classList.add('dark');
               document.documentElement.style.colorScheme = 'dark';
@@ -133,7 +133,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
             try {
-              var ct = localStorage.getItem('archiflow-color-theme');
+              var ct = localStorage.getItem('archii-color-theme');
               if (ct && ct !== 'dorado') {
                 document.documentElement.setAttribute('data-color-theme', ct);
               }
@@ -144,11 +144,11 @@ export default function RootLayout({
         {/* Global error handler — catch and log client-side errors */}
         <script dangerouslySetInnerHTML={{ __html: `
           window.onerror = function(msg, url, line, col, err) {
-            console.error('[ArchiFlow Global Error]', msg, url, line, col, err);
+            console.error('[Archii Global Error]', msg, url, line, col, err);
             return false;
           };
           window.addEventListener('unhandledrejection', function(e) {
-            console.error('[ArchiFlow Unhandled Promise]', e.reason);
+            console.error('[Archii Unhandled Promise]', e.reason);
           });
         ` }} />
       </head>

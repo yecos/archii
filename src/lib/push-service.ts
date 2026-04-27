@@ -45,7 +45,7 @@ async function saveSubscriptionToServer(subscription: PushSubscription): Promise
   try {
     const authHeaders = await getAuthHeaders();
     if (!authHeaders['Authorization']) {
-      console.warn('[ArchiFlow Push] Usuario no autenticado, no se guarda la suscripción');
+      console.warn('[Archii Push] Usuario no autenticado, no se guarda la suscripción');
       return false;
     }
 
@@ -60,13 +60,13 @@ async function saveSubscriptionToServer(subscription: PushSubscription): Promise
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
-      console.error('[ArchiFlow Push] Error del servidor al guardar:', err.error);
+      console.error('[Archii Push] Error del servidor al guardar:', err.error);
       return false;
     }
 
     return true;
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error guardando suscripción:', err.message);
+    console.error('[Archii Push] Error guardando suscripción:', err.message);
     return false;
   }
 }
@@ -82,7 +82,7 @@ async function removeSubscriptionFromServer(): Promise<void> {
       headers: { ...authHeaders },
     });
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error eliminando suscripción:', err.message);
+    console.error('[Archii Push] Error eliminando suscripción:', err.message);
   }
 }
 
@@ -96,12 +96,12 @@ async function removeSubscriptionFromServer(): Promise<void> {
  */
 export async function registerPushSubscription(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('[ArchiFlow Push] Push API no soportada en este navegador');
+    console.warn('[Archii Push] Push API no soportada en este navegador');
     return false;
   }
 
   if (!VAPID_PUBLIC_KEY) {
-    console.warn('[ArchiFlow Push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada');
+    console.warn('[Archii Push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada');
     return false;
   }
 
@@ -111,7 +111,7 @@ export async function registerPushSubscription(): Promise<boolean> {
     // Verificar permiso
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.warn('[ArchiFlow Push] Permiso de notificación denegado:', permission);
+      console.warn('[Archii Push] Permiso de notificación denegado:', permission);
       return false;
     }
 
@@ -132,7 +132,7 @@ export async function registerPushSubscription(): Promise<boolean> {
     const saved = await saveSubscriptionToServer(subscription);
     return saved;
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error en registerPushSubscription:', err.message);
+    console.error('[Archii Push] Error en registerPushSubscription:', err.message);
     return false;
   }
 }
@@ -151,7 +151,7 @@ export async function unregisterPushSubscription(): Promise<void> {
 
     await removeSubscriptionFromServer();
   } catch (err: any) {
-    console.error('[ArchiFlow Push] Error en unregisterPushSubscription:', err.message);
+    console.error('[Archii Push] Error en unregisterPushSubscription:', err.message);
   }
 }
 
