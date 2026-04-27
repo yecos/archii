@@ -30,11 +30,15 @@ function configureVapid() {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-/** Envía un push a una suscripción individual. */
+/** Envía un push a una suscripción individual.
+ *  Retorna 'sent' si se envió correctamente,
+ *  'expired' si la suscripción ya no existe (404/410),
+ *  'failed' para otros errores transitorios.
+ */
 async function sendToSubscription(
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   payload: { title: string; body: string; icon?: string; data?: Record<string, string> }
-): Promise<boolean> {
+): Promise<'sent' | 'expired' | 'failed'> {
   try {
     await webpush.sendNotification(
       {
@@ -50,15 +54,14 @@ async function sendToSubscription(
         urgency: 'normal',
       }
     );
-    return true;
+    return 'sent';
   } catch (err: any) {
-    // 404 o 410 = suscripción inválida/expirada, se debería limpiar
     if (err.statusCode === 404 || err.statusCode === 410) {
       console.warn(`[ArchiFlow Push] Suscripción expirada: ${subscription.endpoint}`);
-    } else {
-      console.error('[ArchiFlow Push] Error enviando push:', err.message);
+      return 'expired';
     }
-    return false;
+    console.error('[ArchiFlow Push] Error enviando push:', err.message);
+    return 'failed';
   }
 }
 
@@ -118,11 +121,10 @@ export async function POST(request: NextRequest) {
   try {
     /* ── Broadcast: enviar a todos los usuarios con suscripción activa ── */
     if (body.broadcast) {
-      // Solo admins pueden hacer broadcast
-      const ADMIN_EMAILS = ['yecos11@gmail.com'];
+      // Solo admins pueden hacer broadcast — verificar rol en Firestore
       const userSnap = await db.collection('users').doc(user.uid).get();
-      const userEmail = userSnap.exists ? userSnap.data()?.email : '';
-      if (!ADMIN_EMAILS.includes(userEmail)) {
+      const userRole = userSnap.exists ? userSnap.data()?.role : '';
+      if (userRole !== 'Super Admin') {
         return NextResponse.json(
           { error: 'No autorizado para broadcast' },
           { status: 403 }
@@ -149,16 +151,18 @@ export async function POST(request: NextRequest) {
         // No enviarse a sí mismo en broadcast
         if (doc.id === user.uid) continue;
 
-        const success = await sendToSubscription(sub, payload);
-        if (success) {
+        const result = await sendToSubscription(sub, payload);
+        if (result === 'sent') {
           sent++;
-        } else {
+        } else if (result === 'expired') {
           failed++;
           expiredEndpoints.push(doc.id);
+        } else {
+          failed++;
         }
       }
 
-      // Limpiar suscripciones expiradas en background
+      // Solo limpiar suscripciones expiradas (404/410), no las que fallaron por otros motivos
       if (expiredEndpoints.length > 0) {
         const batch = db.batch();
         for (const uid of expiredEndpoints) {
@@ -173,6 +177,20 @@ export async function POST(request: NextRequest) {
     /* ── Individual: enviar a un usuario específico ── */
     if (!body.userId) {
       return NextResponse.json({ error: 'userId requerido' }, { status: 400 });
+    }
+
+    // Verificar que caller y target comparten el mismo tenant
+    const [callerSnap, targetSnap] = await Promise.all([
+      db.collection('users').doc(user.uid).get(),
+      db.collection('users').doc(body.userId).get(),
+    ]);
+    const callerTenant = callerSnap.exists ? callerSnap.data()?.tenantId : null;
+    const targetTenant = targetSnap.exists ? targetSnap.data()?.tenantId : null;
+    if (!callerTenant || callerTenant !== targetTenant) {
+      return NextResponse.json(
+        { error: 'No autorizado: los usuarios no comparten el mismo tenant' },
+        { status: 403 }
+      );
     }
 
     const subDoc = await db.collection(COLLECTION).doc(body.userId).get();
@@ -197,12 +215,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const success = await sendToSubscription(subData, payload);
+    const result = await sendToSubscription(subData, payload);
 
-    if (!success) {
-      // Si falló por suscripción expirada, desactivarla
+    if (result === 'expired') {
+      // Solo desactivar si la suscripción expiró (404/410), no en otros errores
       await db.collection(COLLECTION).doc(body.userId).update({ active: false });
       return NextResponse.json({ ok: true, sent: 0, reason: 'subscription_expired' });
+    }
+
+    if (result === 'failed') {
+      return NextResponse.json({ ok: true, sent: 0, reason: 'send_failed' });
     }
 
     return NextResponse.json({ ok: true, sent: 1 });

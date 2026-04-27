@@ -153,7 +153,11 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       if (clients.length > 0) {
-        const client = clients[0];
+        const client = clients.sort((a, b) => {
+          if (a.focused) return -1;
+          if (b.focused) return 1;
+          return (a.visibilityState === 'visible' ? -1 : 1);
+        })[0];
         client.focus();
         if (event.notification.data?.screen) {
           client.postMessage({ type: 'NAVIGATE', screen: event.notification.data.screen, itemId: event.notification.data.itemId });

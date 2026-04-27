@@ -13,7 +13,7 @@ interface CommandResult {
 // ─── MAIN MENU ───
 export function getMainMenu(): CommandResult {
   return {
-    text: `*ArchiFlow Bot*\n\nElige una opcion:\n\n1. Mis tareas pendientes\n2. Estado de proyectos\n3. Presupuesto\n4. Equipo\n5. Proximos vencimientos\n6. Consultar IA`,
+    text: `*ArchiFlow Bot*\n\nElige una opcion:\n\n1. Mis tareas pendientes\n2. Estado de proyectos\n3. Presupuesto\n4. Equipo\n5. Proximos vencimientos`,
     buttons: [
       { id: 'cmd_tareas', title: 'Mis tareas' },
       { id: 'cmd_proyectos', title: 'Proyectos' },
@@ -262,27 +262,6 @@ async function cmdVencimientos(db: any): Promise<CommandResult> {
 }
 
 // ─── LINKING FLOW (Firestore-persisted, serverless-compatible) ───
-
-export async function generateLinkCode(email: string, db: any): Promise<string> {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await db.collection('linkingCodes').doc(email).set({
-    email,
-    code,
-    expires: Date.now() + 5 * 60 * 1000,
-  });
-  return code;
-}
-
-export async function verifyLinkCode(email: string, code: string, db: any): Promise<boolean> {
-  const doc = await db.collection('linkingCodes').doc(email).get();
-  if (!doc.exists) return false;
-  const entry = doc.data();
-  if (Date.now() > entry.expires) {
-    await db.collection('linkingCodes').doc(email).delete();
-    return false;
-  }
-  return entry.code === code;
-}
 
 export function getWelcomeMessage(): CommandResult {
   return {

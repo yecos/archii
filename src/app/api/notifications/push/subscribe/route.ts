@@ -42,26 +42,26 @@ export async function POST(request: NextRequest) {
     const db = getAdminDb();
     const fv = getAdminFieldValue();
 
-    await db.collection(COLLECTION).doc(user.uid).set(
-      {
-        userId: user.uid,
-        email: user.email,
-        endpoint,
-        keys: { p256dh: keys.p256dh, auth: keys.auth },
-        userAgent: request.headers.get('user-agent') || '',
-        updatedAt: fv.serverTimestamp(),
-        active: true,
-      },
-      { merge: true }
-    );
-
-    // Si el documento es nuevo, establecer createdAt
+    // Leer primero para verificar si el documento es nuevo
     const docSnap = await db.collection(COLLECTION).doc(user.uid).get();
-    if (!docSnap.exists || !docSnap.data()?.createdAt) {
-      await db.collection(COLLECTION).doc(user.uid).update({
-        createdAt: fv.serverTimestamp(),
-      });
+    const isNew = !docSnap.exists || !docSnap.data()?.createdAt;
+
+    const docData: Record<string, unknown> = {
+      userId: user.uid,
+      email: user.email,
+      endpoint,
+      keys: { p256dh: keys.p256dh, auth: keys.auth },
+      userAgent: request.headers.get('user-agent') || '',
+      updatedAt: fv.serverTimestamp(),
+      active: true,
+    };
+
+    // Incluir createdAt solo si es un documento nuevo
+    if (isNew) {
+      docData.createdAt = fv.serverTimestamp();
     }
+
+    await db.collection(COLLECTION).doc(user.uid).set(docData, { merge: true });
 
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {

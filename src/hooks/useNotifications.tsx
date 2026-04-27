@@ -39,6 +39,7 @@ export interface NotificationContextValue {
   markNotifRead: (id: string) => void;
   markAllNotifRead: () => void;
   clearNotifHistory: () => void;
+  resetNotifOnTenantSwitch: () => void;
   notifFilterCat: string;
   setNotifFilterCat: (v: string) => void;
   showNotifPanel: boolean;
@@ -263,8 +264,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const clearNotifHistory = useCallback(() => {
     setNotifHistory([]);
     setInAppNotifs([]);
+    setUnreadCount(0);
     showToast('Historial de notificaciones limpiado');
   }, [showToast]);
+
+  /* ---------- resetNotifOnTenantSwitch: clear history + banners silently ---------- */
+  const resetNotifOnTenantSwitch = useCallback(() => {
+    setNotifHistory([]);
+    setInAppNotifs([]);
+    setUnreadCount(0);
+    setShowNotifPanel(false);
+    setShowNotifBanner(false);
+  }, []);
 
   /* ========================================
      EFFECTS
@@ -353,6 +364,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     markNotifRead,
     markAllNotifRead,
     clearNotifHistory,
+    resetNotifOnTenantSwitch,
     notifFilterCat,
     setNotifFilterCat,
     showNotifPanel,

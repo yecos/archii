@@ -16,6 +16,11 @@
 import { fmtCOP, fmtDate } from './helpers';
 import { getAuthHeaders } from './firebase-service';
 
+/** Escapa caracteres HTML para prevenir inyección XSS */
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // URL base del API interno
 const EMAIL_NOTIFY_API = '/api/notifications/email';
 
@@ -421,13 +426,13 @@ export const notifyEmail = {
    * Notificacion personalizada
    */
   async custom(userId: string, subject: string, htmlBody: string) {
-    await sendToUser(userId, subject, buildEmailHtml(subject, htmlBody));
+    await sendToUser(userId, subject, buildEmailHtml(subject, escapeHtml(htmlBody)));
   },
 
   /**
    * Broadcast personalizado
    */
   async customBroadcast(subject: string, htmlBody: string) {
-    await sendBroadcast(subject, buildEmailHtml(subject, htmlBody));
+    await sendBroadcast(subject, buildEmailHtml(subject, escapeHtml(htmlBody)));
   },
 };

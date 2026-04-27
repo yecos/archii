@@ -11,9 +11,9 @@ import { requireAuth, AuthError } from "@/lib/api-auth";
  * Body: { broadcast: true, message: string }
  */
 export async function POST(request: NextRequest) {
+  let authUser: any;
   try {
-    // Autenticacion OBLIGATORIA para todas las rutas
-    await requireAuth(request);
+    authUser = await requireAuth(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -33,17 +33,33 @@ export async function POST(request: NextRequest) {
     const db = getAdminDb();
 
     if (broadcast) {
-      const snap = await db
+      // Tenant isolation: obtener tenantId del usuario autenticado
+      const userSnap = await db.collection("users").doc(authUser.uid).get();
+      const tenantId = userSnap.exists ? userSnap.data()?.tenantId : null;
+      if (!tenantId) {
+        return NextResponse.json({ error: "Usuario sin tenant asociado" }, { status: 403 });
+      }
+
+      // Solo enviar a links del mismo tenant
+      const query = db
         .collection("whatsappLinks")
         .where("active", "==", true)
-        .get();
+        .where("tenantId", "==", tenantId);
 
-      let sent = 0;
-      for (const doc of snap.docs) {
-        const link = doc.data();
-        const result = await sendWhatsAppMessage(link.whatsappPhone, message);
-        if (result.success) sent++;
-      }
+      const snap = await query.get();
+
+      // Enviar en paralelo con Promise.allSettled
+      const results = await Promise.allSettled(
+        snap.docs.map(async (doc) => {
+          const link = doc.data();
+          const result = await sendWhatsAppMessage(link.whatsappPhone, message);
+          return result.success;
+        })
+      );
+
+      const sent = results.filter(
+        (r) => r.status === "fulfilled" && r.value === true
+      ).length;
 
       return NextResponse.json({ ok: true, sent, total: snap.size });
     }

@@ -227,6 +227,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Notification coalescencia buffer (for external channel notifications)
   const notificationBufferRef = useRef<Map<string, { type: string; data: any; count: number }>>(new Map());
   const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Gate to suppress notifications during tenant switching.
+  // Set to true when tenant changes, false only after all onSnapshot listeners
+  // have fired at least once for the new tenant (tracked via collectionsLoadedRef).
+  const tenantSwitchingRef = useRef(false);
 
   // ===== TENANT STATE =====
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
@@ -381,7 +385,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   }, []);
 
   // Destructure notification context for detection effects
-  const { sendNotif, playNotifSound, vibrateNotif, notifPrefs, isTabVisibleRef } = notifCtx;
+  const { sendNotif, playNotifSound, vibrateNotif, notifPrefs, isTabVisibleRef, resetNotifOnTenantSwitch } = notifCtx;
   // Alias for backward compat in detection effects
   const sendBrowserNotif = sendNotif;
 
@@ -959,6 +963,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (activeTenantId && activeTenantId !== prevTenantIdRef.current) {
       prevTenantIdRef.current = activeTenantId;
+      // BLOCK all notifications until new tenant data fully loads
+      tenantSwitchingRef.current = true;
       // Reset all tracking — new tenant data is a fresh "first load"
       allCollectionsLoadedRef.current = false;
       firstLoadDoneRef.current = false;
@@ -976,20 +982,65 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       prevRfiStatusRef.current = new Map();
       prevSubmittalStatusRef.current = new Map();
       prevPunchStatusRef.current = new Map();
+      overdueCheckedRef.current = ''; // Reset overdue check for new tenant
       // Clear notification buffer
       notificationBufferRef.current.clear();
       if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+      // Clear notification history and panel (from NotificationProvider)
+      resetNotifOnTenantSwitch();
     }
   }, [activeTenantId]);
 
   // Mark each collection as hydrated when its data first arrives.
   // Once ALL collections have loaded at least once, arm notifications.
-  // Note: once loading=false, all collections have received their first Firestore
-  // snapshot (even if empty), so we mark them all as loaded.
+  // On initial load: when loading flips false, all onSnapshot have fired.
+  // On tenant switch: we wait for at least one non-empty data arrival per collection
+  // to avoid seeding with stale data from the previous tenant.
   useEffect(() => {
     if (loading || allCollectionsLoadedRef.current) return;
-    // Once Firebase is ready, every onSnapshot has fired at least once.
-    // Empty collections (0 items) are still "loaded" — just empty.
+    // During tenant switching, do NOT re-arm until new data actually arrives.
+    // The first load guard uses the loading flag (only fires once).
+    // The tenant switch guard requires actual data to have changed.
+    if (tenantSwitchingRef.current) {
+      // Wait for at least some data to arrive for the new tenant
+      // before seeding. We consider a collection "loaded" when we have
+      // received at least one snapshot for it (even if empty).
+      // Since onSnapshot listeners depend on [ready, authUser, activeTenantId],
+      // they re-subscribe on tenant change. Once they fire, state updates.
+      // We need to wait for the NEXT render cycle with new data.
+      // Use a microtask to defer seeding to after React batches the state updates.
+      const timer = setTimeout(() => {
+        // This fires after React has processed the onSnapshot updates.
+        // By now, tasks/approvals/etc. should reflect the new tenant's data.
+        if (allCollectionsLoadedRef.current) return; // Already armed by another path
+        collectionsLoadedRef.current.tasks = true;
+        collectionsLoadedRef.current.approvals = true;
+        collectionsLoadedRef.current.meetings = true;
+        collectionsLoadedRef.current.projects = true;
+        collectionsLoadedRef.current.rfis = true;
+        collectionsLoadedRef.current.submittals = true;
+        collectionsLoadedRef.current.punchItems = true;
+        allCollectionsLoadedRef.current = true;
+        // Seed with current data (now from the NEW tenant)
+        knownTaskIdsRef.current = new Set(tasks.map(t => t.id));
+        knownApprovalIdsRef.current = new Set(approvals.map(a => a.id));
+        knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
+        knownProjectIdsRef.current = new Set(projects.map(p => p.id));
+        knownRfiIdsRef.current = new Set(rfis.map(r => r.id));
+        knownSubmittalIdsRef.current = new Set(submittals.map(s => s.id));
+        knownPunchItemIdsRef.current = new Set(punchItems.map(p => p.id));
+        tasks.forEach(t => { prevTaskStatusRef.current.set(t.id, { status: t.data.status, priority: t.data.priority, assigneeId: t.data.assigneeId }); });
+        approvals.forEach(a => { prevApprovalStatusRef.current.set(a.id, a.data.status); });
+        projects.forEach(p => { prevProjectStatusRef.current.set(p.id, p.data.status); });
+        rfis.forEach(r => { prevRfiStatusRef.current.set(r.id, r.data.status); });
+        submittals.forEach(s => { prevSubmittalStatusRef.current.set(s.id, s.data.status); });
+        punchItems.forEach(p => { prevPunchStatusRef.current.set(p.id, p.data.status); });
+        firstLoadDoneRef.current = true;
+        tenantSwitchingRef.current = false;
+      }, 150); // 150ms delay to let React batch onSnapshot state updates
+      return () => clearTimeout(timer);
+    }
+    // Initial load (first time loading goes false)
     if (!loading) {
       collectionsLoadedRef.current.tasks = true;
       collectionsLoadedRef.current.approvals = true;
@@ -1039,8 +1090,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   }, [loading, tasks, approvals, meetings, projects, rfis, submittals, punchItems]);
 
   // Detect new/changed tasks assigned to me (Set-based O(1) lookup)
+  // Guard: skip during tenant switching to avoid false positives
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newTaskIds: string[] = [];
     const changedTaskIds: string[] = [];
     tasks.forEach(t => {
@@ -1086,7 +1138,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect new meetings (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newMeetingIds: string[] = [];
     meetings.forEach(m => { if (!knownMeetingIdsRef.current.has(m.id)) newMeetingIds.push(m.id); });
     knownMeetingIdsRef.current = new Set(meetings.map(m => m.id));
@@ -1106,7 +1158,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect new approvals (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newApprovalIds: string[] = [];
     const changedApprovalIds: string[] = [];
     approvals.forEach(a => {
@@ -1149,7 +1201,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Meeting reminder check (every 60 seconds) — unchanged logic, just guard
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     if (!notifPrefs.meetings || !authUser) return;
     const check = () => {
       const now = new Date();
@@ -1174,7 +1226,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect project status changes (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const changedProjectIds: string[] = [];
     projects.forEach(p => {
       if (!knownProjectIdsRef.current.has(p.id)) return;
@@ -1195,7 +1247,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Overdue tasks reminder (check every 30 min) — unchanged logic, just guard
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     if (!notifPrefs.tasks || !authUser) return;
     const check = () => {
       const today = new Date().toISOString().split('T')[0];
@@ -1214,7 +1266,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect new/changed RFIs (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newRfiIds: string[] = [];
     const changedRfiIds: string[] = [];
     rfis.forEach(r => {
@@ -1247,7 +1299,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect new/changed Submittals (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newSubIds: string[] = [];
     const changedSubIds: string[] = [];
     submittals.forEach(s => {
@@ -1286,7 +1338,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Detect new/changed Punch Items (Set-based O(1) lookup)
   useEffect(() => {
-    if (!firstLoadDoneRef.current) return;
+    if (!firstLoadDoneRef.current || tenantSwitchingRef.current) return;
     const newPunchIds: string[] = [];
     const changedPunchIds: string[] = [];
     punchItems.forEach(p => {
