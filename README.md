@@ -11,6 +11,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Auth_+_Firestore-FFCA28?logo=firebase)](https://firebase.google.com/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Deployed_on_Vercel-000000?logo=vercel)](https://vercel.com/)
+[![CI](https://img.shields.io/github/actions/workflow/status/yecos/archii/ci.yml?branch=main&label=CI)](https://github.com/yecos/archii/actions)
 
 Gestión de proyectos, presupuestos, cronogramas, inventarios, equipos y más —
 todo en una sola plataforma con IA integrada y soporte multi-tenant.
@@ -299,11 +300,19 @@ Las reglas de Firestore (`firestore.rules`) implementan:
 - Rate limiting en todos los endpoints públicos.
 - Content Security Policy configurado para permitir flujos de auth de Firebase, Google y Microsoft.
 
+Lee [SECURITY.md](SECURITY.md) para la política completa y cómo reportar vulnerabilidades.
+
 ---
 
 ## Contribuir
 
 Las contribuciones son bienvenidas. Por favor lee [CONTRIBUTING.md](CONTRIBUTING.md) para los lineamientos.
+
+---
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Archii
 
 ---
 

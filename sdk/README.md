@@ -1,19 +1,19 @@
-# archiflow-sdk
+# archii-sdk
 
-**Official TypeScript SDK for the ArchiFlow Construction Management API.**
+**Official TypeScript SDK for the Archii Construction Management API.**
 
 ## Installation
 
 ```bash
-npm install archiflow-sdk
+npm install archii-sdk
 ```
 
 ```bash
-yarn add archiflow-sdk
+yarn add archii-sdk
 ```
 
 ```bash
-pnpm add archiflow-sdk
+pnpm add archii-sdk
 ```
 
 ---
@@ -21,12 +21,12 @@ pnpm add archiflow-sdk
 ## Quick Start
 
 ```typescript
-import { ArchiFlowClient } from 'archiflow-sdk';
+import { ArchiiClient } from 'archii-sdk';
 
-const client = new ArchiFlowClient({
+const client = new ArchiiClient({
   apiKey: 'your-api-key-here',
-  // baseUrl: 'https://api.archiflow.io',  // default
-  // tenantId: 'tenant-abc123',             // optional, for multi-tenant
+  // baseUrl: 'https://api.archii.io',  // default
+  // tenantId: 'tenant-abc123',          // optional, for multi-tenant
 });
 
 async function main() {
@@ -57,7 +57,7 @@ The SDK supports two authentication methods:
 Pass your API key in the constructor. It will be sent as `X-API-Key` header:
 
 ```typescript
-const client = new ArchiFlowClient({
+const client = new ArchiiClient({
   apiKey: 'af_live_xxxxxxxxxxxxxxxx',
 });
 ```
@@ -67,7 +67,7 @@ const client = new ArchiFlowClient({
 If you have a JWT or OAuth token, use `authenticate()`:
 
 ```typescript
-const client = new ArchiFlowClient({
+const client = new ArchiiClient({
   apiKey: 'fallback-key', // required as fallback
 });
 
@@ -79,7 +79,7 @@ client.authenticate('eyJhbGciOiJIUzI1NiIs...');
 Include `tenantId` for multi-tenant setups:
 
 ```typescript
-const client = new ArchiFlowClient({
+const client = new ArchiiClient({
   apiKey: 'af_live_xxxxxxxxxxxxxxxx',
   tenantId: 'tenant-abc123',
 });
@@ -92,7 +92,7 @@ const client = new ArchiFlowClient({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `apiKey` | `string` | — | **Required.** Your API key. |
-| `baseUrl` | `string` | `https://api.archiflow.io` | API base URL. |
+| `baseUrl` | `string` | `https://api.archii.io` | API base URL. |
 | `tenantId` | `string` | `undefined` | Tenant ID for multi-tenant. |
 | `webhookSecret` | `string` | `undefined` | Webhook signing secret. |
 | `timeout` | `number` | `30000` | Request timeout in ms. |
@@ -281,7 +281,7 @@ console.log(`Available collections: ${schema.collections.length}`);
 ```typescript
 // Register a webhook
 const webhook = await client.webhooks.create(
-  'https://your-app.com/api/webhooks/archiflow',
+  'https://your-app.com/api/webhooks/archii',
   ['task.created', 'task.status_changed', 'project.updated']
 );
 
@@ -319,12 +319,12 @@ await client.keys.revoke('key-123');
 
 ```typescript
 import express from 'express';
-import { archiflowWebhookMiddleware } from 'archiflow-sdk';
+import { archiiWebhookMiddleware } from 'archii-sdk';
 
 const app = express();
 app.use(express.json({ verify: (req, buf) => { req.rawBody = buf.toString(); } }));
 
-app.post('/webhooks/archiflow', archiflowWebhookMiddleware(
+app.post('/webhooks/archii', archiiWebhookMiddleware(
   'whsec_xxxxxxxxxxxxxxxx',
   {
     'task.created': async (payload) => {
@@ -344,11 +344,11 @@ app.post('/webhooks/archiflow', archiflowWebhookMiddleware(
 ### Next.js App Router
 
 ```typescript
-// app/api/webhooks/archiflow/route.ts
-import { handleArchiflowWebhook } from 'archiflow-sdk';
+// app/api/webhooks/archii/route.ts
+import { handleArchiiWebhook } from 'archii-sdk';
 
 export async function POST(request: Request) {
-  return handleArchiflowWebhook(request, 'whsec_xxxxxxxxxxxxxxxx', {
+  return handleArchiiWebhook(request, 'whsec_xxxxxxxxxxxxxxxx', {
     'project.created': async (payload) => {
       console.log('New project:', payload.data.name);
     },
@@ -363,7 +363,7 @@ export async function POST(request: Request) {
 ### Manual Verification
 
 ```typescript
-import { WebhookHandler } from 'archiflow-sdk';
+import { WebhookHandler } from 'archii-sdk';
 
 const handler = new WebhookHandler('whsec_xxxxxxxxxxxxxxxx');
 
@@ -387,15 +387,15 @@ The SDK provides typed error classes for all HTTP error scenarios:
 
 ```typescript
 import {
-  ArchiflowError,
+  ArchiiError,
   AuthenticationError,
   RateLimitError,
   NotFoundError,
   ValidationError,
   ServerError,
   NetworkError,
-  isArchiflowError,
-} from 'archiflow-sdk';
+  isArchiiError,
+} from 'archii-sdk';
 
 try {
   const project = await client.projects.get('nonexistent-id');
@@ -424,7 +424,7 @@ try {
     console.log(`Caused by: ${error.cause?.message}`);
   }
 
-  if (isArchiflowError(error)) {
+  if (isArchiiError(error)) {
     console.log(`[${error.code}] ${error.message}`);
     console.log(`Status: ${error.statusCode}`);
     console.log(`Request ID: ${error.requestId}`);
@@ -477,7 +477,7 @@ The SDK automatically retries requests that fail with:
 Configure retry behavior:
 
 ```typescript
-const client = new ArchiFlowClient({
+const client = new ArchiiClient({
   apiKey: 'your-key',
   maxRetries: 5, // increase from default 3
   timeout: 60000, // 60s timeout
@@ -492,7 +492,7 @@ The SDK is written in TypeScript with strict mode enabled. All methods are fully
 
 ```typescript
 import type {
-  ArchiFlowConfig,
+  ArchiiConfig,
   Project,
   Task,
   TaskStatus,
@@ -504,7 +504,7 @@ import type {
   WebhookPayload,
   ListParams,
   PaginatedResponse,
-} from 'archiflow-sdk';
+} from 'archii-sdk';
 ```
 
 All enums are also exported:
@@ -519,7 +519,7 @@ import {
   RFIStatus,
   SubmittalStatus,
   WebhookEvent,
-} from 'archiflow-sdk';
+} from 'archii-sdk';
 ```
 
 ---
