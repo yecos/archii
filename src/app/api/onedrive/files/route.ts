@@ -1,68 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { authenticateRequest } from '@/lib/api-auth';
+import { verifyArchiiAuth, getAccessToken, autoRefreshPersonalToken } from '@/lib/onedrive-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
-const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
-
-/**
- * Verify Archii authentication from X-Firebase-Token header.
- * OneDrive routes use the Authorization header for MS access tokens,
- * so Archii auth is passed via a separate custom header.
- */
-async function verifyArchiiAuth(request: NextRequest): Promise<boolean> {
-  const fbToken = request.headers.get('x-firebase-token');
-  if (!fbToken) return false;
-  try {
-    const user = await authenticateRequest({
-      ...request,
-      headers: new Headers({ 'authorization': `Bearer ${fbToken}` }),
-    } as NextRequest);
-    return !!user;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Extract the MS access token from the Authorization header.
- */
-function getAccessToken(request: NextRequest): string | null {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  return auth.slice(7);
-}
-
-/**
- * Attempt to auto-refresh a personal MS access token using client credentials.
- * Personal tokens are stored client-side via Firebase Auth, so this is a best-effort
- * server-side fallback using the app's Azure AD credentials.
- */
-async function autoRefreshPersonalToken(refreshToken: string): Promise<string | null> {
-  const clientId = process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
-  const clientSecret = process.env.AZURE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-
-  try {
-    const params = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-      scope: 'Files.ReadWrite.All offline_access',
-    });
-    const tokenRes = await fetch(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
-    if (!tokenRes.ok) return null;
-    const tokenData = await tokenRes.json();
-    return tokenData.access_token || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * GET — List files from a OneDrive folder and optionally sync metadata to Firestore.

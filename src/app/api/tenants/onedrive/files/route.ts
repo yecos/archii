@@ -1,88 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { decryptToken, encryptToken } from '@/lib/token-encryption';
+import { getTenantMsToken, autoRefreshTenantToken } from '@/lib/onedrive-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
-const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
-
-/**
- * Attempt to auto-refresh the tenant's Microsoft access token.
- * Returns the new token if successful, or null if refresh failed.
- */
-async function autoRefreshTenantToken(
-  tenantId: string,
-  tenantData: Record<string, any>
-): Promise<string | null> {
-  // Decrypt the stored refresh token before using it
-  const storedRefresh = decryptToken(tenantData.msRefreshToken || '');
-  if (!storedRefresh) return null;
-
-  const clientId = process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
-  const clientSecret = process.env.AZURE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-
-  try {
-    const params = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'refresh_token',
-      refresh_token: storedRefresh,
-      scope: 'Files.ReadWrite.All Sites.ReadWrite.All offline_access',
-    });
-
-    const tokenRes = await fetch(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
-
-    if (!tokenRes.ok) return null;
-
-    const tokenData = await tokenRes.json();
-    const newAccessToken = tokenData.access_token;
-    const newRefreshToken = tokenData.refresh_token || storedRefresh;
-
-    // Encrypt and save updated tokens to Firestore
-    const db = getAdminDb();
-    await db.collection('tenants').doc(tenantId).update({
-      msAccessToken: encryptToken(newAccessToken),
-      msRefreshToken: encryptToken(newRefreshToken),
-    });
-
-    return newAccessToken;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Get the tenant's MS access token from Firestore.
- * If the token is missing, try to refresh using the stored refresh token.
- */
-async function getTenantMsToken(
-  tenantId: string
-): Promise<{ token: string } | NextResponse> {
-  const db = getAdminDb();
-  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-
-  if (!tenantDoc.exists) {
-    return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
-  }
-
-  const tenantData = tenantDoc.data()!;
-
-  if (!tenantData.msAccessToken) {
-    return NextResponse.json(
-      { error: 'Cuenta de Microsoft no conectada. El Super Admin debe conectar la cuenta del equipo.' },
-      { status: 400, headers: { 'X-Tenant-OD-Status': 'not-connected' } }
-    );
-  }
-
-  // Decrypt and return the stored access token
-  // If token is expired, Graph API will return 401 and caller handles refresh
-  return { token: decryptToken(tenantData.msAccessToken || '') };
-}
 
 /**
  * GET — List files from the tenant's OneDrive folder.

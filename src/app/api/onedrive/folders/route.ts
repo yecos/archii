@@ -1,36 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { authenticateRequest } from '@/lib/api-auth';
+import { verifyArchiiAuth, getAccessToken } from '@/lib/onedrive-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
-
-/**
- * Verify Archii authentication from X-Firebase-Token header.
- * OneDrive routes use the Authorization header for MS access tokens,
- * so Archii auth is passed via a separate custom header.
- */
-async function verifyArchiiAuth(request: NextRequest): Promise<boolean> {
-  const fbToken = request.headers.get('x-firebase-token');
-  if (!fbToken) return false;
-  try {
-    const user = await authenticateRequest({
-      ...request,
-      headers: new Headers({ 'authorization': `Bearer ${fbToken}` }),
-    } as NextRequest);
-    return !!user;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Extract the MS access token from the Authorization header.
- */
-function getAccessToken(request: NextRequest): string | null {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  return auth.slice(7);
-}
 
 /** Subfolders that are created inside each project folder */
 const PROJECT_SUBFOLDERS = [

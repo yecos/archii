@@ -1,33 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getTenantMsToken } from '@/lib/onedrive-auth';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
-
-/**
- * Get the tenant's MS access token from Firestore.
- */
-async function getTenantMsToken(
-  tenantId: string
-): Promise<{ token: string } | NextResponse> {
-  const db = getAdminDb();
-  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-
-  if (!tenantDoc.exists) {
-    return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
-  }
-
-  const tenantData = tenantDoc.data()!;
-
-  if (!tenantData.msAccessToken) {
-    return NextResponse.json(
-      { error: 'Cuenta de Microsoft no conectada' },
-      { status: 400, headers: { 'X-Tenant-OD-Status': 'not-connected' } }
-    );
-  }
-
-  return { token: tenantData.msAccessToken };
-}
 
 /**
  * POST — Create a folder in the tenant's OneDrive.
