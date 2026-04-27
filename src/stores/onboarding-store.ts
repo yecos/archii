@@ -5,7 +5,8 @@ export type OnboardingStep = 'welcome' | 'create-project' | 'explore-dashboard' 
 
 export interface SpotlightTip {
   id: string;
-  targetId: string;       // DOM element id to highlight
+  targetId: string;       // DOM element id to highlight (primary)
+  fallbackTargetIds?: string[]; // Alternative IDs to try if primary not found
   title: string;
   description: string;
   position: 'top' | 'bottom' | 'left' | 'right';
@@ -52,6 +53,7 @@ const DEFAULT_SPOTLIGHT_TIPS: SpotlightTip[] = [
   {
     id: 'sidebar-nav',
     targetId: 'onboarding-sidebar-trigger',
+    fallbackTargetIds: ['onboarding-sidebar-trigger-mobile'],
     title: 'Navegacion principal',
     description: 'Accede rapidamente a todas las secciones de tu proyecto desde aqui. Arrastra el borde para colapsar el sidebar.',
     position: 'right',

@@ -143,33 +143,60 @@ export default function OnboardingSpotlight() {
   const currentPendingIdx = pendingTips.findIndex(t => t.id === activeSpotlightId);
   const hasNext = currentPendingIdx < pendingTips.length - 1;
 
-  // Measure target element
+  // Close help panel when spotlight activates
+  useEffect(() => {
+    if (activeSpotlightId) {
+      useOnboardingStore.getState().setHelpOpen(false);
+    }
+  }, [activeSpotlightId]);
+
+  // Measure target element with fallback support and polling timeout
   useEffect(() => {
     if (!activeTip) {
       setTargetRect(null);
       return;
     }
 
+    const allTargetIds = [activeTip.targetId, ...(activeTip.fallbackTargetIds || [])];
+
     const measure = () => {
-      const el = document.getElementById(activeTip.targetId);
-      if (el) {
-        setTargetRect(el.getBoundingClientRect());
-        return true;
+      // Try all target IDs, pick the first visible one
+      for (const id of allTargetIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // Skip hidden elements (zero-width or zero-height in flow)
+          if (rect.width > 0 && rect.height > 0) {
+            setTargetRect(rect);
+            return true;
+          }
+        }
       }
       return false;
     };
 
-    if (!measure()) {
-      // Element not found yet — poll until it appears (e.g., delayed render)
-      const poll = setInterval(() => {
-        if (measure()) clearInterval(poll);
-      }, 300);
-      return () => clearInterval(poll);
+    if (measure()) {
+      // Re-measure on resize
+      const onResize = () => measure();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
     }
 
-    // Re-measure on resize
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    // Element not found yet — poll with timeout (max 20 attempts = 6s)
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+    const poll = setInterval(() => {
+      attempts++;
+      if (measure() || attempts >= MAX_ATTEMPTS) {
+        clearInterval(poll);
+        if (attempts >= MAX_ATTEMPTS) {
+          // Target not found after timeout — dismiss spotlight silently
+          const { dismissSpotlight } = useOnboardingStore.getState();
+          dismissSpotlight(activeTip.id);
+        }
+      }
+    }, 300);
+    return () => clearInterval(poll);
   }, [activeTip, updateTrigger]);
 
   const handleNext = useCallback(() => {

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOnboardingStore } from '@/stores/onboarding-store';
+import { useApp } from '@/contexts/AppContext';
+import { toast } from 'sonner';
 import {
   CircleHelp, X, Play, BookOpen, MessageCircle, Keyboard,
   ChevronRight, Lightbulb, Sparkles, Undo2, ExternalLink,
@@ -21,13 +23,13 @@ const HELP_SECTIONS = [
   {
     title: 'Guia rapida',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', desc: 'Vista general de tus proyectos' },
-      { icon: Folder, label: 'Proyectos', desc: 'Gestion de obras y proyectos' },
-      { icon: ClipboardCheck, label: 'Tareas', desc: 'Seguimiento y asignacion de tareas' },
-      { icon: MessageCircle, label: 'Chat', desc: 'Comunicacion con tu equipo' },
-      { icon: FileText, label: 'Archivos', desc: 'Planos, documentos y galeria' },
-      { icon: Bot, label: 'Asistente IA', desc: 'Preguntale cualquier cosa' },
-      { icon: Users, label: 'Equipo', desc: 'Gestion de miembros y roles' },
+      { icon: LayoutDashboard, label: 'Dashboard', desc: 'Vista general de tus proyectos', screen: 'dashboard' },
+      { icon: Folder, label: 'Proyectos', desc: 'Gestion de obras y proyectos', screen: 'projects' },
+      { icon: ClipboardCheck, label: 'Tareas', desc: 'Seguimiento y asignacion de tareas', screen: 'tasks' },
+      { icon: MessageCircle, label: 'Chat', desc: 'Comunicacion con tu equipo', screen: 'chat' },
+      { icon: FileText, label: 'Archivos', desc: 'Planos, documentos y galeria', screen: 'files' },
+      { icon: Bot, label: 'Asistente IA', desc: 'Preguntale cualquier cosa', screen: 'chat' },
+      { icon: Users, label: 'Equipo', desc: 'Gestion de miembros y roles', screen: 'team' },
     ],
   },
 ];
@@ -84,6 +86,7 @@ export function HelpButton() {
 /* ─── Help Panel ─── */
 function HelpPanel() {
   const { helpOpen, setHelpOpen, startWizard, showSpotlight, resetWizard, spotlightTips } = useOnboardingStore();
+  const { navigateTo } = useApp();
   const [activeTab, setActiveTab] = useState<'guide' | 'shortcuts'>('guide');
 
   // Close on Escape
@@ -106,6 +109,8 @@ function HelpPanel() {
         const firstPending = spotlightTips.find(t => !t.dismissed);
         if (firstPending) {
           showSpotlight(firstPending.id);
+        } else {
+          toast.info('Ya has visto todos los tips contextuales. Puedes reiniciarlos desde la opcion de abajo.');
         }
         setHelpOpen(false);
         break;
@@ -113,6 +118,15 @@ function HelpPanel() {
       case 'reset-onboarding':
         resetWizard();
         setHelpOpen(false);
+        toast.success('Onboarding reiniciado correctamente');
+        break;
+      default:
+        // Navigate to screen (from Guia rapida items)
+        if (action.startsWith('nav:')) {
+          const targetScreen = action.replace('nav:', '');
+          setHelpOpen(false);
+          setTimeout(() => navigateTo(targetScreen), 200);
+        }
         break;
     }
   };
@@ -202,7 +216,10 @@ function HelpPanel() {
                       {section.items.map((item, i) => (
                         <button
                           key={i}
-                          onClick={() => 'action' in item && handleAction(item.action)}
+                          onClick={() => {
+                            if ('action' in item) handleAction(item.action);
+                            else if ('screen' in item) handleAction('nav:' + item.screen);
+                          }}
                           className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--af-bg3)] hover:bg-[var(--af-bg4)] cursor-pointer transition-all active:scale-[0.98] text-left border-none"
                         >
                           <div className="w-8 h-8 rounded-lg bg-[var(--af-accent)]/10 flex items-center justify-center flex-shrink-0">
@@ -214,7 +231,7 @@ function HelpPanel() {
                               <div className="text-[11px] text-[var(--muted-foreground)]">{(item as any).desc}</div>
                             )}
                           </div>
-                          {'action' in item && <ChevronRight size={14} className="text-[var(--muted-foreground)] flex-shrink-0" />}
+                          <ChevronRight size={14} className="text-[var(--muted-foreground)] flex-shrink-0" />
                         </button>
                       ))}
                     </div>
