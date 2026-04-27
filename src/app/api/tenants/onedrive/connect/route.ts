@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { encryptToken, decryptToken } from '@/lib/token-encryption';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
@@ -186,9 +187,9 @@ export async function POST(request: NextRequest) {
         // Ignore search errors
       }
 
-      // Store tokens in tenant document
+      // Encrypt tokens before storing in Firestore
       const updateData: Record<string, any> = {
-        msAccessToken: accessToken,
+        msAccessToken: encryptToken(accessToken),
         msConnectedEmail: msEmail,
         msConnectedBy: user.uid,
         msConnectedAt: new Date().toISOString(),
@@ -198,9 +199,9 @@ export async function POST(request: NextRequest) {
         updateData.msRootFolderId = rootFolderId;
       }
 
-      // Only store refresh token if provided
+      // Only store refresh token if provided (encrypted)
       if (refreshToken) {
-        updateData.msRefreshToken = refreshToken;
+        updateData.msRefreshToken = encryptToken(refreshToken);
       }
 
       await db.collection('tenants').doc(tenantId).update(updateData);
@@ -236,7 +237,8 @@ export async function POST(request: NextRequest) {
 
     // ── REFRESH: Refresh the tenant's MS access token ──
     if (action === 'refresh') {
-      const storedRefresh = tenantData.msRefreshToken;
+      // Decrypt the stored refresh token
+      const storedRefresh = decryptToken(tenantData.msRefreshToken || '');
       if (!storedRefresh) {
         return NextResponse.json(
           { error: 'No hay refresh token almacenado. Reconecta la cuenta de Microsoft.' },
@@ -295,10 +297,10 @@ export async function POST(request: NextRequest) {
       const newAccessToken = tokenData.access_token;
       const newRefreshToken = tokenData.refresh_token || storedRefresh;
 
-      // Save updated tokens
+      // Encrypt and save updated tokens
       await db.collection('tenants').doc(tenantId).update({
-        msAccessToken: newAccessToken,
-        msRefreshToken: newRefreshToken,
+        msAccessToken: encryptToken(newAccessToken),
+        msRefreshToken: encryptToken(newRefreshToken),
       });
 
       // SECURITY: Don't return the full access token — client doesn't need it.

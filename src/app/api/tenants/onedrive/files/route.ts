@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { decryptToken, encryptToken } from '@/lib/token-encryption';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2/token';
@@ -13,7 +14,8 @@ async function autoRefreshTenantToken(
   tenantId: string,
   tenantData: Record<string, any>
 ): Promise<string | null> {
-  const storedRefresh = tenantData.msRefreshToken;
+  // Decrypt the stored refresh token before using it
+  const storedRefresh = decryptToken(tenantData.msRefreshToken || '');
   if (!storedRefresh) return null;
 
   const clientId = process.env.AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_MS_CLIENT_ID;
@@ -41,11 +43,11 @@ async function autoRefreshTenantToken(
     const newAccessToken = tokenData.access_token;
     const newRefreshToken = tokenData.refresh_token || storedRefresh;
 
-    // Save updated tokens to Firestore
+    // Encrypt and save updated tokens to Firestore
     const db = getAdminDb();
     await db.collection('tenants').doc(tenantId).update({
-      msAccessToken: newAccessToken,
-      msRefreshToken: newRefreshToken,
+      msAccessToken: encryptToken(newAccessToken),
+      msRefreshToken: encryptToken(newRefreshToken),
     });
 
     return newAccessToken;
@@ -77,10 +79,9 @@ async function getTenantMsToken(
     );
   }
 
-  // Try using the stored access token
-  // Note: We don't verify it here to avoid latency; if it's expired, the Graph API will return 401
-  // and the caller can handle it by requesting a refresh
-  return { token: tenantData.msAccessToken };
+  // Decrypt and return the stored access token
+  // If token is expired, Graph API will return 401 and caller handles refresh
+  return { token: decryptToken(tenantData.msAccessToken || '') };
 }
 
 /**
