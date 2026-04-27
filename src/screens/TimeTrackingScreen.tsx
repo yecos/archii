@@ -213,7 +213,29 @@ export default function TimeTrackingScreen() {
                   <span>Total: <b className="text-[var(--foreground)]">{fmtDuration(totalHrs)}</b></span>
                   <span>Facturable: <b className="text-emerald-400">{fmtDuration(billableHrs)}</b></span>
                 </div>
-                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-3">
+                  {filtered.map(e => {
+                    const proj = projects.find(p => p.id === e.data.projectId);
+                    return (
+                      <div key={e.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-[var(--muted-foreground)]">{e.data.date}</div>
+                          <div className="text-sm font-bold text-[var(--af-accent)]">{fmtDuration(e.data.duration)}</div>
+                        </div>
+                        <div className="text-sm font-medium">{e.data.description || 'Sin descripcion'}</div>
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--af-text3)]">
+                          <span className="truncate">{proj?.data.name || '—'}</span>
+                          {proj?.data.name && e.data.startTime && <span>·</span>}
+                          {e.data.startTime && <span>{e.data.startTime}-{e.data.endTime}</span>}
+                          {e.data.billable && <span className="ml-auto">✅ Fact.</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden md:block bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm min-w-[600px]">
                       <thead><tr className="border-b border-[var(--border)] text-[var(--muted-foreground)]">
                         <th className="text-left px-4 py-3 font-medium">Fecha</th>

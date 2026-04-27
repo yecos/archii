@@ -18,6 +18,7 @@ import {
 import type { KanbanBoard as KanbanBoardType, KanbanFilters } from '@/lib/types';
 import { getFirebase, FieldValue as FV } from '@/lib/firebase-service';
 import { Plus, Trash2, Settings, ChevronRight } from 'lucide-react';
+import { SkeletonKanbanBoard } from '@/components/ui/SkeletonLoaders';
 
 export default function KanbanBoardScreen() {
   const {
@@ -362,14 +363,11 @@ export default function KanbanBoardScreen() {
     );
   }, [comments, selectedCard]);
 
-  // Loading state
+  // Loading state — skeleton kanban board
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[13px] text-[var(--muted-foreground)]">Cargando tablero...</span>
-        </div>
+      <div className="flex-1 space-y-4 p-4">
+        <SkeletonKanbanBoard cols={4} />
       </div>
     );
   }

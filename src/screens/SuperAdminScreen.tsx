@@ -11,6 +11,7 @@ import {
   Database, Activity, Globe, PlusCircle, XCircle, CheckCircle2,
   Loader2, MoreVertical
 } from 'lucide-react';
+import { SkeletonKPI, SkeletonChart, SkeletonTenantDetail } from '@/components/ui/SkeletonLoaders';
 
 type SuperAdminTab = 'dashboard' | 'tenants' | 'users' | 'tools';
 
@@ -141,9 +142,14 @@ function DashboardTab({ handleAction, showToast, setLoading }: { handleAction: a
 
   if (!stats) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-[var(--af-accent)]" />
-        <span className="ml-3 text-sm text-[var(--muted-foreground)]">Cargando dashboard...</span>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonKPI key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SkeletonChart height={160} />
+          <SkeletonChart height={160} />
+        </div>
       </div>
     );
   }
@@ -485,7 +491,7 @@ function TenantsTab({ handleAction, showToast, switchTenant, setLoading }: { han
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => { setShowDetail(null); setDetailData(null); }}>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {loadingDetail ? (
-              <div className="p-10 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-[var(--af-accent)]" /></div>
+              <SkeletonTenantDetail />
             ) : detailData ? (
               <>
                 <div className="p-5 border-b border-[var(--border)] flex items-center justify-between">

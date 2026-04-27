@@ -365,6 +365,13 @@ export default function AdminScreen() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-lg font-semibold">👥 Equipo ({teamUsers.length})</h3>
             </div>
+            {teamUsers.length === 0 ? (
+              <div className="text-center py-16 text-[var(--af-text3)]">
+                <div className="text-4xl mb-3">👥</div>
+                <div className="text-[15px] font-medium text-[var(--muted-foreground)] mb-1">Sin miembros en el equipo</div>
+                <div className="text-[13px]">Invita miembros desde la sección de gestión del tenant</div>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamUsers.map(m => {
                 const mTasks = activeTasks.filter((t: any) => t.data.assigneeId === m.id);
@@ -438,6 +445,7 @@ export default function AdminScreen() {
                 </div>);
               })}
             </div>
+            )}
           </div>)}
         </div>
       )}

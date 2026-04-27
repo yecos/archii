@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getFirebaseIdToken } from '@/lib/firebase-service';
 import { getInitials } from '@/lib/helpers';
+import { SkeletonListItem } from '@/components/ui/SkeletonLoaders';
 
 interface ManageMembersModalProps {
   tenantId: string;
@@ -190,8 +191,8 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, canR
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-[var(--af-accent)] border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => <SkeletonListItem key={i} hasAvatar lines={1} />)}
             </div>
           ) : tab === 'members' ? (
             <div className="space-y-2">

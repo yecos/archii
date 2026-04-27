@@ -7,6 +7,7 @@ import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send } from 'lucide-react';
 import { PROJECT_TYPE_COLORS, EXPENSE_CATS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
+import { SkeletonFileList } from '@/components/ui/SkeletonLoaders';
 
 
 
@@ -633,10 +634,7 @@ export default function ProjectDetailScreen() {
                             className={`rounded-lg transition-colors min-h-[120px] ${od.odDragOver ? 'ring-2 ring-[#00a4ef] bg-[#00a4ef]/5' : ''}`}
                           >
                             {od.msLoading ? (
-                              <div className="flex items-center justify-center py-8">
-                                <div className="w-5 h-5 border-2 border-[#00a4ef]/30 border-t-[#00a4ef] rounded-full animate-spin mr-2" />
-                                <span className="text-xs text-[var(--muted-foreground)]">Cargando archivos...</span>
-                              </div>
+                              <SkeletonFileList count={5} />
                             ) : od.odSearchQuery && od.odSearchResults.length > 0 ? (
                               /* Search results */
                               <div className="space-y-1">
