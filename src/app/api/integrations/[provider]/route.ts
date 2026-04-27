@@ -19,6 +19,7 @@ import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabled } from '@/lib/feature-flags';
 import { getProvider, getIntegrationLogs } from '@/lib/marketplace-service';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyTenantMembership } from '@/lib/tenant-utils';
 
 /* ---- Dynamic connector imports ---- */
 
@@ -41,20 +42,6 @@ async function getConnector(providerId: string): Promise<any> {
 }
 
 /* ---- Helpers ---- */
-
-async function verifyTenantMembership(
-  uid: string,
-  tenantId: string
-): Promise<boolean> {
-  const db = getAdminDb();
-  const snap = await db
-    .collection('users')
-    .where('uid', '==', uid)
-    .where('tenantId', '==', tenantId)
-    .limit(1)
-    .get();
-  return !snap.empty;
-}
 
 async function getInstanceConfig(
   tenantId: string,

@@ -23,48 +23,13 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { isFlagEnabled } from '@/lib/feature-flags';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { triggerWebhook } from '@/lib/webhook-service';
+import { verifyTenantMembership } from '@/lib/tenant-utils';
 import { FieldValue } from 'firebase-admin/firestore';
 
 /* ---- Rate limit config per action ---- */
 
 const CURSOR_RATE_LIMIT = { limit: 30, windowSeconds: 60 };
 const DEFAULT_RATE_LIMIT = { limit: 120, windowSeconds: 60 };
-
-/* ---- Tenant membership verification ---- */
-
-/**
- * Verify that the authenticated user belongs to the given tenant.
- * Checks the team_members subcollection.
- */
-async function verifyTenantMembership(
-  uid: string,
-  tenantId: string
-): Promise<boolean> {
-  const db = getAdminDb();
-
-  try {
-    const memberDoc = await db
-      .collection('tenants')
-      .doc(tenantId)
-      .collection('team_members')
-      .doc(uid)
-      .get();
-
-    return memberDoc.exists;
-  } catch {
-    // If the collection doesn't exist or there's a permission error,
-    // fall back to checking the tenant's members array
-    try {
-      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-      if (!tenantDoc.exists) return false;
-
-      const members = tenantDoc.data()?.members || [];
-      return Array.isArray(members) && members.includes(uid);
-    } catch {
-      return false;
-    }
-  }
-}
 
 /* ---- POST handler ---- */
 

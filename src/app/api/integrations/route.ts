@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabled } from '@/lib/feature-flags';
+import { verifyTenantMembership } from '@/lib/tenant-utils';
 import {
   getAvailableProviders,
   getTenantIntegrations,
@@ -27,27 +28,6 @@ import {
   triggerIntegration,
   getIntegrationLogs,
 } from '@/lib/marketplace-service';
-import { getAdminDb } from '@/lib/firebase-admin';
-
-/* ---- Helpers ---- */
-
-/**
- * Verify the authenticated user belongs to the tenant.
- * Returns the user's Firestore doc if found, or null.
- */
-async function verifyTenantMembership(
-  uid: string,
-  tenantId: string
-): Promise<boolean> {
-  const db = getAdminDb();
-  const snap = await db
-    .collection('users')
-    .where('uid', '==', uid)
-    .where('tenantId', '==', tenantId)
-    .limit(1)
-    .get();
-  return !snap.empty;
-}
 
 /* ================================================================
    GET
