@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP } from '@/lib/helpers';
 import { toDate } from '@/lib/types';
-import { Building2, Search, ArrowUpDown, Briefcase, Eye } from 'lucide-react';
+import { Building2, Search, ArrowUpDown, Briefcase, Eye, Plus, ChevronDown, DollarSign, Pencil, Trash2 } from 'lucide-react';
 import type { Company } from '@/lib/types';
 
 type SortKey = 'name-asc' | 'name-desc' | 'projects-desc' | 'date-desc';
@@ -138,10 +138,7 @@ export default function CompaniesScreen() {
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity"
           onClick={handleNewCompany}
         >
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Plus size={14} />
           Nueva empresa
         </button>
       </div>
@@ -169,9 +166,7 @@ export default function CompaniesScreen() {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] pointer-events-none fill-none stroke-current" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] pointer-events-none" />
         </div>
       </div>
 
@@ -198,9 +193,7 @@ export default function CompaniesScreen() {
           </div>
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
             <div className="text-[11px] text-[var(--muted-foreground)] mb-1 flex items-center gap-1">
-              <svg viewBox="0 0 24 24" className="w-[11px] h-[11px] text-emerald-400 fill-none stroke-current" strokeWidth="2">
-                <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-              </svg>
+              <DollarSign size={11} className="text-emerald-400" />
               Presupuesto total
             </div>
             <div className="text-lg font-bold text-emerald-400">{fmtCOP(summary.totalBudget)}</div>
@@ -265,20 +258,14 @@ export default function CompaniesScreen() {
                       onClick={() => handleEditCompany(c)}
                       title="Editar"
                     >
-                      <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
+                      <Pencil size={12} />
                     </button>
                     <button
                       className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border-none bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
                       onClick={() => deleteCompany(c.id)}
                       title="Eliminar"
                     >
-                      <svg viewBox="0 0 24 24" className="w-3 h-3 stroke-current fill-none" strokeWidth="2">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>

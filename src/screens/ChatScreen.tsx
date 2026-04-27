@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useChatContext } from '@/hooks/useChat';
 import { fmtRecTime, fmtSize as fmtFileSize } from '@/lib/helpers';
+import { Search, ChevronLeft, X, Pause, Play, Download, MoreVertical, Paperclip, Mic, Send } from 'lucide-react';
 
 /* ===== EMOJI DATA ===== */
 const EMOJI_CATEGORIES = [
@@ -145,7 +146,7 @@ export default function ChatScreen() {
         {/* Search */}
         <div className="p-3 border-b border-[var(--border)]">
           <div className="relative">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none flex-shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <Search size={16} className="stroke-current fill-none flex-shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
             <input className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-[13px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] transition-colors placeholder:text-[var(--af-text3)]" placeholder="Buscar conversaciones..." value={forms.chatSearch || ''} onChange={e => setForms(p => ({ ...p, chatSearch: e.target.value }))} />
           </div>
         </div>
@@ -226,7 +227,7 @@ export default function ChatScreen() {
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--border)] flex-shrink-0 backdrop-blur-xl bg-[var(--card)]/80 z-10">
           <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg3)] transition-colors lg:hidden" onClick={() => { setChatMobileShow(false); setShowEmojiPicker(false); }}>
-            <svg viewBox="0 0 24 24" className="w-5 h-5" style={{stroke:'currentColor',fill:'none'}} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <ChevronLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate text-[var(--foreground)]">{convTitle}</div>
@@ -239,7 +240,7 @@ export default function ChatScreen() {
               onClick={() => { if (chatMsgSearch) setChatMsgSearch(''); else setChatMsgSearch(' '); }}
               title="Buscar mensajes"
             >
-              <svg viewBox="0 0 24 24" className={`w-4 h-4 transition-colors ${chatMsgSearch ? 'text-[var(--af-accent)]' : 'text-[var(--muted-foreground)]'}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <Search size={16} className={`transition-colors ${chatMsgSearch ? 'text-[var(--af-accent)]' : 'text-[var(--muted-foreground)]'}`} />
             </button>
           </div>
         </div>
@@ -248,7 +249,7 @@ export default function ChatScreen() {
         {chatMsgSearch !== '' && (
           <div className="px-3 py-2 border-b border-[var(--border)] bg-[var(--card)] animate-fadeIn">
             <div className="relative">
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <Search size={14} className="stroke-current fill-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
               <input
                 className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg pl-8 pr-8 py-1.5 text-[12px] text-[var(--foreground)] outline-none focus:border-[var(--af-accent)] placeholder:text-[var(--af-text3)]"
                 placeholder="Buscar en esta conversación..."
@@ -257,7 +258,7 @@ export default function ChatScreen() {
                 autoFocus
               />
               <button className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent" onClick={() => setChatMsgSearch('')}>
-                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <X size={12} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -397,9 +398,9 @@ export default function ChatScreen() {
                             onClick={() => toggleAudioPlay(m.id)}
                           >
                             {playingAudio === m.id ? (
-                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                              <Pause size={14} fill="currentColor" stroke="none" />
                             ) : (
-                              <svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+                              <Play size={14} fill="currentColor" stroke="none" className="ml-0.5" />
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
@@ -431,7 +432,7 @@ export default function ChatScreen() {
                             {m.fileSize && <div className="text-[10px] text-[var(--muted-foreground)]">{fmtFileSize(m.fileSize)}</div>}
                           </div>
                           <a href={m.fileData} download={m.fileName || 'archivo'} className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--af-bg4)] hover:bg-[var(--af-accent)]/10 transition-colors flex-shrink-0" title="Descargar">
-                            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <Download size={14} className="stroke-current fill-none" />
                           </a>
                         </div>
                       )}
@@ -442,7 +443,7 @@ export default function ChatScreen() {
                         style={{ top: -4, [isMe ? 'left' : 'right']: -32 }}
                         onClick={(e) => { e.stopPropagation(); setChatMenuMsg(chatMenuMsg === m.id ? null : m.id); setShowReactionPicker(null); }}
                       >
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[var(--muted-foreground)]" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                        <MoreVertical size={14} className="text-[var(--muted-foreground)]" />
                       </button>
 
                       {/* Context menu */}
@@ -618,7 +619,7 @@ export default function ChatScreen() {
                   className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent flex-shrink-0"
                   onClick={() => setChatReplyingTo(null)}
                 >
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <X size={14} strokeWidth={2.5} />
                 </button>
               </div>
             </div>
@@ -627,7 +628,7 @@ export default function ChatScreen() {
           <div className="flex gap-1 items-end px-2.5 py-2.5 safe-bottom">
             <input ref={fileInputRef} type="file" className="hidden" multiple onChange={(e) => handleFileSelect(e.target.files)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.dwg,.txt,.csv" />
             <button className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer border-none bg-transparent hover:bg-[var(--af-bg3)] transition-colors flex-shrink-0" onClick={() => fileInputRef.current?.click()} title="Adjuntar archivo">
-              <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-[var(--muted-foreground)] fill-none" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49 0L2 12.05"/><circle cx="17" cy="5" r="3"/></svg>
+              <Paperclip size={18} className="stroke-[var(--muted-foreground)]" strokeWidth={1.75} />
             </button>
             <input
               id="chat-input-field"
@@ -652,7 +653,7 @@ export default function ChatScreen() {
               {isRecording ? (
                 <div className="w-3 h-3 bg-white rounded-sm" />
               ) : (
-                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={audioPreviewUrl ? 'var(--background)' : 'none'} stroke={audioPreviewUrl ? 'none' : 'currentColor'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                <Mic size={18} fill={audioPreviewUrl ? 'var(--background)' : 'none'} stroke={audioPreviewUrl ? 'none' : 'currentColor'} strokeWidth={1.75} />
               )}
             </button>
             <button
@@ -660,7 +661,7 @@ export default function ChatScreen() {
               onClick={sendAll}
               title="Enviar"
             >
-              <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-background fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <Send size={18} className="stroke-background" strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -676,7 +677,7 @@ export default function ChatScreen() {
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer border-none text-white z-10 transition-colors"
             onClick={() => setLightboxImg(null)}
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <X size={20} strokeWidth={2.5} />
           </button>
           <img
             src={lightboxImg.src}

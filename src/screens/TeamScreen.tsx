@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Users } from 'lucide-react';
+import { Users, Plus } from 'lucide-react';
 import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import ManageMembersModal from '@/components/layout/ManageMembersModal';
@@ -34,7 +34,7 @@ export default function TeamScreen() {
               onClick={() => setShowManageMembers(true)}
               className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              <Plus size={14} />
               Gestionar miembros
             </button>
           )}

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import AIChatPanel from './AIChatPanel';
 import QuickActions from './QuickActions';
 import { useUIStore } from '@/stores/ui-store';
+import { Plus, Zap } from 'lucide-react';
 
 export default function AIFloatingWrapper() {
   const [chatOpen, setChatOpen] = useState(false);
@@ -79,10 +80,7 @@ export default function AIFloatingWrapper() {
           )}
           title="Acciones rápidas"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Plus size={20} />
         </button>
 
         {/* Main AI Chat Button (golden gradient) */}
@@ -97,9 +95,7 @@ export default function AIFloatingWrapper() {
           )}
           title="Abrir Super IA"
         >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
+          <Zap size={24} />
         </button>
       </div>
       )}

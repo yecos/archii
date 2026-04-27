@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Store } from 'lucide-react';
+import { Store, Plus } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 
 export default function SuppliersScreen() {
@@ -20,7 +20,7 @@ export default function SuppliersScreen() {
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{suppliers.length} proveedores</p>
         </div>
         <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => { setEditingId(null); openModal('supplier'); }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo proveedor
+          <Plus size={14} />Nuevo proveedor
         </button>
       </div>
       {loading && (

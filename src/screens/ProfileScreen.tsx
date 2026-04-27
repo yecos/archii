@@ -5,6 +5,7 @@ import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { useOneDrive } from '@/hooks/useOneDrive';
 import { fmtCOP, fmtDate, prioColor, taskStColor, avatarColor } from '@/lib/helpers';
 import { ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, USER_ROLES, toDate } from '@/lib/types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type ProfileTab = 'resumen' | 'calendario' | 'actividad' | 'integraciones';
 
@@ -580,11 +581,11 @@ export default function ProfileScreen() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1.5">
               <button className="w-7 h-7 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcPrevMonth}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                <ChevronLeft size={14} className="text-[var(--muted-foreground)]" />
               </button>
               <div className="text-[13px] sm:text-[14px] font-semibold min-w-[110px] sm:min-w-[140px] text-center">{MESES[pcMonth]} {pcYear}</div>
               <button className="w-7 h-7 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcNextMonth}>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                <ChevronRight size={14} className="text-[var(--muted-foreground)]" />
               </button>
             </div>
             <button className="text-[10px] px-2 py-1 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={pcGoToday}>Hoy</button>

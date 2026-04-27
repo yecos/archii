@@ -3,6 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { prioColor, taskStColor } from '@/lib/helpers';
 import { MESES, DIAS_SEMANA } from '@/lib/types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CalendarScreen() {
   const {
@@ -59,11 +60,11 @@ export default function CalendarScreen() {
               <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={prevMonth}>
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    <ChevronLeft size={16} className="text-[var(--muted-foreground)]" />
                   </button>
                   <div className="text-[15px] font-semibold min-w-[120px] sm:min-w-[160px] text-center">{MESES[calMonth]} {calYear}</div>
                   <button className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={nextMonth}>
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-[var(--muted-foreground)] fill-none" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <ChevronRight size={16} className="text-[var(--muted-foreground)]" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2">

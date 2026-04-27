@@ -3,7 +3,7 @@ import React from 'react';
 import CenterModal from '@/components/common/CenterModal';
 import { useApp } from '@/contexts/AppContext';
 import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter } from '@/components/common/FormField';
-import { UserPlus, Repeat } from 'lucide-react';
+import { UserPlus, Repeat, Check } from 'lucide-react';
 
 const DIAS_SEMANA_RECURRENTE = [
   { value: 0, label: 'Domingo', short: 'Dom' },
@@ -115,9 +115,7 @@ export default function MeetingModal({ open, onClose }: { open: boolean; onClose
           >
             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isRecurring ? 'bg-[var(--af-accent)] border-[var(--af-accent)]' : 'border-[var(--input)]'}`}>
               {isRecurring && (
-                <svg className="w-3 h-3 text-background" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <Check size={12} className="text-background" />
               )}
             </div>
             <Repeat size={16} className={`transition-colors ${isRecurring ? 'text-[var(--af-accent)]' : 'text-[var(--muted-foreground)]'}`} />

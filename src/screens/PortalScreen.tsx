@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { fmtCOP, statusColor } from '@/lib/helpers';
 import type { Submittal, Project } from '@/lib/types';
-import { Globe, Search, Filter, FolderKanban, DollarSign, CheckCircle2, ArrowRight, X } from 'lucide-react';
+import { Globe, Search, Filter, FolderKanban, DollarSign, CheckCircle2, ArrowRight, X, ChevronRight } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { key: 'Todos', value: '' },
@@ -239,37 +239,37 @@ export default function PortalScreen() {
                     )}
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[var(--af-text3)] group-hover:bg-[var(--af-accent)]/10 group-hover:text-[var(--af-accent)] transition-all flex-shrink-0 ml-2">
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                    <ChevronRight size={16} className="stroke-current" />
                   </div>
                 </div>
                 {/* Progress bar */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-[var(--af-text3)]">Progreso general</span>
-                    <span className="text-[10px] font-medium text-[var(--muted-foreground)]">{p.progress}%</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-[var(--af-bg3)]">
-                    <div
-                      className={`h-1.5 rounded-full transition-all ${
-                        p.progress >= 80 ? 'bg-emerald-500' : p.progress >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${p.progress}%` }}
-                    />
-                  </div>
-                </div>
-                {/* Budget */}
-                {p.data.budget > 0 && (
                   <div className="mb-3">
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--af-accent)]/10 text-[var(--af-accent)]">
-                      {fmtCOP(p.data.budget)}
-                    </span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-[var(--af-text3)]">Progreso general</span>
+                      <span className="text-[10px] font-medium text-[var(--muted-foreground)]">{p.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-[var(--af-bg3)]">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          p.progress >= 80 ? 'bg-emerald-500' : p.progress >= 40 ? 'bg-[var(--af-accent)]' : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${p.progress}%` }}
+                      />
+                    </div>
                   </div>
-                )}
-                {/* Quick stats */}
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--af-bg3)] text-[var(--muted-foreground)]">
-                    {p.completedTasks}/{p.totalTasks} tareas
-                  </span>
+                  {/* Budget */}
+                  {p.data.budget > 0 && (
+                    <div className="mb-3">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--af-accent)]/10 text-[var(--af-accent)]">
+                        {fmtCOP(p.data.budget)}
+                      </span>
+                    </div>
+                  )}
+                  {/* Quick stats */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--af-bg3)] text-[var(--muted-foreground)]">
+                      {p.completedTasks}/{p.totalTasks} tareas
+                    </span>
                   {p.openRFIs > 0 && (
                     <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400">
                       {p.openRFIs} RFI{p.openRFIs !== 1 ? 's' : ''} abierto{p.openRFIs !== 1 ? 's' : ''}
@@ -320,11 +320,11 @@ export default function PortalScreen() {
                     )}
                   </div>
                   <div className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] flex items-center justify-center text-[var(--af-text3)] group-hover:bg-[var(--af-accent)]/10 group-hover:text-[var(--af-accent)] transition-all flex-shrink-0 ml-2">
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                <ChevronRight size={16} className="stroke-current" />
                   </div>
                 </div>
                 {/* Progress bar for non-active projects too */}
-                {p.totalTasks > 0 && (
+                  {p.totalTasks > 0 && (
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-[var(--af-text3)]">Progreso general</span>

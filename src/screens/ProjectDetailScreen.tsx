@@ -5,7 +5,7 @@ import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { useOneDrive, formatFileSize, getFileIcon } from '@/hooks/useOneDrive';
 import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
-import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send } from 'lucide-react';
+import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send, ChevronLeft, X, Pencil, Eye, Trash2 } from 'lucide-react';
 import { PROJECT_TYPE_COLORS, EXPENSE_CATS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
 import { SkeletonFileList } from '@/components/ui/SkeletonLoaders';
 
@@ -174,7 +174,7 @@ export default function ProjectDetailScreen() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button className="flex items-center gap-1.5 bg-[var(--af-bg3)] border border-[var(--border)] text-[var(--foreground)] px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-[var(--af-bg4)] transition-colors" onClick={() => navigateTo('projects')}>
-                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    <ChevronLeft className="w-3.5 h-3.5" />
                     Volver
                   </button>
                   <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity" onClick={() => openEditProject(currentProject)}>
@@ -199,7 +199,7 @@ export default function ProjectDetailScreen() {
                 ) : (
                   <button className="flex items-center gap-1 text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer bg-transparent border-none" onClick={() => setEditingProgress(true)}>
                     {currentProject.data.progress || 0}%
-                    <svg viewBox="0 0 24 24" className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <Pencil className="w-3 h-3 ml-0.5" />
                   </button>
                 )}
               </div>
@@ -1113,7 +1113,7 @@ export default function ProjectDetailScreen() {
                     className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity"
                     onClick={() => { resetLogForm(); setSelectedLogId(null); setDailyLogTab('create'); }}
                   >
-                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <Plus className="w-3.5 h-3.5" />
                     Nuevo Registro
                   </button>
                 </div>
@@ -1159,13 +1159,13 @@ export default function ProjectDetailScreen() {
                               </div>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent transition-colors" onClick={() => { setSelectedLogId(log.id); setDailyLogTab('detail'); }} title="Ver detalle">
-                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
                                 <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--af-bg3)] text-[var(--muted-foreground)] cursor-pointer border-none bg-transparent transition-colors" onClick={() => openEditLog(log)} title="Editar">
-                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                  <Pencil className="w-3.5 h-3.5" />
                                 </button>
                                 <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent transition-colors" onClick={() => { if (confirm('¿Eliminar este registro de bitácora?')) deleteDailyLog(log.id); }} title="Eliminar">
-                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -1209,7 +1209,7 @@ export default function ProjectDetailScreen() {
                   return (
                     <div className="space-y-4">
                       <button className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer border-none bg-transparent" onClick={() => { setDailyLogTab('list'); setSelectedLogId(null); }}>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        <ChevronLeft className="w-3.5 h-3.5" />
                         Volver a bitácora
                       </button>
 
@@ -1291,7 +1291,7 @@ export default function ProjectDetailScreen() {
                 {dailyLogTab === 'create' && (
                   <div className="space-y-4">
                     <button className="flex items-center gap-1.5 text-[12px] text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer border-none bg-transparent" onClick={() => { setDailyLogTab('list'); setSelectedLogId(null); resetLogForm(); }}>
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      <ChevronLeft className="w-3.5 h-3.5" />
                       Volver a bitácora
                     </button>
 
@@ -1342,7 +1342,7 @@ export default function ProjectDetailScreen() {
                               <input type="text" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder={`Actividad ${i + 1}`} value={a} onChange={e => { const arr = [...(logForm.activities || [''])]; arr[i] = e.target.value; setLogForm((p: Record<string, any>) => ({ ...p, activities: arr })); }} />
                               {(logForm.activities || ['']).length > 1 && (
                                 <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent flex-shrink-0 transition-colors" onClick={() => { const arr = (logForm.activities || ['']).filter((_: string, idx: number) => idx !== i); setLogForm((p: Record<string, any>) => ({ ...p, activities: arr.length > 0 ? arr : [''] })); }}>
-                                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  <X className="w-4 h-4" />
                                 </button>
                               )}
                             </div>
@@ -1362,7 +1362,7 @@ export default function ProjectDetailScreen() {
                               <input type="text" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder={`Equipo ${i + 1}`} value={e} onChange={ev => { const arr = [...(logForm.equipment || [''])]; arr[i] = ev.target.value; setLogForm((p: Record<string, any>) => ({ ...p, equipment: arr })); }} />
                               {(logForm.equipment || ['']).length > 1 && (
                                 <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent flex-shrink-0 transition-colors" onClick={() => { const arr = (logForm.equipment || ['']).filter((_: string, idx: number) => idx !== i); setLogForm((p: Record<string, any>) => ({ ...p, equipment: arr.length > 0 ? arr : [''] })); }}>
-                                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  <X className="w-4 h-4" />
                                 </button>
                               )}
                             </div>
@@ -1382,7 +1382,7 @@ export default function ProjectDetailScreen() {
                               <input type="text" className="flex-1 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--af-accent)]" placeholder={`Material ${i + 1}`} value={m} onChange={ev => { const arr = [...(logForm.materials || [''])]; arr[i] = ev.target.value; setLogForm((p: Record<string, any>) => ({ ...p, materials: arr })); }} />
                               {(logForm.materials || ['']).length > 1 && (
                                 <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 cursor-pointer border-none bg-transparent flex-shrink-0 transition-colors" onClick={() => { const arr = (logForm.materials || ['']).filter((_: string, idx: number) => idx !== i); setLogForm((p: Record<string, any>) => ({ ...p, materials: arr.length > 0 ? arr : [''] })); }}>
-                                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  <X className="w-4 h-4" />
                                 </button>
                               )}
                             </div>
@@ -1405,7 +1405,7 @@ export default function ProjectDetailScreen() {
                           ))}
                           <label className="w-20 h-20 rounded-lg border-2 border-dashed border-[var(--border)] flex items-center justify-center cursor-pointer hover:border-[var(--af-accent)]/40 transition-colors flex-shrink-0">
                             <input type="file" accept="image/*" className="hidden" multiple onChange={e => { const files = e.target.files; if (!files) return; Array.from(files).forEach(f => { const reader = new FileReader(); reader.onload = () => setLogForm((pf: Record<string, any>) => ({ ...pf, photos: [...(pf.photos || []), reader.result as string] })); reader.readAsDataURL(f); }); }} />
-                            <svg viewBox="0 0 24 24" className="w-5 h-5 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <Plus className="w-5 h-5 text-[var(--muted-foreground)]" />
                           </label>
                         </div>
                       </div>

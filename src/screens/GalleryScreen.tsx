@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonGallery } from '@/components/ui/SkeletonLoaders';
 import { PHOTO_CATS } from '@/lib/types';
-import { Camera } from 'lucide-react';
+import { Camera, Plus } from 'lucide-react';
 
 export default function GalleryScreen() {
   const {
@@ -24,7 +24,7 @@ export default function GalleryScreen() {
       <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{getFilteredGalleryPhotos().length} foto{getFilteredGalleryPhotos().length !== 1 ? 's' : ''}</p>
     </div>
     <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)] transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms(p => ({ ...p, galleryImageData: '', galleryProject: '', galleryCategory: 'Otro', galleryCaption: '' })); openModal('gallery'); }}>
-      <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <Plus size={16} />
       Agregar foto
     </button>
   </div>

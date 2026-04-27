@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { Home } from 'lucide-react';
 
 interface AuthScreenProps {
   forms: Record<string, any>;
@@ -247,7 +248,7 @@ export default function AuthScreen({ forms, setForms, doLogin, doRegister, doGoo
       <div className="relative bg-[var(--card)] border border-[var(--input)] rounded-2xl p-8 w-full max-w-[400px] af-card shadow-2xl">
         <div className="flex items-center gap-3 mb-7">
           <div className="w-10 h-10 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-xl shadow-lg af-glow-accent flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-background fill-none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <Home size={20} className="stroke-background" />
           </div>
           <span style={{ fontFamily: "'DM Serif Display', serif" }} className="text-2xl">Archii</span>
         </div>

@@ -7,7 +7,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import * as fbActions from '@/lib/firestore-actions';
 import { PRIO_COLORS } from '@/lib/constants/colors';
 import { useEntityResolvers } from '@/lib/useEntityResolvers';
-import { Pencil, Trash2, MessageCircleQuestion } from 'lucide-react';
+import { Pencil, Trash2, MessageCircleQuestion, Plus } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/OverflowMenu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -71,7 +71,7 @@ export default function RFIsScreen() {
           className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
           onClick={handleCreate}
         >
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <Plus size={14} />
           Nuevo RFI
         </button>
       </div>

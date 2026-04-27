@@ -8,7 +8,7 @@ import { useInventoryContext } from '@/hooks/useInventory';
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoaders';
 import { fmtCOP, fmtDate, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
-import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer, Plus } from 'lucide-react';
+import { TrendingUp, FolderKanban, Clock, DollarSign, AlertTriangle, Download, FileText, Zap, CircleHelp, ListChecks, CalendarDays, Users, CheckCircle2, Timer, Plus, ChevronRight } from 'lucide-react';
 import { exportGeneralReportPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 import type { Task, Expense, Invoice, TimeEntry, RFI, Submittal, PunchItem, Meeting, Approval, TeamUser, NotifEntry, Project, Company, FirestoreTimestamp } from '@/lib/types';
@@ -403,7 +403,7 @@ export default function DashboardScreen() {
               Agenda de Hoy
             </div>
             <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('calendar')}>
-              Calendario <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+              Calendario <ChevronRight size={12} />
             </button>
           </div>
 
@@ -502,7 +502,7 @@ export default function DashboardScreen() {
               Proyectos
             </div>
             <button className="text-[10px] text-[var(--af-accent)] cursor-pointer hover:underline flex items-center gap-1" onClick={() => navigateTo('projects')}>
-              Ver todos <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+              Ver todos <ChevronRight size={12} />
             </button>
           </div>
           {(() => {

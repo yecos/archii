@@ -5,7 +5,7 @@ import { SkeletonCard } from '@/components/ui/SkeletonLoaders';
 import { getFirebaseIdToken } from '@/lib/firebase-service';
 import { fmtSize } from '@/lib/helpers';
 import { useTenantOneDrive, usePersonalOneDrive, getFileIcon, formatTimeAgo, type ODItem, type TabKey } from '@/lib/onedrive-hooks';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Search, X, LayoutGrid, List, Plus, Upload, ChevronRight, Loader2, Download, Pencil, Trash2 } from 'lucide-react';
 
 /* ===== File Browser Component (shared) ===== */
 function FileBrowser({
@@ -61,9 +61,7 @@ function FileBrowser({
       <div className="flex flex-col sm:flex-row gap-2 mb-3">
         {/* Search */}
         <div className="relative flex-1">
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-          </svg>
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted-foreground)]" />
           <input
             type="text"
             placeholder="Buscar archivos..."
@@ -73,7 +71,7 @@ function FileBrowser({
           />
           {od.searchQuery && (
             <button onClick={() => od.setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -85,9 +83,9 @@ function FileBrowser({
             title={od.viewMode === 'list' ? 'Vista cuadrícula' : 'Vista lista'}
           >
             {od.viewMode === 'list' ? (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/></svg>
+              <LayoutGrid className="w-4 h-4" />
             ) : (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
+              <List className="w-4 h-4" />
             )}
           </button>
           {/* New folder */}
@@ -96,9 +94,7 @@ function FileBrowser({
             className="p-2 rounded-lg border border-[var(--border)] bg-[var(--af-bg3)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             title="Nueva carpeta"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Plus className="w-4 h-4" />
           </button>
           {/* Upload */}
           <button
@@ -106,9 +102,7 @@ function FileBrowser({
             className="px-3 py-2 rounded-lg text-[12px] font-medium text-white cursor-pointer transition-colors flex items-center gap-1.5"
             style={{ backgroundColor: 'var(--af-accent)' }}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
+            <Upload className="w-3.5 h-3.5" />
             Subir
           </button>
           <input
@@ -137,7 +131,7 @@ function FileBrowser({
         </button>
         {od.breadcrumbs.map((crumb, i) => (
           <React.Fragment key={crumb.id}>
-            <svg className="w-3 h-3 text-[var(--af-text3)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+            <ChevronRight className="w-3 h-3 text-[var(--af-text3)] flex-shrink-0" />
             <button
               onClick={() => od.navigateBreadcrumb(i)}
               className={`hover:underline whitespace-nowrap ${i === od.breadcrumbs.length - 1 ? 'text-[var(--foreground)] font-medium' : 'text-[var(--muted-foreground)]'}`}
@@ -172,9 +166,9 @@ function FileBrowser({
           </button>
           <button
             onClick={() => { od.setCreatingFolder(false); od.setNewFolderName(''); }}
-            className="px-2 py-1 rounded text-[11px] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            className="p-1 rounded text-[11px] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           >
-            ✕
+            <X size={12} />
           </button>
         </div>
       )}
@@ -183,10 +177,7 @@ function FileBrowser({
       {od.uploading && (
         <div className="mb-3 p-2.5 bg-[var(--af-accent)]/10 rounded-lg border border-[var(--af-accent)]/20">
           <div className="flex items-center gap-2 mb-1">
-            <svg className="w-4 h-4 animate-spin text-[var(--af-accent)]" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+            <Loader2 className="w-4 h-4 animate-spin text-[var(--af-accent)]" />
             <span className="text-[12px] text-[var(--af-accent)] font-medium truncate">{od.uploadFileName}</span>
           </div>
           <div className="h-1 bg-[var(--af-accent)]/20 rounded-full overflow-hidden">
@@ -209,7 +200,7 @@ function FileBrowser({
             onClick={od.clearError}
             className="text-red-400/60 hover:text-red-400 text-xs flex-shrink-0"
           >
-            ✕
+            <X size={12} />
           </button>
         </div>
       )}
@@ -291,21 +282,21 @@ function FileBrowser({
                       className="p-1 rounded bg-[var(--af-bg4)] hover:bg-[var(--af-accent)]/20 text-[var(--muted-foreground)] hover:text-[var(--af-accent)] transition-colors"
                       title="Descargar"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                      <Download className="w-3 h-3" />
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); od.setRenamingId(item.id); od.setRenameName(item.name); }}
                       className="p-1 rounded bg-[var(--af-bg4)] hover:bg-amber-500/20 text-[var(--muted-foreground)] hover:text-amber-400 transition-colors"
                       title="Renombrar"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                      <Pencil className="w-3 h-3" />
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); od.deleteFile(item.id, item.name); }}
                       className="p-1 rounded bg-[var(--af-bg4)] hover:bg-red-500/20 text-[var(--muted-foreground)] hover:text-red-400 transition-colors"
                       title="Eliminar"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 </>
@@ -363,9 +354,9 @@ function FileBrowser({
                   </button>
                   <button
                     onClick={e => { e.stopPropagation(); od.setRenamingId(null); od.setRenameName(''); }}
-                    className="px-2 py-1 rounded text-[11px] text-[var(--muted-foreground)]"
+                    className="p-1 rounded text-[11px] text-[var(--muted-foreground)]"
                   >
-                    ✕
+                    <X size={12} />
                   </button>
                 </div>
               ) : (
@@ -402,21 +393,21 @@ function FileBrowser({
                         className="p-1.5 rounded-lg hover:bg-[var(--af-bg4)] text-[var(--muted-foreground)] hover:text-[var(--af-accent)] transition-colors"
                         title="Descargar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                        <Download className="w-4 h-4" />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); od.setRenamingId(item.id); od.setRenameName(item.name); }}
                         className="p-1.5 rounded-lg hover:bg-amber-500/10 text-[var(--muted-foreground)] hover:text-amber-400 transition-colors"
                         title="Renombrar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); od.deleteFile(item.id, item.name); }}
                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-[var(--muted-foreground)] hover:text-red-400 transition-colors"
                         title="Eliminar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}

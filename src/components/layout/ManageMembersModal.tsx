@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getFirebaseIdToken } from '@/lib/firebase-service';
 import { getInitials } from '@/lib/helpers';
 import { SkeletonListItem } from '@/components/ui/SkeletonLoaders';
+import { Trash2, Copy } from 'lucide-react';
 
 interface ManageMembersModalProps {
   tenantId: string;
@@ -224,7 +225,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, canR
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-400 hover:bg-red-500/15 border border-red-500/20 transition-colors cursor-pointer flex-shrink-0"
                         title="Eliminar del tenant"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <Trash2 size={12} />
                         Quitar
                       </button>
                     )}
@@ -333,10 +334,7 @@ export default function ManageMembersModal({ tenantId, tenantName, onClose, canR
                   className="p-3 rounded-xl bg-[var(--af-accent)] hover:opacity-90 text-[var(--primary-foreground)] transition-colors cursor-pointer border-none"
                   title="Copiar codigo"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry={2} />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                  </svg>
+                  <Copy size={20} />
                 </button>
               </div>
               <p className="text-[var(--af-text3)] text-xs mt-4">Los nuevos miembros entraran como Miembro</p>

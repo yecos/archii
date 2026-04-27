@@ -3,6 +3,7 @@ import React from 'react';
 import { useUIStore } from '@/stores/ui-store';
 import { THEME_REGISTRY, getThemeGroups } from '@/lib/theme-registry';
 import type { ThemeDefinition } from '@/lib/theme-registry';
+import { Check } from 'lucide-react';
 
 interface ThemePanelProps {
   onClose: () => void;
@@ -121,9 +122,7 @@ function ThemeCard({ themeDef, isActive, onSelect }: {
       {/* Check indicator */}
       {isActive && (
         <div className="w-6 h-6 rounded-full bg-[var(--af-accent)] flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" stroke="var(--primary-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="2,6 5,9 10,3" />
-          </svg>
+          <Check size={12} className="text-[var(--primary-foreground)]" />
         </div>
       )}
     </button>
