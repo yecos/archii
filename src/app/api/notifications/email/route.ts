@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
   }
 
+  // Get caller info for tenant checks (both broadcast and individual paths)
+  const authHeader = request.headers.get("authorization");
+  const idToken = authHeader?.split("Bearer ")[1] || "";
+  const { getAdminAuth } = await import("@/lib/firebase-admin");
+  const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+  const callerEmail = decodedToken.email || "";
+
   try {
     const body = await request.json();
     const { userId, message, broadcast, subject, htmlBody } = body;
@@ -32,7 +39,8 @@ export async function POST(request: NextRequest) {
 
     // Determinar subject y htmlBody con fallback a message
     const emailSubject = subject || message || 'Notificación ArchiFlow';
-    const emailHtml = htmlBody || (message ? `<p style="font-family:sans-serif;font-size:15px;color:#1f2937;">${message.replace(/\n/g, '<br>')}</p>` : '');
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const emailHtml = htmlBody || (message ? `<p style="font-family:sans-serif;font-size:15px;color:#1f2937;">${escapeHtml(message).replace(/\n/g, '<br>')}</p>` : '');
 
     if (!emailHtml) {
       return NextResponse.json({ error: "htmlBody requerido" }, { status: 400 });
@@ -43,13 +51,10 @@ export async function POST(request: NextRequest) {
 
     // ─── Broadcast: enviar a todos los miembros del tenant ───
     if (broadcast) {
-      // Obtener el tenantId del usuario autenticado (por email)
-      const authUser = await requireAuth(request);
-
-      // Buscar el perfil del usuario para obtener su tenantId
+      // Buscar el perfil del usuario para obtener su tenantId (reutilizar callerEmail del header)
       const userSnap = await db
         .collection("users")
-        .where("email", "==", authUser.email)
+        .where("email", "==", callerEmail)
         .limit(1)
         .get();
 
@@ -115,6 +120,17 @@ export async function POST(request: NextRequest) {
     }
 
     const userDoc = userSnap.docs[0].data();
+
+    // Verify caller and target share the same tenant
+    const callerUserSnap = await db.collection("users").where("email", "==", callerEmail).limit(1).get();
+    if (!callerUserSnap.empty) {
+      const callerTenantId = callerUserSnap.docs[0].data()?.tenantId;
+      const targetTenantId = userDoc.tenantId;
+      if (callerTenantId && targetTenantId && callerTenantId !== targetTenantId) {
+        return NextResponse.json({ ok: false, error: "No autorizado: diferentes tenants" }, { status: 403 });
+      }
+    }
+
     const userEmail = userDoc.email;
 
     if (!userEmail) {

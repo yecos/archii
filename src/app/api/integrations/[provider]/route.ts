@@ -197,13 +197,11 @@ export async function POST(
           body.code
         );
 
+        // Store tokens server-side, don't return to client
+        // The tokens are already stored in the instance config by the connector
         return NextResponse.json({
-          message: 'OAuth exitoso',
-          tokens: {
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            expiresIn: tokens.expires_in,
-          },
+          message: 'OAuth exitoso — integración configurada',
+          expiresIn: tokens.expires_in,
         });
       }
 

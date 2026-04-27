@@ -44,6 +44,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
     switch (action) {
       // ── Búsqueda semántica ──
       case 'search': {
@@ -52,12 +65,15 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'query requerida' }, { status: 400 });
         }
 
+        const boundedTopK = Math.min(Math.max(topK || 10, 1), 50);
+        const boundedMinScore = Math.max(Math.min(minScore || 0.3, 1), 0);
+
         const results = await searchDocuments({
           tenantId,
           query,
-          topK: topK || 10,
+          topK: boundedTopK,
           sourceFilter,
-          minScore: minScore || 0.3,
+          minScore: boundedMinScore,
         });
 
         return NextResponse.json({
@@ -161,7 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error?.message || 'Error interno del servidor' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

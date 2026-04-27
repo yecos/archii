@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
             userId: user.uid,
             userName: body.userName || user.email,
             userPhoto: body.userPhoto || null,
-            userRole: body.userRole || 'Miembro',
+            userRole: body.userRole || 'Miembro', // display-only; real role enforced by server
             documentId,
             tenantId,
             cursor: null,
@@ -276,12 +276,27 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+        if (changes.length > 200) {
+          return NextResponse.json(
+            { error: 'Máximo 200 cambios por solicitud' },
+            { status: 400 }
+          );
+        }
 
         if (!version || typeof version !== 'object') {
           return NextResponse.json(
             { error: 'version (vector de versión) es requerido' },
             { status: 400 }
           );
+        }
+        // Validate version vector keys and values
+        for (const [key, val] of Object.entries(version)) {
+          if (typeof val !== 'number') {
+            return NextResponse.json(
+              { error: 'version vector values must be numbers' },
+              { status: 400 }
+            );
+          }
         }
 
         // General rate limit for sync
@@ -376,7 +391,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error?.message || 'Error interno del servidor' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

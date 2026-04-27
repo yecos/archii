@@ -1011,8 +1011,17 @@ async function executeToolCall(
         const tenantSnap = await db.collection("tenants").doc(tenantId).get();
         const tenantData = tenantSnap.exists ? tenantSnap.data() : null;
         const memberIds: string[] = tenantData?.members || [];
-        const snap = await db.collection("users").get();
-        const members = snap.docs.map((d: any) => ({ id: d.id, data: d.data() })).filter((m: any) => memberIds.includes(m.id));
+        // Fetch only tenant members (not all users) - individual gets for reliability
+        let members: { id: string; data: any }[] = [];
+        if (memberIds.length > 0) {
+          const memberPromises = memberIds.map(async (uid: string) => {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists) return { id: doc.id, data: doc.data() };
+            return null;
+          });
+          const results = await Promise.all(memberPromises);
+          members = results.filter((m): m is { id: string; data: any } => m !== null);
+        }
         if (members.length === 0) return "No hay miembros en este espacio de trabajo.";
 
         const lines = members.map(
@@ -1110,8 +1119,15 @@ async function executeToolCall(
         // Resolve assignee
         let assigneeId: string | undefined;
         if (args.assignee_name) {
-          const usersSnap = await db.collection("users").limit(50).get();
-          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          // Only search within tenant members
+          const taskTenantSnap = await db.collection("tenants").doc(tenantId).get();
+          const taskTenantMembers = taskTenantSnap.exists ? (taskTenantSnap.data()?.members || []) : [];
+          const taskUsersPromises = taskTenantMembers.map(async (uid: string) => {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists) return { id: doc.id, data: doc.data() };
+            return null;
+          });
+          const users = (await Promise.all(taskUsersPromises)).filter((u): u is { id: string; data: any } => u !== null);
           const lower = args.assignee_name.toLowerCase();
           const found = users.find(
             (u: any) =>
@@ -1354,8 +1370,15 @@ async function executeToolCall(
         }
         let assigneeId: string | undefined;
         if (args.assignee_name) {
-          const usersSnap = await db.collection("users").limit(50).get();
-          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          // Only search within tenant members
+          const rfiTenantSnap = await db.collection("tenants").doc(tenantId).get();
+          const rfiTenantMembers = rfiTenantSnap.exists ? (rfiTenantSnap.data()?.members || []) : [];
+          const rfiUsersPromises = rfiTenantMembers.map(async (uid: string) => {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists) return { id: doc.id, data: doc.data() };
+            return null;
+          });
+          const users = (await Promise.all(rfiUsersPromises)).filter((u): u is { id: string; data: any } => u !== null);
           const lower = args.assignee_name.toLowerCase();
           const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
           if (found) assigneeId = found.id;
@@ -1741,8 +1764,15 @@ async function executeToolCall(
 
         let reviewerId: string | undefined;
         if (args.reviewer_name) {
-          const usersSnap = await db.collection("users").limit(50).get();
-          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          // Only search within tenant members
+          const subTenantSnap = await db.collection("tenants").doc(tenantId).get();
+          const subTenantMembers = subTenantSnap.exists ? (subTenantSnap.data()?.members || []) : [];
+          const subUsersPromises = subTenantMembers.map(async (uid: string) => {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists) return { id: doc.id, data: doc.data() };
+            return null;
+          });
+          const users = (await Promise.all(subUsersPromises)).filter((u): u is { id: string; data: any } => u !== null);
           const lower = args.reviewer_name.toLowerCase();
           const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
           if (found) reviewerId = found.id;
@@ -1789,8 +1819,15 @@ async function executeToolCall(
 
         let assignedToId: string | undefined;
         if (args.assigned_to_name) {
-          const usersSnap = await db.collection("users").limit(50).get();
-          const users = usersSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          // Only search within tenant members
+          const punchTenantSnap = await db.collection("tenants").doc(tenantId).get();
+          const punchTenantMembers = punchTenantSnap.exists ? (punchTenantSnap.data()?.members || []) : [];
+          const punchUsersPromises = punchTenantMembers.map(async (uid: string) => {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists) return { id: doc.id, data: doc.data() };
+            return null;
+          });
+          const users = (await Promise.all(punchUsersPromises)).filter((u): u is { id: string; data: any } => u !== null);
           const lower = args.assigned_to_name.toLowerCase();
           const found = users.find((u: any) => u.data?.name?.toLowerCase().includes(lower) || u.data?.email?.toLowerCase().includes(lower));
           if (found) assignedToId = found.id;
@@ -2062,8 +2099,9 @@ async function executeToolCall(
 
 export async function POST(request: NextRequest) {
   // Auth check
+  let user: { uid: string; email: string; role?: string };
   try {
-    var user = await requireAuth(request);
+    user = await requireAuth(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

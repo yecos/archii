@@ -121,20 +121,36 @@ export async function POST(request: NextRequest) {
     // ===== LIST TENANTS =====
     if (action === "list-tenants") {
       const snap = await db.collection("tenants").orderBy("createdAt", "desc").get();
-      const tenants = [];
+      const allTenants = snap.docs.map((doc: any) => {
+        const data = doc.data();
+        return { id: doc.id, ...data };
+      });
 
+      // Batch user lookups instead of N+1
+      const allMemberUids = [...new Set(allTenants.flatMap((t: any) => (t.members || [])))];
+      const userMap: Record<string, any> = {};
+      const batchSize = 20; // Concurrent Firestore reads
+      for (let i = 0; i < allMemberUids.length; i += batchSize) {
+        const batch = allMemberUids.slice(i, i + batchSize);
+        const docs = await Promise.all(batch.map((uid: string) => db.collection("users").doc(uid).get()));
+        for (const doc of docs) {
+          if (doc.exists) userMap[doc.id] = doc.data();
+        }
+      }
+
+      const tenants = [];
       for (const doc of snap.docs) {
         const data = doc.data();
         const membersResolved: any[] = [];
 
         for (const uid of (data.members || [])) {
-          const uDoc = await db.collection("users").doc(uid).get();
+          const uData = userMap[uid];
           membersResolved.push({
             uid,
-            name: uDoc.exists ? uDoc.data()?.name : "Desconocido",
-            email: uDoc.exists ? uDoc.data()?.email : "N/A",
-            role: uDoc.exists ? uDoc.data()?.role : "Miembro",
-            photoURL: uDoc.exists ? uDoc.data()?.photoURL || "" : "",
+            name: uData?.name || "Desconocido",
+            email: uData?.email || "N/A",
+            role: uData?.role || "Miembro",
+            photoURL: uData?.photoURL || "",
             isCreator: uid === data.createdBy,
           });
         }
@@ -275,8 +291,10 @@ export async function POST(request: NextRequest) {
         let totalDeleted = 0;
         for (const col of collections) {
           try {
-            const snap = await db.collection(col).where("tenantId", "==", tenantId).limit(500).get();
-            if (!snap.empty) {
+            let keepGoing = true;
+            while (keepGoing) {
+              const snap = await db.collection(col).where("tenantId", "==", tenantId).limit(500).get();
+              if (snap.empty) { keepGoing = false; break; }
               let batch = db.batch();
               for (const d of snap.docs) {
                 batch.delete(d.ref);
@@ -287,6 +305,7 @@ export async function POST(request: NextRequest) {
                 }
               }
               await batch.commit();
+              if (snap.size < 500) keepGoing = false; // Got all docs
             }
           } catch (e) { /* collection may not exist or not have tenantId index */ }
         }
@@ -550,6 +569,16 @@ export async function POST(request: NextRequest) {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       let code = "";
       for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+
+      // Ensure uniqueness before writing
+      let attempts = 0;
+      while (attempts < 20) {
+        const existing = await db.collection("tenants").where("code", "==", code).limit(1).get();
+        if (existing.empty || existing.docs[0].id === tenantId) break;
+        code = "";
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        attempts++;
+      }
 
       await db.collection("tenants").doc(tenantId).update({ code });
       return NextResponse.json({ code, tenantId });

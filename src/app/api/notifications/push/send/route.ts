@@ -131,16 +131,28 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Get caller's tenantId
+      const callerDoc = await db.collection('users').doc(user.uid).get();
+      const callerTenantId = callerDoc.exists ? callerDoc.data()?.tenantId : null;
+      if (!callerTenantId) {
+        return NextResponse.json({ error: 'Usuario sin tenant asociado' }, { status: 400 });
+      }
+
       const snap = await db
         .collection(COLLECTION)
         .where('active', '==', true)
         .get();
+      // Filter subscriptions to same tenant
+      const subsInTenant = snap.docs.filter((doc) => {
+        const data = doc.data();
+        return data.tenantId === callerTenantId;
+      });
 
       let sent = 0;
       let failed = 0;
       const expiredEndpoints: string[] = [];
 
-      for (const doc of snap.docs) {
+      for (const doc of subsInTenant) {
         const sub = doc.data() as {
           endpoint: string;
           keys: { p256dh: string; auth: string };
@@ -164,14 +176,21 @@ export async function POST(request: NextRequest) {
 
       // Solo limpiar suscripciones expiradas (404/410), no las que fallaron por otros motivos
       if (expiredEndpoints.length > 0) {
-        const batch = db.batch();
-        for (const uid of expiredEndpoints) {
-          batch.update(db.collection(COLLECTION).doc(uid), { active: false });
+        // Firestore batches have a 500-op limit
+        const chunks: string[][] = [];
+        for (let i = 0; i < expiredEndpoints.length; i += 450) {
+          chunks.push(expiredEndpoints.slice(i, i + 450));
         }
-        await batch.commit();
+        for (const chunk of chunks) {
+          const batch = db.batch();
+          for (const uid of chunk) {
+            batch.update(db.collection(COLLECTION).doc(uid), { active: false });
+          }
+          await batch.commit();
+        }
       }
 
-      return NextResponse.json({ ok: true, sent, failed, total: snap.size });
+      return NextResponse.json({ ok: true, sent, failed, total: subsInTenant.length });
     }
 
     /* ── Individual: enviar a un usuario específico ── */
@@ -231,6 +250,6 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     console.error('[ArchiFlow Push] Error enviando notificación:', message);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'Error interno del servidor' }, { status: 500 });
   }
 }
