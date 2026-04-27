@@ -44,6 +44,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import AIFloatingWrapper from '@/components/archii/AIFloatingWrapper';
 import KeyboardShortcutsInitializer from '@/components/archii/KeyboardShortcutsInitializer';
 import OnboardingProvider from '@/components/onboarding/OnboardingProvider';
+import FeedbackWidget from '@/components/beta/FeedbackWidget';
 
 /* ─── Screens — core screens loaded directly ─── */
 import DashboardScreen from '@/screens/DashboardScreen';
@@ -289,6 +290,8 @@ function AppContent() {
       <KeyboardShortcutsInitializer />
       {/* Onboarding - Wizard, Spotlight, Help (auto-triggers for first-time users) */}
       <OnboardingProvider />
+      {/* Beta - Feedback widget */}
+      <FeedbackWidget />
 
       {/* ===== Modals — each self-contained ===== */}
       <ProjectModal open={!!modals.project} onClose={() => closeModal('project')} />

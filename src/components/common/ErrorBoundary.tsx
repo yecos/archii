@@ -1,13 +1,16 @@
 'use client';
 import React, { Component, ReactNode } from 'react';
+import { reportError } from '@/lib/error-reporting-service';
 
 /* ===== Error Boundary =====
  * Captura errores de renderizado en componentes hijos.
  * Muestra una UI de fallback en vez de romper toda la app.
+ * Reporta errores a Firestore cuando error_reporting flag está activo.
  */
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  screenName?: string;
 }
 
 interface ErrorBoundaryState {
@@ -27,6 +30,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[Archii] ErrorBoundary caught:', error, errorInfo);
+
+    // Report to Firestore (non-blocking)
+    reportError({
+      message: error.message,
+      stack: error.stack || undefined,
+      componentStack: errorInfo.componentStack || undefined,
+      screen: this.props.screenName,
+    }).catch(() => {});
   }
 
   handleRetry = () => {

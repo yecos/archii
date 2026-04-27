@@ -93,6 +93,28 @@ const FLAG_REGISTRY: Record<string, { envKey: string; defaultValue: boolean; des
     defaultValue: false,
     description: 'Herramientas GDPR (exportación/eliminación de datos)',
   },
+
+  // BETA flags
+  feedback_widget: {
+    envKey: 'FEEDBACK_WIDGET',
+    defaultValue: true,
+    description: 'Muestra el widget de feedback flotante para reportes de usuarios',
+  },
+  error_reporting: {
+    envKey: 'ERROR_REPORTING',
+    defaultValue: true,
+    description: 'Envía errores de UI a Firestore para análisis de bugs',
+  },
+  telemetry: {
+    envKey: 'TELEMETRY',
+    defaultValue: true,
+    description: 'Telemetría anónima de uso de features (sin datos personales)',
+  },
+  beta_mode: {
+    envKey: 'BETA_MODE',
+    defaultValue: true,
+    description: 'Activa indicadores visuales de beta y badge en la UI',
+  },
 };
 
 /* ---- Cache ---- */
