@@ -35,12 +35,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
 
+    // Verify tenant membership — prevent cross-tenant access
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const isMember = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!isMember) {
+      return NextResponse.json({ error: 'No eres miembro de este tenant' }, { status: 403 });
+    }
+
     const keys = await listAPIKeys(tenantId);
     return NextResponse.json({ keys, count: keys.length });
   } catch (error: any) {
     console.error('[API Keys] GET error:', error?.message);
     if (error?.status === 401) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
@@ -58,18 +71,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const isMember = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!isMember) {
+      return NextResponse.json({ error: 'No eres miembro de este tenant' }, { status: 403 });
+    }
+
     switch (action) {
       case 'create': {
         if (!body.name?.trim()) {
           return NextResponse.json({ error: 'name requerido' }, { status: 400 });
         }
 
+        // Validate permissions
+        const allowedPermissions = ['read', 'write', 'export'];
+        const perms = (body.permissions || ['read']).filter((p: string) => allowedPermissions.includes(p));
+        if (perms.length === 0) {
+          return NextResponse.json({ error: 'Permisos inválidos' }, { status: 400 });
+        }
+
+        // Validate expiresAt
+        if (body.expiresAt && new Date(body.expiresAt) <= new Date()) {
+          return NextResponse.json({ error: 'expiresAt debe ser una fecha futura' }, { status: 400 });
+        }
+
         const result = await createAPIKey({
           tenantId,
           name: body.name,
           createdBy: user.uid,
-          permissions: body.permissions || ['read'],
-          rateLimit: body.rateLimit,
+          permissions: perms,
+          rateLimit: body.rateLimit ? { limit: Math.min(body.rateLimit.limit || 100, 1000), windowSeconds: Math.max(body.rateLimit.windowSeconds || 60, 10) } : undefined,
           expiresAt: body.expiresAt,
         });
 
@@ -109,6 +147,6 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('[API Keys] POST error:', error?.message);
     if (error?.status === 401) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

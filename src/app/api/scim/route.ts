@@ -86,12 +86,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'SCIM no habilitado' }, { status: 403 });
     }
 
+    const { requireAuth, AuthError } = await import('@/lib/api-auth');
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
     const tenantId = new URL(request.url).searchParams.get('tenantId');
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
     const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
     const snapshot = await db
       .collection('scim_events')
       .where('tenantId', '==', tenantId)

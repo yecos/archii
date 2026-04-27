@@ -53,8 +53,6 @@ import {
 const ALLOWED_ROLES = ['Admin', 'Director', 'SuperAdmin'];
 
 function hasComplianceAccess(user: AuthUser): boolean {
-  // Check email-based admin (from api-auth) or role-based
-  if (['yecos11@gmail.com'].includes(user.email)) return true;
   if (user.role && ALLOWED_ROLES.includes(user.role)) return true;
   return false;
 }
@@ -113,6 +111,18 @@ export async function GET(request: NextRequest) {
     const tenantId = request.headers.get('x-tenant-id') || request.nextUrl.searchParams.get('tenantId');
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido (header x-tenant-id o query param)' }, { status: 400 });
+    }
+
+    // Verify tenant membership
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -202,12 +212,10 @@ export async function GET(request: NextRequest) {
         await logComplianceAction('export-download', user.uid, tenantId, { requestId, exportId });
 
         if (format === 'csv') {
-          // Convert JSON export to CSV-like response
-          const csvContent = exportData.data;
-          return new NextResponse(csvContent, {
+          return new NextResponse(exportData.data, {
             headers: {
-              'Content-Type': 'application/json; charset=utf-8',
-              'Content-Disposition': `attachment; filename="gdpr-export-${requestId}.json"`,
+              'Content-Type': 'text/csv; charset=utf-8',
+              'Content-Disposition': `attachment; filename="gdpr-export-${requestId}.csv"`,
             },
           });
         }
@@ -260,6 +268,19 @@ export async function POST(request: NextRequest) {
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido en body' }, { status: 400 });
     }
+
+    // Verify tenant membership
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
     if (!action) {
       return NextResponse.json({ error: '"action" requerido en body. Valores: export-data, delete-data, archive-collection, evaluate-policies' }, { status: 400 });
     }
@@ -348,6 +369,11 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'collection y olderThanDays requeridos' }, { status: 400 });
         }
 
+        const ALLOWED_ARCHIVE_COLLECTIONS = ['tasks', 'expenses', 'meetings', 'comments', 'generalMessages', 'galleryPhotos', 'invMovements', 'invTransfers', 'invoices', 'timeEntries'];
+        if (!ALLOWED_ARCHIVE_COLLECTIONS.includes(collection)) {
+          return NextResponse.json({ error: `Colección "${collection}" no permitida para archivar` }, { status: 400 });
+        }
+
         const archived = await archiveCollection(tenantId, collection, Number(olderThanDays));
         await logComplianceAction('archive-collection', user.uid, tenantId, {
           collection,
@@ -372,6 +398,11 @@ export async function POST(request: NextRequest) {
         const { collection, olderThanDays } = body;
         if (!collection || !olderThanDays) {
           return NextResponse.json({ error: 'collection y olderThanDays requeridos' }, { status: 400 });
+        }
+
+        const ALLOWED_DELETE_COLLECTIONS = ['tasks', 'expenses', 'meetings', 'comments', 'generalMessages', 'galleryPhotos', 'invMovements', 'invTransfers', 'invoices', 'timeEntries'];
+        if (!ALLOWED_DELETE_COLLECTIONS.includes(collection)) {
+          return NextResponse.json({ error: `Colección "${collection}" no permitida para eliminar` }, { status: 400 });
         }
 
         const deleted = await deleteCollection(tenantId, collection, Number(olderThanDays));

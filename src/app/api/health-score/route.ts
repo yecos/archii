@@ -50,15 +50,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
     if (history) {
       const limitParam = searchParams.get('limit');
-      const limit = limitParam ? parseInt(limitParam, 10) : 30;
+      const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 30, 1), 100) : 30;
       const scores = await getHealthScoreHistory(projectId, limit);
       return NextResponse.json({ scores, count: scores.length });
     }
 
     // Obtener último score
-    const db = getAdminDb();
     const snapshot = await db
       .collection('project_health_scores')
       .where('projectId', '==', projectId)
@@ -91,7 +103,7 @@ export async function GET(request: NextRequest) {
     if (error?.status === 401) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
@@ -110,6 +122,19 @@ export async function POST(request: NextRequest) {
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
+    }
+
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
     }
 
     switch (action) {
@@ -132,6 +157,6 @@ export async function POST(request: NextRequest) {
     if (error?.status === 401) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

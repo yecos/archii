@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || auth.tenantId;
+    const tenantId = auth.tenantId;
     const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10) || 20, 1), 100);
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
@@ -98,17 +98,8 @@ export async function GET(request: NextRequest) {
       ...doc.data(),
     }));
 
-    // Rate limit headers
-    const rateResult = await checkRateLimit(`apikey:${auth.apiKeyRecord?.keyPrefix || 'firebase'}`);
-
     return NextResponse.json(
-      { projects, total, page, limit, pages: Math.ceil(total / limit) },
-      {
-        headers: {
-          'X-RateLimit-Limit': String(rateResult.limit),
-          'X-RateLimit-Remaining': String(rateResult.remaining),
-        },
-      }
+      { projects, total, page, limit, pages: Math.ceil(total / limit) }
     );
   } catch (error: any) {
     console.error('[API v1 /projects] GET error:', error?.message);
@@ -133,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const tenantId = body.tenantId || auth.tenantId;
+    const tenantId = auth.tenantId;
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
@@ -149,10 +140,14 @@ export async function POST(request: NextRequest) {
 
     const db = getAdminDb();
     const docRef = await db.collection(COLLECTION).add({
-      ...body,
+      name: (body.name || '').trim(),
+      status: (body.status || '').trim(),
+      client: body.client || '',
+      location: body.location || '',
+      description: body.description || '',
+      progress: typeof body.progress === 'number' ? body.progress : 0,
+      budget: typeof body.budget === 'number' ? body.budget : 0,
       tenantId,
-      progress: body.progress || 0,
-      budget: body.budget || 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: auth.user?.uid || auth.apiKeyRecord?.createdBy || 'api',

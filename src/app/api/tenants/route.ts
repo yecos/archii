@@ -160,8 +160,8 @@ export async function POST(request: NextRequest) {
 
   const { action, name, code, tenantId, emails, memberUid, email } = body;
 
-  if (!action || !["create", "join", "list", "add-members", "remove-member", "delete-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role", "debug-me"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, delete-member, get-members, add-all-users, set-super-admin, fix-my-role, debug-me" }, { status: 400 });
+  if (!action || !["create", "join", "list", "add-members", "remove-member", "delete-member", "get-members", "add-all-users", "set-super-admin"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, delete-member, get-members, add-all-users, set-super-admin" }, { status: 400 });
   }
 
   try {
@@ -288,8 +288,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      if (tenantData.createdBy !== user.uid && !(tenantData.members || []).includes(user.uid)) {
-        return NextResponse.json({ error: "No eres miembro de este tenant" }, { status: 403 });
+      const isSuperAdminAdd = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isSuperAdminAdd) {
+        return NextResponse.json({ error: "Solo el Super Admin puede agregar miembros" }, { status: 403 });
       }
 
       const uidsToAdd: string[] = [];
@@ -337,10 +338,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      // Allow any member to add all users (not just creator)
-      const isMember = (tenantData.members || []).includes(user.uid) || tenantData.createdBy === user.uid;
-      if (!isMember) {
-        return NextResponse.json({ error: "No eres miembro de este tenant" }, { status: 403 });
+      // Require Super Admin to add all users
+      const isSuperAdminCheck = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isSuperAdminCheck) {
+        return NextResponse.json({ error: "Solo el Super Admin puede agregar todos los usuarios" }, { status: 403 });
       }
 
       const currentMembers: string[] = tenantData.members || [];
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest) {
                 name: authUser.displayName || (authUser.email || '').split('@')[0],
                 email: authUser.email || '',
                 photoURL: authUser.photoURL || '',
-                role: ['yecos11@gmail.com'].includes(authUser.email || '') ? 'Admin' : 'Miembro',
+                role: 'Miembro',
                 createdAt: fValue.serverTimestamp(),
               });
             }
@@ -547,21 +548,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
-      // Check if user is Super Admin of ANY tenant (not just the target one)
-      // This allows a Super Admin from one tenant to set Super Admins in another
-      let isCurrentSuperAdmin = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
-      if (!isCurrentSuperAdmin) {
-        const allTenants = await db.collection("tenants")
-          .where("members", "array-contains", user.uid)
-          .get();
-        for (const doc of allTenants.docs) {
-          const d = doc.data();
-          if (d.createdBy === user.uid || (d.superAdmins || []).includes(user.uid)) {
-            isCurrentSuperAdmin = true;
-            break;
-          }
-        }
-      }
+      // Check if user is Super Admin of THIS tenant only (prevent cross-tenant escalation)
+      const isCurrentSuperAdmin = tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
       if (!isCurrentSuperAdmin) {
         return NextResponse.json({ error: "Solo un Super Admin puede designar otro Super Admin" }, { status: 403 });
       }
@@ -670,6 +658,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
       }
       const tenantData = tenantDoc.data()!;
+      // Verify caller is a member of this tenant
+      const isMemberCheck = (tenantData.members || []).includes(user.uid) || tenantData.createdBy === user.uid || (tenantData.superAdmins || []).includes(user.uid);
+      if (!isMemberCheck) {
+        return NextResponse.json({ error: "No eres miembro de este tenant" }, { status: 403 });
+      }
       const members: any[] = [];
       const memberUids: string[] = tenantData.members || [];
 
@@ -711,132 +704,6 @@ export async function POST(request: NextRequest) {
         createdBy: tenantData.createdBy,
         members,
         availableUsers,
-      });
-    }
-
-    // ===== DEBUG ME — shows full diagnostic info for current user =====
-    if (action === "debug-me") {
-      // Find ALL user docs matching this email
-      const userDoc = await db.collection("users").doc(user.uid).get();
-      const userData = userDoc.exists ? userDoc.data() : null;
-
-      const allByEmail = await db.collection("users").where("email", "==", user.email).get();
-      const allByEmailDocs = allByEmail.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      const allTenants = await db.collection("tenants").get();
-      const tenantInfo = allTenants.docs.map(d => {
-        const t = d.data();
-        return {
-          id: d.id,
-          name: t.name,
-          createdBy: t.createdBy,
-          members: t.members || [],
-          superAdmins: t.superAdmins || [],
-          isCurrentUserMember: (t.members || []).includes(user.uid),
-          isCurrentUserSuperAdmin: t.createdBy === user.uid || (t.superAdmins || []).includes(user.uid),
-        };
-      });
-
-      return NextResponse.json({
-        authUid: user.uid,
-        authEmail: user.email,
-        userDoc: userData ? { ...userData, _id: user.uid } : null,
-        allUsersWithEmail: allByEmailDocs,
-        allTenants: tenantInfo,
-      });
-    }
-
-    // ===== FIX MY ROLE — forces Super Admin on ALL tenants (by UID in members + by email match) =====
-    if (action === "fix-my-role") {
-      const targetTenantId = tenantId; // optional — if provided, only fix this tenant
-      const fixed: string[] = [];
-      const already: string[] = [];
-      const addedToMembers: string[] = [];
-
-      // 1) Tenants where current UID is in members
-      const memberTenants = await db.collection("tenants")
-        .where("members", "array-contains", user.uid)
-        .get();
-
-      for (const doc of memberTenants.docs) {
-        if (targetTenantId && doc.id !== targetTenantId) continue;
-        const t = doc.data();
-        const isSA = t.createdBy === user.uid || (t.superAdmins || []).includes(user.uid);
-
-        if (isSA) {
-          already.push(`${t.name} (ya eres SA — createdBy=${t.createdBy === user.uid}, superAdmins=${(t.superAdmins || []).includes(user.uid)})`);
-        } else {
-          // Add to superAdmins
-          await db.collection("tenants").doc(doc.id).update({
-            superAdmins: FieldValue.arrayUnion(user.uid),
-          });
-          fixed.push(t.name);
-        }
-      }
-
-      // 2) Also check ALL tenants (not just where current UID is member)
-      // This catches the case where UID changed and old UID is in createdBy/members
-      if (!targetTenantId) {
-        const allTenants = await db.collection("tenants").get();
-        for (const doc of allTenants.docs) {
-          const t = doc.data();
-          const members: string[] = t.members || [];
-          const superAdmins: string[] = t.superAdmins || [];
-
-          // Skip if already handled above or already SA
-          if (members.includes(user.uid)) continue;
-          if (t.createdBy === user.uid || superAdmins.includes(user.uid)) continue;
-
-          // Check if ANY user doc with this email has a UID that matches createdBy or is in members/superAdmins
-          // If so, the current user is the same person but with a new UID — migrate them
-          const sameEmailUsers = await db.collection("users").where("email", "==", user.email).get();
-          const relatedUids = sameEmailUsers.docs.map(d => d.id);
-
-          const isRelatedCreator = relatedUids.includes(t.createdBy);
-          const isRelatedSA = relatedUids.some(uid => superAdmins.includes(uid));
-          const isRelatedMember = relatedUids.some(uid => members.includes(uid));
-
-          if (isRelatedCreator || isRelatedSA || isRelatedMember) {
-
-            // Add current UID to members and superAdmins
-            const updates: Record<string, any> = {
-              members: FieldValue.arrayUnion(user.uid),
-            };
-            if (isRelatedCreator || isRelatedSA) {
-              updates.superAdmins = FieldValue.arrayUnion(user.uid);
-            }
-            await db.collection("tenants").doc(doc.id).update(updates);
-            addedToMembers.push(`${t.name} (${isRelatedCreator ? 'era creador' : isRelatedSA ? 'era SA' : 'era miembro'} con UID anterior)`);
-          }
-        }
-      }
-
-      // Fix defaultTenantRole in user doc
-      const userDoc = await db.collection("users").doc(user.uid).get();
-      if (userDoc.exists) {
-        await db.collection("users").doc(user.uid).update({
-          defaultTenantRole: "Super Admin",
-          lastUid: user.uid,
-        });
-      }
-
-      // Also fix ALL user docs with same email
-      const sameEmail = await db.collection("users").where("email", "==", user.email).get();
-      for (const d of sameEmail.docs) {
-        if (d.id !== user.uid) {
-          await db.collection("users").doc(d.id).update({
-            defaultTenantRole: "Super Admin",
-            lastUid: user.uid,
-          });
-        }
-      }
-
-      return NextResponse.json({
-        message: `Rol corregido. UID: ${user.uid}, Email: ${user.email}`,
-        fixed,
-        already,
-        addedToMembers,
-        allTenantsChecked: true,
       });
     }
 

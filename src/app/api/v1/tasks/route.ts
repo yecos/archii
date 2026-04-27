@@ -45,12 +45,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || auth.tenantId;
+    const tenantId = auth.tenantId;
     const projectId = searchParams.get('projectId');
     const status = searchParams.get('status');
     const assigneeId = searchParams.get('assigneeId');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10) || 50, 1), 100);
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const tenantId = body.tenantId || auth.tenantId;
+    const tenantId = auth.tenantId;
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title requerido' }, { status: 400 });
     }
 
-    const status = body.status || 'Por hacer';
+    const validStatuses = ['Por hacer', 'En progreso', 'Revision', 'Completado'];
+    const status = validStatuses.includes(body.status) ? body.status : 'Por hacer';
     const now = new Date().toISOString();
     const db = getAdminDb();
     const docRef = await db.collection('tasks').add({
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
       dueDate: body.dueDate || '',
       startDate: body.startDate || '',
       phaseId: body.phaseId || '',
-      estimatedHours: body.estimatedHours || null,
+      estimatedHours: typeof body.estimatedHours === 'number' && body.estimatedHours >= 0 ? body.estimatedHours : null,
       tags: Array.isArray(body.tags) && body.tags.length > 0 ? body.tags : null,
       subtasks: Array.isArray(body.subtasks) ? body.subtasks.filter((s: any) => s.text?.trim()) : [],
       completedAt: status === 'Completado' ? now : null,

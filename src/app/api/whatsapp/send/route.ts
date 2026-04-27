@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const authResponse = await requireAdmin(request);
 
     const body = await request.json();
-    const { type, userId, message } = body;
+    const { type, userId, message, tenantId } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Se requiere un mensaje" }, { status: 400 });
@@ -25,15 +25,17 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
 
     if (type === "user" && userId) {
-      const snap = await db
+      let query = db
         .collection("whatsappLinks")
         .where("userId", "==", userId)
-        .where("active", "==", true)
-        .limit(1)
-        .get();
+        .where("active", "==", true);
+      if (tenantId) {
+        query = query.where("tenantId", "==", tenantId);
+      }
+      const snap = await query.limit(1).get();
 
       if (snap.empty) {
-        return NextResponse.json({ success: true, sent: 0, message: "El usuario no tiene WhatsApp vinculado" });
+        return NextResponse.json({ success: false, sent: 0, message: "El usuario no tiene WhatsApp vinculado" });
       }
 
       for (const doc of snap.docs) {
@@ -43,13 +45,22 @@ export async function POST(request: NextRequest) {
         else { errorCount++; errors.push(result.error || "Error"); }
       }
     } else if (type === "broadcast") {
-      const snap = await db
-        .collection("whatsappLinks")
-        .where("active", "==", true)
-        .get();
+      let snap;
+      if (tenantId) {
+        snap = await db
+          .collection("whatsappLinks")
+          .where("active", "==", true)
+          .where("tenantId", "==", tenantId)
+          .get();
+      } else {
+        snap = await db
+          .collection("whatsappLinks")
+          .where("active", "==", true)
+          .get();
+      }
 
       if (snap.empty) {
-        return NextResponse.json({ success: true, sent: 0, message: "No hay usuarios con WhatsApp vinculado" });
+        return NextResponse.json({ success: false, sent: 0, message: "No hay usuarios con WhatsApp vinculado" });
       }
 
       for (const doc of snap.docs) {

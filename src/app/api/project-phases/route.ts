@@ -10,7 +10,7 @@ import { requireAuth } from '@/lib/api-auth';
 export async function GET(req: NextRequest) {
   try {
     // SECURITY: Require authentication
-    await requireAuth(req);
+    const user = await requireAuth(req);
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get('projectId');
@@ -20,7 +20,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'projectId y tenantId requeridos' }, { status: 400 });
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
     const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
     const snap = await db.collection('projects').doc(projectId).collection('workPhases')
       .orderBy('order', 'asc').get();
 
@@ -32,6 +44,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ phases });
   } catch (err: any) {
     console.error('[ProjectPhases] Error:', err);
-    return NextResponse.json({ error: err.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

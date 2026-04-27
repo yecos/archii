@@ -37,6 +37,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
 
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
     const config = await getSSOConfig(tenantId);
 
     if (!config) {
@@ -74,6 +87,33 @@ export async function POST(request: NextRequest) {
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
+    }
+
+    // Verify tenant membership
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+    }
+    const tData = tenantDoc.data()!;
+    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
+    // For save and disable, require Super Admin
+    if (action === 'save' || action === 'disable') {
+      const { getAdminDb } = await import('@/lib/firebase-admin');
+      const db2 = getAdminDb();
+      const tenantDoc2 = await db2.collection('tenants').doc(tenantId).get();
+      if (tenantDoc2.exists) {
+        const tData2 = tenantDoc2.data()!;
+        const isSA = tData2.createdBy === user.uid || (tData2.superAdmins || []).includes(user.uid);
+        if (!isSA) {
+          return NextResponse.json({ error: 'Solo Super Admin puede modificar SSO' }, { status: 403 });
+        }
+      }
     }
 
     switch (action) {

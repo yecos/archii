@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         {
           status: 429,
           headers: {
-            'Retry-After': String(rateResult.resetAt - Date.now()),
+            'Retry-After': String(Math.max(0, rateResult.resetAt - Date.now())),
             'X-RateLimit-Limit': String(rateResult.limit),
             'X-RateLimit-Remaining': '0',
           },
@@ -94,10 +94,19 @@ export async function GET(request: NextRequest) {
 
     // Parse query params
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || auth.tenantId;
+    const tenantId = auth.tenantId;
     const collectionsParam = searchParams.get('collections');
     const dateFrom = searchParams.get('dateFrom') || undefined;
     const dateTo = searchParams.get('dateTo') || undefined;
+
+    // Validate date formats
+    if (dateFrom && !/^\d{4}-\d{2}-\d{2}$/.test(dateFrom)) {
+      return NextResponse.json({ error: 'dateFrom debe tener formato YYYY-MM-DD' }, { status: 400 });
+    }
+    if (dateTo && !/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) {
+      return NextResponse.json({ error: 'dateTo debe tener formato YYYY-MM-DD' }, { status: 400 });
+    }
+
     const fieldsParam = searchParams.get('fields');
     const limitParam = searchParams.get('limit');
     const cursor = searchParams.get('cursor') || undefined;
@@ -132,7 +141,7 @@ export async function GET(request: NextRequest) {
       format: 'csv',
       dateFrom,
       dateTo,
-      limit: limitParam ? parseInt(limitParam, 10) : undefined,
+      limit: limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 1000, 1), 10000) : undefined,
       cursor,
       fields: fieldsParam ? fieldsParam.split(',').map((f) => f.trim()) : undefined,
       sanitizePII,
@@ -160,6 +169,6 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     console.error('[API /export/csv] GET error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
