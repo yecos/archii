@@ -2120,6 +2120,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limiting: 20 requests per minute per user per tenant (protects Gemini API costs)
+    const { checkRateLimit } = await import("@/lib/rate-limiter");
+    const rateKey = `ai_agent:${user.uid}:${tenantId}`;
+    const rateResult = await checkRateLimit(rateKey, { limit: 20, windowSeconds: 60 });
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        {
+          error: "Has superado el límite de mensajes al asistente. Intenta de nuevo en un minuto.",
+          retryAfter: Math.ceil((rateResult.resetAt - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateResult.resetAt - Date.now()) / 1000)),
+            "X-RateLimit-Limit": String(rateResult.limit),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
     const db = getAdminDb();
     const actions: ExecutedAction[] = [];
 

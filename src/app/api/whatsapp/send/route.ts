@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { requireAdmin, AuthError } from "@/lib/api-auth";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 /**
  * POST /api/whatsapp/send
@@ -11,6 +12,21 @@ export async function POST(request: NextRequest) {
   try {
     // Admin-only: broadcast and direct send require admin privileges
     const authResponse = await requireAdmin(request);
+
+    // Rate limiting: 30 messages per minute per admin (prevents abuse / cost spikes)
+    const adminUid = (authResponse as any)?.uid || 'unknown';
+    const rateResult = await checkRateLimit(`whatsapp_send:${adminUid}`, { limit: 30, windowSeconds: 60 });
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        { error: "Límite de envíos alcanzado. Intenta de nuevo en un minuto." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateResult.resetAt - Date.now()) / 1000)),
+          },
+        }
+      );
+    }
 
     const body = await request.json();
     const { type, userId, message, tenantId } = body;
