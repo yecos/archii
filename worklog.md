@@ -1111,3 +1111,72 @@ Stage Summary:
   - KanbanBoardScreen (eliminar tarjetas)
   - RFIsScreen, SubmittalsScreen, PunchListScreen, InvoicesScreen, InventoryScreen
 - Deploy automatico a Vercel en curso (https://archii-theta.vercel.app)
+
+---
+Task ID: 15
+Agent: Super Z (Main)
+Task: Auditoria completa del sistema de notificaciones — 12 fixes
+
+Protocolo leido: LEE_PRIMERO.txt + INSTRUCTIVO_BITACORA.txt
+Tag: backup-pre-notif-audit-fixes-20260427
+
+Auditoria completa de 22 archivos del sistema de notificaciones:
+- In-App: useNotifications.tsx, NotifPanel.tsx, toast.tsx, ui-store.ts, AppContext.tsx
+- Push: push-service.ts, push-notifications.ts, subscribe/route.ts, send/route.ts, sw.js
+- Email: email-service.ts, email-notifications.ts, email/route.ts
+- WhatsApp: whatsapp-service.ts, whatsapp-notifications.ts, whatsapp-commands.ts, notify/route.ts, send/route.ts
+- Unificado: notify-unified.ts
+
+Work Log:
+- Mapeados 22 archivos del sistema de notificaciones
+- 4 agentes en paralelo auditaron: in-app, push, email, WhatsApp+unificado
+- Encontrados 3 bugs criticos, 18 medios, 7 low, 4 codigo muerto
+
+FIX CRITICO 1: Race condition al cambiar de tenant (AppContext.tsx)
+- Causa: efecto de hidratacion dependia de loading=false (solo se setea una vez al inicio)
+- Al cambiar tenant: reset ponia allCollectionsLoadedRef=false, pero el efecto se re-armaba inmediatamente con datos stale del tenant anterior
+- Fix: nuevo tenantSwitchingRef bloquea notificaciones al cambiar tenant
+- Los 8 efectos de deteccion ahora verifican tenantSwitchingRef.current
+- Efecto de hidratacion usa setTimeout(150ms) al cambiar tenant para esperar que los onSnapshot listeners actualicen el state
+
+FIX CRITICO 2: Reset de historial al cambiar tenant (useNotifications.tsx)
+- Nuevo: resetNotifOnTenantSwitch() limpia historial, in-app notifs, unread count, cierra panel y banner
+- Conectado desde AppContext al cambiar tenant
+
+FIX CRITICO 3: overdueCheckedRef no se reseteaba al cambiar tenant
+- Agregado al bloque de reset en el efecto de cambio de tenant
+
+FIX SEGURIDAD 1: Push send — auth en envio individual (push/send/route.ts)
+- Antes: cualquier usuario podia enviar push a cualquier otro usuario
+- Ahora: verifica que caller y target compartan tenantId
+
+FIX SEGURIDAD 2: Push send — deactivation solo en 404/410
+- Antes: TODOS los fallos marcaban suscripciones como expiradas
+- Ahora: sendToSubscription retorna 'sent'|'expired'|'failed', solo 'expired' desactiva
+
+FIX SEGURIDAD 3: Push send — admins hardcoded reemplazados por role Firestore
+
+FIX SEGURIDAD 4: WhatsApp notify — aislamiento por tenant
+- Antes: broadcast sin filtro de tenant
+- Ahora: filtra whatsappLinks por tenantId del usuario autenticado
+- Broadcast ahora paralelo con Promise.allSettled
+
+FIX CALIDAD 1: XSS en email-notifications custom() — escapeHtml() aplicada
+
+FIX CALIDAD 2: Push subscribe — ops redundantes (3 → 2 Firestore ops)
+
+FIX LIMPIEZA 1: Codigo muerto en whatsapp-commands.ts (generateLinkCode, verifyLinkCode, Consultar IA)
+
+FIX LIMPIEZA 2: Service Worker — notificationclick prefiere ventana focused/visible
+
+TypeScript check: 0 errores nuevos en src/
+Commit: 2764cb4 (local — push requiere autenticacion GitHub)
+Tag: backup-pre-notif-audit-fixes-20260427
+
+Stage Summary:
+- 8 archivos modificados, +175 lineas, -85 lineas
+- 12 fixes implementados (3 criticos, 4 seguridad, 5 calidad/limpieza)
+- Commit: 2764cb4 (local)
+- PENDIENTE: push a GitHub (requiere credenciales)
+- NOTA: RESEND_API_KEY sigue vacia — emails no se envian hasta configurar
+- NOTA: 6 de 12 tipos de notif no tienen disparadores en AppContext
