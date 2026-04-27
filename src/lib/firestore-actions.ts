@@ -189,7 +189,7 @@ export async function sendMessage(chatProjectId: string, msgData: Record<string,
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
-    const msg = {
+    const msg: Record<string, any> = {
       ...msgData,
       uid: authUser?.uid,
       userName: authUser?.displayName || authUser?.email || 'Usuario',

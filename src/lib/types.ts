@@ -54,6 +54,7 @@ export interface Project {
     progress: number;
     companyId?: string;
     projectType?: string;
+    tenantId?: string;
     createdAt: FirestoreTimestamp;
     updatedAt?: FirestoreTimestamp;
     createdBy?: string;

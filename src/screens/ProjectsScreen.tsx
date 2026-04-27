@@ -133,7 +133,7 @@ const HEALTH_CONFIG: Record<HealthLevel, { color: string; bg: string; label: str
 };
 
 // ─── Timeline / Gantt Component ───
-function TimelineView({ projects, getHealth }: { projects: Project[]; getHealth: (p: Project) => { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } } }) {
+function TimelineView({ projects, getHealth, onOpenProject }: { projects: Project[]; getHealth: (p: Project) => { score: number; level: HealthLevel; details: { budget: number; schedule: number; tasks: number; progress: number } }; onOpenProject: (id: string) => void }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayMs = new Date(todayStr + 'T12:00:00').getTime();
 
@@ -208,7 +208,7 @@ function TimelineView({ projects, getHealth }: { projects: Project[]; getHealth:
           const barColor = STATUS_COLORS[d.status] || '#828282';
 
           return (
-            <div key={p.id} className="relative px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--af-bg3)]/30 transition-colors cursor-pointer" onClick={() => openProject(p.id)}>
+            <div key={p.id} className="relative px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--af-bg3)]/30 transition-colors cursor-pointer" onClick={() => onOpenProject(p.id)}>
               {/* Project label */}
               <div className="w-36 sm:w-48 flex-shrink-0">
                 <div className="text-[12px] font-semibold truncate">{d.name}</div>
@@ -583,7 +583,7 @@ export default function ProjectsScreen() {
       const app = getFirebase();
       const db = app.firestore();
       const batch = db.batch();
-      const ts = db.FieldValue.serverTimestamp();
+      const ts = app.FieldValue.serverTimestamp();
       selected.forEach((p: Project) => {
         const ref = db.collection('projects').doc(p.id);
         batch.update(ref, { status: newStatus, updatedAt: ts });
@@ -982,7 +982,7 @@ export default function ProjectsScreen() {
 
       {/* ===== TIMELINE VIEW ===== */}
       {!loading && viewMode === 'timeline' && filteredProjects.length > 0 && (
-        <TimelineView projects={filteredProjects} getHealth={getHealth} />
+        <TimelineView projects={filteredProjects} getHealth={getHealth} onOpenProject={openProject} />
       )}
 
       {/* ===== PROJECT CARDS ===== */}
