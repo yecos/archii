@@ -694,8 +694,18 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           return realRole;
         });
 
-        // AUTO-FIX: If user was previously Super Admin (stored in user doc) but tenant doesn't reflect it,
-        // automatically add to superAdmins array. This handles UID changes from auth provider switches.
+        // AUTO-FIX 1: Super Admin exists in superAdmins but missing from members → add to members.
+        // Firestore rules check members array for access, so this mismatch causes permission denied.
+        if (isSuperAdmin && !members.includes(uid)) {
+          db.collection('tenants').doc(activeTenantId).update({
+            members: getFirebase().firestore.FieldValue.arrayUnion(uid),
+          }).catch(err => {
+            console.error('[Archii Team] AUTO-FIX members failed:', err);
+          });
+        }
+
+        // AUTO-FIX 2: If user was previously Super Admin (stored in user doc) but tenant doesn't reflect it,
+        // automatically add to superAdmins + members arrays. This handles UID changes from auth provider switches.
         if (!isSuperAdmin) {
           db.collection('users').doc(uid).get().then(userDoc => {
             if (userDoc.exists) {
