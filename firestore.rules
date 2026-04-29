@@ -14,12 +14,20 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/tenants/$(tenantId)).data.members;
     }
 
-    // Check if the authenticated user is a member of a specific tenant
+    // Get the superAdmins array of a tenant (cached per evaluation)
+    function getTenantSuperAdmins(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)).data.superAdmins;
+    }
+
+    // Check if the authenticated user is a member or super admin of a specific tenant
     function isMemberOfTenant(tenantId) {
       return tenantId != null
         && tenantId != ''
         && isAuthenticated()
-        && request.auth.uid in getTenantMembers(tenantId);
+        && (
+          request.auth.uid in getTenantMembers(tenantId)
+          || request.auth.uid in getTenantSuperAdmins(tenantId)
+        );
     }
 
     // Check if user is the creator (Super Admin) of a tenant
@@ -44,14 +52,8 @@ service cloud.firestore {
     // Only the creator can delete a tenant
     match /tenants/{tenantId} {
       allow create: if isAuthenticated();
-      allow read: if isAuthenticated() && (
-        request.auth.uid in getTenantMembers(tenantId)
-        || request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.superAdmins
-      );
-      allow update: if isAuthenticated() && (
-        request.auth.uid in getTenantMembers(tenantId)
-        || request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.superAdmins
-      );
+      allow read: if isAuthenticated() && isMemberOfTenant(tenantId);
+      allow update: if isAuthenticated() && isMemberOfTenant(tenantId);
       allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
     }
 
