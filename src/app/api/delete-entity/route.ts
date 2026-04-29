@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 });
       }
       const projData = projDoc.data();
+      if (!projData) {
+        return NextResponse.json({ error: 'Datos del proyecto no encontrados' }, { status: 404 });
+      }
       if (tenantId && projData.tenantId !== tenantId) {
         return NextResponse.json({ error: 'Proyecto no pertenece a tu espacio' }, { status: 403 });
       }
