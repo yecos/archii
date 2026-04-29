@@ -2027,7 +2027,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       const res = await fetch('/api/migrate-phases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ tenantId: activeTenantId, uid: authUser.uid, projectId: selectedProjectId }),
+        body: JSON.stringify({ tenantId: activeTenantId, uid: authUser.uid, projectId: selectedProjectId, projectType: 'Ambos' }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');

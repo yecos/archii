@@ -10,12 +10,13 @@ import { initPhasesForProject } from '@/lib/firestore-actions';
  * Body:
  *   - tenantId (required): the tenant ID
  *   - projectId (optional): if provided, only migrate that project; otherwise migrate all
+ *   - projectType (optional): force a specific type ('Diseño', 'Ejecución', 'Ambos'). Defaults to 'Ambos'.
  */
 export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth(req);
 
-    const { tenantId, projectId } = await req.json();
+    const { tenantId, projectId, projectType: forcedType } = await req.json();
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
     }
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       await initPhasesForProject(
         db as any,
         projectId,
-        projData.projectType || 'Ejecución',
+        forcedType || projData.projectType || 'Ambos',
         [],          // enabledPhases: empty = enable all
         Date.now(),  // ts
         tenantId,
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
         await initPhasesForProject(
           db as any,
           projDoc.id,
-          projData.projectType || 'Ejecución',
+          forcedType || projData.projectType || 'Ambos',
           [],          // enabledPhases: empty = enable all
           Date.now(),  // ts
           tenantId,
