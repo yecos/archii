@@ -704,6 +704,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
                 db.collection('tenants').doc(activeTenantId).update({
                   superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
+                  members: getFirebase().firestore.FieldValue.arrayUnion(uid),
                 }).then(() => {
 
                   localStorage.setItem('archii-active-tenant-role', 'Super Admin');

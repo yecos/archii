@@ -86,11 +86,10 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteProject(projectId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este proyecto y todos sus datos?')) return;
   return fbAction('eliminar proyecto', async () => {
     const db = getFirebase().firestore();
     // Delete subcollections
-    const collections = ['messages', 'workPhases', 'files', 'approvals'];
+    const collections = ['messages', 'workPhases', 'files', 'approvals', 'dailyLogs'];
     for (const col of collections) {
       const snap = await db.collection('projects').doc(projectId).collection(col).get();
       const batch = db.batch();
