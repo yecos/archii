@@ -147,6 +147,14 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       return { text: "El codigo ha expirado. Envía tu email de Archii para recibir un nuevo codigo." };
     }
 
+    // SECURITY: Brute-force protection — max 5 failed attempts, then lock
+    const MAX_OTP_ATTEMPTS = 5;
+    const failedAttempts = otpData.failedAttempts || 0;
+    if (failedAttempts >= MAX_OTP_ATTEMPTS) {
+      await otpDoc.ref.update({ status: "locked" });
+      return { text: "Demasiados intentos fallidos. El codigo ha sido bloqueado. Envía tu email de Archii para recibir un nuevo codigo." };
+    }
+
     if (msg === otpData.code) {
       // OTP correct — proceed with linking
       await otpDoc.ref.update({ status: "verified" });
@@ -189,8 +197,11 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
         return { text: "Error al vincular la cuenta. Intenta de nuevo." };
       }
     } else {
+      // SECURITY: Increment failed attempt counter to prevent brute-force
+      await otpDoc.ref.update({ failedAttempts: (failedAttempts + 1) });
+      const remaining = MAX_OTP_ATTEMPTS - (failedAttempts + 1);
       return {
-        text: "Codigo incorrecto. Intenta de nuevo o envia tu email para generar un nuevo codigo."
+        text: `Codigo incorrecto. ${remaining > 0 ? `Te quedan ${remaining} intento${remaining > 1 ? 's' : ''}.` : 'El codigo ha sido bloqueado.'}\n\nEnvia tu email para generar un nuevo codigo.`
       };
     }
   }

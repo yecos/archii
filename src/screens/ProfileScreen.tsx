@@ -108,7 +108,7 @@ export default function ProfileScreen() {
   const [editNameVal, setEditNameVal] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const uid = authUser?.uid;
+  const uid = authUser?.uid ?? '';
 
   // ─── Computed Data ──────────────────────────────────
   const computed = useMemo(() => {

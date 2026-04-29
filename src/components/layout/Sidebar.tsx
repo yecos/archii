@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { getInitials, avatarColor } from '@/lib/helpers';
 import { ROLE_ICONS } from '@/lib/types';
 import { useUIStore } from '@/stores/ui-store';
+import type { FirebaseUser } from '@/lib/firebase-service';
 import { LayoutGrid, User, Folder, ClipboardCheck, MessageCircle, DollarSign, FileText, Camera, Image, Package, Settings, Store, Users, Calendar, Globe, Building2, Download, ChevronLeft, Home, Timer, Receipt, BarChart3, Shield, CircleHelp, ClipboardList, ListChecks } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
@@ -15,7 +16,7 @@ interface SidebarProps {
   setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   userName: string;
   initials: string;
-  authUser: any;
+  authUser: FirebaseUser | null;
   teamUsers: any[];
   isEmailAdmin: boolean;
   projects: any[];
@@ -182,7 +183,7 @@ export default function Sidebar({
               <ChevronLeft size={14} className="stroke-[var(--muted-foreground)] rotate-180" />
             </button>
             <div className="flex items-center gap-3 px-1 cursor-pointer" onClick={() => handleNavClick('profile')}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 flex-shrink-0 ${authUser?.photoURL ? '' : avatarColor(authUser?.uid ?? '')} overflow-hidden`}>
                 {authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
               </div>
               <div className="flex-1 min-w-0">
@@ -223,7 +224,7 @@ export default function Sidebar({
           ))}
         </div>
         <div className="border-t border-[var(--border)] p-3 flex items-center gap-2.5 cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => navigateTo('profile')}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${authUser?.photoURL ? '' : avatarColor(authUser?.uid)} overflow-hidden`}>{authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}</div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${authUser?.photoURL ? '' : avatarColor(authUser?.uid ?? '')} overflow-hidden`}>{authUser?.photoURL ? <img src={authUser.photoURL} alt="" className="w-full h-full object-cover" /> : initials}</div>
           <div className={`flex-1 min-w-0 transition-all duration-200 ${sidebarCollapsed ? 'md:hidden md:w-0' : 'md:block'}`}><div className="text-[13px] font-medium truncate">{userName}</div><div className="text-[11px] text-[var(--muted-foreground)]">{ROLE_ICONS[displayRole] || '👤'} {displayRole}</div></div>
         </div>
       </aside>

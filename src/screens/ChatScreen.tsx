@@ -487,7 +487,7 @@ export default function ChatScreen() {
                         {reactionKeys.map(emoji => (
                           <button
                             key={emoji}
-                            className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[12px] border cursor-pointer transition-all hover:scale-105 ${reactions[emoji].includes(authUser?.uid) ? 'bg-[var(--af-accent)]/15 border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`}
+                            className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[12px] border cursor-pointer transition-all hover:scale-105 ${reactions[emoji].includes(authUser?.uid ?? '') ? 'bg-[var(--af-accent)]/15 border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] border-[var(--border)] hover:border-[var(--af-accent)]/30'}`}
                             onClick={() => toggleReaction(m.id, emoji)}
                           >
                             <span>{emoji}</span>

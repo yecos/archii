@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-service";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAuth, AuthError, type AuthUser } from "@/lib/api-auth";
 
 /**
  * POST /api/whatsapp/notify
@@ -11,7 +11,7 @@ import { requireAuth, AuthError } from "@/lib/api-auth";
  * Body: { broadcast: true, message: string }
  */
 export async function POST(request: NextRequest) {
-  let authUser: any;
+  let authUser: AuthUser;
   try {
     authUser = await requireAuth(request);
   } catch (err) {

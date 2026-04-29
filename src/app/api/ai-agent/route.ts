@@ -1665,6 +1665,18 @@ async function executeToolCall(
       }
 
       case "update_invoice_status": {
+        // SECURITY: Whitelist valid invoice statuses to prevent arbitrary data from LLM
+        const VALID_INVOICE_STATUSES = [
+          "Borrador", "Enviada", "Aprobada", "Pagada",
+          "Vencida", "Cancelada", "Parcialmente Pagada",
+        ];
+        const newStatus = String(args.new_status || "").trim();
+        if (!VALID_INVOICE_STATUSES.includes(newStatus)) {
+          const error = `Estado de factura invalido "${newStatus}". Estados validos: ${VALID_INVOICE_STATUSES.join(", ")}`;
+          actions.push({ type: "invoice_update_failed", label: "Estado invalido", icon: "⚠️", details: error, success: false, error });
+          return error;
+        }
+
         let invoice: FirestoreDoc | null = null;
         if (args.invoice_id) {
           const doc = await db.collection("invoices").doc(args.invoice_id).get();
@@ -1685,7 +1697,7 @@ async function executeToolCall(
         }
 
         await db.collection("invoices").doc(invoice.id).update({
-          status: args.new_status,
+          status: newStatus,
           updatedAt: ts,
         });
 
@@ -1693,11 +1705,11 @@ async function executeToolCall(
           type: "invoice_updated",
           label: "Factura actualizada",
           icon: "🔄",
-          details: `${invoice.data.number || invoice.id} → ${args.new_status}`,
+          details: `${invoice.data.number || invoice.id} → ${newStatus}`,
           success: true,
         });
 
-        return `Factura "${invoice.data.number || invoice.id}" actualizada a estado "${args.new_status}" exitosamente.`;
+        return `Factura "${invoice.data.number || invoice.id}" actualizada a estado "${newStatus}" exitosamente.`;
       }
 
       // ── TIME TRACKING OPERATIONS ──

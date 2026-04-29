@@ -9,7 +9,7 @@ import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, ADMIN_EMAILS, 
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId, scrubUndefined } from '@/lib/helpers';
 
-import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
+import { getFirebase, getFirebaseIdToken, type FirebaseUser } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
 import { OneDriveProvider } from '@/hooks/useOneDrive';
 import { useNotificationsContext } from '@/hooks/useNotifications';
@@ -32,7 +32,7 @@ interface AppContextValue {
   showToast: (msg: string, type?: string) => void;
   editingId: string | null;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
-  authUser: any;
+  authUser: FirebaseUser | null;
   projects: Project[];
   tasks: Task[];
   expenses: Expense[];
@@ -58,7 +58,7 @@ const AppContext = createContext<AppContextValue & Record<string, any>>(null!);
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [authUser, setAuthUser] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [screen, setScreen] = useState('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
