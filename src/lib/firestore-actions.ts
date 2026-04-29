@@ -5,7 +5,7 @@
  * Manejo de errores consistente con console.error + mensaje al usuario.
  */
 
-import { getFirebase, type FirebaseUser, type FirestoreDB } from '@/lib/firebase-service';
+import { getFirebase, getFirebaseIdToken, type FirebaseUser, type FirestoreDB } from '@/lib/firebase-service';
 import { fileToBase64 } from '@/lib/helpers';
 import { DEFAULT_PHASES, PROJECT_TYPE_PHASES, PhaseTemplate } from '@/lib/types';
 
@@ -58,6 +58,23 @@ async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: Toa
   }
 }
 
+/** Helper: server-side delete via Admin SDK (bypasses Firestore rules) */
+async function serverDelete(type: string, id: string, tenantId: string | null, extra?: Record<string, string>): Promise<boolean> {
+  const token = await getFirebaseIdToken();
+  if (!token) throw new Error('No hay token de autenticación');
+  const body: Record<string, string> = { type, id };
+  if (tenantId) body.tenantId = tenantId;
+  if (extra) Object.assign(body, extra);
+  const res = await fetch('/api/delete-entity', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  return !!data.success;
+}
+
 /* ===== PROJECTS ===== */
 
 export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
@@ -102,19 +119,7 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
 
 export async function deleteProject(projectId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar proyecto', async () => {
-    const db = getFirebase().firestore();
-    // 1. Delete subcollections (paginated for >500 docs)
-    const subcollections = ['messages', 'workPhases', 'files', 'approvals', 'dailyLogs'];
-    for (const col of subcollections) {
-      await deleteCollectionBatch(db, db.collection('projects').doc(projectId).collection(col));
-    }
-    // 2. Delete orphaned top-level docs referencing this project
-    const topLevelCollections = ['tasks', 'comments', 'expenses', 'rfis', 'submittals', 'punchItems', 'meetings', 'timeEntries', 'invoices', 'galleryPhotos'];
-    for (const col of topLevelCollections) {
-      await deleteCollectionBatch(db, db.collection(col).where('projectId', '==', projectId));
-    }
-    // 3. Delete the project document itself
-    await db.collection('projects').doc(projectId).delete();
+    await serverDelete('project', projectId, tenantId);
     showToast('Proyecto eliminado');
   }, showToast);
 }
@@ -193,7 +198,7 @@ export async function toggleTask(taskId: string, currentStatus: string, showToas
 
 export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar tarea', async () => {
-    await getFirebase().firestore().collection('tasks').doc(taskId).delete();
+    await serverDelete('task', taskId, tenantId);
     showToast('Tarea eliminada');
   }, showToast);
 }
@@ -262,7 +267,7 @@ export function saveExpense(data: Record<string, any>, editingId: string | null,
 
 export async function deleteExpense(expenseId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar gasto', async () => {
-    await getFirebase().firestore().collection('expenses').doc(expenseId).delete();
+    await serverDelete('expense', expenseId, tenantId);
     showToast('Gasto eliminado');
   }, showToast);
 }
@@ -308,7 +313,7 @@ export function saveSupplier(data: Record<string, any>, editingId: string | null
 
 export async function deleteSupplier(supplierId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar proveedor', async () => {
-    await getFirebase().firestore().collection('suppliers').doc(supplierId).delete();
+    await serverDelete('supplier', supplierId, tenantId);
     showToast('Proveedor eliminado');
   }, showToast);
 }
@@ -350,7 +355,7 @@ export function saveCompany(data: Record<string, any>, editingId: string | null,
 
 export async function deleteCompany(companyId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar empresa', async () => {
-    await getFirebase().firestore().collection('companies').doc(companyId).delete();
+    await serverDelete('company', companyId, tenantId);
     showToast('Empresa eliminada');
   }, showToast);
 }
@@ -379,7 +384,7 @@ export async function uploadProjectFile(projectId: string, file: File, showToast
 
 export async function deleteProjectFile(projectId: string, fileId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar archivo', async () => {
-    await getFirebase().firestore().collection('projects').doc(projectId).collection('files').doc(fileId).delete();
+    await serverDelete('projectFile', fileId, tenantId, { projectId });
     showToast('Archivo eliminado');
   }, showToast);
 }
@@ -530,7 +535,7 @@ export async function updateApproval(projectId: string, approvalId: string, stat
 
 export async function deleteApproval(projectId: string, approvalId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar aprobación', async () => {
-    await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(approvalId).delete();
+    await serverDelete('approval', approvalId, tenantId, { projectId });
     showToast('Solicitud eliminada');
   }, showToast);
 }
@@ -577,7 +582,7 @@ export function saveMeeting(data: Record<string, any>, editingId: string | null,
 
 export async function deleteMeeting(meetingId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar reunión', async () => {
-    await getFirebase().firestore().collection('meetings').doc(meetingId).delete();
+    await serverDelete('meeting', meetingId, tenantId);
     showToast('Reunión eliminada');
   }, showToast);
 }
@@ -604,7 +609,7 @@ export async function saveGalleryPhoto(data: Record<string, any>, showToast: Toa
 
 export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar foto', async () => {
-    await getFirebase().firestore().collection('galleryPhotos').doc(photoId).delete();
+    await serverDelete('galleryPhoto', photoId, tenantId);
     showToast('Foto eliminada');
   }, showToast);
 }
@@ -654,7 +659,7 @@ export function saveInvProduct(data: Record<string, any>, editingId: string | nu
 
 export async function deleteInvProduct(productId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar producto', async () => {
-    await getFirebase().firestore().collection('invProducts').doc(productId).delete();
+    await serverDelete('invProduct', productId, tenantId);
     showToast('Producto eliminado');
   }, showToast);
 }
@@ -686,7 +691,7 @@ export function saveInvCategory(data: Record<string, any>, editingId: string | n
 
 export async function deleteInvCategory(catId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar categoría', async () => {
-    await getFirebase().firestore().collection('invCategories').doc(catId).delete();
+    await serverDelete('invCategory', catId, tenantId);
     showToast('Categoría eliminada');
   }, showToast);
 }
@@ -714,7 +719,7 @@ export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, a
 
 export async function deleteInvMovement(movId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar movimiento', async () => {
-    await getFirebase().firestore().collection('invMovements').doc(movId).delete();
+    await serverDelete('invMovement', movId, tenantId);
     showToast('Movimiento eliminado');
   }, showToast);
 }
@@ -743,7 +748,7 @@ export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, a
 
 export async function deleteInvTransfer(transId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar transferencia', async () => {
-    await getFirebase().firestore().collection('invTransfers').doc(transId).delete();
+    await serverDelete('invTransfer', transId, tenantId);
     showToast('Transferencia eliminada');
   }, showToast);
 }
@@ -814,7 +819,7 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
 
 export async function deleteTimeEntry(entryId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar tiempo', async () => {
-    await getFirebase().firestore().collection('timeEntries').doc(entryId).delete();
+    await serverDelete('timeEntry', entryId, tenantId);
     showToast('Registro eliminado');
   }, showToast);
 }
@@ -869,7 +874,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: string, sho
 
 export async function deleteInvoice(invoiceId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar factura', async () => {
-    await getFirebase().firestore().collection('invoices').doc(invoiceId).delete();
+    await serverDelete('invoice', invoiceId, tenantId);
     showToast('Factura eliminada');
   }, showToast);
 }
@@ -898,7 +903,7 @@ export function saveComment(data: Record<string, any>, showToast: ToastFn, authU
 
 export async function deleteComment(commentId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar comentario', async () => {
-    await getFirebase().firestore().collection('comments').doc(commentId).delete();
+    await serverDelete('comment', commentId, tenantId);
     showToast('Comentario eliminado');
   }, showToast);
 }
@@ -951,7 +956,7 @@ export function saveRFI(data: Record<string, any>, editingId: string | null, sho
 
 export async function deleteRFI(rfiId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar RFI', async () => {
-    await getFirebase().firestore().collection('rfis').doc(rfiId).delete();
+    await serverDelete('rfi', rfiId, tenantId);
     showToast('RFI eliminado');
   }, showToast);
 }
@@ -1017,7 +1022,7 @@ export function saveSubmittal(data: Record<string, any>, editingId: string | nul
 
 export async function deleteSubmittal(subId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar submittal', async () => {
-    await getFirebase().firestore().collection('submittals').doc(subId).delete();
+    await serverDelete('submittal', subId, tenantId);
     showToast('Submittal eliminado');
   }, showToast);
 }
@@ -1082,7 +1087,7 @@ export function savePunchItem(data: Record<string, any>, editingId: string | nul
 
 export async function deletePunchItem(punchId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar item punch list', async () => {
-    await getFirebase().firestore().collection('punchItems').doc(punchId).delete();
+    await serverDelete('punchItem', punchId, tenantId);
     showToast('Item eliminado');
   }, showToast);
 }
