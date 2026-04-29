@@ -28,6 +28,18 @@ async function authenticateV1(request: NextRequest) {
   if (user) {
     const tenantId = request.headers.get('x-tenant-id');
     if (!tenantId) return { authenticated: false, error: { status: 400, message: 'x-tenant-id requerido' } };
+    // Verify tenant membership
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return { authenticated: false, error: { status: 404, message: 'Espacio de trabajo no encontrado' } };
+    }
+    const tenantData = tenantDoc.data()!;
+    const members: string[] = tenantData.members || [];
+    const superAdmins: string[] = tenantData.superAdmins || [];
+    if (!members.includes(user.uid) && !superAdmins.includes(user.uid)) {
+      return { authenticated: false, error: { status: 403, message: 'No tienes acceso a este espacio de trabajo' } };
+    }
     return { authenticated: true, tenantId, user };
   }
   return { authenticated: false, error: { status: 401, message: 'Autenticación requerida' } };
@@ -77,7 +89,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ tasks, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (error: any) {
     console.error('[API v1 /tasks] GET error:', error?.message);
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -134,6 +146,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: docRef.id, message: 'Tarea creada' }, { status: 201 });
   } catch (error: any) {
     console.error('[API v1 /tasks] POST error:', error?.message);
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

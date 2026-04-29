@@ -51,6 +51,18 @@ async function authenticateV1(request: NextRequest): Promise<{
     if (!tenantId) {
       return { authenticated: false, error: { status: 400, message: 'x-tenant-id header requerido' } };
     }
+    // Verify tenant membership
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return { authenticated: false, error: { status: 404, message: 'Espacio de trabajo no encontrado' } };
+    }
+    const tenantData = tenantDoc.data()!;
+    const members: string[] = tenantData.members || [];
+    const superAdmins: string[] = tenantData.superAdmins || [];
+    if (!members.includes(user.uid) && !superAdmins.includes(user.uid)) {
+      return { authenticated: false, error: { status: 403, message: 'No tienes acceso a este espacio de trabajo' } };
+    }
     return { authenticated: true, tenantId, user };
   }
 
@@ -103,7 +115,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('[API v1 /projects] GET error:', error?.message);
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -159,6 +171,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('[API v1 /projects] POST error:', error?.message);
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

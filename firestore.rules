@@ -143,6 +143,20 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
       allow create: if isAuthenticated() && isMemberOfTenant(request.resource.data.tenantId);
       allow update, delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+
+      // Reactions subcollection
+      match /reactions/{reactionId} {
+        allow read: if isAuthenticated() && isMemberOfTenant(
+          get(/databases/$(database)/documents/generalMessages/$(messageId)).data.tenantId
+        );
+        allow create: if isAuthenticated() && isMemberOfTenant(
+          request.resource.data.tenantId != null ? request.resource.data.tenantId
+            : get(/databases/$(database)/documents/generalMessages/$(messageId)).data.tenantId
+        );
+        allow delete: if isAuthenticated() && isMemberOfTenant(
+          get(/databases/$(database)/documents/generalMessages/$(messageId)).data.tenantId
+        );
+      }
     }
 
     // Gallery Photos
@@ -239,6 +253,34 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isMemberOfTenant(request.resource.data.tenantId);
       allow update: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
       allow delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+    }
+
+    // Kanban Boards (tenant-scoped)
+    match /kanbanBoards/{boardId} {
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow create: if isAuthenticated() && isMemberOfTenant(request.resource.data.tenantId);
+      allow update: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+
+      // Columns subcollection
+      match /columns/{columnId} {
+        allow read: if isAuthenticated() && isMemberOfTenant(
+          (resource.data.tenantId != null) ? resource.data.tenantId
+            : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
+        );
+        allow create: if isAuthenticated() && (
+          (request.resource.data.tenantId != null && isMemberOfTenant(request.resource.data.tenantId))
+          || isMemberOfTenant(get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId)
+        );
+        allow update: if isAuthenticated() && isMemberOfTenant(
+          (resource.data.tenantId != null) ? resource.data.tenantId
+            : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
+        );
+        allow delete: if isAuthenticated() && isMemberOfTenant(
+          (resource.data.tenantId != null) ? resource.data.tenantId
+            : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
+        );
+      }
     }
 
     // Direct Messages (DMs between users) - accessible by both participants

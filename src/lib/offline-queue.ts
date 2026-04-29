@@ -197,9 +197,11 @@ export async function syncOfflineQueue(): Promise<{
         continue;
       }
 
+      // Use top-level collection paths (tasks, projects, etc.)
+      // NOT nested under tenants/ — the data model uses tenantId field, not nested paths
       const collectionPath = item.collection.startsWith('tenants/')
         ? item.collection
-        : `tenants/${item.tenantId}/${item.collection}`;
+        : item.collection;
 
       switch (item.action) {
         case 'add':

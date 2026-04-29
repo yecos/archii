@@ -1879,7 +1879,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       if (newStatus === 'Completado') {
         await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, completedAt: ts, updatedAt: ts });
       } else {
-        await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, updatedAt: ts });
+        // Clear completedAt when moving away from Completado, set new status
+        await getFirebase().firestore().collection('tasks').doc(id).update({ status: newStatus, completedAt: getFirebase().firestore.FieldValue.delete(), updatedAt: ts });
       }
     } catch (err) { console.error("[Archii]", err); }
   };

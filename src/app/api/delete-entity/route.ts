@@ -30,7 +30,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Falta type o id' }, { status: 400 });
     }
 
+    // Security: tenantId is required to prevent cross-tenant deletion
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Se requiere tenantId' }, { status: 400 });
+    }
+
     const db = getAdminDb();
+
+    // Verify tenant exists and user is a member
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Espacio de trabajo no encontrado' }, { status: 404 });
+    }
+    const tenantData = tenantDoc.data()!;
+    const members: string[] = tenantData.members || [];
+    const superAdmins: string[] = tenantData.superAdmins || [];
+    const isTenantMember = members.includes(uid) || tenantData.createdBy === uid || superAdmins.includes(uid);
+    if (!isTenantMember) {
+      return NextResponse.json({ error: 'No eres miembro de este espacio de trabajo' }, { status: 403 });
+    }
+
+    // Role verification: only Super Admin, Admin, or Director can delete entities
+    const isCreator = tenantData.createdBy === uid;
+    const isSuperAdmin = superAdmins.includes(uid);
+    const callerDoc = await db.collection('users').doc(uid).get();
+    const callerRole = callerDoc.exists ? (callerDoc.data()?.role || 'Miembro') : 'Miembro';
+    const isAdmin = callerRole === 'Admin' || callerRole === 'Director' || isCreator || isSuperAdmin;
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Solo Admin, Director o Super Admin pueden eliminar entidades' }, { status: 403 });
+    }
 
     if (type === 'project') {
       // 1. Verify project belongs to user's tenant
@@ -42,7 +70,7 @@ export async function POST(request: NextRequest) {
       if (!projData) {
         return NextResponse.json({ error: 'Datos del proyecto no encontrados' }, { status: 404 });
       }
-      if (tenantId && projData.tenantId !== tenantId) {
+      if (projData.tenantId !== tenantId) {
         return NextResponse.json({ error: 'Proyecto no pertenece a tu espacio' }, { status: 403 });
       }
 
@@ -110,7 +138,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 });
       }
       const docData = docSnap.data();
-      if (tenantId && docData?.tenantId !== tenantId) {
+      if (docData?.tenantId !== tenantId) {
         return NextResponse.json({ error: 'No tienes permiso para eliminar este documento' }, { status: 403 });
       }
       await docRef.delete();
@@ -127,11 +155,9 @@ export async function POST(request: NextRequest) {
       const { projectId } = body;
       if (!projectId) return NextResponse.json({ error: 'Falta projectId' }, { status: 400 });
       // Security: verify project belongs to tenant before deleting subcollection doc
-      if (tenantId) {
-        const projSnap = await db.collection('projects').doc(projectId).get();
-        if (!projSnap.exists || projSnap.data()?.tenantId !== tenantId) {
-          return NextResponse.json({ error: 'Proyecto no pertenece a tu espacio' }, { status: 403 });
-        }
+      const projSnap = await db.collection('projects').doc(projectId).get();
+      if (!projSnap.exists || projSnap.data()?.tenantId !== tenantId) {
+        return NextResponse.json({ error: 'Proyecto no pertenece a tu espacio' }, { status: 403 });
       }
       await db.collection('projects').doc(projectId).collection(subDeletes[type]).doc(id).delete();
       return NextResponse.json({ success: true });
@@ -140,6 +166,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Tipo no soportado: ${type}` }, { status: 400 });
   } catch (err: any) {
     console.error('[Archii] delete-entity error:', err);
-    return NextResponse.json({ error: err.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

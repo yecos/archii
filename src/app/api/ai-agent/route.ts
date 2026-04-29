@@ -2120,6 +2120,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify tenant membership - prevent cross-tenant access
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return NextResponse.json({ error: 'Espacio de trabajo no encontrado' }, { status: 404 });
+    }
+    const tenantData = tenantDoc.data()!;
+    const tenantMembers: string[] = tenantData.members || [];
+    const tenantSuperAdmins: string[] = tenantData.superAdmins || [];
+    if (!tenantMembers.includes(user.uid) && !tenantSuperAdmins.includes(user.uid)) {
+      return NextResponse.json({ error: 'No tienes acceso a este espacio de trabajo' }, { status: 403 });
+    }
+
     // Rate limiting: 20 requests per minute per user per tenant (protects Gemini API costs)
     const { checkRateLimit } = await import("@/lib/rate-limiter");
     const rateKey = `ai_agent:${user.uid}:${tenantId}`;
@@ -2141,7 +2154,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
     const actions: ExecutedAction[] = [];
 
     // Build messages
