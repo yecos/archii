@@ -103,7 +103,17 @@ export async function POST(request: NextRequest) {
     };
 
     if (simpleDeletes[type]) {
-      await db.collection(simpleDeletes[type]).doc(id).delete();
+      // Security: verify tenant ownership before deleting
+      const docRef = db.collection(simpleDeletes[type]).doc(id);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 });
+      }
+      const docData = docSnap.data();
+      if (tenantId && docData?.tenantId !== tenantId) {
+        return NextResponse.json({ error: 'No tienes permiso para eliminar este documento' }, { status: 403 });
+      }
+      await docRef.delete();
       return NextResponse.json({ success: true });
     }
 
@@ -116,6 +126,13 @@ export async function POST(request: NextRequest) {
     if (subDeletes[type]) {
       const { projectId } = body;
       if (!projectId) return NextResponse.json({ error: 'Falta projectId' }, { status: 400 });
+      // Security: verify project belongs to tenant before deleting subcollection doc
+      if (tenantId) {
+        const projSnap = await db.collection('projects').doc(projectId).get();
+        if (!projSnap.exists || projSnap.data()?.tenantId !== tenantId) {
+          return NextResponse.json({ error: 'Proyecto no pertenece a tu espacio' }, { status: 403 });
+        }
+      }
       await db.collection('projects').doc(projectId).collection(subDeletes[type]).doc(id).delete();
       return NextResponse.json({ success: true });
     }

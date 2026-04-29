@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
       for (const tpl of templates) {
         if (existingKeys.has(tpl.key)) continue; // Already exists, skip
 
-        const nextOrder = (existingByType[type] || 0) + (addedCount > 0 ? 0 : 0);
         existingByType[type] = (existingByType[type] || 0) + 1;
 
         const phaseRef = db

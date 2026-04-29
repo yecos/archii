@@ -7,8 +7,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase-admin";
 
-// Admin emails — loaded from env var, comma-separated. Fallback for local dev.
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'yecos11@gmail.com').split(',').map(e => e.trim().toLowerCase());
+// Admin emails — loaded from env var, comma-separated. No hardcoded fallback for security.
+const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
+  ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  : (() => {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[Archii Auth] CRITICAL: ADMIN_EMAILS env var is not set in production. Admin routes will be disabled.');
+      } else {
+        console.warn('[Archii Auth] ADMIN_EMAILS not set. Admin routes disabled. Set ADMIN_EMAILS env var to enable.');
+      }
+      return [];
+    })();
 
 export interface AuthUser {
   uid: string;
