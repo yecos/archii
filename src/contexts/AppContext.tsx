@@ -1711,19 +1711,36 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return new Date(dateStr).toLocaleDateString('es');
   };
 
-  // Change user role (admin only)
+  // Change user role (admin only) — uses server endpoint to bypass Firestore rules
   const updateUserRole = async (uid: string, newRole: string) => {
     try {
-      await getFirebase().firestore().collection('users').doc(uid).update({ role: newRole });
+      if (!authUser || !activeTenantId) return;
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ tenantId: activeTenantId, targetUid: uid, role: newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error');
       showToast(`Rol actualizado a ${newRole}`);
-    } catch (err) { console.error('[Archii]', err); showToast('Error al cambiar rol', 'error'); }
+    } catch (err: any) { console.error('[Archii]', err); showToast('Error al cambiar rol: ' + (err.message || ''), 'error'); }
   };
 
+  // Change user company (admin only) — uses server endpoint to bypass Firestore rules
   const updateUserCompany = async (uid: string, companyId: string) => {
     try {
-      await getFirebase().firestore().collection('users').doc(uid).update({ companyId: companyId || null });
+      if (!authUser || !activeTenantId) return;
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ tenantId: activeTenantId, targetUid: uid, companyId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error');
       showToast(companyId ? 'Empresa asignada' : 'Empresa removida');
-    } catch (err) { console.error('[Archii]', err); showToast('Error al asignar empresa', 'error'); }
+    } catch (err: any) { console.error('[Archii]', err); showToast('Error al asignar empresa: ' + (err.message || ''), 'error'); }
   };
 
   // Get the current user's company ID
@@ -2006,9 +2023,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const initDefaultPhases = async () => {
     if (!selectedProjectId || !authUser || !activeTenantId) return;
     try {
+      const token = await authUser.getIdToken();
       const res = await fetch('/api/migrate-phases', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ tenantId: activeTenantId, uid: authUser.uid, projectId: selectedProjectId }),
       });
       const data = await res.json();
