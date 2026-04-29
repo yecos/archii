@@ -32,6 +32,21 @@ function scrubUndefined(obj: any): any {
   return cleaned;
 }
 
+/** Helper: elimina todos los documentos de una colección, paginando si hay más de 500 */
+async function deleteCollectionBatch(db: any, collectionRef: any): Promise<void> {
+  let query = collectionRef.orderBy('__name__').limit(500);
+  let snap = await query.get();
+  while (snap.docs.length > 0) {
+    const batch = db.batch();
+    snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+    await batch.commit();
+    // Get next page (start after last deleted doc)
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    query = collectionRef.orderBy('__name__').startAfter(lastDoc).limit(500);
+    snap = await query.get();
+  }
+}
+
 /** Helper: ejecuta acción Firebase con manejo de errores consistente */
 async function fbAction<T>(action: string, fn: () => Promise<T>, showToast?: ToastFn): Promise<T | null> {
   try {
@@ -88,14 +103,17 @@ export function saveProject(data: Record<string, any>, editingId: string | null,
 export async function deleteProject(projectId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar proyecto', async () => {
     const db = getFirebase().firestore();
-    // Delete subcollections
-    const collections = ['messages', 'workPhases', 'files', 'approvals', 'dailyLogs'];
-    for (const col of collections) {
-      const snap = await db.collection('projects').doc(projectId).collection(col).get();
-      const batch = db.batch();
-      snap.docs.forEach((doc: any) => batch.delete(doc.ref));
-      if (snap.docs.length > 0) await batch.commit();
+    // 1. Delete subcollections (paginated for >500 docs)
+    const subcollections = ['messages', 'workPhases', 'files', 'approvals', 'dailyLogs'];
+    for (const col of subcollections) {
+      await deleteCollectionBatch(db, db.collection('projects').doc(projectId).collection(col));
     }
+    // 2. Delete orphaned top-level docs referencing this project
+    const topLevelCollections = ['tasks', 'comments', 'expenses', 'rfis', 'submittals', 'punchItems', 'meetings', 'timeEntries', 'invoices', 'galleryPhotos'];
+    for (const col of topLevelCollections) {
+      await deleteCollectionBatch(db, db.collection(col).where('projectId', '==', projectId));
+    }
+    // 3. Delete the project document itself
     await db.collection('projects').doc(projectId).delete();
     showToast('Proyecto eliminado');
   }, showToast);
@@ -243,7 +261,6 @@ export function saveExpense(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteExpense(expenseId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este gasto?')) return;
   return fbAction('eliminar gasto', async () => {
     await getFirebase().firestore().collection('expenses').doc(expenseId).delete();
     showToast('Gasto eliminado');
@@ -290,7 +307,6 @@ export function saveSupplier(data: Record<string, any>, editingId: string | null
 }
 
 export async function deleteSupplier(supplierId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este proveedor?')) return;
   return fbAction('eliminar proveedor', async () => {
     await getFirebase().firestore().collection('suppliers').doc(supplierId).delete();
     showToast('Proveedor eliminado');
@@ -333,7 +349,6 @@ export function saveCompany(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteCompany(companyId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta empresa?')) return;
   return fbAction('eliminar empresa', async () => {
     await getFirebase().firestore().collection('companies').doc(companyId).delete();
     showToast('Empresa eliminada');
@@ -363,7 +378,6 @@ export async function uploadProjectFile(projectId: string, file: File, showToast
 }
 
 export async function deleteProjectFile(projectId: string, fileId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este archivo?')) return;
   return fbAction('eliminar archivo', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('files').doc(fileId).delete();
     showToast('Archivo eliminado');
@@ -515,7 +529,6 @@ export async function updateApproval(projectId: string, approvalId: string, stat
 }
 
 export async function deleteApproval(projectId: string, approvalId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta solicitud?')) return;
   return fbAction('eliminar aprobación', async () => {
     await getFirebase().firestore().collection('projects').doc(projectId).collection('approvals').doc(approvalId).delete();
     showToast('Solicitud eliminada');
@@ -563,7 +576,6 @@ export function saveMeeting(data: Record<string, any>, editingId: string | null,
 }
 
 export async function deleteMeeting(meetingId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta reunión?')) return;
   return fbAction('eliminar reunión', async () => {
     await getFirebase().firestore().collection('meetings').doc(meetingId).delete();
     showToast('Reunión eliminada');
@@ -591,7 +603,6 @@ export async function saveGalleryPhoto(data: Record<string, any>, showToast: Toa
 }
 
 export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta foto?')) return;
   return fbAction('eliminar foto', async () => {
     await getFirebase().firestore().collection('galleryPhotos').doc(photoId).delete();
     showToast('Foto eliminada');
@@ -642,7 +653,6 @@ export function saveInvProduct(data: Record<string, any>, editingId: string | nu
 }
 
 export async function deleteInvProduct(productId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este producto?')) return;
   return fbAction('eliminar producto', async () => {
     await getFirebase().firestore().collection('invProducts').doc(productId).delete();
     showToast('Producto eliminado');
@@ -675,7 +685,6 @@ export function saveInvCategory(data: Record<string, any>, editingId: string | n
 }
 
 export async function deleteInvCategory(catId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta categoría?')) return;
   return fbAction('eliminar categoría', async () => {
     await getFirebase().firestore().collection('invCategories').doc(catId).delete();
     showToast('Categoría eliminada');
@@ -704,7 +713,6 @@ export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, a
 }
 
 export async function deleteInvMovement(movId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este movimiento?')) return;
   return fbAction('eliminar movimiento', async () => {
     await getFirebase().firestore().collection('invMovements').doc(movId).delete();
     showToast('Movimiento eliminado');
@@ -734,7 +742,6 @@ export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, a
 }
 
 export async function deleteInvTransfer(transId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta transferencia?')) return;
   return fbAction('eliminar transferencia', async () => {
     await getFirebase().firestore().collection('invTransfers').doc(transId).delete();
     showToast('Transferencia eliminada');
@@ -806,7 +813,6 @@ export function saveTimeEntry(data: Record<string, any>, editingId: string | nul
 }
 
 export async function deleteTimeEntry(entryId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este registro de tiempo?')) return;
   return fbAction('eliminar tiempo', async () => {
     await getFirebase().firestore().collection('timeEntries').doc(entryId).delete();
     showToast('Registro eliminado');
@@ -862,7 +868,6 @@ export async function updateInvoiceStatus(invoiceId: string, status: string, sho
 }
 
 export async function deleteInvoice(invoiceId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar esta factura?')) return;
   return fbAction('eliminar factura', async () => {
     await getFirebase().firestore().collection('invoices').doc(invoiceId).delete();
     showToast('Factura eliminada');
@@ -945,7 +950,6 @@ export function saveRFI(data: Record<string, any>, editingId: string | null, sho
 }
 
 export async function deleteRFI(rfiId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este RFI?')) return;
   return fbAction('eliminar RFI', async () => {
     await getFirebase().firestore().collection('rfis').doc(rfiId).delete();
     showToast('RFI eliminado');
@@ -1012,7 +1016,6 @@ export function saveSubmittal(data: Record<string, any>, editingId: string | nul
 }
 
 export async function deleteSubmittal(subId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este submittal?')) return;
   return fbAction('eliminar submittal', async () => {
     await getFirebase().firestore().collection('submittals').doc(subId).delete();
     showToast('Submittal eliminado');
@@ -1078,7 +1081,6 @@ export function savePunchItem(data: Record<string, any>, editingId: string | nul
 }
 
 export async function deletePunchItem(punchId: string, showToast: ToastFn, tenantId: string | null) {
-  if (!confirm('¿Eliminar este item?')) return;
   return fbAction('eliminar item punch list', async () => {
     await getFirebase().firestore().collection('punchItems').doc(punchId).delete();
     showToast('Item eliminado');

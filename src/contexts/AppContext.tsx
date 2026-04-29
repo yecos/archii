@@ -210,6 +210,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const overdueCheckedRef = useRef<string>('');
   // Track first data load to avoid re-notifying existing items
   const firstLoadDoneRef = useRef(false);
+  // Guard: AUTO-FIX 1 only runs once per tenant session
+  const autoFixMembersDoneRef = useRef(false);
   // Track which collections have hydrated at least once
   const collectionsLoadedRef = useRef<Record<string, boolean>>({
     tasks: false, approvals: false, meetings: false,
@@ -666,6 +668,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Listen to active tenant document for members array + verify role in real-time
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
+    // Reset AUTO-FIX guard when tenant changes
+    autoFixMembersDoneRef.current = false;
     const db = getFirebase().firestore();
     const uid = authUser.uid;
     const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
@@ -696,7 +700,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
         // AUTO-FIX 1: Super Admin exists in superAdmins but missing from members → add to members.
         // Firestore rules check members array for access, so this mismatch causes permission denied.
-        if (isSuperAdmin && !members.includes(uid)) {
+        // Only runs once per tenant session to avoid unnecessary writes on every snapshot.
+        if (isSuperAdmin && !members.includes(uid) && !autoFixMembersDoneRef.current) {
+          autoFixMembersDoneRef.current = true;
           db.collection('tenants').doc(activeTenantId).update({
             members: getFirebase().firestore.FieldValue.arrayUnion(uid),
           }).catch(err => {
@@ -794,7 +800,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('projects').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjects(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -805,7 +813,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('tasks').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setTasks(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -815,7 +825,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('expenses').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setExpenses(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -826,12 +838,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsubs: any[] = [];
     unsubs.push(db.collection('suppliers').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSuppliers(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {}));
+    }, (err: any) => {
+      console.error('[Archii] Snapshot error:', err.code, err.message);
+    }));
 
     // Companies listener (tenant-filtered)
     unsubs.push(db.collection('companies').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setCompanies(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {}));
+    }, (err: any) => {
+      console.error('[Archii] Snapshot error:', err.code, err.message);
+    }));
 
     return () => unsubs.forEach(u => u());
   }, [ready, authUser, activeTenantId]);
@@ -901,7 +917,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => { unsub(); setProjectFiles([]); };
   }, [ready, selectedProjectId]);
 
@@ -911,7 +929,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('approvals').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setApprovals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => { unsub(); setApprovals([]); };
   }, [ready, selectedProjectId]);
 
@@ -922,7 +942,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('meetings').where('tenantId', '==', activeTenantId).orderBy('date', 'asc').onSnapshot(snap => {
       setMeetings(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -932,7 +954,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('galleryPhotos').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setGalleryPhotos(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -942,7 +966,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('comments').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'asc').limit(300).onSnapshot(snap => {
       setComments(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -953,7 +979,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('rfis').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setRfis(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -964,7 +992,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('submittals').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setSubmittals(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -975,7 +1005,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const unsub = db.collection('punchItems').where('tenantId', '==', activeTenantId).orderBy('createdAt', 'desc').onSnapshot(snap => {
       setPunchItems(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
       markCollectionSnapshot();
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => unsub();
   }, [ready, authUser, activeTenantId]);
 
@@ -985,7 +1017,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot(snap => {
       setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
-    }, () => {});
+    }, (err: any) => {
+  console.error('[Archii] Snapshot error:', err.code, err.message);
+});
     return () => { unsub(); setDailyLogs([]); };
   }, [ready, authUser, selectedProjectId]);
 
