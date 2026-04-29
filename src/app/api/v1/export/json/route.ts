@@ -46,6 +46,18 @@ async function authenticateExport(
     if (!tenantId) {
       return { authenticated: false, error: { status: 400, message: 'Header x-tenant-id requerido' } };
     }
+    // Verify tenant membership — prevent cross-tenant access
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const db = getAdminDb();
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    if (!tenantDoc.exists) {
+      return { authenticated: false, error: { status: 404, message: 'Espacio de trabajo no encontrado' } };
+    }
+    const tData = tenantDoc.data()!;
+    const isMember = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    if (!isMember) {
+      return { authenticated: false, error: { status: 403, message: 'No tienes acceso a este espacio de trabajo' } };
+    }
     return { authenticated: true, tenantId };
   }
 

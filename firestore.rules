@@ -307,16 +307,56 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
     }
 
-    // OneDrive files cache (tenant-scoped via projectId lookup)
+    // OneDrive files cache (server-managed, accessed via Admin SDK in API routes)
+    // Client-side reads allowed for authenticated users — tenant scoping enforced at API level
     match /onedrive_files/{fileId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow create, update, delete: if false; // Server/Admin SDK only
     }
 
-    // OneDrive folders cache
+    // OneDrive folders cache (server-managed)
     match /onedrive_folders/{folderId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated();
+      allow create, update, delete: if false; // Server/Admin SDK only
+    }
+
+    // ===== SYSTEM LOGGING COLLECTIONS (tenant-scoped) =====
+
+    // Audit Logs — only Admin SDK / server can create; members can read
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow create: if false; // Server/Admin SDK only
+      allow update, delete: if false; // Immutable
+    }
+
+    // Error Reports — only Admin SDK / server can create; members can read own tenant's
+    match /error_reports/{reportId} {
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow create: if false; // Server/Admin SDK only
+      allow update, delete: if false; // Immutable
+    }
+
+    // Telemetry Events — only Admin SDK / server can create; no client read
+    match /telemetry_events/{eventId} {
+      allow read: if false; // Server/Admin SDK only
+      allow create: if false; // Server/Admin SDK only
+      allow update, delete: if false; // Server/Admin SDK only
+    }
+
+    // Beta Feedback — members can create/read own tenant's; server can update status
+    match /beta_feedback/{feedbackId} {
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow create: if isAuthenticated() && isMemberOfTenant(request.resource.data.tenantId);
+      allow update: if false; // Server/Admin SDK only (status changes)
+      allow delete: if false; // Preserve feedback history
+    }
+
+    // API Keys — server-managed, users can read their own tenant's keys
+    match /apiKeys/{keyId} {
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
+      allow create: if false; // Server/Admin SDK only
+      allow update: if false; // Server/Admin SDK only (revoke)
+      allow delete: if false; // Server/Admin SDK only
     }
 
   }

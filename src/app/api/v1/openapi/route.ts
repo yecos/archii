@@ -6,7 +6,7 @@
  *   — Retorna swagger.json
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const OPENAPI_SPEC = {
   openapi: '3.0.3',
@@ -172,11 +172,42 @@ const OPENAPI_SPEC = {
   },
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigins = [
+    'https://archii-theta.vercel.app',
+    'https://archii.vercel.app',
+    'http://localhost:3000',
+  ];
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   return NextResponse.json(OPENAPI_SPEC, {
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+    },
+  });
+}
+
+// Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigins = [
+    'https://archii-theta.vercel.app',
+    'https://archii.vercel.app',
+    'http://localhost:3000',
+  ];
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }

@@ -1328,10 +1328,17 @@ async function executeToolCall(
           return error;
         }
 
-        await db.collection("tasks").doc(task.id).update({
+        const updateData: Record<string, any> = {
           status: args.new_status,
           updatedAt: ts,
-        });
+        };
+        // Set completedAt when marking as completed, clear it otherwise
+        if (args.new_status === 'Completado') {
+          updateData.completedAt = ts;
+        } else {
+          updateData.completedAt = null;
+        }
+        await db.collection("tasks").doc(task.id).update(updateData);
 
         actions.push({
           type: "task_updated",

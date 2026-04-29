@@ -172,6 +172,7 @@ export async function syncOfflineQueue(): Promise<{
   const db = fb.firestore();
   const auth = fb.auth();
   const user = auth.currentUser;
+  const serverTimestamp = fb.firestore.FieldValue.serverTimestamp;
 
   if (!user) {
     console.warn('[Offline] No hay usuario autenticado para sync');
@@ -208,21 +209,21 @@ export async function syncOfflineQueue(): Promise<{
           await db.collection(collectionPath).add({
             ...item.data,
             _syncedFrom: 'offline',
-            _syncedAt: fb.firestore.FieldValue.serverTimestamp(),
+            _syncedAt: serverTimestamp(),
           });
           break;
         case 'set':
           await db.collection(collectionPath).doc(item.docId).set({
             ...item.data,
             _syncedFrom: 'offline',
-            _syncedAt: fb.firestore.FieldValue.serverTimestamp(),
+            _syncedAt: serverTimestamp(),
           });
           break;
         case 'update':
           await db.collection(collectionPath).doc(item.docId).update({
             ...item.data,
             _syncedFrom: 'offline',
-            _syncedAt: fb.firestore.FieldValue.serverTimestamp(),
+            _syncedAt: serverTimestamp(),
           });
           break;
         case 'delete':
