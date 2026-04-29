@@ -19,7 +19,7 @@ export default function ProjectDetailScreen() {
     openEditExpense,
     doMicrosoftLogin,
     forms,
-    getUserName, initDefaultPhases,
+    getUserName, initDefaultPhases, addMissingPhases,
     loading,
     navigateTo, openEditProject, openEditTask, openModal,
     projectBudget, projectExpenses, projectFiles, projectSpent, projectTasks,
@@ -811,7 +811,12 @@ export default function ProjectDetailScreen() {
                 </div>
                 <div className="flex gap-2">
                   {forms.workView !== 'bitacora' && (
-                    <button className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-emerald-700 transition-colors" onClick={initDefaultPhases}>🔄 Reinicializar fases (Ambas)</button>
+                    <>
+                      <button className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-emerald-700 transition-colors" onClick={initDefaultPhases}>🔄 Reinicializar fases</button>
+                      <button className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-blue-700 transition-colors" onClick={() => addMissingPhases('Ambos')}>➕ Agregar fases faltantes</button>
+                      <button className="flex items-center gap-1.5 bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-violet-700 transition-colors" onClick={() => addMissingPhases('Diseño')}>📐 Agregar Diseño</button>
+                      <button className="flex items-center gap-1.5 bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-amber-700 transition-colors" onClick={() => addMissingPhases('Ejecución')}>🏗️ Agregar Ejecución</button>
+                    </>
                   )}
                 </div>
               </div>

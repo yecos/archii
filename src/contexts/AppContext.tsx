@@ -2043,6 +2043,34 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err: any) { console.error('[Archii] initDefaultPhases error:', err); showToast('Error al inicializar fases: ' + (err.message || ''), 'error'); }
   };
 
+  // Add missing phases (does NOT delete existing ones)
+  const addMissingPhases = async (projType: string = 'Ambos') => {
+    if (!selectedProjectId || !authUser || !activeTenantId) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/add-missing-phases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ tenantId: activeTenantId, projectId: selectedProjectId, projectType: projType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error');
+      if (data.added > 0) {
+        showToast(`✅ ${data.added} fase${data.added > 1 ? 's' : ''} agregada${data.added > 1 ? 's' : ''}`);
+      } else {
+        showToast('ℹ️ No faltan fases por agregar');
+      }
+      // Reload phases
+      const reloadRes = await fetch(`/api/project-phases?projectId=${selectedProjectId}&tenantId=${activeTenantId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (reloadRes.ok) {
+        const reloadData = await reloadRes.json();
+        setWorkPhases(reloadData.phases || []);
+      }
+    } catch (err: any) { console.error('[Archii] addMissingPhases error:', err); showToast('Error: ' + (err.message || ''), 'error'); }
+  };
+
   const updatePhaseStatus = async (phaseId: string, status: string) => {
     try { await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('workPhases').doc(phaseId).update({ status }); } catch (err) { console.error("[Archii]", err); }
   };
@@ -2822,6 +2850,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     uploadFile,
     deleteFile,
     initDefaultPhases,
+    addMissingPhases,
     updatePhaseStatus,
     updatePhaseDates,
     doTogglePhaseEnabled,
