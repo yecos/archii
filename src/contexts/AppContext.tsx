@@ -7,7 +7,7 @@ import { useUIStore } from '@/stores/ui-store';
 import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting } from '@/lib/types';
 import { DEFAULT_PHASES, EXPENSE_CATS, SUPPLIER_CATS, PHOTO_CATS, ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS, MESES, DIAS_SEMANA, NAV_ITEMS, SCREEN_TITLES, DEFAULT_ROLE_PERMS } from '@/lib/types';
 
-import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId } from '@/lib/helpers';
+import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId, scrubUndefined } from '@/lib/helpers';
 
 import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
@@ -1772,18 +1772,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   const doLogout = () => { if (!confirm('¿Cerrar sesión?')) return; getFirebase().auth().signOut(); };
 
-  /** Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore */
-  const scrubUndefined = (obj: any): any => {
-    if (obj === null || typeof obj !== 'object') return obj;
-    if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined) {
-        cleaned[key] = scrubUndefined(value);
-      }
-    }
-    return cleaned;
-  };
+  // scrubUndefined imported from @/lib/helpers (canonical version)
 
   const getUserName = (uid: string) => { if (!uid) return 'Sin asignar'; const u = teamUsers.find(x => x.id === uid); return u ? u.data.name : uid.substring(0, 8) + '...'; };
 
@@ -1990,14 +1979,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     });
   };
 
-  const fileToBase64 = (file: any): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
+  // fileToBase64 imported from @/lib/helpers (canonical version)
 
   const uploadFile = async (e: any) => {
     const file = e.target?.files?.[0];

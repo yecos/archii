@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useNotificationsContext } from '@/hooks/useNotifications';
 import type { InvProduct, InvCategory, InvMovement, InvTransfer } from '@/lib/types';
 import { INV_WAREHOUSES, CAT_COLORS } from '@/lib/types';
-import { fileToBase64 } from '@/lib/helpers';
+import { fileToBase64, scrubUndefined } from '@/lib/helpers';
 import { getFirebase } from '@/lib/firebase-service';
 
 /* ===== TYPES ===== */
@@ -57,17 +57,8 @@ export interface InventoryContextValue {
 const InventoryContext = createContext<InventoryContextValue>(null!);
 
 /* ===== HELPERS ===== */
-const scrubUndefined = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
-  const cleaned: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      cleaned[key] = scrubUndefined(value);
-    }
-  }
-  return cleaned;
-};
+// scrubUndefined imported from @/lib/helpers (canonical version)
+
 
 /* ===== PROVIDER ===== */
 export function InventoryProvider({ children }: { children: React.ReactNode }) {

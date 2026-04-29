@@ -167,3 +167,19 @@ export const getPlatform = (): string => {
  */
 export const uniqueId = (prefix = 'id'): string =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+/**
+ * Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore.
+ * Centralizado para evitar duplicación (antes estaba en 4 archivos).
+ */
+export const scrubUndefined = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = scrubUndefined(value);
+    }
+  }
+  return cleaned;
+};

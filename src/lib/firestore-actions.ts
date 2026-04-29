@@ -6,7 +6,7 @@
  */
 
 import { getFirebase, getFirebaseIdToken, type FirebaseUser, type FirestoreDB } from '@/lib/firebase-service';
-import { fileToBase64 } from '@/lib/helpers';
+import { fileToBase64, scrubUndefined } from '@/lib/helpers';
 import { DEFAULT_PHASES, PROJECT_TYPE_PHASES, PhaseTemplate } from '@/lib/types';
 
 type ToastFn = (msg: string, type?: string) => void;
@@ -19,18 +19,7 @@ function requireAuth(authUser: FirebaseUser | null, action: string): void {
   }
 }
 
-/** Elimina recursivamente todos los valores undefined de un objeto antes de enviar a Firestore */
-function scrubUndefined(obj: any): any {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
-  const cleaned: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      cleaned[key] = scrubUndefined(value);
-    }
-  }
-  return cleaned;
-}
+// scrubUndefined imported from @/lib/helpers (canonical version)
 
 /** Helper: elimina todos los documentos de una colección, paginando si hay más de 500 */
 async function deleteCollectionBatch(db: any, collectionRef: any): Promise<void> {
@@ -184,17 +173,7 @@ export function saveTask(data: Record<string, any>, editingId: string | null, sh
   }, showToast);
 }
 
-export async function toggleTask(taskId: string, currentStatus: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('cambiar estado tarea', async () => {
-    const nextStatus = currentStatus === 'Completado' ? 'Por hacer' : 'Completado';
-    const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-    if (nextStatus === 'Completado') {
-      await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus, completedAt: ts, updatedAt: ts });
-    } else {
-      await getFirebase().firestore().collection('tasks').doc(taskId).update({ status: nextStatus, completedAt: getFirebase().firestore.FieldValue.delete(), updatedAt: ts });
-    }
-  }, showToast);
-}
+// NOTE: toggleTask removed — dead code. AppContext.tsx provides its own implementation.
 
 export async function deleteTask(taskId: string, showToast: ToastFn, tenantId: string | null) {
   return fbAction('eliminar tarea', async () => {
@@ -764,24 +743,10 @@ export async function updateTransferStatus(transId: string, status: string, show
 }
 
 /* ===== PROJECT PROGRESS ===== */
-
-export async function updateProjectProgress(projectId: string, progress: number, tenantId: string | null) {
-  return fbAction('actualizar progreso', async () => {
-    await getFirebase().firestore().collection('projects').doc(projectId).update({
-      progress,
-      updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
-    });
-  });
-}
+// NOTE: updateProjectProgress removed — dead code. AppContext.tsx provides its own implementation.
 
 /* ===== USER COMPANY ===== */
-
-export async function updateUserCompany(userId: string, companyId: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('asignar empresa', async () => {
-    await getFirebase().firestore().collection('users').doc(userId).update({ companyId });
-    showToast('Empresa asignada');
-  }, showToast);
-}
+// NOTE: updateUserCompany removed — dead code. AppContext.tsx provides its own implementation (uses /api/update-user).
 
 /* ===== TIME ENTRIES ===== */
 

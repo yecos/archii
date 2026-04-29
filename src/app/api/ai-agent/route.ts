@@ -862,18 +862,39 @@ function findTaskByTitle(tasks: FirestoreDoc[], title: string): FirestoreDoc | n
   ) ?? null;
 }
 
+// Tools that only Admin/Director/SuperAdmin should execute (write/update/delete operations)
+const ADMIN_ONLY_TOOLS = new Set([
+  "create_task", "create_project", "create_expense", "create_supplier",
+  "create_meeting", "create_rfi", "create_submittal", "create_punch_item",
+  "create_inventory_product", "create_inventory_movement", "create_invoice",
+  "create_time_entry", "create_company", "create_daily_log",
+  "update_task_status", "update_project_status", "update_project_progress",
+  "update_invoice_status", "delete_task",
+]);
+
 async function executeToolCall(
   name: string,
   args: Record<string, any>,
   db: Firestore,
   userUid: string,
   actions: ExecutedAction[],
-  tenantId: string
+  tenantId: string,
+  userRole?: string
 ): Promise<string> {
   const FieldValue = getAdminFieldValue();
   const ts = FieldValue.serverTimestamp();
 
   try {
+    // SECURITY: Role-based access control for write/update/delete operations
+    if (ADMIN_ONLY_TOOLS.has(name)) {
+      const allowedRoles = ["Admin", "Director", "Super Admin"];
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        const error = `Lo siento, solo Administradores o Directores pueden ejecutar "${name}". Contacta al admin de tu equipo.`;
+        actions.push({ type: "permission_denied", label: "Sin permisos", icon: "🔒", details: error, success: false, error });
+        return error;
+      }
+    }
+
     switch (name) {
       // ── READ OPERATIONS ──
       case "get_projects": {
@@ -1647,7 +1668,10 @@ async function executeToolCall(
         let invoice: FirestoreDoc | null = null;
         if (args.invoice_id) {
           const doc = await db.collection("invoices").doc(args.invoice_id).get();
-          if (doc.exists) invoice = { id: doc.id, data: doc.data()! };
+          // SECURITY: Verify the invoice belongs to the requesting tenant (prevent cross-tenant IDOR)
+          if (doc.exists && doc.data()?.tenantId === tenantId) {
+            invoice = { id: doc.id, data: doc.data()! };
+          }
         } else if (args.invoice_number) {
           const invSnap = await db.collection("invoices").where("tenantId", "==", tenantId).limit(50).get();
           const allInvoices = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
@@ -2136,9 +2160,16 @@ export async function POST(request: NextRequest) {
     const tenantData = tenantDoc.data()!;
     const tenantMembers: string[] = tenantData.members || [];
     const tenantSuperAdmins: string[] = tenantData.superAdmins || [];
+    const tenantCreatedBy: string = tenantData.createdBy || '';
     if (!tenantMembers.includes(user.uid) && !tenantSuperAdmins.includes(user.uid)) {
       return NextResponse.json({ error: 'No tienes acceso a este espacio de trabajo' }, { status: 403 });
     }
+
+    // Determine user role for RBAC in tool execution
+    let userRole: string = 'Miembro';
+    if (tenantSuperAdmins.includes(user.uid)) userRole = 'Super Admin';
+    else if (tenantCreatedBy === user.uid) userRole = 'Admin';
+    else if (tenantData.memberRoles?.[user.uid]) userRole = tenantData.memberRoles[user.uid];
 
     // Rate limiting: 20 requests per minute per user per tenant (protects Gemini API costs)
     const { checkRateLimit } = await import("@/lib/rate-limiter");
@@ -2229,7 +2260,7 @@ export async function POST(request: NextRequest) {
           funcArgs = {};
         }
 
-        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId);
+        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId, userRole);
 
         // Add tool result to conversation
         apiMessages.push({

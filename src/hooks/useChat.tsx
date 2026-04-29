@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNotificationsContext } from '@/hooks/useNotifications';
-import { fmtRecTime, fmtSize } from '@/lib/helpers';
+import { fmtRecTime, fmtSize, scrubUndefined } from '@/lib/helpers';
 import { getFirebase } from '@/lib/firebase-service';
 
 /* ===== TYPES ===== */
@@ -81,20 +81,10 @@ export interface ChatContextValue {
   fmtFileSize: (bytes: number) => string;
 }
 
-const ChatContext = createContext<ChatContextValue>(null!);
-
 /* ===== HELPERS ===== */
-const scrubUndefined = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(item => scrubUndefined(item));
-  const cleaned: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      cleaned[key] = scrubUndefined(value);
-    }
-  }
-  return cleaned;
-};
+// scrubUndefined imported from @/lib/helpers (canonical version)
+
+const ChatContext = createContext<ChatContextValue>(null!);
 
 const fileIcon = (type: string) => {
   if (type.startsWith('image/')) return '🖼️';

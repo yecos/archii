@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "node:crypto";
 import {
   verifyWebhook,
   parseWebhookPayload,
@@ -114,18 +115,87 @@ async function safeReply(message: any) {
   }
 }
 
-// ─── Manejo del flujo de vinculacion ───
+// ─── Manejo del flujo de vinculacion con OTP ───
 async function handleLinkingFlow(message: any, db: any): Promise<{ text: string; buttons?: { id: string; title: string }[] }> {
   const msg = message.body.toLowerCase().trim();
-
-
+  const phone = message.from;
 
   // Primer contacto o boton de vincular
   if (msg === 'hola' || msg === 'hi' || msg === 'link_start' || msg === '1') {
     return getWelcomeMessage();
   }
 
-  // Parece un email (contiene @) → vincular directamente
+  // Check if there's a pending OTP for this phone number
+  const pendingOtpSnap = await db
+    .collection("whatsappOtp")
+    .where("whatsappPhone", "==", phone)
+    .where("status", "==", "pending")
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .get();
+
+  // If user sent a 6-digit code, verify it
+  if (/^\d{6}$/.test(msg) && !pendingOtpSnap.empty) {
+    const otpDoc = pendingOtpSnap.docs[0];
+    const otpData = otpDoc.data();
+    const now = Date.now();
+    const otpAge = now - (otpData.createdAt?._seconds ? otpData.createdAt._seconds * 1000 : 0);
+
+    // OTP expires after 10 minutes
+    if (otpAge > 10 * 60 * 1000) {
+      await otpDoc.ref.update({ status: "expired" });
+      return { text: "El codigo ha expirado. Envía tu email de Archii para recibir un nuevo codigo." };
+    }
+
+    if (msg === otpData.code) {
+      // OTP correct — proceed with linking
+      await otpDoc.ref.update({ status: "verified" });
+
+      const userId = otpData.userId;
+      const email = otpData.userEmail;
+      const userName = otpData.userName || email.split("@")[0];
+      const userTenantId = otpData.tenantId;
+
+      // Check if already linked to another phone
+      const existingLink = await db
+        .collection("whatsappLinks")
+        .where("userId", "==", userId)
+        .where("active", "==", true)
+        .limit(1)
+        .get();
+
+      if (!existingLink.empty) {
+        const existingPhone = existingLink.docs[0].data().whatsappPhone;
+        if (existingPhone === phone) {
+          return { text: "Este numero ya esta vinculado a tu cuenta. Escribe *menu* para ver las opciones." };
+        }
+        return { text: `El email ${email} ya esta vinculado a otro numero de WhatsApp.` };
+      }
+
+      // Create the link
+      try {
+        await db.collection('whatsappLinks').add({
+          whatsappPhone: phone,
+          userId: userId,
+          userEmail: email,
+          userName: userName,
+          tenantId: userTenantId,
+          active: true,
+          linkedAt: FieldValue.serverTimestamp(),
+        });
+        return getLinkedSuccess(userName);
+      } catch (err: any) {
+        console.error("[Archii WhatsApp] Error vinculando:", err.message);
+        return { text: "Error al vincular la cuenta. Intenta de nuevo." };
+      }
+    } else {
+      return {
+        text: "Codigo incorrecto. Intenta de nuevo o envia tu email para generar un nuevo codigo."
+      };
+    }
+  }
+
+  // Parece un email (contiene @) → iniciar flujo OTP
   if (msg.includes("@")) {
     const email = msg.replace(/[^a-zA-Z0-9@._+\-]/g, "").toLowerCase();
 
@@ -146,10 +216,8 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
     const userName = userData.name || userData.displayName || email.split("@")[0];
 
     // SECURITY: Verify the user belongs to at least one tenant before linking
-    // This prevents account takeover by linking WhatsApp to orphan accounts
     let userTenantId = userData.defaultTenantId || '';
 
-    // If no defaultTenantId, check tenants where this user is a member
     if (!userTenantId) {
       const tenantMemberSnap = await db
         .collection("tenants")
@@ -164,58 +232,45 @@ async function handleLinkingFlow(message: any, db: any): Promise<{ text: string;
       userTenantId = tenantMemberSnap.docs[0].id;
     }
 
-    // Verificar si ya esta vinculado a OTRO numero
-    const existingLink = await db
-      .collection("whatsappLinks")
-      .where("userId", "==", userSnap.docs[0].id)
-      .where("active", "==", true)
-      .limit(1)
-      .get();
-
-    if (!existingLink.empty) {
-      const existingPhone = existingLink.docs[0].data().whatsappPhone;
-      if (existingPhone === message.from) {
-        return {
-          text: `Este numero ya esta vinculado a tu cuenta. Escribe *menu* para ver las opciones.`
-        };
-      }
-      return {
-        text: `El email ${email} ya esta vinculado a otro numero de WhatsApp.`
-      };
-    }
-
-    // Verificar si este numero ya esta vinculado a otra cuenta
+    // Check if this phone is already linked
     const existingPhoneLink = await db
       .collection("whatsappLinks")
-      .where("whatsappPhone", "==", message.from)
+      .where("whatsappPhone", "==", phone)
       .where("active", "==", true)
       .limit(1)
       .get();
 
     if (!existingPhoneLink.empty) {
-      return {
-        text: `Este numero de WhatsApp ya esta vinculado a una cuenta.`
-      };
+      return { text: "Este numero de WhatsApp ya esta vinculado a una cuenta." };
     }
 
-    // Vincular directamente
-    try {
-      await db.collection('whatsappLinks').add({
-        whatsappPhone: message.from,
-        userId: userSnap.docs[0].id,
-        userEmail: email,
-        userName: userName,
-        tenantId: userTenantId,
-        active: true,
-        linkedAt: FieldValue.serverTimestamp(),
-      });
+    // Generate 6-digit OTP code (cryptographically secure)
+    const otpCode = String(randomInt(100000, 1000000));
 
-
-      return getLinkedSuccess(userName);
-    } catch (err: any) {
-      console.error("[Archii WhatsApp] Error vinculando:", err.message);
-      return { text: "Error al vincular la cuenta. Intenta de nuevo." };
+    // Expire any previous pending OTPs for this phone
+    if (!pendingOtpSnap.empty) {
+      for (const doc of pendingOtpSnap.docs) {
+        await doc.ref.update({ status: "expired" });
+      }
     }
+
+    // Store the OTP
+    await db.collection("whatsappOtp").add({
+      whatsappPhone: phone,
+      userId: userSnap.docs[0].id,
+      userEmail: email,
+      userName: userName,
+      tenantId: userTenantId,
+      code: otpCode,
+      status: "pending",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    // NOTE: In production, this code should be sent via email (Resend API).
+    // For now, we send it via WhatsApp as a transitional measure.
+    return {
+      text: `🔐 *Verificacion de seguridad*\n\nTu codigo de vinculacion es: *${otpCode}*\n\nEste codigo expira en 10 minutos.\nResponde con el codigo de 6 digitos para completar la vinculacion.`
+    };
   }
 
   // Mensaje no reconocido sin vinculacion

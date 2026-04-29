@@ -55,6 +55,11 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isMemberOfTenant(tenantId);
       allow update: if isAuthenticated() && isMemberOfTenant(tenantId);
       allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+
+      // Collaboration subcollections — Admin SDK only (accessed via /api/collab)
+      match /collab_{subcollection}/{docId} {
+        allow read, write: if false; // Server/Admin SDK only
+      }
     }
 
     // ===== TENANT-SCOPED TOP-LEVEL COLLECTIONS =====
@@ -307,16 +312,21 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
     }
 
+    // WhatsApp OTP codes — Admin SDK only (server manages creation and verification)
+    match /whatsappOtp/{otpId} {
+      allow read, write: if false; // Server/Admin SDK only
+    }
+
     // OneDrive files cache (server-managed, accessed via Admin SDK in API routes)
-    // Client-side reads allowed for authenticated users — tenant scoping enforced at API level
+    // SECURITY: Tenant-scoped reads to prevent cross-tenant metadata leakage
     match /onedrive_files/{fileId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
       allow create, update, delete: if false; // Server/Admin SDK only
     }
 
     // OneDrive folders cache (server-managed)
     match /onedrive_folders/{folderId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && isMemberOfTenant(resource.data.tenantId);
       allow create, update, delete: if false; // Server/Admin SDK only
     }
 
