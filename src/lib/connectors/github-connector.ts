@@ -293,7 +293,9 @@ export function handleGitHubWebhook(
 }
 
 /**
- * Verify GitHub webhook signature (optional, for security).
+ * Verify GitHub webhook signature using SHA-256 (SEC-M08 fix).
+ * GitHub now supports X-Hub-Signature-256 which uses HMAC-SHA256.
+ * Also added length check before timingSafeEqual to prevent unhandled exceptions.
  */
 export function verifyGitHubSignature(
   payload: string,
@@ -301,12 +303,25 @@ export function verifyGitHubSignature(
   secret: string
 ): boolean {
   const crypto = require('crypto');
-  const expected = 'sha1=' + crypto.createHmac('sha1', secret).update(payload).digest('hex');
+  // Prefer SHA-256; fall back to SHA-1 for legacy webhooks
+  let expected: string;
+  if (signature.startsWith('sha256=')) {
+    expected = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  } else if (signature.startsWith('sha1=')) {
+    expected = 'sha1=' + crypto.createHmac('sha1', secret).update(payload).digest('hex');
+  } else {
+    return false;
+  }
+
+  // Length check to prevent timingSafeEqual exception on mismatched lengths
+  const sigBuf = Buffer.from(signature, 'utf8');
+  const expBuf = Buffer.from(expected, 'utf8');
+  if (sigBuf.length !== expBuf.length) {
+    return false;
+  }
+
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expected)
-    );
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   } catch {
     return false;
   }

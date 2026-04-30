@@ -71,7 +71,14 @@ interface EncryptedToken {
  */
 export function encryptToken(plaintext: string): string {
   const key = getEncryptionKey();
-  if (!key) return plaintext; // Backward compatible: no key = no encryption
+  if (!key) {
+    // SEC-M01: In production, fail loudly if encryption key is not set
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[TokenEncryption] TOKEN_ENCRYPTION_KEY not set in production! Tokens MUST be encrypted.');
+    }
+    console.warn('[TokenEncryption] TOKEN_ENCRYPTION_KEY not set — tokens stored unencrypted (development only)');
+    return plaintext;
+  }
 
   const iv = randomBytes(12); // 96-bit IV for GCM
   const cipher = createCipheriv(ALGORITHM, key, iv);

@@ -59,12 +59,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // No exponer el certificate completo en la respuesta
-    const { idpCertificate, scimSecret, ...safeConfig } = config;
+    // SEC-M03: No exponer el certificate, SCIM secret, ni roleMapping en la respuesta GET
+    // roleMapping reveals internal role structure — only return to Super Admins
+    const { idpCertificate, scimSecret, roleMapping, ...safeConfig } = config;
+
+    // Check if caller is Super Admin for roleMapping access
+    const isSuperAdmin = tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
 
     return NextResponse.json({
       configured: true,
-      config: safeConfig,
+      config: isSuperAdmin ? { ...safeConfig, roleMapping } : safeConfig,
       hasCertificate: !!idpCertificate,
       hasSCIMSecret: !!scimSecret,
     });

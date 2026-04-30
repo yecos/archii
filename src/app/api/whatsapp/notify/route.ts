@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "userId requerido" }, { status: 400 });
     }
 
+    // SEC-H03: Verify sender and recipient belong to the same tenant
+    const senderDoc = await db.collection("users").doc(authUser.uid).get();
+    const senderTenantId = senderDoc.exists ? senderDoc.data()?.defaultTenantId : null;
+
     const snap = await db
       .collection("whatsappLinks")
       .where("userId", "==", userId)
@@ -79,8 +83,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, sent: 0, reason: "no_link" });
     }
 
-    const link = snap.docs[0].data();
-    const result = await sendWhatsAppMessage(link.whatsappPhone, message);
+    // Check that recipient belongs to the same tenant
+    const recipientLink = snap.docs[0].data();
+    if (recipientLink.tenantId && senderTenantId && recipientLink.tenantId !== senderTenantId) {
+      return NextResponse.json({ error: "No puedes enviar mensajes a usuarios de otro equipo" }, { status: 403 });
+    }
+
+    const result = await sendWhatsAppMessage(recipientLink.whatsappPhone, message);
 
     return NextResponse.json({
       ok: true,

@@ -111,21 +111,62 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'URL inválida' }, { status: 400 });
         }
 
-        // SSRF protection: block private/internal IPs
+        // SSRF protection (SEC-H08): comprehensive check against private/internal IPs
         const parsedUrl = new URL(body.url);
-        const hostname = parsedUrl.hostname;
-        if (
-          hostname === 'localhost' ||
-          hostname === '127.0.0.1' ||
-          hostname === '0.0.0.0' ||
-          hostname === '::1' ||
-          hostname.startsWith('10.') ||
-          hostname.startsWith('172.') ||
-          hostname.startsWith('192.168.') ||
-          hostname.startsWith('169.254.') ||
-          hostname.endsWith('.local') ||
-          hostname.endsWith('.internal')
-        ) {
+        const hostname = parsedUrl.hostname.toLowerCase();
+
+        // Block known internal hostnames
+        const blockedHostnames = ['localhost', '0.0.0.0', 'metadata.google.internal', 'metadata.internal'];
+        if (blockedHostnames.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+          return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+        }
+
+        // Block IPv4/IPv6 private ranges
+        const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+        const ipv6Regex = /^\[([0-9a-f:]+)\]$/i;
+        const ipv4Match = hostname.match(ipv4Regex);
+        const ipv6Match = hostname.match(ipv6Regex);
+
+        if (ipv4Match) {
+          const [, a, b] = ipv4Match.map(Number);
+          if (a === 127 || a === 10) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          // 172.16.0.0/12 (SEC-H08: was incorrectly blocking ALL 172.*)
+          if (a === 172 && b >= 16 && b <= 31) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          if (a === 192 && b === 168) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          // 169.254.0.0/16 (link-local, includes cloud metadata)
+          if (a === 169 && b === 254) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          // 100.64.0.0/10 (carrier-grade NAT)
+          if (a === 100 && b >= 64 && b <= 127) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          // 198.18.0.0/15 (benchmark testing)
+          if (a === 198 && (b === 18 || b === 19)) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+        }
+
+        // Block IPv6 loopback and private
+        if (ipv6Match) {
+          const addr = ipv6Match[1];
+          if (addr === '::1' || addr.startsWith('fc') || addr.startsWith('fd') || addr.startsWith('fe80')) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+          // Block IPv6-mapped IPv4 (::ffff:127.0.0.1 etc)
+          if (addr.includes('::ffff:')) {
+            return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
+          }
+        }
+
+        // Block ::1 directly
+        if (hostname === '::1') {
           return NextResponse.json({ error: 'URLs internas no permitidas' }, { status: 400 });
         }
 
@@ -133,11 +174,17 @@ export async function POST(request: NextRequest) {
         const validEvents = ['task.created', 'task.updated', 'task.deleted', 'project.created', 'project.updated', 'task.assigned', 'task.completed', 'comment.created', 'member.joined', 'member.removed'];
         const events = (body.events || []).filter((e: string) => validEvents.includes(e));
 
-        // Block dangerous custom headers
-        const blockedHeaders = ['authorization', 'cookie', 'host', 'proxy-authorization', 'proxy-*'];
+        // SEC-M10: Block dangerous custom headers (expanded blocklist)
+        const blockedHeaders = [
+          'authorization', 'cookie', 'host', 'proxy-authorization',
+          'x-api-key', 'x-auth-token', 'x-csrf-token', 'x-forwarded-for',
+          'x-forwarded-host', 'x-forwarded-proto', 'x-original-url', 'x-rewrite-url',
+          'set-cookie', 'forwarded', 'te', 'transfer-encoding', 'origin', 'referer',
+        ];
         const customHeaders = body.customHeaders || {};
         for (const key of Object.keys(customHeaders)) {
-          if (blockedHeaders.some(h => key.toLowerCase() === h)) {
+          const lowerKey = key.toLowerCase();
+          if (blockedHeaders.includes(lowerKey) || lowerKey.startsWith('proxy-')) {
             return NextResponse.json({ error: `Header "${key}" no permitido` }, { status: 400 });
           }
         }

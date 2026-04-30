@@ -108,6 +108,29 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // SEC-M07: Validate that sourceDocId actually exists in the source collection
+        try {
+          const sourceDoc = await db.collection(source).doc(sourceDocId).get();
+          if (!sourceDoc.exists) {
+            return NextResponse.json(
+              { error: `El documento ${source}/${sourceDocId} no existe. Solo se pueden indexar documentos reales.` },
+              { status: 400 }
+            );
+          }
+          // Verify source doc belongs to same tenant
+          if (sourceDoc.data()?.tenantId && sourceDoc.data()?.tenantId !== tenantId) {
+            return NextResponse.json(
+              { error: 'El documento fuente no pertenece a este tenant' },
+              { status: 403 }
+            );
+          }
+        } catch (err: any) {
+          return NextResponse.json(
+            { error: `Error verificando documento fuente: ${err.message}` },
+            { status: 400 }
+          );
+        }
+
         const chunkCount = await indexDocument({
           tenantId,
           source,

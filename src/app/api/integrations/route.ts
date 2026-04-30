@@ -100,6 +100,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sin acceso al tenant' }, { status: 403 });
     }
 
+    // SEC-H04: For install, uninstall, and update actions, require Super Admin role
+    const requiresSuperAdmin = ['install', 'uninstall', 'update'].includes(action);
+    if (requiresSuperAdmin) {
+      const { getAdminDb } = await import('@/lib/firebase-admin');
+      const db = getAdminDb();
+      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+      if (tenantDoc.exists) {
+        const tData = tenantDoc.data()!;
+        const isSuperAdmin = tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+        if (!isSuperAdmin) {
+          return NextResponse.json({ error: 'Solo Super Admin puede instalar, desinstalar o actualizar integraciones' }, { status: 403 });
+        }
+      }
+    }
+
     switch (action) {
       /* ---- INSTALL ---- */
       case 'install': {

@@ -105,8 +105,9 @@ async function discoverModels(): Promise<string[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const res = await fetch(`${BASE_URL}/models?key=${apiKey}`, {
+    const res = await fetch(`${BASE_URL}/models`, {
       signal: controller.signal,
+      headers: { 'x-goog-api-key': apiKey },
     });
     clearTimeout(timeout);
 
@@ -349,14 +350,13 @@ async function callGemini(body: Record<string, unknown>): Promise<GeminiResponse
 
   let lastError: Error | null = null;
   for (const model of models) {
-    const url = `${BASE_URL}/models/${model}:generateContent?key=${apiKey}`;
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
 
-      const res = await fetch(url, {
+      const res = await fetch(`${BASE_URL}/models/${model}:generateContent`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", 'x-goog-api-key': apiKey },
         body: JSON.stringify(body),
         signal: controller.signal,
       });

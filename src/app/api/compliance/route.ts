@@ -52,7 +52,20 @@ import {
 
 const ALLOWED_ROLES = ['Admin', 'Director', 'SuperAdmin'];
 
-function hasComplianceAccess(user: AuthUser): boolean {
+async function hasComplianceAccess(user: AuthUser, tenantId: string): Promise<boolean> {
+  // SEC-H02: Verify role from Firestore (authoritative) instead of relying on token claims
+  // Token claims may be stale if custom claims haven't been synced yet.
+  try {
+    const db = getAdminDb();
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    if (userDoc.exists) {
+      const firestoreRole = userDoc.data()?.role;
+      if (firestoreRole && ALLOWED_ROLES.includes(firestoreRole)) return true;
+    }
+  } catch (err) {
+    console.error('[Compliance] Error checking Firestore role, falling back to token claim:', err);
+  }
+  // Fallback to token claim if Firestore lookup fails
   if (user.role && ALLOWED_ROLES.includes(user.role)) return true;
   return false;
 }
@@ -101,19 +114,19 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Autenticación requerida' }, { status: 401 });
     }
-    if (!hasComplianceAccess(user)) {
-      return NextResponse.json(
-        { error: 'Acceso denegado. Se requiere rol Admin o Director.' },
-        { status: 403 },
-      );
-    }
 
     const tenantId = request.headers.get('x-tenant-id') || request.nextUrl.searchParams.get('tenantId');
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido (header x-tenant-id o query param)' }, { status: 400 });
     }
 
-    // Verify tenant membership
+    if (!(await hasComplianceAccess(user, tenantId))) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Se requiere rol Admin o Director.' },
+        { status: 403 },
+      );
+    }
+
     const db = getAdminDb();
     const tenantDoc = await db.collection('tenants').doc(tenantId).get();
     if (!tenantDoc.exists) {
@@ -255,18 +268,19 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Autenticación requerida' }, { status: 401 });
     }
-    if (!hasComplianceAccess(user)) {
-      return NextResponse.json(
-        { error: 'Acceso denegado. Se requiere rol Admin o Director.' },
-        { status: 403 },
-      );
-    }
 
     const body = await request.json();
     const { action, tenantId } = body;
 
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId requerido en body' }, { status: 400 });
+    }
+
+    if (!(await hasComplianceAccess(user, tenantId))) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Se requiere rol Admin o Director.' },
+        { status: 403 },
+      );
     }
 
     // Verify tenant membership
@@ -295,6 +309,19 @@ export async function POST(request: NextRequest) {
         const { userId } = body;
         if (!userId) {
           return NextResponse.json({ error: 'userId requerido' }, { status: 400 });
+        }
+
+        // SEC-M11: Verify target userId belongs to the same tenant
+        const targetUserDoc = await db.collection('users').doc(userId).get();
+        if (targetUserDoc.exists) {
+          const targetTenantId = targetUserDoc.data()?.defaultTenantId;
+          if (targetTenantId !== tenantId) {
+            // Also check if userId is in tenant members
+            const isInMembers = (tData.members || []).includes(userId);
+            if (!isInMembers) {
+              return NextResponse.json({ error: 'El usuario no pertenece a este tenant' }, { status: 403 });
+            }
+          }
         }
 
         // Create a GDPR request
@@ -331,6 +358,18 @@ export async function POST(request: NextRequest) {
         const { userId } = body;
         if (!userId) {
           return NextResponse.json({ error: 'userId requerido' }, { status: 400 });
+        }
+
+        // SEC-M11: Verify target userId belongs to the same tenant
+        const targetUserDoc2 = await db.collection('users').doc(userId).get();
+        if (targetUserDoc2.exists) {
+          const targetTenantId = targetUserDoc2.data()?.defaultTenantId;
+          if (targetTenantId !== tenantId) {
+            const isInMembers = (tData.members || []).includes(userId);
+            if (!isInMembers) {
+              return NextResponse.json({ error: 'El usuario no pertenece a este tenant' }, { status: 403 });
+            }
+          }
         }
 
         // Create a GDPR request

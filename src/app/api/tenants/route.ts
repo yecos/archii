@@ -21,9 +21,10 @@ import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
  */
 
 function generateCode(): string {
+  // SEC-H07: Increased from 6 to 10 characters for stronger invite codes (~60 bits of entropy)
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 10; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
 
@@ -38,6 +39,16 @@ async function ensureUniqueCode(db: any): Promise<string> {
   }
   return code;
 }
+
+// SEC-H07: Rate limiting for join attempts (max 5 per user per 15 minutes)
+const joinRateLimits = new Map<string, { count: number; resetAt: number }>();
+// Clean up expired entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of joinRateLimits) {
+    if (entry.resetAt <= now) joinRateLimits.delete(key);
+  }
+}, 10 * 60 * 1000);
 
 /**
  * Migrate existing unassigned data to a new tenant.
@@ -238,6 +249,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "join") {
+      // SEC-H07: Rate limiting on join attempts (max 5 per user per 15 minutes)
+      const joinRateKey = `join_${user.uid}`;
+      const now = Date.now();
+      const rateEntry = joinRateLimits.get(joinRateKey);
+      if (rateEntry && rateEntry.resetAt > now && rateEntry.count >= 5) {
+        return NextResponse.json({ error: "Demasiados intentos de union. Intenta de nuevo en 15 minutos." }, { status: 429 });
+      }
+      if (!rateEntry || rateEntry.resetAt <= now) {
+        joinRateLimits.set(joinRateKey, { count: 1, resetAt: now + 15 * 60 * 1000 });
+      } else {
+        rateEntry.count++;
+      }
+
       if (!code || typeof code !== "string") {
         return NextResponse.json({ error: "Código requerido" }, { status: 400 });
       }

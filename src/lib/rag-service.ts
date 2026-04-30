@@ -82,11 +82,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error('GEMINI_API_KEY no configurada para embeddings');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       model: `models/${EMBEDDING_MODEL}`,
       content: { parts: [{ text }] },
@@ -118,7 +118,7 @@ export async function generateEmbeddingBatch(texts: string[]): Promise<number[][
     throw new Error('GEMINI_API_KEY no configurada para embeddings');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents`;
 
   const requests = texts.map((text) => ({
     model: `models/${EMBEDDING_MODEL}`,
@@ -127,7 +127,7 @@ export async function generateEmbeddingBatch(texts: string[]): Promise<number[][
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ requests }),
   });
 

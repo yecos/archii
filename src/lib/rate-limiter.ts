@@ -131,10 +131,11 @@ export async function checkRateLimit(
     };
   } catch (err) {
     console.error('[RateLimiter] Error:', err);
-    // En caso de error, permitir la request (fail-open)
+    // SEC-H01: Fail-closed — if Firestore is unavailable, deny the request
+    // This prevents rate limit bypass during infrastructure incidents.
     return {
-      allowed: true,
-      remaining: config.limit,
+      allowed: false,
+      remaining: 0,
       resetAt: now + config.windowSeconds * 1000,
       limit: config.limit,
     };

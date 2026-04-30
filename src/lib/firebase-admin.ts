@@ -11,7 +11,11 @@ import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
-const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'archii-prod-2026';
+// SEC-M02: Remove hardcoded project ID fallback — require the env var explicitly
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+if (!FIREBASE_PROJECT_ID) {
+  console.error('[Archii Admin] NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set. Firebase Admin SDK will not initialize correctly.');
+}
 
 // Credenciales para firebase-admin desde variables de entorno o JSON
 function getAdminConfig() {

@@ -339,7 +339,9 @@ export async function storeTenantKey(params: {
   }
 
   const { key: derivedKey, salt } = deriveKeyFromPassphrase(masterKey);
-  const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, crypto.randomBytes(IV_LENGTH));
+  // SEC-C04: Store IV alongside the encrypted key material (never reuse IVs with AES-GCM)
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, iv);
   let encrypted = cipher.update(params.key.toString('base64'), 'utf-8', 'base64');
   encrypted += cipher.final('base64');
   const authTag = cipher.getAuthTag();
@@ -348,6 +350,7 @@ export async function storeTenantKey(params: {
   const docRef = await db.collection(KMS_COLLECTION).add({
     tenantId: params.tenantId,
     keyEncrypted: `${encrypted}|${authTag.toString('base64')}`,
+    iv: iv.toString('base64'), // Store the random IV for proper decryption
     salt: salt.toString('base64'),
     label: params.label,
     active: true,
@@ -393,13 +396,17 @@ export async function getTenantKey(tenantId: string): Promise<Buffer | null> {
   const authTagB64 = keyEncrypted.slice(lastPipe + 1);
 
   try {
+    // SEC-C04: Use the stored IV if available, otherwise fall back to deterministic IV
+    // for backward compatibility with keys stored before this fix.
+    const ivB64 = data.iv;
+    const ivBuffer = ivB64
+      ? Buffer.from(ivB64 as string, 'base64')
+      : saltBuffer.slice(0, IV_LENGTH); // legacy fallback
+
     const decipher = crypto.createDecipheriv(
       ALGORITHM,
       derivedKey,
-      // We don't have the IV stored separately — for a production KMS
-      // the IV should be stored alongside. For now, use a deterministic IV
-      // from the salt (this is acceptable for key wrapping but not for data encryption).
-      saltBuffer.slice(0, IV_LENGTH),
+      ivBuffer,
       { authTagLength: AUTH_TAG_LENGTH },
     );
     decipher.setAuthTag(Buffer.from(authTagB64, 'base64'));
