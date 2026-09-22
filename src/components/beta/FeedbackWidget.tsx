@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquarePlus, X, Star, Send, CheckCircle2, Loader } from 'lucide-react';
 import { submitFeedback, FEEDBACK_CATEGORIES, type FeedbackCategory } from '@/lib/feedback-service';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 import { useUIStore } from '@/stores/ui-store';
 import { trackEvent } from '@/lib/telemetry-service';
 import { toast } from 'sonner';
@@ -49,9 +49,10 @@ export default function FeedbackWidget() {
   const instant = { duration: 0 };
 
   const currentScreen = useUIStore(s => s.currentScreen);
+  const feedbackEnabled = useFeatureFlag('feedback_widget');
 
   // Don't render if feedback_widget flag is disabled
-  if (!isFlagEnabled('feedback_widget')) return null;
+  if (!feedbackEnabled) return null;
 
   const handleSubmit = useCallback(async () => {
     if (!text.trim() && rating === 0) {
