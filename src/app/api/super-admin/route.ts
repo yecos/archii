@@ -954,13 +954,30 @@ export async function POST(request: NextRequest) {
       const doc = await db.collection("error_reports").doc(errorId).get();
       if (!doc.exists) return NextResponse.json({ error: "Error report no encontrado" }, { status: 404 });
 
+      const message = doc.data()?.message || null;
+      const resolvedAt = FieldValue.serverTimestamp();
+
+      if (message) {
+        const groupSnap = await db.collection("error_reports").where("message", "==", message).limit(200).get();
+        const batch = db.batch();
+        groupSnap.docs.forEach((reportDoc: any) => {
+          batch.update(reportDoc.ref, {
+            resolved: true,
+            resolvedAt,
+            resolvedBy: user.uid,
+          });
+        });
+        await batch.commit();
+        return NextResponse.json({ resolved: true, resolvedCount: groupSnap.size });
+      }
+
       await db.collection("error_reports").doc(errorId).update({
         resolved: true,
-        resolvedAt: FieldValue.serverTimestamp(),
+        resolvedAt,
         resolvedBy: user.uid,
       });
 
-      return NextResponse.json({ resolved: true });
+      return NextResponse.json({ resolved: true, resolvedCount: 1 });
     }
 
     // ===== REVIEW FEEDBACK GLOBAL — Review feedback (global) =====
