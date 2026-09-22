@@ -1087,25 +1087,32 @@ export async function POST(request: NextRequest) {
         checks.auth = false;
       }
 
-      // 3. Test Firestore read (try reading a non-existent doc)
+      // 3–4. Test Firestore write/read/delete using the same temporary document.
+      // This avoids false negatives caused by probing a non-existent document.
+      const healthRef = db.collection("_platform_config").doc("health_check");
       try {
-        await db.collection("_platform_config").doc("__health_check_read__").get();
-        checks.firestoreRead = true;
-      } catch {
-        checks.firestoreRead = false;
-      }
-
-      // 4. Test Firestore write + delete
-      try {
-        const healthRef = db.collection("_platform_config").doc("health_check");
         await healthRef.set({
           timestamp: FieldValue.serverTimestamp(),
           checkedBy: user.uid,
+          probe: "archii-health-check",
         });
-        await healthRef.delete();
         checks.firestoreWrite = true;
+
+        try {
+          const healthSnap = await healthRef.get();
+          checks.firestoreRead = healthSnap.exists && healthSnap.data()?.probe === "archii-health-check";
+        } catch {
+          checks.firestoreRead = false;
+        }
       } catch {
         checks.firestoreWrite = false;
+        checks.firestoreRead = false;
+      } finally {
+        try {
+          await healthRef.delete();
+        } catch {
+          // Cleanup failure should not change the read/write service result.
+        }
       }
 
       // 5. Count total docs in key collections using efficient .count() aggregation
