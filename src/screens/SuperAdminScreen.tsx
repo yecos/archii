@@ -14,6 +14,7 @@ import {
 import { SkeletonKPI, SkeletonChart, SkeletonTenantDetail } from '@/components/ui/SkeletonLoaders';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { setRuntimeFeatureFlag } from '@/lib/feature-flags';
 
 type SuperAdminTab = 'dashboard' | 'tenants' | 'users' | 'tools' | 'activity' | 'config';
 
@@ -1295,8 +1296,12 @@ function ConfigTab({ handleAction, showToast, setLoading }: { handleAction: any;
   useEffect(() => { loadFlags(); }, [loadFlags]);
 
   const toggleFlag = async (flagKey: string, currentEnabled: boolean) => {
-    await handleAction('update-feature-flag', { flagKey, enabled: !currentEnabled }, `Flag "${flagKey}" ${!currentEnabled ? 'habilitada' : 'deshabilitada'}`);
-    loadFlags();
+    const nextEnabled = !currentEnabled;
+    const result = await handleAction('update-feature-flag', { flagKey, enabled: nextEnabled }, `Flag "${flagKey}" ${nextEnabled ? 'habilitada' : 'deshabilitada'}`);
+    if (result) {
+      setRuntimeFeatureFlag(flagKey, nextEnabled);
+      setFlags(prev => prev.map(flag => flag.key === flagKey ? { ...flag, enabled: nextEnabled } : flag));
+    }
   };
 
   const runHealthCheck = async () => {
