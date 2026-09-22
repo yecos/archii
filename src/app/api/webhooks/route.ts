@@ -26,11 +26,11 @@ import {
   generateEventId,
   type WebhookEventType,
 } from '@/lib/webhook-service';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('webhooks_system')) {
+    if (!await isFlagEnabledDynamic('webhooks_system')) {
       return NextResponse.json({ error: 'Sistema de webhooks no habilitado' }, { status: 403 });
     }
 
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('webhooks_system')) {
+    if (!await isFlagEnabledDynamic('webhooks_system')) {
       return NextResponse.json({ error: 'Sistema de webhooks no habilitado' }, { status: 403 });
     }
 
