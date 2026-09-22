@@ -1063,7 +1063,7 @@ function AuditSubTab({ handleAction, showToast, setLoading }: { handleAction: an
                     <div className="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">{log.description}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-[10px] text-[var(--muted-foreground)]">{fmtDateTime(log.timestamp)}</div>
+                    <div className="text-[10px] text-[var(--muted-foreground)]">{fmtDateTime(log.createdAt || log.timestamp)}</div>
                     {log.tenantName && <div className="text-[10px] text-[var(--af-accent)] font-medium">{log.tenantName}</div>}
                   </div>
                   {expandedRow === logId ? <ChevronUp size={14} className="text-[var(--muted-foreground)] flex-shrink-0" aria-hidden="true"/> : <ChevronDown size={14} className="text-[var(--muted-foreground)] flex-shrink-0" aria-hidden="true"/>}
@@ -1283,7 +1283,13 @@ function ConfigTab({ handleAction, showToast, setLoading }: { handleAction: any;
 
   const loadFlags = useCallback(async () => {
     const data = await handleAction('get-feature-flags', {}, '');
-    if (data && data.flags) setFlags(data.flags);
+    if (data && data.flags) {
+      setFlags(Array.isArray(data.flags) ? data.flags : Object.entries(data.flags).map(([key, value]: [string, any]) => ({
+        key,
+        enabled: Boolean(value?.enabled),
+        description: value?.description || '',
+      })));
+    }
   }, [handleAction]);
 
   useEffect(() => { loadFlags(); }, [loadFlags]);
