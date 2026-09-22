@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, AuthUser } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import {
   getRetentionStatus,
   evaluateRetentionPolicies,
@@ -102,7 +102,7 @@ async function logComplianceAction(
 export async function GET(request: NextRequest) {
   try {
     // At least one compliance feature flag must be enabled
-    if (!isFlagEnabled('gdpr_tools') && !isFlagEnabled('field_encryption')) {
+    if (!await isFlagEnabledDynamic('gdpr_tools') && !await isFlagEnabledDynamic('field_encryption')) {
       return NextResponse.json(
         { error: 'Herramientas de cumplimiento no habilitadas. Activa gdpr_tools o field_encryption.' },
         { status: 403 },
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     switch (action) {
       /* ---- Retention Status ---- */
       case 'retention-status': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
         const status = await getRetentionStatus(tenantId);
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 
       /* ---- GDPR Requests List ---- */
       case 'gdpr-requests': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
         const status = searchParams.get('status') as any;
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
 
       /* ---- Privacy Report ---- */
       case 'privacy-report': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
         const report = await generateDataProcessingReport(tenantId);
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
 
       /* ---- Privacy Notice ---- */
       case 'privacy-notice': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
         const notice = createPrivacyNotice(tenantId, `Tenant ${tenantId}`);
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
 
       /* ---- Encryption Key Metadata ---- */
       case 'encryption-keys': {
-        if (!isFlagEnabled('field_encryption')) {
+        if (!await isFlagEnabledDynamic('field_encryption')) {
           return NextResponse.json({ error: 'field_encryption no habilitado' }, { status: 403 });
         }
         const keyMeta = await getTenantKeyMetadata(tenantId);
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
 
       /* ---- Download Export ---- */
       case 'download-export': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
         const requestId = searchParams.get('requestId');
@@ -256,7 +256,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // At least one compliance feature flag must be enabled
-    if (!isFlagEnabled('gdpr_tools') && !isFlagEnabled('field_encryption')) {
+    if (!await isFlagEnabledDynamic('gdpr_tools') && !await isFlagEnabledDynamic('field_encryption')) {
       return NextResponse.json(
         { error: 'Herramientas de cumplimiento no habilitadas. Activa gdpr_tools o field_encryption.' },
         { status: 403 },
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       /* ---- Export User Data (GDPR Art. 20) ---- */
       case 'export-data': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Delete User Data (GDPR Art. 17) ---- */
       case 'delete-data': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -399,7 +399,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Archive Collection ---- */
       case 'archive-collection': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -430,7 +430,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Delete Collection ---- */
       case 'delete-collection': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -460,7 +460,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Evaluate Policies ---- */
       case 'evaluate-policies': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -479,7 +479,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Record Consent ---- */
       case 'record-consent': {
-        if (!isFlagEnabled('gdpr_tools')) {
+        if (!await isFlagEnabledDynamic('gdpr_tools')) {
           return NextResponse.json({ error: 'gdpr_tools no habilitado' }, { status: 403 });
         }
 
@@ -510,7 +510,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Generate Encryption Key ---- */
       case 'generate-encryption-key': {
-        if (!isFlagEnabled('field_encryption')) {
+        if (!await isFlagEnabledDynamic('field_encryption')) {
           return NextResponse.json({ error: 'field_encryption no habilitado' }, { status: 403 });
         }
 
@@ -537,7 +537,7 @@ export async function POST(request: NextRequest) {
 
       /* ---- Rotate Encryption Key ---- */
       case 'rotate-encryption-key': {
-        if (!isFlagEnabled('field_encryption')) {
+        if (!await isFlagEnabledDynamic('field_encryption')) {
           return NextResponse.json({ error: 'field_encryption no habilitado' }, { status: 403 });
         }
 

@@ -26,11 +26,11 @@ import {
   getHealthEmoji,
 } from '@/lib/health-score';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('health_score_predictive')) {
+    if (!await isFlagEnabledDynamic('health_score_predictive')) {
       return NextResponse.json(
         { error: 'Health Score no está habilitado' },
         { status: 403 }
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('health_score_predictive')) {
+    if (!await isFlagEnabledDynamic('health_score_predictive')) {
       return NextResponse.json(
         { error: 'Health Score no está habilitado' },
         { status: 403 }

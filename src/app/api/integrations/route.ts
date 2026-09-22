@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
 import {
   getAvailableProviders,
@@ -35,7 +35,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('marketplace')) {
+    if (!await isFlagEnabledDynamic('marketplace')) {
       return NextResponse.json(
         { error: 'Marketplace no habilitado. Habilita la flag NEXT_PUBLIC_FLAG_MARKETPLACE.' },
         { status: 403 }
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('marketplace')) {
+    if (!await isFlagEnabledDynamic('marketplace')) {
       return NextResponse.json(
         { error: 'Marketplace no habilitado' },
         { status: 403 }

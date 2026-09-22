@@ -20,11 +20,11 @@ import {
   listAPIKeys,
   revokeAPIKey,
 } from '@/lib/rate-limiter';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('public_api')) {
+    if (!await isFlagEnabledDynamic('public_api')) {
       return NextResponse.json({ error: 'API pública no habilitada' }, { status: 403 });
     }
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('public_api')) {
+    if (!await isFlagEnabledDynamic('public_api')) {
       return NextResponse.json({ error: 'API pública no habilitada' }, { status: 403 });
     }
 

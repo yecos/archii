@@ -22,11 +22,11 @@ import {
   generateSCIMSecret,
   type SSOConfig,
 } from '@/lib/sso-service';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('sso_saml')) {
+    if (!await isFlagEnabledDynamic('sso_saml')) {
       return NextResponse.json({ error: 'SSO/SAML no habilitado' }, { status: 403 });
     }
 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('sso_saml')) {
+    if (!await isFlagEnabledDynamic('sso_saml')) {
       return NextResponse.json({ error: 'SSO/SAML no habilitado' }, { status: 403 });
     }
 

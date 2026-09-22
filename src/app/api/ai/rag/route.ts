@@ -23,12 +23,12 @@ import {
   deleteDocumentChunks,
   reindexCollection,
 } from '@/lib/rag-service';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function POST(request: NextRequest) {
   try {
     // Feature gate
-    if (!isFlagEnabled('rag_search')) {
+    if (!await isFlagEnabledDynamic('rag_search')) {
       return NextResponse.json(
         { error: 'RAG search no está habilitado. Contacta al administrador.' },
         { status: 403 }

@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { getProvider, getIntegrationLogs } from '@/lib/marketplace-service';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
@@ -64,7 +64,7 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
-    if (!isFlagEnabled('marketplace')) {
+    if (!await isFlagEnabledDynamic('marketplace')) {
       return NextResponse.json({ error: 'Marketplace no habilitado' }, { status: 403 });
     }
 
@@ -124,7 +124,7 @@ export async function POST(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
-    if (!isFlagEnabled('marketplace')) {
+    if (!await isFlagEnabledDynamic('marketplace')) {
       return NextResponse.json({ error: 'Marketplace no habilitado' }, { status: 403 });
     }
 

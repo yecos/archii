@@ -20,7 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { triggerWebhook } from '@/lib/webhook-service';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
@@ -36,7 +36,7 @@ const DEFAULT_RATE_LIMIT = { limit: 120, windowSeconds: 60 };
 export async function POST(request: NextRequest) {
   try {
     // Feature flag gate
-    if (!isFlagEnabled('realtime_collab')) {
+    if (!await isFlagEnabledDynamic('realtime_collab')) {
       return NextResponse.json(
         { error: 'Colaboración en tiempo real no habilitada' },
         { status: 403 }
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
           });
 
         // Trigger webhook if webhooks_system is enabled
-        if (isFlagEnabled('webhooks_system')) {
+        if (await isFlagEnabledDynamic('webhooks_system')) {
           triggerWebhook(
             'comment.created',
             tenantId,

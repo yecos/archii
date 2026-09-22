@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAPIKey, checkRateLimit } from '@/lib/rate-limiter';
 import { authenticateRequest } from '@/lib/api-auth';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { exportToCSV, validateCollections } from '@/lib/bi-export';
 import type { BIExportOptions } from '@/lib/bi-export';
 
@@ -74,7 +74,7 @@ const EXPORT_RATE_LIMIT = { limit: 10, windowSeconds: 60 };
 export async function GET(request: NextRequest) {
   try {
     // Feature flag gate
-    if (!isFlagEnabled('bi_connector')) {
+    if (!await isFlagEnabledDynamic('bi_connector')) {
       return NextResponse.json(
         { error: 'BI Connector no habilitado. Activa la feature flag bi_connector.' },
         { status: 403 },

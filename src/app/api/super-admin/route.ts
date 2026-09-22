@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue, getAdminAuth, isAdminInitialized } from "@/lib/firebase-admin";
-import { getAllFlags } from "@/lib/feature-flags";
+import { getAllFlags, setRuntimeFeatureFlag } from "@/lib/feature-flags";
+import { getDynamicFeatureFlags, invalidateDynamicFeatureFlagCache } from "@/lib/feature-flags-server";
 
 /* ─── In-memory cache for expensive queries (3-minute TTL) ─── */
 const apiCache = new Map<string, { data: any; expiresAt: number }>();
@@ -1009,37 +1010,10 @@ export async function POST(request: NextRequest) {
 
     // ===== GET FEATURE FLAGS =====
     if (action === "get-feature-flags") {
-      // Try reading from Firestore config doc first
-      const configDoc = await db.collection("_platform_config").doc("feature_flags").get();
-
-      if (configDoc.exists) {
-        const data = configDoc.data()!;
-        // Firestore doc stores flags as { [key]: { enabled, description } }
-        const flags = Object.entries(data).map(([key, value]: [string, any]) => ({
-          key,
-          enabled: Boolean(value?.enabled),
-          description: value?.description || "",
-        }));
-        return NextResponse.json({ flags });
-      }
-
-      // Fallback to defaults from feature-flags module
-      const allFlags = getAllFlags();
-      const flags: Record<string, { enabled: boolean; description: string }> = {};
-      for (const [key, val] of Object.entries(allFlags)) {
-        flags[key] = {
-          enabled: val.enabled,
-          description: val.description,
-        };
-      }
-
-      return NextResponse.json({
-        flags: Object.entries(flags).map(([key, value]) => ({
-          key,
-          enabled: value.enabled,
-          description: value.description,
-        })),
-      });
+      // Merge registry defaults/env values with Firestore overrides so the
+      // admin always sees the complete flag catalog.
+      const flags = await getDynamicFeatureFlags(true);
+      return NextResponse.json({ flags });
     }
 
     // ===== UPDATE FEATURE FLAG =====
@@ -1069,6 +1043,8 @@ export async function POST(request: NextRequest) {
         [flagKey]: { enabled, description },
       }, { merge: true });
 
+      setRuntimeFeatureFlag(flagKey, enabled);
+      invalidateDynamicFeatureFlagCache();
       invalidateCache();
       return NextResponse.json({ updated: true, flagKey, enabled });
     }

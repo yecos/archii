@@ -12,13 +12,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { getBISchema, getAvailableCollections } from '@/lib/bi-export';
 
 export async function GET(_request: NextRequest) {
   try {
     // Feature flag gate
-    if (!isFlagEnabled('bi_connector')) {
+    if (!await isFlagEnabledDynamic('bi_connector')) {
       return NextResponse.json(
         { error: 'BI Connector no habilitado. Activa la feature flag bi_connector.' },
         { status: 403 },
@@ -62,7 +62,7 @@ export async function GET(_request: NextRequest) {
  * Returns 200 if BI Connector is enabled, 403 otherwise.
  */
 export async function HEAD(_request: NextRequest) {
-  if (!isFlagEnabled('bi_connector')) {
+  if (!await isFlagEnabledDynamic('bi_connector')) {
     return new NextResponse(null, { status: 403 });
   }
 
