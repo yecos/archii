@@ -20,7 +20,7 @@
 
 import { useRef, useCallback, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 
 /* ---- Types ---- */
 
@@ -61,7 +61,8 @@ export function VirtualizedList<T>({
   const parentRef = useRef<HTMLDivElement>(null);
 
   // Si la feature flag está desactivada o hay pocos items, renderizar normal
-  const shouldVirtualize = isFlagEnabled('virtualized_lists') && items.length > 30;
+  const virtualizationEnabled = useFeatureFlag('virtualized_lists');
+  const shouldVirtualize = virtualizationEnabled && items.length > 30;
 
   if (!shouldVirtualize) {
     // Fallback: render normal sin virtualización
