@@ -882,7 +882,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Group by message field for error frequency
-      const groupMap: Record<string, { message: string; count: number; firstSeen: string | null; lastSeen: string | null; sampleIds: string[] }> = {};
+      const groupMap: Record<string, { message: string; count: number; firstSeen: string | null; lastSeen: string | null; sampleIds: string[]; resolved: boolean; stackTrace?: string }> = {};
       for (const report of reports) {
         const key = report.message || "(unknown error)";
         if (!groupMap[key]) {
@@ -892,9 +892,16 @@ export async function POST(request: NextRequest) {
             firstSeen: report.createdAt,
             lastSeen: report.createdAt,
             sampleIds: [],
+            resolved: Boolean(report.resolved),
+            stackTrace: report.stackTrace || report.stack || undefined,
           };
         }
         groupMap[key].count++;
+        // A group is resolved only when every occurrence is resolved.
+        groupMap[key].resolved = groupMap[key].resolved && Boolean(report.resolved);
+        if (!groupMap[key].stackTrace && (report.stackTrace || report.stack)) {
+          groupMap[key].stackTrace = report.stackTrace || report.stack;
+        }
         // Update firstSeen / lastSeen
         if (report.createdAt) {
           if (!groupMap[key].firstSeen || report.createdAt < groupMap[key].firstSeen!) {
@@ -936,7 +943,7 @@ export async function POST(request: NextRequest) {
         categoryStats[cat] = (categoryStats[cat] || 0) + 1;
       }
 
-      return NextResponse.json({ items, categoryStats });
+      return NextResponse.json({ items, feedback: items, categoryStats });
     }
 
     // ===== RESOLVE ERROR GLOBAL — Mark error report as resolved =====
@@ -947,13 +954,30 @@ export async function POST(request: NextRequest) {
       const doc = await db.collection("error_reports").doc(errorId).get();
       if (!doc.exists) return NextResponse.json({ error: "Error report no encontrado" }, { status: 404 });
 
+      const message = doc.data()?.message || null;
+      const resolvedAt = FieldValue.serverTimestamp();
+
+      if (message) {
+        const groupSnap = await db.collection("error_reports").where("message", "==", message).limit(200).get();
+        const batch = db.batch();
+        groupSnap.docs.forEach((reportDoc: any) => {
+          batch.update(reportDoc.ref, {
+            resolved: true,
+            resolvedAt,
+            resolvedBy: user.uid,
+          });
+        });
+        await batch.commit();
+        return NextResponse.json({ resolved: true, resolvedCount: groupSnap.size });
+      }
+
       await db.collection("error_reports").doc(errorId).update({
         resolved: true,
-        resolvedAt: FieldValue.serverTimestamp(),
+        resolvedAt,
         resolvedBy: user.uid,
       });
 
-      return NextResponse.json({ resolved: true });
+      return NextResponse.json({ resolved: true, resolvedCount: 1 });
     }
 
     // ===== REVIEW FEEDBACK GLOBAL — Review feedback (global) =====
@@ -991,7 +1015,12 @@ export async function POST(request: NextRequest) {
       if (configDoc.exists) {
         const data = configDoc.data()!;
         // Firestore doc stores flags as { [key]: { enabled, description } }
-        return NextResponse.json({ flags: data });
+        const flags = Object.entries(data).map(([key, value]: [string, any]) => ({
+          key,
+          enabled: Boolean(value?.enabled),
+          description: value?.description || "",
+        }));
+        return NextResponse.json({ flags });
       }
 
       // Fallback to defaults from feature-flags module
@@ -1004,7 +1033,13 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      return NextResponse.json({ flags });
+      return NextResponse.json({
+        flags: Object.entries(flags).map(([key, value]) => ({
+          key,
+          enabled: value.enabled,
+          description: value.description,
+        })),
+      });
     }
 
     // ===== UPDATE FEATURE FLAG =====
