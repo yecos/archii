@@ -1003,13 +1003,7 @@ export async function POST(request: NextRequest) {
           enabled: Boolean(value?.enabled),
           description: value?.description || "",
         }));
-        return NextResponse.json({
-        flags: Object.entries(flags).map(([key, value]) => ({
-          key,
-          enabled: value.enabled,
-          description: value.description,
-        })),
-      });
+        return NextResponse.json({ flags });
       }
 
       // Fallback to defaults from feature-flags module
@@ -1022,7 +1016,13 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      return NextResponse.json({ flags });
+      return NextResponse.json({
+        flags: Object.entries(flags).map(([key, value]) => ({
+          key,
+          enabled: value.enabled,
+          description: value.description,
+        })),
+      });
     }
 
     // ===== UPDATE FEATURE FLAG =====
