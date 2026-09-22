@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue, getAdminAuth, isAdminInitialized } from "@/lib/firebase-admin";
-import { getAllFlags } from "@/lib/feature-flags";
+import { getAllFlags, setRuntimeFeatureFlag } from "@/lib/feature-flags";
+import { invalidateDynamicFeatureFlagCache } from "@/lib/feature-flags-server";
 
 /* ─── In-memory cache for expensive queries (3-minute TTL) ─── */
 const apiCache = new Map<string, { data: any; expiresAt: number }>();
@@ -1069,6 +1070,8 @@ export async function POST(request: NextRequest) {
         [flagKey]: { enabled, description },
       }, { merge: true });
 
+      setRuntimeFeatureFlag(flagKey, enabled);
+      invalidateDynamicFeatureFlagCache();
       invalidateCache();
       return NextResponse.json({ updated: true, flagKey, enabled });
     }
