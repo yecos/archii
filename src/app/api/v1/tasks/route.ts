@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateAPIKey, checkRateLimit } from '@/lib/rate-limiter';
 import { authenticateRequest } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 async function authenticateV1(request: NextRequest) {
   const apiKey = request.headers.get('x-api-key');
@@ -47,7 +47,7 @@ async function authenticateV1(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('public_api')) {
+    if (!await isFlagEnabledDynamic('public_api')) {
       return NextResponse.json({ error: 'API pública no habilitada' }, { status: 403 });
     }
 
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('public_api')) {
+    if (!await isFlagEnabledDynamic('public_api')) {
       return NextResponse.json({ error: 'API pública no habilitada' }, { status: 403 });
     }
 
