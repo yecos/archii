@@ -234,6 +234,7 @@ export default function TeamPage() {
     userName,
     initials,
     modals,
+    openModal,
     closeModal,
     pendingDeleteAction,
     setPendingDeleteAction,
