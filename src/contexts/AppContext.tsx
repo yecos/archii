@@ -792,7 +792,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           db.collection('users').doc(uid).get().then(userDoc => {
             if (userDoc.exists) {
               const userData = userDoc.data();
-              if (userData?.defaultTenantRole === 'Super Admin' || userData?.defaultTenantId === activeTenantId) {
+              if (userData?.defaultTenantRole === 'Super Admin' && userData?.defaultTenantId === activeTenantId) {
 
                 db.collection('tenants').doc(activeTenantId).update({
                   superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
