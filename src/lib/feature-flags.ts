@@ -31,7 +31,7 @@ const FLAG_REGISTRY: Record<string, { envKey: string; defaultValue: boolean; des
 };
 
 type FeatureFlagGlobalState = {
-  state.runtimeFlags: Record<string, boolean>;
+  runtimeFlags: Record<string, boolean>;
   version: number;
   listeners: Set<() => void>;
 };
@@ -41,7 +41,7 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 const state: FeatureFlagGlobalState = globalStore.__archiiFeatureFlags || {
-  state.runtimeFlags: {},
+  runtimeFlags: {},
   version: 0,
   listeners: new Set<() => void>(),
 };
