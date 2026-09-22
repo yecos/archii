@@ -14,6 +14,7 @@ import {
   FolderOpen,
   Users,
   ArrowLeft,
+  ArrowRightLeft,
   Plus,
   Clock3,
   CircleAlert,
@@ -230,6 +231,8 @@ export default function TeamPage() {
     doGoogleLogin,
     doMicrosoftLogin,
     tenantReady,
+    showTenantSelector,
+    setShowTenantSelector,
     activeTenantName,
     userName,
     initials,
@@ -267,7 +270,7 @@ export default function TeamPage() {
     );
   }
 
-  if (!tenantReady) return <TenantSelectionScreen />;
+  if (!tenantReady || showTenantSelector) return <TenantSelectionScreen />;
 
   const activeScreen = TEAM_SCREENS.has(screen) ? screen : 'dashboard';
   const currentNav = activeScreen === 'projectDetail' ? 'projects' : activeScreen;
@@ -313,10 +316,17 @@ export default function TeamPage() {
         </div>
 
         <div className="px-4 py-4">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-3">
-            <div className="truncate text-xs font-semibold">{activeTenantName || 'Equipo'}</div>
-            <div className="mt-1 text-[10px] text-[var(--muted-foreground)]">Espacio de trabajo</div>
-          </div>
+          <button
+            onClick={() => setShowTenantSelector(true)}
+            className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-3 text-left transition hover:border-[var(--af-accent)]/40"
+            title="Cambiar espacio de trabajo"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-semibold">{activeTenantName || 'Equipo'}</div>
+              <div className="mt-1 text-[10px] text-[var(--muted-foreground)]">Espacio de trabajo</div>
+            </div>
+            <ArrowRightLeft size={15} className="shrink-0 text-[var(--af-accent)]" />
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3">
