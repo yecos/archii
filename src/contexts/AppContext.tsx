@@ -872,16 +872,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => clearTimeout(timer);
   }, [ready, authUser, activeTenantId, activeTenantRole]);
 
-  // Derive teamUsers from allUsersCache + activeTenantMembers
-  // This REACTS immediately when members change — no race condition
+  // Derive teamUsers strictly from the active tenant membership.
+  // IMPORTANT: never fall back to allUsersCache while tenant members are loading,
+  // otherwise users from other tenants can briefly leak into the UI.
   useEffect(() => {
-
-    if (activeTenantId && activeTenantMembers.length > 0) {
-      const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
-      setTeamUsers(filtered);
-    } else {
-      setTeamUsers(allUsersCache);
+    if (!activeTenantId) {
+      setTeamUsers([]);
+      return;
     }
+    const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
+    setTeamUsers(filtered);
   }, [allUsersCache, activeTenantId, activeTenantMembers]);
 
   // Helper: mark a tracked collection as loaded. Called from each onSnapshot callback.
@@ -3165,6 +3165,34 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // ===== TENANT MANAGEMENT =====
   const switchTenant = useCallback((tenantId: string, tenantName: string, role: string = 'Miembro') => {
+    // Clear tenant-scoped state before activating the next tenant.
+    // This prevents data from the previous tenant from remaining visible while
+    // the new Firestore snapshots are still loading.
+    setActiveTenantMembers([]);
+    setTeamUsers([]);
+    setProjects([]);
+    setTasks([]);
+    setExpenses([]);
+    setSuppliers([]);
+    setCompanies([]);
+    setMeetings([]);
+    setGalleryPhotos([]);
+    setDailyLogs([]);
+    setRfis([]);
+    setSubmittals([]);
+    setPunchItems([]);
+    setChangeOrders([]);
+    setCatalogs([]);
+    setFieldNotes([]);
+    setProjectFiles([]);
+    setWorkPhases([]);
+    setApprovals([]);
+    setComments([]);
+    setProjectPhasesCache({});
+    setSelectedProjectId(null);
+    setEditingId(null);
+    setScreen('dashboard');
+
     setActiveTenantId(tenantId);
     setActiveTenantName(tenantName);
     setActiveTenantRole(role);
