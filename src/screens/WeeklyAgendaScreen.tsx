@@ -594,7 +594,7 @@ export default function WeeklyAgendaScreen() {
     const loadNotes = async () => {
       try {
         const db = getFirebase().firestore();
-        const doc = await db.collection('agendaWeekData').doc(weekDocId).get();
+        const doc = await db.collection('tenants').doc(activeTenantId).collection('agendaWeekData').doc(dateKey(weekDates[0])).get();
         if (!cancelled) {
           const data = doc.data();
           setWeekNotes(data?.notes || []);
@@ -623,7 +623,7 @@ export default function WeeklyAgendaScreen() {
       try {
         const db = getFirebase().firestore();
         const ts = getFirebase().firestore.FieldValue.serverTimestamp();
-        await db.collection('agendaWeekData').doc(weekDocId).set(scrubUndefined({
+        await db.collection('tenants').doc(activeTenantId).collection('agendaWeekData').doc(dateKey(weekDates[0])).set(scrubUndefined({
           tenantId: activeTenantId,
           weekStart: dateKey(weekDates[0]),
           notes: weekNotes,
