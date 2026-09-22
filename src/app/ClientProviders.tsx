@@ -7,6 +7,7 @@ import { InventoryProvider } from '@/hooks/useInventory';
 import { TimeTrackingProvider } from '@/hooks/useTimeTracking';
 import { useUIStore } from '@/stores/ui-store';
 import { initOfflineSync } from '@/lib/offline-queue';
+import { setRuntimeFeatureFlags } from '@/lib/feature-flags';
 
 /**
  * ClientProviders — Client-side wrapper for layout.tsx
@@ -34,6 +35,36 @@ export default function ClientProviders({ children }: { children: React.ReactNod
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // Keep runtime feature flags synchronized without requiring a redeploy.
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshFlags = async () => {
+      try {
+        const res = await fetch('/api/feature-flags', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data.flags)) return;
+        setRuntimeFeatureFlags(Object.fromEntries(
+          data.flags.map((flag: any) => [flag.key, Boolean(flag.enabled)])
+        ));
+      } catch {
+        // Environment/default values remain active if the dynamic endpoint is unavailable.
+      }
+    };
+
+    refreshFlags();
+    const interval = window.setInterval(refreshFlags, 15000);
+    const onFocus = () => refreshFlags();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   // Inicializar offline sync listener (fire-and-forget)
   useEffect(() => {
