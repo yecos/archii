@@ -30,9 +30,22 @@ const FLAG_REGISTRY: Record<string, { envKey: string; defaultValue: boolean; des
   beta_mode: { envKey: 'BETA_MODE', defaultValue: true, description: 'Activa indicadores visuales de beta y badge en la UI' },
 };
 
-let runtimeFlags: Record<string, boolean> = {};
-let version = 0;
-const listeners = new Set<() => void>();
+type FeatureFlagGlobalState = {
+  state.runtimeFlags: Record<string, boolean>;
+  version: number;
+  listeners: Set<() => void>;
+};
+
+const globalStore = globalThis as typeof globalThis & {
+  __archiiFeatureFlags?: FeatureFlagGlobalState;
+};
+
+const state: FeatureFlagGlobalState = globalStore.__archiiFeatureFlags || {
+  state.runtimeFlags: {},
+  version: 0,
+  listeners: new Set<() => void>(),
+};
+globalStore.__archiiFeatureFlags = state;
 
 function envOrDefault(flag: string): boolean {
   const registry = FLAG_REGISTRY[flag];
@@ -46,14 +59,14 @@ function envOrDefault(flag: string): boolean {
 }
 
 export function isFlagEnabled(flag: string): boolean {
-  if (Object.prototype.hasOwnProperty.call(runtimeFlags, flag)) return runtimeFlags[flag];
+  if (Object.prototype.hasOwnProperty.call(state.runtimeFlags, flag)) return state.runtimeFlags[flag];
   return envOrDefault(flag);
 }
 
 export function setRuntimeFeatureFlags(flags: Record<string, boolean>): void {
-  runtimeFlags = { ...runtimeFlags, ...flags };
-  version += 1;
-  listeners.forEach(listener => listener());
+  state.runtimeFlags = { ...state.runtimeFlags, ...flags };
+  state.version += 1;
+  state.listeners.forEach(listener => listener());
 }
 
 export function setRuntimeFeatureFlag(flag: string, enabled: boolean): void {
@@ -61,18 +74,18 @@ export function setRuntimeFeatureFlag(flag: string, enabled: boolean): void {
 }
 
 export function clearRuntimeFeatureFlags(): void {
-  runtimeFlags = {};
-  version += 1;
-  listeners.forEach(listener => listener());
+  state.runtimeFlags = {};
+  state.version += 1;
+  state.listeners.forEach(listener => listener());
 }
 
 export function subscribeFeatureFlags(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+  state.listeners.add(listener);
+  return () => state.listeners.delete(listener);
 }
 
 export function getFeatureFlagsVersion(): number {
-  return version;
+  return state.version;
 }
 
 export function getAllFlags(): Record<string, { enabled: boolean; defaultValue: boolean; description: string }> {
