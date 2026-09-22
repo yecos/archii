@@ -21,11 +21,11 @@ import {
   type SCIMEvent,
 } from '@/lib/sso-service';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { isFlagEnabled } from '@/lib/feature-flags';
+import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isFlagEnabled('sso_saml')) {
+    if (!await isFlagEnabledDynamic('sso_saml')) {
       return NextResponse.json({ error: 'SCIM no habilitado' }, { status: 403 });
     }
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isFlagEnabled('sso_saml')) {
+    if (!await isFlagEnabledDynamic('sso_saml')) {
       return NextResponse.json({ error: 'SCIM no habilitado' }, { status: 403 });
     }
 
