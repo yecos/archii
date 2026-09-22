@@ -741,34 +741,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => unsubscribe();
   }, [ready]);
 
-  // ALL users cache (from Firestore) — always up to date via onSnapshot
-  // This is the raw list before tenant filtering
-  const [allUsersCache, setAllUsersCache] = useState<TeamUser[]>([]);
-
-  // Load ALL users from Firestore (runs once when auth is ready)
-  useEffect(() => {
-    if (!ready || !authUser) { setAllUsersCache([]); return; }
-    const db = getFirebase().firestore();
-    const unsub = db.collection('users').onSnapshot(snap => {
-      const users = snap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
-
-      setAllUsersCache(users);
-    }, (err: any) => {
-      console.error('[Archii Team] ERROR loading users collection:', err.code, err.message);
-      // If permission denied, try fetching just the current user as fallback
-      if (err.code === 'permission-denied') {
-        console.warn('[Archii Team] Permission denied on users collection — checking Firestore rules');
-        // Fallback: at least show the current user
-        db.collection('users').doc(authUser.uid).get().then(doc => {
-          if (doc.exists) {
-            setAllUsersCache([{ id: doc.id, data: doc.data() }]);
-          }
-        }).catch(() => {});
-      }
-    });
-    return () => unsub();
-  }, [ready, authUser]);
-
   // Listen to active tenant document for members array + verify role in real-time
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
@@ -872,17 +844,40 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     return () => clearTimeout(timer);
   }, [ready, authUser, activeTenantId, activeTenantRole]);
 
-  // Derive teamUsers strictly from the active tenant membership.
-  // IMPORTANT: never fall back to allUsersCache while tenant members are loading,
-  // otherwise users from other tenants can briefly leak into the UI.
+  // Load ONLY user profiles that belong to the active tenant.
+  // We intentionally avoid subscribing to the global users collection so tenant
+  // clients never receive unrelated user profiles.
   useEffect(() => {
-    if (!activeTenantId) {
+    if (!ready || !authUser || !activeTenantId || activeTenantMembers.length === 0) {
       setTeamUsers([]);
       return;
     }
-    const filtered = allUsersCache.filter((u: any) => activeTenantMembers.includes(u.id));
-    setTeamUsers(filtered);
-  }, [allUsersCache, activeTenantId, activeTenantMembers]);
+
+    const db = getFirebase().firestore();
+    const memberMap = new Map<string, TeamUser>();
+
+    const publish = () => {
+      const ordered = activeTenantMembers
+        .map(uid => memberMap.get(uid))
+        .filter((user): user is TeamUser => Boolean(user));
+      setTeamUsers(ordered);
+    };
+
+    const unsubs = activeTenantMembers.map(uid =>
+      db.collection('users').doc(uid).onSnapshot(doc => {
+        if (doc.exists) {
+          memberMap.set(doc.id, { id: doc.id, data: doc.data() } as TeamUser);
+        } else {
+          memberMap.delete(uid);
+        }
+        publish();
+      }, err => {
+        console.error('[Archii Team] ERROR loading tenant member:', uid, err.code, err.message);
+      })
+    );
+
+    return () => unsubs.forEach(unsub => unsub());
+  }, [ready, authUser, activeTenantId, activeTenantMembers]);
 
   // Helper: mark a tracked collection as loaded. Called from each onSnapshot callback.
   // When all 6 tracked collections have loaded, triggers hydration effect.
