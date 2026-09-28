@@ -19,7 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, AuthUser } from '@/lib/api-auth';
+import { authenticateRequest, AuthUser, isPlatformAdminEmail } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import {
@@ -50,24 +50,31 @@ import {
 
 /* ===== Role check ===== */
 
-const ALLOWED_ROLES = ['Admin', 'Director', 'SuperAdmin'];
-
 async function hasComplianceAccess(user: AuthUser, tenantId: string): Promise<boolean> {
-  // SEC-H02: Verify role from Firestore (authoritative) instead of relying on token claims
-  // Token claims may be stale if custom claims haven't been synced yet.
+  if (isPlatformAdminEmail(user.email)) return true;
+
   try {
     const db = getAdminDb();
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    if (userDoc.exists) {
-      const firestoreRole = userDoc.data()?.role;
-      if (firestoreRole && ALLOWED_ROLES.includes(firestoreRole)) return true;
-    }
+    const [tenantDoc, userDoc] = await Promise.all([
+      db.collection('tenants').doc(tenantId).get(),
+      db.collection('users').doc(user.uid).get(),
+    ]);
+    if (!tenantDoc.exists) return false;
+
+    const tenant = tenantDoc.data()!;
+    const members: string[] = tenant.members || [];
+    const superAdmins: string[] = tenant.superAdmins || [];
+    const isCreator = tenant.createdBy === user.uid;
+    const isSuperAdmin = superAdmins.includes(user.uid);
+    const isMember = members.includes(user.uid) || isCreator || isSuperAdmin;
+    if (!isMember) return false;
+
+    if (isCreator || isSuperAdmin) return true;
+    return userDoc.exists && userDoc.data()?.role === 'Director';
   } catch (err) {
-    console.error('[Compliance] Error checking Firestore role, falling back to token claim:', err);
+    console.error('[Compliance] Error checking tenant authority:', err);
+    return false;
   }
-  // Fallback to token claim if Firestore lookup fails
-  if (user.role && ALLOWED_ROLES.includes(user.role)) return true;
-  return false;
 }
 
 /* ===== Audit logging helper ===== */
@@ -134,7 +141,7 @@ export async function GET(request: NextRequest) {
     }
     const tData = tenantDoc.data()!;
     const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
-    if (!hasAccess) {
+    if (!hasAccess && !isPlatformAdminEmail(user.email)) {
       return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
     }
 
@@ -291,7 +298,7 @@ export async function POST(request: NextRequest) {
     }
     const tData = tenantDoc.data()!;
     const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
-    if (!hasAccess) {
+    if (!hasAccess && !isPlatformAdminEmail(user.email)) {
       return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
     }
 
