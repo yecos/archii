@@ -318,7 +318,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
 
     authUser.getIdToken()
-      .then(token => fetch('/api/admin-emails', {
+      .then((token: string) => fetch('/api/admin-emails', {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       }))
