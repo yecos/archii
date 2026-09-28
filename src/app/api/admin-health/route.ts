@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminInitialized, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { requireAdmin, AuthError } from '@/lib/api-auth';
 
 /**
  * GET /api/admin-health
@@ -7,6 +8,15 @@ import { isAdminInitialized, getAdminAuth, getAdminDb } from '@/lib/firebase-adm
  * Requires Bearer token for auth verification test.
  */
 export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: 'Error de autenticación' }, { status: 401 });
+  }
+
   const results: Record<string, any> = {};
 
   // 1. Check env vars
