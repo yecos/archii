@@ -22,14 +22,39 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.members;
     }
 
+    /** Only the tenant creator or an existing Super Admin may mutate the
+     *  tenant root document. Membership alone is not an admin capability. */
+    function isTenantSuperAdmin(tenantId) {
+      return isSignedIn()
+        && tenantId != null
+        && tenantId != ''
+        && (
+          get(/databases/$(database)/documents/tenants/$(tenantId)).data.createdBy == request.auth.uid
+          || (
+            get(/databases/$(database)/documents/tenants/$(tenantId)).data.superAdmins != null
+            && request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.superAdmins
+          )
+        );
+    }
+
     // ========================================================================
     // USERS — global, not tenant-scoped
     // ========================================================================
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && request.auth.uid == userId;
+      // Client-created profiles always start at least-privilege. Elevated roles
+      // are assigned by trusted server routes using the Admin SDK.
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && (
+          !('role' in request.resource.data)
+          || request.resource.data.role == 'Miembro'
+        );
+      // Users may edit their own profile/preferences, but never their security role.
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
       allow delete: if isSignedIn() && request.auth.uid == userId;
     }
 
@@ -38,10 +63,12 @@ service cloud.firestore {
     // ========================================================================
 
     match /tenants/{tenantId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.auth.uid in request.resource.data.members;
       allow read: if isSignedIn() && isTenantMember(tenantId);
-      allow update: if isSignedIn() && isTenantMember(tenantId);
-      allow delete: if isSignedIn() && isTenantMember(tenantId);
+      allow update: if isTenantSuperAdmin(tenantId);
+      allow delete: if isTenantSuperAdmin(tenantId);
 
       // Tenant subcollection: agendaWeekData
       match /agendaWeekData/{weekId} {
@@ -79,7 +106,9 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
 
       // Project subcollections — all inherit parent project's tenantId
@@ -273,7 +302,9 @@ service cloud.firestore {
     match /tasks/{taskId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -281,7 +312,9 @@ service cloud.firestore {
     match /expenses/{expenseId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -289,7 +322,9 @@ service cloud.firestore {
     match /suppliers/{supplierId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -297,7 +332,9 @@ service cloud.firestore {
     match /companies/{companyId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -305,7 +342,9 @@ service cloud.firestore {
     match /meetings/{meetingId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -313,7 +352,9 @@ service cloud.firestore {
     match /generalMessages/{messageId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
 
       // Reactions subcollection
@@ -336,7 +377,9 @@ service cloud.firestore {
     match /galleryPhotos/{photoId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -344,7 +387,9 @@ service cloud.firestore {
     match /invProducts/{productId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -352,7 +397,9 @@ service cloud.firestore {
     match /invCategories/{catId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -360,7 +407,9 @@ service cloud.firestore {
     match /invMovements/{movId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -368,7 +417,9 @@ service cloud.firestore {
     match /invTransfers/{transId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -376,7 +427,9 @@ service cloud.firestore {
     match /timeEntries/{entryId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -384,7 +437,9 @@ service cloud.firestore {
     match /invoices/{invoiceId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -392,7 +447,9 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -400,7 +457,9 @@ service cloud.firestore {
     match /fieldNotes/{noteId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -408,7 +467,9 @@ service cloud.firestore {
     match /agendaWeekData/{weekDocId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -416,7 +477,9 @@ service cloud.firestore {
     match /rfis/{rfiId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -424,7 +487,9 @@ service cloud.firestore {
     match /submittals/{subId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -432,7 +497,9 @@ service cloud.firestore {
     match /punchItems/{punchId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -440,7 +507,9 @@ service cloud.firestore {
     match /changeOrders/{coId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -448,7 +517,9 @@ service cloud.firestore {
     match /carnets/{carnetId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -456,7 +527,9 @@ service cloud.firestore {
     match /carnet-templates/{templateId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -464,7 +537,9 @@ service cloud.firestore {
     match /catalogs/{catalogId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -472,7 +547,9 @@ service cloud.firestore {
     match /activityLog/{logId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -480,7 +557,9 @@ service cloud.firestore {
     match /notifications/{notifId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
@@ -488,7 +567,9 @@ service cloud.firestore {
     match /kanbanBoards/{boardId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
 
       // Columns subcollection
@@ -516,7 +597,9 @@ service cloud.firestore {
     match /directMessages/{dmId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if false; // Conversations are never hard-deleted
 
       match /messages/{msgId} {
@@ -536,7 +619,9 @@ service cloud.firestore {
     match /whatsappLinks/{linkId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow update: if isSignedIn()
+        && isTenantMember(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId;
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
