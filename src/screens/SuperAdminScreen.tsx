@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { ADMIN_EMAILS as FALLBACK_ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
+import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase, getFirebaseIdToken } from '@/lib/firebase-service';
 import { avatarColor, getInitials, fmtDateTime } from '@/lib/helpers';
 import {
@@ -37,29 +37,12 @@ async function apiCall(action: string, body: Record<string, any> = {}): Promise<
 }
 
 export default function SuperAdminScreen() {
-  const { authUser, showToast, switchTenant } = useApp();
+  const { authUser, isEmailAdmin, showToast, switchTenant } = useApp();
   const [tab, setTab] = useState<SuperAdminTab>('dashboard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Server-verified admin emails (fetched from env var), with hardcoded fallback
-  const [serverAdminEmails, setServerAdminEmails] = useState<string[]>(FALLBACK_ADMIN_EMAILS);
-
-  useEffect(() => {
-    fetch('/api/admin-emails')
-      .then(r => r.json())
-      .then(data => {
-        if (data.adminEmails && data.adminEmails.length > 0) {
-          setServerAdminEmails(data.adminEmails);
-        }
-      })
-      .catch(() => {
-        // Fallback to hardcoded list if API unreachable
-      });
-  }, []);
-
-  // Check super admin access using server-verified emails
-  const isSuperAdmin = authUser ? serverAdminEmails.includes((authUser.email || '').toLowerCase()) : false;
+  const isSuperAdmin = Boolean(authUser && isEmailAdmin);
 
   if (!isSuperAdmin) {
     return (
@@ -138,7 +121,7 @@ export default function SuperAdminScreen() {
       {/* Tab content */}
       {tab === 'dashboard' && <DashboardTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} />}
       {tab === 'tenants' && <TenantsTab handleAction={handleAction} showToast={showToast} switchTenant={switchTenant} setLoading={setLoading} />}
-      {tab === 'users' && <UsersTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} adminEmails={serverAdminEmails} />}
+      {tab === 'users' && <UsersTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} />}
       {tab === 'tools' && <ToolsTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} />}
       {tab === 'activity' && <ActivityTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} />}
       {tab === 'config' && <ConfigTab handleAction={handleAction} showToast={showToast} setLoading={setLoading} />}
@@ -635,7 +618,7 @@ function TenantsTab({ handleAction, showToast, switchTenant, setLoading }: { han
 }
 
 /* ===== USERS TAB ===== */
-function UsersTab({ handleAction, showToast, setLoading, adminEmails }: { handleAction: any; showToast: any; setLoading: any; adminEmails: string[] }) {
+function UsersTab({ handleAction, showToast, setLoading }: { handleAction: any; showToast: any; setLoading: any }) {
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -775,7 +758,7 @@ function UsersTab({ handleAction, showToast, setLoading, adminEmails }: { handle
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold truncate">{u.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${ROLE_COLORS[u.role] || ROLE_COLORS['Miembro']}`}>{ROLE_ICONS[u.role]} {u.role}</span>
-                  {adminEmails.includes((u.email || '').toLowerCase()) && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-semibold">SA</span>}
+                  {u.isPlatformAdmin === true && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-semibold">SA</span>}
                 </div>
                 <div className="text-[10px] text-[var(--muted-foreground)] truncate">{u.email} · {u.tenantsCount} tenant{u.tenantsCount !== 1 ? 's' : ''}</div>
                 {u.tenants && u.tenants.length > 0 && (
@@ -790,7 +773,7 @@ function UsersTab({ handleAction, showToast, setLoading, adminEmails }: { handle
               </div>
 
               {/* User actions */}
-              {!adminEmails.includes((u.email || '').toLowerCase()) && (
+              {!u.isPlatformAdmin === true && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <select
                     value={u.role}
