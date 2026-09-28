@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   reactStrictMode: false,
-  serverExternalPackages: ['firebase-admin', 'sharp'],
+  serverExternalPackages: ['firebase-admin'],
   async headers() {
     return [
       {
