@@ -361,7 +361,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const oldRole = String(oldUserDoc.data()?.role || "Miembro");
+      const safeRole = oldRole === "Admin" ? "Miembro" : oldRole;
       await db.collection("users").doc(user.uid).set({
+        role: safeRole,
         lastUid: user.uid,
         migratedFromUid: oldUid,
       }, { merge: true });
