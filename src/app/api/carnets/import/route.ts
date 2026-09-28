@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
 import * as XLSX from "xlsx";
+import { verifyTenantMembership } from "@/lib/tenant-utils";
 
 /**
  * POST /api/carnets/import
@@ -201,6 +202,11 @@ export async function POST(request: NextRequest) {
     }
     if (!tenantId) {
       return NextResponse.json({ error: "tenantId requerido" }, { status: 400 });
+    }
+
+    const isMember = await verifyTenantMembership(user.uid, tenantId);
+    if (!isMember) {
+      return NextResponse.json({ error: "No tienes acceso a este tenant" }, { status: 403 });
     }
 
     // Read the Excel file
