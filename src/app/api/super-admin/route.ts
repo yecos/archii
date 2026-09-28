@@ -869,16 +869,17 @@ export async function POST(request: NextRequest) {
 
     // ===== GLOBAL ERRORS — Error reports across ALL tenants =====
     if (action === "global-errors") {
-      const snap = await db.collection("error_reports").orderBy("createdAt", "desc").limit(100).get();
+      const snap = await db.collection("error_reports").orderBy("timestamp", "desc").limit(100).get();
 
       const reports = snap.docs.map((d: any) => {
         const data = d.data();
+        const time = data.createdAt || data.timestamp;
         return {
           id: d.id,
           ...data,
-          createdAt: data.createdAt?._seconds
-            ? new Date(data.createdAt._seconds * 1000).toISOString()
-            : data.createdAt || null,
+          createdAt: time?._seconds
+            ? new Date(time._seconds * 1000).toISOString()
+            : time || null,
         };
       });
 
@@ -924,16 +925,17 @@ export async function POST(request: NextRequest) {
 
     // ===== GLOBAL FEEDBACK — Beta feedback across ALL tenants =====
     if (action === "global-feedback") {
-      const snap = await db.collection("beta_feedback").orderBy("createdAt", "desc").limit(100).get();
+      const snap = await db.collection("beta_feedback").orderBy("timestamp", "desc").limit(100).get();
 
       const items = snap.docs.map((d: any) => {
         const data = d.data();
+        const time = data.createdAt || data.timestamp;
         return {
           id: d.id,
           ...data,
-          createdAt: data.createdAt?._seconds
-            ? new Date(data.createdAt._seconds * 1000).toISOString()
-            : data.createdAt || null,
+          createdAt: time?._seconds
+            ? new Date(time._seconds * 1000).toISOString()
+            : time || null,
         };
       });
 
