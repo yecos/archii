@@ -345,9 +345,13 @@ export async function POST(request: NextRequest) {
 
     // ===== REVIEW FEEDBACK =====
     if (action === "review-feedback") {
-      const { feedbackId, adminNote } = body;
+      const { feedbackId, adminNote, status } = body;
       if (!feedbackId) {
         return NextResponse.json({ error: "feedbackId requerido" }, { status: 400 });
+      }
+      const validStatuses = ["pending", "reviewed", "resolved"];
+      if (status !== undefined && !validStatuses.includes(status)) {
+        return NextResponse.json({ error: "status inválido" }, { status: 400 });
       }
 
       const feedbackDoc = await db.collection("beta_feedback").doc(feedbackId).get();
@@ -358,10 +362,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Feedback no pertenece a este tenant" }, { status: 403 });
       }
 
+      const nextStatus = status || "reviewed";
       const updates: Record<string, any> = {
-        reviewed: true,
-        reviewedAt: FieldValue.serverTimestamp(),
-        reviewedBy: user.uid,
+        status: nextStatus,
+        reviewed: nextStatus !== "pending",
+        reviewedAt: nextStatus !== "pending" ? FieldValue.serverTimestamp() : null,
+        reviewedBy: nextStatus !== "pending" ? user.uid : null,
       };
 
       if (adminNote && typeof adminNote === "string") {
