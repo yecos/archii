@@ -119,10 +119,13 @@ export default function AdminLogScreen() {
       const snap = await db
         .collection('error_reports')
         .where('tenantId', '==', activeTenantId)
-        .orderBy('createdAt', 'desc')
+        .orderBy('timestamp', 'desc')
         .limit(50)
         .get();
-      const items = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as ErrorReport));
+      const items = snap.docs.map((d: any) => {
+        const data = d.data();
+        return { id: d.id, ...data, createdAt: data.createdAt || data.timestamp } as ErrorReport;
+      });
       setErrorReports(items);
     } catch (err: any) {
       console.error('[AdminLog] Error cargando errores:', err);
@@ -141,10 +144,13 @@ export default function AdminLogScreen() {
       const snap = await db
         .collection('beta_feedback')
         .where('tenantId', '==', activeTenantId)
-        .orderBy('createdAt', 'desc')
+        .orderBy('timestamp', 'desc')
         .limit(50)
         .get();
-      const items = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as BetaFeedback));
+      const items = snap.docs.map((d: any) => {
+        const data = d.data();
+        return { id: d.id, ...data, createdAt: data.createdAt || data.timestamp } as BetaFeedback;
+      });
       setFeedbackItems(items);
     } catch (err: any) {
       console.error('[AdminLog] Error cargando feedback:', err);
@@ -165,9 +171,25 @@ export default function AdminLogScreen() {
 
   /* ===== Update feedback status in Firestore ===== */
   const updateFeedbackStatus = useCallback(async (itemId: string, newStatus: BetaFeedback['status']) => {
+    if (!authUser || !activeTenantId) return;
     try {
-      const db = getFirebase().firestore();
-      await db.collection('beta_feedback').doc(itemId).update({ status: newStatus });
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin-data', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'review-feedback',
+          tenantId: activeTenantId,
+          feedbackId: itemId,
+          status: newStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar estado');
+
       setFeedbackItems(prev =>
         prev.map(item => (item.id === itemId ? { ...item, status: newStatus } : item))
       );
@@ -176,7 +198,7 @@ export default function AdminLogScreen() {
       console.error('[AdminLog] Error actualizando estado:', err);
       showToast('Error al actualizar el estado', 'error');
     }
-  }, [showToast]);
+  }, [authUser, activeTenantId, showToast]);
 
   /* ===== Filtering ===== */
   const filteredAudit = auditLogs.filter(item => {
