@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
+import { isPlatformAdminEmail } from '@/lib/api-auth';
 
 /**
  * POST /api/delete-entity
@@ -16,9 +17,11 @@ export async function POST(request: NextRequest) {
     const token = authHeader.split('Bearer ')[1];
     const auth = getAdminAuth();
     let uid: string;
+    let userEmail = '';
     try {
       const decoded = await auth.verifyIdToken(token);
       uid = decoded.uid;
+      userEmail = decoded.email || '';
     } catch {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
@@ -46,16 +49,18 @@ export async function POST(request: NextRequest) {
     const members: string[] = tenantData.members || [];
     const superAdmins: string[] = tenantData.superAdmins || [];
     const isTenantMember = members.includes(uid) || tenantData.createdBy === uid || superAdmins.includes(uid);
-    if (!isTenantMember) {
+    const platformAdmin = isPlatformAdminEmail(userEmail);
+    if (!isTenantMember && !platformAdmin) {
       return NextResponse.json({ error: 'No eres miembro de este espacio de trabajo' }, { status: 403 });
     }
 
-    // Role verification: only Super Admin, Admin, or Director can delete entities
+    // Role verification: platform Admin is derived from ADMIN_EMAILS. Director
+    // only has authority inside a tenant where they are actually a member.
     const isCreator = tenantData.createdBy === uid;
     const isSuperAdmin = superAdmins.includes(uid);
     const callerDoc = await db.collection('users').doc(uid).get();
     const callerRole = callerDoc.exists ? (callerDoc.data()?.role || 'Miembro') : 'Miembro';
-    const isAdmin = callerRole === 'Admin' || callerRole === 'Director' || isCreator || isSuperAdmin;
+    const isAdmin = platformAdmin || (isTenantMember && (callerRole === 'Director' || isCreator || isSuperAdmin));
     if (!isAdmin) {
       return NextResponse.json({ error: 'Solo Admin, Director o Super Admin pueden eliminar entidades' }, { status: 403 });
     }
