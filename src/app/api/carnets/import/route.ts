@@ -16,6 +16,10 @@ import { verifyTenantMembership } from "@/lib/tenant-utils";
  * Column names are matched case-insensitively and with common variations.
  */
 
+const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_IMPORT_ROWS = 1000;
+const ALLOWED_IMPORT_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
+
 interface ImportRow {
   employeeCode: string;
   fullName: string;
@@ -204,6 +208,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "tenantId requerido" }, { status: 400 });
     }
 
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      return NextResponse.json(
+        { error: "El archivo supera el límite de 5 MB" },
+        { status: 413 }
+      );
+    }
+
+    const lowerName = file.name.toLowerCase();
+    if (!ALLOWED_IMPORT_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+      return NextResponse.json(
+        { error: "Formato no permitido. Usa .xlsx, .xls o .csv" },
+        { status: 400 }
+      );
+    }
+
     const isMember = await verifyTenantMembership(user.uid, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "No tienes acceso a este tenant" }, { status: 403 });
@@ -228,6 +247,13 @@ export async function POST(request: NextRequest) {
 
     if (rawData.length === 0) {
       return NextResponse.json({ error: "El archivo está vacío o no tiene datos" }, { status: 400 });
+    }
+
+    if (rawData.length > MAX_IMPORT_ROWS) {
+      return NextResponse.json(
+        { error: `El archivo contiene ${rawData.length} filas. El máximo permitido por importación es ${MAX_IMPORT_ROWS}.` },
+        { status: 413 }
+      );
     }
 
     // Map columns
