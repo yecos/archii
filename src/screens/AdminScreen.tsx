@@ -171,6 +171,7 @@ export default function AdminScreen() {
   }, [activeTenantId, auditSearch, auditActionFilter, showToast]);
 
   const fetchErrors = React.useCallback(async (page: number = 1) => {
+    if (!activeTenantId) return;
     setErrorsLoading(true);
     try {
       const authHeaders = await getAuthHeaders();
@@ -180,6 +181,7 @@ export default function AdminScreen() {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           action: 'error-reports',
+          tenantId: activeTenantId,
           resolved,
           page,
           pageSize: 20,
@@ -197,9 +199,10 @@ export default function AdminScreen() {
     } finally {
       setErrorsLoading(false);
     }
-  }, [errorsResolvedFilter, showToast]);
+  }, [activeTenantId, errorsResolvedFilter, showToast]);
 
   const fetchFeedback = React.useCallback(async (page: number = 1) => {
+    if (!activeTenantId) return;
     setFeedbackLoading(true);
     try {
       const authHeaders = await getAuthHeaders();
@@ -208,6 +211,7 @@ export default function AdminScreen() {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           action: 'beta-feedback',
+          tenantId: activeTenantId,
           category: feedbackCategoryFilter || undefined,
           page,
           pageSize: 20,
@@ -225,17 +229,18 @@ export default function AdminScreen() {
     } finally {
       setFeedbackLoading(false);
     }
-  }, [feedbackCategoryFilter, showToast]);
+  }, [activeTenantId, feedbackCategoryFilter, showToast]);
 
   // ===== Action handlers =====
   const handleResolveError = async (errorId: string) => {
+    if (!activeTenantId) return;
     setResolvingIds(prev => new Set(prev).add(errorId));
     try {
       const authHeaders = await getAuthHeaders();
       const res = await fetch('/api/admin-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ action: 'resolve-error', errorId }),
+        body: JSON.stringify({ action: 'resolve-error', tenantId: activeTenantId, errorId }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error || 'Error al resolver', 'error'); return; }
@@ -249,6 +254,7 @@ export default function AdminScreen() {
   };
 
   const handleReviewFeedback = async (feedbackId: string) => {
+    if (!activeTenantId) return;
     if (reviewingId !== feedbackId) {
       setReviewingId(feedbackId);
       setFeedbackNote('');
@@ -259,7 +265,7 @@ export default function AdminScreen() {
       const res = await fetch('/api/admin-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ action: 'review-feedback', feedbackId, adminNote: feedbackNote || undefined }),
+        body: JSON.stringify({ action: 'review-feedback', tenantId: activeTenantId, feedbackId, adminNote: feedbackNote || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error || 'Error al revisar', 'error'); return; }
