@@ -51,9 +51,6 @@ export default function FeedbackWidget() {
   const currentScreen = useUIStore(s => s.currentScreen);
   const feedbackEnabled = useFeatureFlag('feedback_widget');
 
-  // Don't render if feedback_widget flag is disabled
-  if (!feedbackEnabled) return null;
-
   const handleSubmit = useCallback(async () => {
     if (!text.trim() && rating === 0) {
       toast.error('Por favor escribe un comentario o da una calificación');
@@ -84,6 +81,9 @@ export default function FeedbackWidget() {
     setSent(false);
     setOpen(false);
   };
+
+  // Hooks above must always run in the same order; gate rendering only after them.
+  if (!feedbackEnabled) return null;
 
   return (
     <>
