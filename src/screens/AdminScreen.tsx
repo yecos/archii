@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { fmtDate, getInitials, statusColor, avatarColor } from '@/lib/helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
 import { ShieldCheck, Loader2, Trash2, Shield, Search, ChevronDown, ChevronRight, CheckCircle2, Star, MessageSquare, RefreshCw, Filter, FileText, Bug, AlertTriangle } from 'lucide-react';
-import { ADMIN_EMAILS, USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
+import { USER_ROLES, ROLE_COLORS, ROLE_ICONS } from '@/lib/types';
 import { getFirebase, getAuthHeaders } from '@/lib/firebase-service';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
