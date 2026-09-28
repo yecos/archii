@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, AuthError } from '@/lib/api-auth';
+import { requireAuth, isPlatformAdminEmail } from '@/lib/api-auth';
 import { getAdminDb } from '@/lib/firebase-admin';
 
 /**
@@ -33,21 +33,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
     }
     const tData = tenantDoc.data()!;
+    const members: string[] = tData.members || [];
+    const superAdmins: string[] = tData.superAdmins || [];
     const isCreator = tData.createdBy === user.uid;
-    const isSuperAdmin = (tData.superAdmins || []).includes(user.uid);
+    const isSuperAdmin = superAdmins.includes(user.uid);
+    const isMember = members.includes(user.uid) || isCreator || isSuperAdmin;
+    const platformAdmin = isPlatformAdminEmail(user.email);
 
-    // Check caller's role in users collection
+    // Director is a tenant-level operational role. Platform Admin comes only
+    // from ADMIN_EMAILS, never from a client-writable Firestore role.
     const callerDoc = await db.collection('users').doc(user.uid).get();
     const callerRole = callerDoc.exists ? (callerDoc.data()?.role || 'Miembro') : 'Miembro';
-    const isAdmin = callerRole === 'Admin' || callerRole === 'Director' || isCreator || isSuperAdmin;
+    const isAuthorized = platformAdmin || (isMember && (callerRole === 'Director' || isCreator || isSuperAdmin));
 
-    if (!isAdmin) {
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Sin permisos para cambiar roles' }, { status: 403 });
     }
 
     // Cannot change own role
     if (targetUid === user.uid && role) {
       return NextResponse.json({ error: 'No puedes cambiar tu propio rol' }, { status: 400 });
+    }
+
+    const targetBelongsToTenant =
+      members.includes(targetUid) ||
+      tData.createdBy === targetUid ||
+      superAdmins.includes(targetUid);
+    if (!targetBelongsToTenant) {
+      return NextResponse.json({ error: 'El usuario no pertenece a este tenant' }, { status: 403 });
     }
 
     // Verify target user exists
