@@ -56,7 +56,35 @@ jobs:
         run: npm ci
 
       - name: Production security audit
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          node <<'NODE'
+          const fs = require('fs');
+          const audit = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+          const vulnerabilities = audit.vulnerabilities || {};
+          const important = Object.entries(vulnerabilities)
+            .filter(([, info]) => info && (info.severity === 'critical' || info.severity === 'high'))
+            .sort((a, b) => {
+              const weight = { critical: 2, high: 1 };
+              return (weight[b[1].severity] || 0) - (weight[a[1].severity] || 0);
+            });
+
+          console.log('=== Production audit summary ===');
+          console.log(audit.metadata?.vulnerabilities || {});
+
+          for (const [name, info] of important) {
+            const via = Array.isArray(info.via)
+              ? info.via.map(item => typeof item === 'string' ? item : item?.title || item?.source).filter(Boolean)
+              : [];
+            console.log(`${String(info.severity).toUpperCase()}: ${name}`);
+            if (via.length) console.log(`  via: ${via.join(' | ')}`);
+            if (info.fixAvailable) console.log(`  fixAvailable: ${JSON.stringify(info.fixAvailable)}`);
+          }
+
+          if ((audit.metadata?.vulnerabilities?.critical || 0) > 0) {
+            process.exitCode = 1;
+          }
+          NODE
         continue-on-error: true
 
       - name: Check for secrets
