@@ -269,8 +269,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const overdueCheckedRef = useRef<string>('');
   // Track first data load to avoid re-notifying existing items
   const firstLoadDoneRef = useRef(false);
-  // Guard: AUTO-FIX 1 only runs once per tenant session
-  const autoFixMembersDoneRef = useRef(false);
   // Track which collections have hydrated at least once
   const collectionsLoadedRef = useRef<Record<string, boolean>>({
     tasks: false, approvals: false, meetings: false,
@@ -593,7 +591,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           // Save user profile
           const ref = db.collection('users').doc(user.uid);
           const snap = await ref.get();
-          const isAdminEmail = adminEmails.includes((user.email || '').toLowerCase());
 
           if (!snap.exists) {
             // ANTI-DUP: Check if another user doc already exists with this email
@@ -717,8 +714,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Listen to active tenant document for members array + verify role in real-time
   useEffect(() => {
     if (!ready || !authUser || !activeTenantId) { setActiveTenantMembers([]); return; }
-    // Reset AUTO-FIX guard when tenant changes
-    autoFixMembersDoneRef.current = false;
     const db = getFirebase().firestore();
     const uid = authUser.uid;
     const unsub = db.collection('tenants').doc(activeTenantId).onSnapshot(snap => {
