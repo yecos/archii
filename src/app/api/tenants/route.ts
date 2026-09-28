@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAuth, AuthError, isPlatformAdminEmail } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
 
 /**
@@ -169,10 +169,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const { action, name, code, tenantId, emails, memberUid, email } = body;
+  const { action, name, code, tenantId, emails, memberUid, email, oldUid } = body;
 
-  if (!action || !["create", "join", "list", "add-members", "remove-member", "delete-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role"].includes(action)) {
-    return NextResponse.json({ error: "Acción inválida. Usa: create, join, list, add-members, remove-member, delete-member, get-members, add-all-users, set-super-admin, fix-my-role" }, { status: 400 });
+  if (!action || !["create", "join", "list", "migrate-my-uid", "add-members", "remove-member", "delete-member", "get-members", "add-all-users", "set-super-admin", "fix-my-role"].includes(action)) {
+    return NextResponse.json({ error: "Acción inválida" }, { status: 400 });
   }
 
   try {
@@ -299,6 +299,74 @@ export async function POST(request: NextRequest) {
         code: tenantData.code,
         role: 'Miembro', // Joined users are always Miembro
       });
+    }
+
+    // ===== MIGRATE MY UID =====
+    // Used when the same person signs in through a different auth provider and
+    // Firebase gives them a new UID. The server verifies the old profile belongs
+    // to the same email before moving tenant membership/ownership.
+    if (action === "migrate-my-uid") {
+      if (!oldUid || typeof oldUid !== "string" || oldUid === user.uid) {
+        return NextResponse.json({ error: "oldUid inválido" }, { status: 400 });
+      }
+
+      const normalizedEmail = (user.email || "").trim().toLowerCase();
+      if (!normalizedEmail) {
+        return NextResponse.json({ error: "El usuario autenticado no tiene email" }, { status: 400 });
+      }
+
+      const oldUserDoc = await db.collection("users").doc(oldUid).get();
+      if (!oldUserDoc.exists) {
+        return NextResponse.json({ error: "Perfil anterior no encontrado" }, { status: 404 });
+      }
+
+      const oldEmail = String(oldUserDoc.data()?.email || "").trim().toLowerCase();
+      if (!oldEmail || oldEmail !== normalizedEmail) {
+        return NextResponse.json({ error: "El perfil anterior no pertenece al usuario autenticado" }, { status: 403 });
+      }
+
+      const tenantDocs = new Map<string, any>();
+      const [memberSnap, superAdminSnap, creatorSnap] = await Promise.all([
+        db.collection("tenants").where("members", "array-contains", oldUid).get(),
+        db.collection("tenants").where("superAdmins", "array-contains", oldUid).get(),
+        db.collection("tenants").where("createdBy", "==", oldUid).get(),
+      ]);
+      for (const doc of [...memberSnap.docs, ...superAdminSnap.docs, ...creatorSnap.docs]) {
+        tenantDocs.set(doc.id, doc);
+      }
+
+      const migrated: string[] = [];
+      for (const [tid, tenantDoc] of tenantDocs.entries()) {
+        const data = tenantDoc.data();
+        const members: string[] = data.members || [];
+        const superAdmins: string[] = data.superAdmins || [];
+        const updates: Record<string, any> = {};
+
+        if (members.includes(oldUid)) {
+          updates.members = [...new Set(members.map((uid: string) => uid === oldUid ? user.uid : uid))];
+        }
+        if (superAdmins.includes(oldUid)) {
+          updates.superAdmins = [...new Set(superAdmins.map((uid: string) => uid === oldUid ? user.uid : uid))];
+        }
+        if (data.createdBy === oldUid) {
+          updates.createdBy = user.uid;
+          if (!updates.members) {
+            updates.members = [...new Set([...members.filter((uid: string) => uid !== oldUid), user.uid])];
+          }
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await db.collection("tenants").doc(tid).update(updates);
+          migrated.push(tid);
+        }
+      }
+
+      await db.collection("users").doc(user.uid).set({
+        lastUid: user.uid,
+        migratedFromUid: oldUid,
+      }, { merge: true });
+
+      return NextResponse.json({ migrated: migrated.length, tenantIds: migrated });
     }
 
     // ===== ADD MEMBERS =====
@@ -497,9 +565,10 @@ export async function POST(request: NextRequest) {
       // Also check if caller has Admin or Director role in the users collection
       const callerDoc = await db.collection("users").doc(user.uid).get();
       const callerRole = callerDoc.exists ? callerDoc.data()?.role || 'Miembro' : 'Miembro';
-      const callerIsAdminOrDirector = callerRole === 'Admin' || callerRole === 'Director';
+      const callerIsPlatformAdmin = isPlatformAdminEmail(user.email);
+      const callerIsDirector = callerRole === 'Director';
 
-      if (!isSuperAdmin && !callerIsAdminOrDirector) {
+      if (!isSuperAdmin && !callerIsPlatformAdmin && !callerIsDirector) {
         return NextResponse.json({ error: "Solo Admin, Director o Super Admin pueden eliminar miembros" }, { status: 403 });
       }
       if (memberUid === user.uid) {
