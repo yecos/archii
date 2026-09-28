@@ -44,3 +44,5 @@ jobs:
           git add package.json package-lock.json
           git commit -m "security: refresh spreadsheet and image dependencies"
           git push origin HEAD:security/tenant-hardening-2026-09
+
+# one-time trigger
