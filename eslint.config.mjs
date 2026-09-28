@@ -18,6 +18,11 @@ const eslintConfig = [
     rules: {
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "prefer-const": "warn",
+      "@next/next/no-sync-scripts": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
       "react/no-unescaped-entities": "off",
       "react-hooks/exhaustive-deps": "warn",
     },
