@@ -317,21 +317,23 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    authUser.getIdToken()
-      .then((token: string) => fetch('/api/admin-emails', {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      }))
-      .then(async res => {
+    const checkPlatformAdmin = async () => {
+      try {
+        const token: string = await authUser.getIdToken();
+        const res: Response = await fetch('/api/admin-emails', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
+
+        const data = await res.json() as { isAdmin?: boolean };
         if (!cancelled) setIsEmailAdmin(data.isAdmin === true);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setIsEmailAdmin(false);
-      });
+      }
+    };
+
+    void checkPlatformAdmin();
 
     return () => { cancelled = true; };
   }, [authUser]);
