@@ -24,11 +24,21 @@ export async function submitFeedback(entry: FeedbackEntry): Promise<string> {
   const app = getFirebase();
   if (!app) throw new Error('Firebase not initialized');
 
+  const tenantId = typeof window !== 'undefined'
+    ? window.localStorage.getItem('archii-active-tenant')
+    : null;
+  if (!tenantId) throw new Error('No hay tenant activo');
+
+  const now = new Date();
   const db = app.firestore();
   const doc = await db.collection(COLLECTION).add({
     ...entry,
+    tenantId,
+    status: 'pending',
+    reviewed: false,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
-    timestamp: new Date(),
+    timestamp: now,
+    createdAt: now,
   });
 
   return doc.id;
