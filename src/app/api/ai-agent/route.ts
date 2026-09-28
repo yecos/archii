@@ -58,7 +58,13 @@ export async function POST(request: NextRequest) {
     const tenantMembers: string[] = tenantData.members || [];
     const tenantSuperAdmins: string[] = tenantData.superAdmins || [];
     const tenantCreatedBy: string = tenantData.createdBy || '';
-    if (!tenantMembers.includes(user.uid) && !tenantSuperAdmins.includes(user.uid)) {
+
+    const hasTenantAccess =
+      tenantMembers.includes(user.uid) ||
+      tenantSuperAdmins.includes(user.uid) ||
+      tenantCreatedBy === user.uid;
+
+    if (!hasTenantAccess) {
       return NextResponse.json({ error: 'No tienes acceso a este espacio de trabajo' }, { status: 403 });
     }
 
