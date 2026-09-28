@@ -612,7 +612,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                   name: existingData.name || user.displayName || (user.email || '').split('@')[0],
                   email: user.email,
                   photoURL: user.photoURL || existingData.photoURL || '',
-                  role: existingData.role === 'Admin' ? 'Miembro' : (existingData.role || 'Miembro'),
+                  role: 'Miembro',
                   createdAt: existingData.createdAt || fb.firestore.FieldValue.serverTimestamp(),
                 });
                 // Migrate tenant membership through the trusted server. The API
