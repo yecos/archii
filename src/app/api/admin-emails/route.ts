@@ -1,18 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, AuthError, isPlatformAdminEmail } from "@/lib/api-auth";
 
 /**
  * GET /api/admin-emails
  *
- * Returns the list of Super Admin emails from the ADMIN_EMAILS env var.
- * Used by the client to gate Super Admin UI without hardcoding emails.
- * This is a public endpoint (no auth required) since admin emails are not
- * secret — they only control which users see the Super Admin panel.
- * The actual admin actions are still protected by requireAdmin() server-side.
+ * Compatibility endpoint that returns only whether the authenticated caller is
+ * a platform Admin. The ADMIN_EMAILS list never leaves the server.
  */
-export async function GET() {
-  const adminEmails: string[] = process.env.ADMIN_EMAILS
-    ? process.env.ADMIN_EMAILS.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
-    : [];
-
-  return NextResponse.json({ adminEmails });
+export async function GET(request: NextRequest) {
+  try {
+    const user = await requireAuth(request);
+    return NextResponse.json({ isAdmin: isPlatformAdminEmail(user.email) });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
+  }
 }
