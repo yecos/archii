@@ -21,16 +21,29 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify tenant membership
-    const { getAdminDb } = await import('@/lib/firebase-admin');
     const db = getAdminDb();
     const tenantDoc = await db.collection('tenants').doc(tenantId).get();
     if (!tenantDoc.exists) {
       return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
     }
     const tData = tenantDoc.data()!;
-    const hasAccess = (tData.members || []).includes(user.uid) || tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
+    const hasAccess =
+      (tData.members || []).includes(user.uid) ||
+      tData.createdBy === user.uid ||
+      (tData.superAdmins || []).includes(user.uid);
+
     if (!hasAccess) {
       return NextResponse.json({ error: 'No tienes acceso a este tenant' }, { status: 403 });
+    }
+
+    // SECURITY: the project itself must belong to the requested tenant.
+    // Admin SDK bypasses Firestore rules, so tenant membership alone is not enough.
+    const projectDoc = await db.collection('projects').doc(projectId).get();
+    if (!projectDoc.exists) {
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 });
+    }
+    if (projectDoc.data()?.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Proyecto no pertenece a este tenant' }, { status: 403 });
     }
 
     const snap = await db.collection('projects').doc(projectId).collection('workPhases')
