@@ -111,12 +111,16 @@ export async function requireAuth(
  * Returns the user on success, or throws an AuthError.
  * Usage: const user = await requireAdmin(request);
  */
+export function isPlatformAdminEmail(email: string | null | undefined): boolean {
+  return Boolean(email && ADMIN_EMAILS.includes(email.trim().toLowerCase()));
+}
+
 export async function requireAdmin(
   request: NextRequest
 ): Promise<AuthUser> {
   const user = await requireAuth(request);
 
-  if (!ADMIN_EMAILS.includes(user.email)) {
+  if (!isPlatformAdminEmail(user.email)) {
     console.warn(
       `[Archii Auth] Non-admin access attempt by ${user.email}`
     );
