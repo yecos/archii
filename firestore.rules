@@ -37,6 +37,20 @@ service cloud.firestore {
         );
     }
 
+    /** Keep optional tenantId fields immutable on update.
+     *  Legacy subcollection documents may not have tenantId; those documents
+     *  must remain without it and inherit tenant scope from their parent. */
+    function tenantIdUnchanged() {
+      return (
+        (!('tenantId' in resource.data) && !('tenantId' in request.resource.data))
+        || (
+          ('tenantId' in resource.data)
+          && ('tenantId' in request.resource.data)
+          && request.resource.data.tenantId == resource.data.tenantId
+        )
+      );
+    }
+
     // ========================================================================
     // USERS — global, not tenant-scoped
     // ========================================================================
@@ -122,10 +136,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -142,10 +158,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -162,10 +180,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -182,10 +202,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -202,10 +224,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -222,10 +246,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -242,10 +268,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -262,10 +290,12 @@ service cloud.firestore {
             ? request.resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
@@ -582,10 +612,12 @@ service cloud.firestore {
           (request.resource.data.tenantId != null && isTenantMember(request.resource.data.tenantId))
           || isTenantMember(get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId)
         );
-        allow update: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
-        );
+        allow update: if isSignedIn()
+          && isTenantMember(
+            resource.data.tenantId != null ? resource.data.tenantId
+              : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
+          )
+          && tenantIdUnchanged();
         allow delete: if isSignedIn() && isTenantMember(
           resource.data.tenantId != null ? resource.data.tenantId
             : get(/databases/$(database)/documents/kanbanBoards/$(boardId)).data.tenantId
