@@ -7,7 +7,7 @@ import { useUIStore } from '@/stores/ui-store';
 import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting, ChangeOrder, Catalog, FieldNote } from '@/lib/types';
 import { ROLE_ICONS } from '@/lib/types';
 
-import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, getPlatform, uniqueId, scrubUndefined } from '@/lib/helpers';
+import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, uniqueId, scrubUndefined } from '@/lib/helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
 
 import { getFirebase, getFirebaseIdToken, type FirebaseUser } from '@/lib/firebase-service';
@@ -2997,6 +2997,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Get platform info for install guide
   const getPlatform = () => {
+    if (typeof navigator === 'undefined') return 'other';
     const ua = navigator.userAgent;
     if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
     if (/Android/.test(ua)) return 'android';
