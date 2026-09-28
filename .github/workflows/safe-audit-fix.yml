@@ -25,7 +25,7 @@ jobs:
           cache: npm
 
       - name: Apply non-breaking npm audit fixes
-        run: npm audit fix
+        run: npm audit fix --package-lock-only || true
 
       - name: Commit safe dependency patches
         run: |
