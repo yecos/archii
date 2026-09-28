@@ -13,7 +13,7 @@ const eslintConfig = [
   {
     ignores: ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/build/**"],
   },
-  ...compat.extends("next/core-web-vitals"),
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
       "@typescript-eslint/no-unused-vars": "warn",
