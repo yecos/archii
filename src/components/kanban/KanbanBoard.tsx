@@ -94,17 +94,17 @@ export default function KanbanBoard({
     // This could be used for visual feedback during drag
   }, []);
 
+  const sortedCards = useMemo(() =>
+    [...cards].sort((a, b) => {
+      const colOrder = columns.findIndex(c => c.id === a.columnId) - columns.findIndex(c => c.id === b.columnId);
+      if (colOrder !== 0) return colOrder;
+      return a.order - b.order;
+    }),
+    [cards, columns]
+  );
+
   // List view rendering
   if (viewMode === 'list') {
-    const sortedCards = useMemo(() =>
-      [...cards].sort((a, b) => {
-        const colOrder = columns.findIndex(c => c.id === a.columnId) - columns.findIndex(c => c.id === b.columnId);
-        if (colOrder !== 0) return colOrder;
-        return a.order - b.order;
-      }),
-      [cards, columns]
-    );
-
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
