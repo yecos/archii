@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, AuthError } from "@/lib/api-auth";
+import { requireAdmin, AuthError, isPlatformAdminEmail } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue, getAdminAuth, isAdminInitialized } from "@/lib/firebase-admin";
 import { getAllFlags, setRuntimeFeatureFlag } from "@/lib/feature-flags";
 import { getDynamicFeatureFlags, invalidateDynamicFeatureFlagCache } from "@/lib/feature-flags-server";
@@ -500,6 +500,7 @@ export async function POST(request: NextRequest) {
           name: data.name || "Sin nombre",
           email: data.email || "",
           role: data.role || "Miembro",
+          isPlatformAdmin: isPlatformAdminEmail(data.email),
           photoURL: data.photoURL || "",
           createdAt: data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000).toISOString() : null,
           tenants: userTenantMap[d.id] || [],
