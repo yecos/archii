@@ -64,6 +64,13 @@ export function VirtualizedList<T>({
   const virtualizationEnabled = useFeatureFlag('virtualized_lists');
   const shouldVirtualize = virtualizationEnabled && items.length > 30;
 
+  const virtualizer = useVirtualizer({
+    count: shouldVirtualize ? items.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => estimateSize + gap,
+    overscan,
+  });
+
   if (!shouldVirtualize) {
     // Fallback: render normal sin virtualización
     return (
@@ -88,13 +95,6 @@ export function VirtualizedList<T>({
       </div>
     );
   }
-
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => estimateSize + gap,
-    overscan,
-  });
 
   const virtualItems = virtualizer.getVirtualItems();
 
