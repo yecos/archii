@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/api-auth";
+import { requireAuth, AuthError, isPlatformAdminEmail } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
 
 /**
@@ -17,8 +17,6 @@ import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
  *   - review-feedback: Marcar feedback como revisado + nota del admin
  */
 
-const ADMIN_ROLES = ["Admin", "Director", "Super Admin"];
-
 export async function POST(request: NextRequest) {
   let user: any;
   try {
@@ -30,26 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Error de autenticación" }, { status: 401 });
   }
 
-  // Verify user has admin role
   const db = getAdminDb();
-  let userRole = user.role || "";
-  if (!ADMIN_ROLES.includes(userRole)) {
-    // Look up role from Firestore as fallback
-    try {
-      const userDoc = await db.collection("users").doc(user.uid).get();
-      if (userDoc.exists) {
-        userRole = userDoc.data()?.role || "";
-      }
-    } catch {
-      // ignore
-    }
-    if (!ADMIN_ROLES.includes(userRole)) {
-      return NextResponse.json(
-        { error: "No autorizado. Se requiere rol de Admin, Director o Super Admin." },
-        { status: 403 }
-      );
-    }
-  }
 
   let body: any;
   try {
@@ -58,7 +37,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const { action } = body;
+  const { action, tenantId } = body;
+  if (!tenantId || typeof tenantId !== "string") {
+    return NextResponse.json({ error: "tenantId requerido" }, { status: 400 });
+  }
+
+  // Admin data is tenant-scoped. Platform admins may inspect any tenant;
+  // everyone else must both belong to the tenant and hold a trusted tenant role.
+  const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+  if (!tenantDoc.exists) {
+    return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+  }
+  const tenantData = tenantDoc.data()!;
+  const isMember =
+    (tenantData.members || []).includes(user.uid) ||
+    tenantData.createdBy === user.uid ||
+    (tenantData.superAdmins || []).includes(user.uid);
+  const isTenantSuperAdmin =
+    tenantData.createdBy === user.uid ||
+    (tenantData.superAdmins || []).includes(user.uid);
+  const platformAdmin = isPlatformAdminEmail(user.email);
+
+  let callerRole = "";
+  try {
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (userDoc.exists) callerRole = userDoc.data()?.role || "";
+  } catch {
+    // deny below unless another trusted admin condition is satisfied
+  }
+
+  if (!platformAdmin && (!isMember || (!isTenantSuperAdmin && callerRole !== "Director"))) {
+    return NextResponse.json(
+      { error: "No autorizado para administrar este tenant." },
+      { status: 403 }
+    );
+  }
 
   const validActions = [
     "audit-logs",
@@ -81,17 +94,12 @@ export async function POST(request: NextRequest) {
     // ===== AUDIT LOGS =====
     if (action === "audit-logs") {
       const {
-        tenantId,
         collection: filterCollection,
         filterAction,
         userId: filterUserId,
         page = 1,
         pageSize = 20,
       } = body;
-
-      if (!tenantId) {
-        return NextResponse.json({ error: "tenantId requerido" }, { status: 400 });
-      }
 
       let query: any = db
         .collection("audit_logs")
@@ -171,7 +179,9 @@ export async function POST(request: NextRequest) {
     if (action === "error-reports") {
       const { resolved, page = 1, pageSize = 20 } = body;
 
-      let query = db.collection("error_reports").orderBy("timestamp", "desc");
+      let query = db.collection("error_reports")
+        .where("tenantId", "==", tenantId)
+        .orderBy("timestamp", "desc");
 
       // Filter by resolved status if specified
       if (resolved !== undefined) {
@@ -229,8 +239,8 @@ export async function POST(request: NextRequest) {
       let unresolvedCount = 0;
       try {
         const [totalSnap, unresolvedSnap] = await Promise.all([
-          db.collection("error_reports").count().get(),
-          db.collection("error_reports").where("resolved", "==", false).count().get(),
+          db.collection("error_reports").where("tenantId", "==", tenantId).count().get(),
+          db.collection("error_reports").where("tenantId", "==", tenantId).where("resolved", "==", false).count().get(),
         ]);
         totalCount = totalSnap.data().count;
         unresolvedCount = unresolvedSnap.data().count;
@@ -253,7 +263,9 @@ export async function POST(request: NextRequest) {
     if (action === "beta-feedback") {
       const { category, page = 1, pageSize = 20 } = body;
 
-      let query = db.collection("beta_feedback").orderBy("timestamp", "desc");
+      let query = db.collection("beta_feedback")
+        .where("tenantId", "==", tenantId)
+        .orderBy("timestamp", "desc");
 
       if (category) {
         query = query.where("category", "==", category);
@@ -280,8 +292,8 @@ export async function POST(request: NextRequest) {
       let reviewedCount = 0;
       try {
         const [totalSnap, reviewedSnap] = await Promise.all([
-          db.collection("beta_feedback").count().get(),
-          db.collection("beta_feedback").where("reviewed", "==", true).count().get(),
+          db.collection("beta_feedback").where("tenantId", "==", tenantId).count().get(),
+          db.collection("beta_feedback").where("tenantId", "==", tenantId).where("reviewed", "==", true).count().get(),
         ]);
         totalCount = totalSnap.data().count;
         reviewedCount = reviewedSnap.data().count;
@@ -318,6 +330,9 @@ export async function POST(request: NextRequest) {
       if (!errorDoc.exists) {
         return NextResponse.json({ error: "Error report no encontrado" }, { status: 404 });
       }
+      if (errorDoc.data()?.tenantId !== tenantId) {
+        return NextResponse.json({ error: "Error report no pertenece a este tenant" }, { status: 403 });
+      }
 
       await db.collection("error_reports").doc(errorId).update({
         resolved: true,
@@ -338,6 +353,9 @@ export async function POST(request: NextRequest) {
       const feedbackDoc = await db.collection("beta_feedback").doc(feedbackId).get();
       if (!feedbackDoc.exists) {
         return NextResponse.json({ error: "Feedback no encontrado" }, { status: 404 });
+      }
+      if (feedbackDoc.data()?.tenantId !== tenantId) {
+        return NextResponse.json({ error: "Feedback no pertenece a este tenant" }, { status: 403 });
       }
 
       const updates: Record<string, any> = {
