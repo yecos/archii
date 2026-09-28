@@ -30,13 +30,13 @@ jobs:
       - name: Run ESLint
         run: npx next lint
 
+      - name: Check TypeScript
+        run: npx tsc --noEmit --pretty false
+
       - name: Build
         run: npx next build
         env:
           NODE_ENV: production
-
-      - name: Check TypeScript
-        run: npx tsc --noEmit --pretty
 
   security-audit:
     runs-on: ubuntu-latest
