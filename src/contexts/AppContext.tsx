@@ -612,35 +612,35 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                   name: existingData.name || user.displayName || (user.email || '').split('@')[0],
                   email: user.email,
                   photoURL: user.photoURL || existingData.photoURL || '',
-                  role: existingData.role || (isAdminEmail ? 'Admin' : 'Miembro'),
+                  role: existingData.role === 'Admin' ? 'Miembro' : (existingData.role || 'Miembro'),
                   createdAt: existingData.createdAt || fb.firestore.FieldValue.serverTimestamp(),
                 });
-                // Now migrate tenant memberships from old UID to new UID
-                const allTenants = await db.collection('tenants').get();
-                for (const tenantDoc of allTenants.docs) {
-                  const tData = tenantDoc.data();
-                  const members: string[] = tData.members || [];
-                  const superAdmins: string[] = tData.superAdmins || [];
-                  const tenantUpdates: Record<string, any> = {};
-                  if (members.includes(existingDoc.id) && !members.includes(user.uid)) {
-                    tenantUpdates.members = fb.firestore.FieldValue.arrayUnion(user.uid);
+                // Migrate tenant membership through the trusted server. The API
+                // verifies that the previous profile belongs to the same email
+                // before moving membership, super-admin status or ownership.
+                try {
+                  const token = await user.getIdToken();
+                  const migrateRes = await fetch('/api/tenants', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'migrate-my-uid', oldUid: existingDoc.id }),
+                  });
+                  if (!migrateRes.ok) {
+                    const migrateData = await migrateRes.json().catch(() => ({}));
+                    console.warn('[Archii Auth] UID tenant migration failed:', migrateData?.error || migrateRes.status);
                   }
-                  // Also migrate Super Admin role if the old UID was Super Admin
-                  if (superAdmins.includes(existingDoc.id) && !superAdmins.includes(user.uid)) {
-                    tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
-
-                  }
-                  if (Object.keys(tenantUpdates).length > 0) {
-                    await db.collection('tenants').doc(tenantDoc.id).update(tenantUpdates);
-
-                  }
+                } catch (migrationErr) {
+                  console.warn('[Archii Auth] UID tenant migration failed:', migrationErr);
                 }
               } else {
-                await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+                await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
               }
             } catch (_dupErr) {
               // Duplicate check failed, creating user doc anyway
-              await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: isAdminEmail ? 'Admin' : 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
+              await ref.set({ name: user.displayName || (user.email || '').split('@')[0], email: user.email, photoURL: user.photoURL || '', role: 'Miembro', createdAt: fb.firestore.FieldValue.serverTimestamp() });
             }
           } else {
             // Existing user: sync photoURL and name from auth provider on every login
@@ -654,10 +654,6 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             }
             if ((user.displayName || '') && (user.displayName || '') !== (existing.name || '')) {
               updates.name = user.displayName;
-            }
-            if (isAdminEmail && existing.role !== 'Admin') {
-              updates.role = 'Admin';
-
             }
             if (Object.keys(updates).length > 0) {
               await ref.update(updates);
@@ -680,36 +676,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
                 if (tenantDoc.exists) {
                   const tData = tenantDoc.data();
                   const members: string[] = tData.members || [];
-                  // Check if user is member by ANY UID (current or stored in user doc)
+                  // Only the tenant document is authoritative for membership and
+                  // Super Admin status. Saved user preferences must never grant access.
                   const isMember = members.includes(user.uid);
-                  const wasMemberWithOldUid = userData?.lastUid && members.includes(userData.lastUid) && userData.lastUid !== user.uid;
-                  if (isMember || wasMemberWithOldUid) {
-                    // If user has a new UID but was member with old UID, add new UID
-                    if (wasMemberWithOldUid && !isMember) {
-                      const tenantUpdates: Record<string, any> = { members: fb.firestore.FieldValue.arrayUnion(user.uid) };
-                      // Also migrate Super Admin
-                      const superAdmins: string[] = tData.superAdmins || [];
-                      if (superAdmins.includes(userData.lastUid) && !superAdmins.includes(user.uid)) {
-                        tenantUpdates.superAdmins = fb.firestore.FieldValue.arrayUnion(user.uid);
-                      }
-                      await db.collection('tenants').doc(fsDefaultTenantId).update(tenantUpdates);
-
-                    }
-                    // Determine role — trust saved defaultTenantRole first, then verify on tenant doc
-                    let role = 'Miembro';
-                    if (userData.defaultTenantRole === 'Super Admin') {
-                      role = 'Super Admin';
-                      // Ensure the Super Admin role is in the tenant doc too
-                      const superAdmins: string[] = tData.superAdmins || [];
-                      if (!superAdmins.includes(user.uid)) {
-                        await db.collection('tenants').doc(fsDefaultTenantId).update({
-                          superAdmins: fb.firestore.FieldValue.arrayUnion(user.uid),
-                        });
-
-                      }
-                    } else if (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid)) {
-                      role = 'Super Admin';
-                    }
+                  if (isMember) {
+                    const role = (tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid))
+                      ? 'Super Admin'
+                      : 'Miembro';
                     const tenantName = userData.defaultTenantName || tData.name || fsDefaultTenantId;
 
                     setActiveTenantId(fsDefaultTenantId);
@@ -774,40 +747,8 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           return realRole;
         });
 
-        // AUTO-FIX 1: Super Admin exists in superAdmins but missing from members → add to members.
-        // Firestore rules check members array for access, so this mismatch causes permission denied.
-        // Only runs once per tenant session to avoid unnecessary writes on every snapshot.
-        if (isSuperAdmin && !members.includes(uid) && !autoFixMembersDoneRef.current) {
-          autoFixMembersDoneRef.current = true;
-          db.collection('tenants').doc(activeTenantId).update({
-            members: getFirebase().firestore.FieldValue.arrayUnion(uid),
-          }).catch(err => {
-            console.error('[Archii Team] AUTO-FIX members failed:', err);
-          });
-        }
-
-        // AUTO-FIX 2: If user was previously Super Admin (stored in user doc) but tenant doesn't reflect it,
-        // automatically add to superAdmins + members arrays. This handles UID changes from auth provider switches.
-        if (!isSuperAdmin) {
-          db.collection('users').doc(uid).get().then(userDoc => {
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              if (userData?.defaultTenantRole === 'Super Admin' && userData?.defaultTenantId === activeTenantId) {
-
-                db.collection('tenants').doc(activeTenantId).update({
-                  superAdmins: getFirebase().firestore.FieldValue.arrayUnion(uid),
-                  members: getFirebase().firestore.FieldValue.arrayUnion(uid),
-                }).then(() => {
-
-                  localStorage.setItem('archii-active-tenant-role', 'Super Admin');
-                  db.collection('users').doc(uid).update({ defaultTenantRole: 'Super Admin' });
-                }).catch(err => {
-                  console.error('[Archii Team] AUTO-FIX failed:', err);
-                });
-              }
-            }
-          }).catch(() => {});
-        }
+        // Membership/role repair is intentionally server-side. The client only
+        // observes the tenant document and never grants itself membership or roles.
       } else {
 
         setActiveTenantMembers([]);
@@ -1972,8 +1913,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   // Get current user's role
   const getMyRole = () => {
     if (!authUser) return 'Miembro';
+    if (adminEmails.includes((authUser.email || '').toLowerCase())) return 'Admin';
     const me = teamUsers.find(u => u.id === authUser.uid);
-    return me?.data?.role || 'Miembro';
+    return me?.data?.role === 'Admin' ? 'Miembro' : (me?.data?.role || 'Miembro');
   };
 
   // Filter projects based on company (Admin/Director see all, others see their company only)
