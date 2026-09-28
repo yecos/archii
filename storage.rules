@@ -9,11 +9,11 @@ service firebase.storage {
                    && request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.members;
     }
 
-    // Public read for all tenant images (for carnet photos, logos, etc.)
+    // All other tenant files are private to tenant members.
+    // Public assets must live under the explicit carnet-templates path above.
     match /tenants/{tenantId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-                   && request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.members;
+      allow read, write: if request.auth != null
+                         && request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)).data.members;
     }
 
     // Default: deny all
