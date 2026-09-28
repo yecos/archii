@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb, getAdminFieldValue } from "@/lib/firebase-admin";
+import { verifyTenantMembership } from "@/lib/tenant-utils";
 
 /**
  * POST /api/carnets
@@ -88,6 +89,17 @@ export async function POST(request: NextRequest) {
   try {
     const db = getAdminDb();
     const FieldValue = getAdminFieldValue();
+
+    // Every authenticated carnet action is tenant-scoped. The Admin SDK bypasses
+    // Firestore Security Rules, so membership must be verified explicitly here.
+    const requestedTenantId = body.tenantId;
+    if (!requestedTenantId) {
+      return NextResponse.json({ error: "tenantId requerido" }, { status: 400 });
+    }
+    const isMember = await verifyTenantMembership(user.uid, requestedTenantId);
+    if (!isMember) {
+      return NextResponse.json({ error: "No tienes acceso a este tenant" }, { status: 403 });
+    }
 
     // ===== LIST — Carnets for tenant (optionally includes stats to avoid extra API call) =====
     if (action === "list") {
