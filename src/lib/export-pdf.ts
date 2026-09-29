@@ -4,8 +4,8 @@
  * Archii v2.0 — Todos los reportes en PDF.
  */
 
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import { autoTable } from 'jspdf-autotable';
 import { fmtCOP, fmtDate, fmtDuration } from './helpers';
 import { isOverdue as checkOverdue } from './kanban-helpers';
 
