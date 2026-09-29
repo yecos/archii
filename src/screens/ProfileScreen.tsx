@@ -30,7 +30,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: { open: bo
 // ─── Export Profile PDF ─────────────────────────────────
 async function exportProfilePDF(data: { name: string; email: string; role: string; totalTasks: number; completed: number; pending: number; inProgress: number; compliance: number; overdue: number; totalProjects: number; totalHours: number; totalExpenses: number; rfis: number; submittals: number; punchItems: number }) {
   try {
-    const { default: jsPDF } = await import('jspdf');
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
     let y = 18;
