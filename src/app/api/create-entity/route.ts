@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth, isAdminInitialized } from '@/lib/firebase-admin';
+import { isPlatformAdminEmail } from '@/lib/api-auth';
 
 /**
  * POST /api/create-entity
@@ -24,9 +25,11 @@ export async function POST(request: NextRequest) {
     const token = authHeader.split('Bearer ')[1];
     const auth = getAdminAuth();
     let uid: string;
+    let userEmail = '';
     try {
       const decoded = await auth.verifyIdToken(token);
       uid = decoded.uid;
+      userEmail = decoded.email || '';
     } catch (tokenErr: any) {
       console.error('[Archii] create-entity: Token verification failed —', tokenErr?.message || String(tokenErr));
       return NextResponse.json({ error: 'Token inválido o expirado. Recarga la página e intenta de nuevo.' }, { status: 401 });
@@ -66,15 +69,33 @@ export async function POST(request: NextRequest) {
     const tenantData = tenantDoc.data()!;
     const members: string[] = tenantData.members || [];
     const superAdmins: string[] = tenantData.superAdmins || [];
-    const isTenantMember = members.includes(uid) || tenantData.createdBy === uid || superAdmins.includes(uid);
-    if (!isTenantMember) {
+    const isCreator = tenantData.createdBy === uid;
+    const isTenantSuperAdmin = isCreator || superAdmins.includes(uid);
+    const isTenantMember = members.includes(uid) || isTenantSuperAdmin;
+    const platformAdmin = isPlatformAdminEmail(userEmail);
+
+    if (!isTenantMember && !platformAdmin) {
       return NextResponse.json({ error: 'No eres miembro de este espacio de trabajo' }, { status: 403 });
     }
+
+    const callerDoc = await db.collection('users').doc(uid).get();
+    const storedRole = callerDoc.exists ? (callerDoc.data()?.role || 'Miembro') : 'Miembro';
+    const effectiveRole = platformAdmin
+      ? 'Admin'
+      : isTenantSuperAdmin
+        ? 'Super Admin'
+        : storedRole === 'Admin'
+          ? 'Miembro'
+          : storedRole;
 
     const now = new Date().toISOString();
 
     // ─── CREATE PROJECT ───
     if (type === 'project') {
+      const canCreateProject = ['Admin', 'Super Admin', 'Director', 'Arquitecto'].includes(effectiveRole);
+      if (!canCreateProject) {
+        return NextResponse.json({ error: 'Tu rol no permite crear proyectos' }, { status: 403 });
+      }
       if (!data?.name?.trim()) {
         return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
       }
