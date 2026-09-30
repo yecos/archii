@@ -41,7 +41,7 @@ cp "$SRC" "$BRIDGE_PY"
 chmod 700 "$BRIDGE_PY"
 python -m py_compile "$BRIDGE_PY"
 
-if [ ! -f "$ENV_FILE" ]; then
+if [ ! -f "$ENV_FILE" ] || [ -z "$(cut -d "'" -f2 "$ENV_FILE" | head -n1)" ]; then
   TOKEN="$(python - <<'PY'
 import secrets
 print(secrets.token_urlsafe(48))
@@ -71,7 +71,9 @@ PY="$BASE/bin/s10-nas-bridge.py"
 
 [ -f "$ENV_FILE" ] || { echo "Bridge config missing"; exit 1; }
 # shellcheck disable=SC1090
+set -a
 source "$ENV_FILE"
+set +a
 
 if [ -f "$PID_FILE" ]; then
   PID="$(cat "$PID_FILE" 2>/dev/null || true)"
