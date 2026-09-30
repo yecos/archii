@@ -55,6 +55,7 @@ export default function ProjectsScreen() {
         onExportExcel={handleExportExcel}
         onExportCSV={data.exportCSV}
         handleNewProject={data.handleNewProject}
+        canCreateProject={data.canCreateProject}
       />
 
       {/* ===== SEARCH + FILTERS ===== */}
@@ -176,11 +177,13 @@ export default function ProjectsScreen() {
           getProjectSpent={data.getProjectSpent}
           getDaysRemaining={data.getDaysRemaining}
           today={data.today}
+          canEditProject={data.canEditProject}
+          canDeleteProject={data.canDeleteProject}
         />
       )}
 
       {/* ===== MOBILE FAB ===== */}
-      <FloatingActionButton onClick={data.handleNewProject} ariaLabel="Nuevo proyecto" />
+      {data.canCreateProject && <FloatingActionButton onClick={data.handleNewProject} ariaLabel="Nuevo proyecto" />}
 
       {/* ===== BATCH ACTION BAR ===== */}
       {data.selectedIds.size > 0 && (
@@ -190,6 +193,7 @@ export default function ProjectsScreen() {
           onExportPDF={data.batchExportPDF}
           onExportCSV={data.batchExportCSV}
           onStatusChange={data.batchChangeStatus}
+          canEditProject={data.canEditProject}
         />
       )}
 
