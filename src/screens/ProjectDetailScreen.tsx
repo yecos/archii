@@ -7,7 +7,8 @@ import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
 import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send, ChevronLeft, X, Pencil, Eye, Trash2, Download, XCircle } from 'lucide-react';
-import { PROJECT_TYPE_COLORS, EXPENSE_CATS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
+import { PROJECT_TYPE_COLORS, EXPENSE_CATS, DEFAULT_ROLE_PERMS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
+import { updateProjectFields } from '@/lib/firestore-actions';
 import { SkeletonFileList } from '@/components/ui/SkeletonLoaders';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -38,9 +39,13 @@ export default function ProjectDetailScreen() {
     rfis, submittals, punchItems, changeTaskStatus, showToast,
     getPhaseName,
     comments, commentText, setCommentText, replyingTo, setReplyingTo,
-    authUser, teamUsers, activeTenantId,
+    authUser, teamUsers, activeTenantId, activeTenantRole, getMyRole,
   } = useApp();
   const { timeEntries } = useTimeTrackingContext();
+
+  const effectiveProjectRole = activeTenantRole === 'Super Admin' ? 'Super Admin' : getMyRole();
+  const canEditProject = effectiveProjectRole === 'Super Admin'
+    || (DEFAULT_ROLE_PERMS['Editar proyectos'] || []).includes(effectiveProjectRole);
 
   // Computed values
   const today = new Date().toISOString().split('T')[0];
@@ -71,20 +76,17 @@ export default function ProjectDetailScreen() {
       )
     : (currentProject?.data.progress || 0);
 
-  // Auto-sync computed progress to Firestore
+  // Auto-sync computed progress only for roles allowed to edit projects.
   const lastSyncedProgress = useRef<number | null>(null);
   useEffect(() => {
-    if (enabledPhases.length === 0) return; // No phases — use manual value
-    if (!selectedProjectId) return;
+    if (!canEditProject || enabledPhases.length === 0) return;
+    if (!selectedProjectId || !activeTenantId) return;
     const current = currentProject?.data.progress ?? 0;
     if (computedProgress !== current && computedProgress !== lastSyncedProgress.current) {
       lastSyncedProgress.current = computedProgress;
-      getFirebase().firestore().collection('projects').doc(selectedProjectId).update({
-        progress: computedProgress,
-        updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
-      }).catch(() => {});
+      updateProjectFields(selectedProjectId, { progress: computedProgress }, activeTenantId).catch(() => {});
     }
-  }, [computedProgress, selectedProjectId, currentProject?.data.progress, enabledPhases.length]);
+  }, [canEditProject, computedProgress, selectedProjectId, activeTenantId, currentProject?.data.progress, enabledPhases.length]);
 
   // Progress edit state
   const [editingProgress, setEditingProgress] = useState(false);
@@ -181,9 +183,11 @@ export default function ProjectDetailScreen() {
                     <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true"/>
                     Volver
                   </button>
-                  <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity" onClick={() => openEditProject(currentProject)}>
-                    ✏️ Editar proyecto
-                  </button>
+                  {canEditProject && (
+                    <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:opacity-90 transition-opacity" onClick={() => openEditProject(currentProject)}>
+                      ✏️ Editar proyecto
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
@@ -200,11 +204,13 @@ export default function ProjectDetailScreen() {
                     onBlur={() => setEditingProgress(false)}
                     onKeyDown={e => { if (e.key === 'Enter') setEditingProgress(false); }}
                   />
-                ) : (
+                ) : canEditProject ? (
                   <button className="flex items-center gap-1 text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer bg-transparent border-none" onClick={() => setEditingProgress(true)}>
                     {currentProject.data.progress || 0}%
                     <Pencil className="w-3 h-3 ml-0.5" aria-hidden="true"/>
                   </button>
+                ) : (
+                  <span className="text-sm font-medium text-[var(--muted-foreground)]">{currentProject.data.progress || 0}%</span>
                 )}
               </div>
             </div>
