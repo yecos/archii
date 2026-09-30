@@ -289,11 +289,16 @@ class Handler(BaseHTTPRequestHandler):
             parsed, params = self._params()
 
             if parsed.path == "/health":
-                status, _, _ = _dav_request("OPTIONS", WEBDAV_BASE + "/")
+                status, _, _ = _dav_request(
+                    "PROPFIND",
+                    WEBDAV_BASE + _encode_path(PROJECTS_ROOT),
+                    body=b'<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:allprop/></d:propfind>',
+                    headers={"Depth": "0", "Content-Type": "application/xml; charset=utf-8"},
+                )
                 self._send_json(
-                    200 if status == 200 else 503,
+                    200 if status == 207 else 503,
                     {
-                        "ok": status == 200,
+                        "ok": status == 207,
                         "backend": "S10-NAS",
                         "webdav": status,
                         "root": PROJECTS_ROOT,
