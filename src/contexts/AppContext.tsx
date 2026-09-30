@@ -2042,8 +2042,14 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   const updateProjectProgress = async (val: number) => {
-    if (!selectedProjectId) return;
-    try { await getFirebase().firestore().collection('projects').doc(selectedProjectId).update({ progress: val, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }); showToast(`Progreso: ${val}%`); } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
+    if (!selectedProjectId || !activeTenantId) return;
+    try {
+      await fbActions.updateProjectFields(selectedProjectId, { progress: val }, activeTenantId);
+      showToast(`Progreso: ${val}%`);
+    } catch (err) {
+      console.error('[Archii] updateProjectProgress:', err);
+      showToast(err instanceof Error ? err.message : 'Error al actualizar progreso', 'error');
+    }
   };
 
   const updateUserName = async (newName: string) => {
