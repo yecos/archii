@@ -1974,32 +1974,27 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   };
 
   const deleteProject = async (id: string) => {
-    // Validate tenant ownership before deleting
     const proj = projects.find(p => p.id === id);
-    if (proj && activeTenantId && proj.data.tenantId && proj.data.tenantId !== activeTenantId) {
+    const projectTenantId = proj?.data.tenantId || activeTenantId;
+
+    if (!projectTenantId) {
+      showToast('No se pudo determinar el espacio de trabajo del proyecto', 'error');
+      return;
+    }
+
+    if (activeTenantId && proj?.data.tenantId && proj.data.tenantId !== activeTenantId) {
       showToast('Error: proyecto no pertenece a tu espacio', 'error');
       return;
     }
-    const projectData = proj ? { ...proj.data } : null;
+
     try {
-      await getFirebase().firestore().collection('projects').doc(id).delete();
-      if (projectData) {
-        toast.success('Proyecto eliminado', {
-          duration: 5000,
-          action: {
-            label: 'Deshacer',
-            onClick: async () => {
-              try {
-                await getFirebase().firestore().collection('projects').doc(id).set(scrubUndefined({ ...projectData, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }));
-                toast.success('Proyecto restaurado');
-              } catch (err) { console.error('[Archii] undo deleteProject:', err); toast.error('Error al restaurar'); }
-            },
-          },
-        });
-      } else {
-        showToast('Proyecto eliminado');
-      }
-    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
+      // Always delete through the server-side Admin SDK route. This is required
+      // for platform admins that can manage a tenant without being in tenant.members,
+      // and it also performs the project cascade cleanup.
+      await fbActions.deleteProject(id, showToast, projectTenantId);
+    } catch (err) {
+      console.error('[Archii] deleteProject:', err);
+    }
   };
 
   const openEditProject = (p: Project) => {
