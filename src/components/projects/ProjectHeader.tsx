@@ -16,6 +16,7 @@ export interface ProjectHeaderProps {
   onExportExcel: () => void;
   onExportCSV: () => void;
   handleNewProject: () => void;
+  canCreateProject: boolean;
 }
 
 export default function ProjectHeader({
@@ -30,6 +31,7 @@ export default function ProjectHeader({
   onExportExcel,
   onExportCSV,
   handleNewProject,
+  canCreateProject,
 }: ProjectHeaderProps) {
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
@@ -87,12 +89,14 @@ export default function ProjectHeader({
         >
           <Download size={14} aria-hidden="true"/> CSV
         </button>
-        <button
-          className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
-          onClick={handleNewProject}
-        >
-          <Plus size={15} aria-hidden="true"/> Nuevo proyecto
-        </button>
+        {canCreateProject && (
+          <button
+            className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors"
+            onClick={handleNewProject}
+          >
+            <Plus size={15} aria-hidden="true"/> Nuevo proyecto
+          </button>
+        )}
       </div>
     </div>
   );
