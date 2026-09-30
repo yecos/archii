@@ -22,6 +22,8 @@ export interface ProjectCardsProps {
   getProjectSpent: (projectId: string) => number;
   getDaysRemaining: (endDate: string) => number | null;
   today: string;
+  canEditProject: boolean;
+  canDeleteProject: boolean;
 }
 
 export default function ProjectCards({
@@ -37,6 +39,8 @@ export default function ProjectCards({
   getProjectStats,
   getProjectSpent,
   getDaysRemaining,
+  canEditProject,
+  canDeleteProject,
 }: ProjectCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -89,21 +93,29 @@ export default function ProjectCards({
                 </span>
               </div>
               {/* Desktop edit/delete */}
-              <div className="hidden md:flex gap-1.5" onClick={e => e.stopPropagation()}>
-                <button aria-label="Editar proyecto" className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}><Pencil size={13} aria-hidden="true"/></button>
-                <button aria-label="Eliminar proyecto" className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={async () => { if (await confirmDialog.confirm({ title: 'Eliminar proyecto', description: `¿Estás seguro de eliminar "${d.name}"? Esta acción no se puede deshacer.` })) deleteProject(p.id); }}><Trash2 size={13} aria-hidden="true"/></button>
-              </div>
+              {(canEditProject || canDeleteProject) && (
+                <div className="hidden md:flex gap-1.5" onClick={e => e.stopPropagation()}>
+                  {canEditProject && (
+                    <button aria-label="Editar proyecto" className="px-2.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer hover:bg-[var(--af-bg3)]" onClick={() => openEditProject(p)}><Pencil size={13} aria-hidden="true"/></button>
+                  )}
+                  {canDeleteProject && (
+                    <button aria-label="Eliminar proyecto" className="px-2.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20" onClick={async () => { if (await confirmDialog.confirm({ title: 'Eliminar proyecto', description: `¿Estás seguro de eliminar "${d.name}"? Esta acción no se puede deshacer.` })) deleteProject(p.id); }}><Trash2 size={13} aria-hidden="true"/></button>
+                  )}
+                </div>
+              )}
               {/* Mobile overflow */}
-              <div className="md:hidden" onClick={e => e.stopPropagation()}>
-                <OverflowMenu
-                  actions={[
-                    { label: 'Editar proyecto', icon: <Pencil size={14} aria-hidden="true"/>, onClick: () => openEditProject(p) },
-                    { label: 'Eliminar proyecto', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirmDialog.confirm({ title: 'Eliminar proyecto', description: `¿Estás seguro de eliminar "${d.name}"?` })) deleteProject(p.id); }, variant: 'danger', separator: true },
-                  ]}
-                  side="left"
-                  align="end"
-                />
-              </div>
+              {(canEditProject || canDeleteProject) && (
+                <div className="md:hidden" onClick={e => e.stopPropagation()}>
+                  <OverflowMenu
+                    actions={[
+                      ...(canEditProject ? [{ label: 'Editar proyecto', icon: <Pencil size={14} aria-hidden="true"/>, onClick: () => openEditProject(p) }] : []),
+                      ...(canDeleteProject ? [{ label: 'Eliminar proyecto', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirmDialog.confirm({ title: 'Eliminar proyecto', description: `¿Estás seguro de eliminar "${d.name}"?` })) deleteProject(p.id); }, variant: 'danger' as const, separator: true }] : []),
+                    ]}
+                    side="left"
+                    align="end"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Project name */}
