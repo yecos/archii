@@ -129,107 +129,78 @@ async function serverCreateProject(data: Record<string, any>, tenantId: string |
   return { id: result.id };
 }
 
-/** Server-side project update via Admin SDK (bypasses Firestore rules) */
+/** Server-side project update via Admin SDK (bypasses client Firestore rules). */
 async function serverUpdateProject(projectId: string, data: Record<string, any>, tenantId: string | null): Promise<void> {
   const token = await getFirebaseIdToken();
   if (!token) throw new Error('No hay token de autenticación');
-  // Use the update-entity API (or patch via create-entity with editingId)
-  const fb = getFirebase();
-  const db = fb.firestore();
-  const ts = fb.firestore.FieldValue.serverTimestamp();
-  const projData: Record<string, any> = scrubUndefined({
-    name: data.projName,
-    status: data.projStatus || 'Concepto',
-    client: data.projClient || '',
-    location: data.projLocation || '',
-    budget: Number(data.projBudget) || 0,
-    description: data.projDesc || '',
-    startDate: data.projStart || '',
-    endDate: data.projEnd || '',
-    companyId: data.projCompany || '',
-    projectType: data.projType || 'Ejecución',
-    updatedAt: ts,
-    updatedBy: data._authUid || '',
+  if (!tenantId) throw new Error('No hay espacio de trabajo activo');
+
+  const res = await fetch('/api/update-entity', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'project',
+      id: projectId,
+      tenantId,
+      data: {
+        name: data.projName,
+        status: data.projStatus || 'Concepto',
+        client: data.projClient || '',
+        location: data.projLocation || '',
+        budget: Number(data.projBudget) || 0,
+        description: data.projDesc || '',
+        startDate: data.projStart || '',
+        endDate: data.projEnd || '',
+        companyId: data.projCompany || '',
+        projectType: data.projType || 'Ejecución',
+        enabledPhases: data.enabledPhases || [],
+      },
+    }),
   });
-  // Try direct update first, fallback would need another API endpoint
-  await db.collection('projects').doc(projectId).update(projData);
-  if (data.projType && data._prevType && data.projType !== data._prevType) {
-    await initPhasesForProject(db, projectId, data.projType, data.enabledPhases || [], ts, tenantId);
-  }
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || `Error ${res.status}`);
+}
+
+/**
+ * Update a limited set of project fields through the trusted server route.
+ * Used by batch/status operations that should obey the same role policy.
+ */
+export async function updateProjectFields(
+  projectId: string,
+  fields: Record<string, any>,
+  tenantId: string | null,
+): Promise<void> {
+  const token = await getFirebaseIdToken();
+  if (!token) throw new Error('No hay token de autenticación');
+  if (!tenantId) throw new Error('No hay espacio de trabajo activo');
+
+  const res = await fetch('/api/update-entity', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'project', id: projectId, tenantId, data: fields }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || `Error ${res.status}`);
 }
 
 export function saveProject(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
   return fbAction('guardar proyecto', async () => {
     requireAuth(authUser, 'guardar proyecto');
+    if (!tenantId) throw new Error('No hay espacio de trabajo activo');
 
-    // Dedup guard: prevent double-creation (e.g., offline write queued + user retries)
     const dedupKey = `project:${editingId || 'new'}:${(data.projName || '').trim().toLowerCase()}:${tenantId}`;
     if (!dedupStart(dedupKey)) {
-      showToast('Proyecto ya se está creando, espera un momento', 'error');
+      showToast('Proyecto ya se está guardando, espera un momento', 'error');
       return;
     }
 
     try {
-      const fb = getFirebase();
-      const db = fb.firestore();
-      const ts = fb.firestore.FieldValue.serverTimestamp();
-
       if (editingId) {
-        // UPDATE existing project
-        const projData: Record<string, any> = scrubUndefined({
-          name: data.projName,
-          status: data.projStatus || 'Concepto',
-          client: data.projClient || '',
-          location: data.projLocation || '',
-          budget: Number(data.projBudget) || 0,
-          description: data.projDesc || '',
-          startDate: data.projStart || '',
-          endDate: data.projEnd || '',
-          companyId: data.projCompany || '',
-          projectType: data.projType || 'Ejecución',
-          updatedAt: ts,
-          updatedBy: authUser?.uid || '',
-        });
-        await db.collection('projects').doc(editingId).update(projData);
-        if (data.projType && data._prevType && data.projType !== data._prevType) {
-          await initPhasesForProject(db, editingId, data.projType, data.enabledPhases || [], ts, tenantId);
-        }
+        await serverUpdateProject(editingId, data, tenantId);
         showToast('Proyecto actualizado');
       } else {
-        // CREATE new project — try direct Firestore first, fallback to Admin SDK API
-        try {
-          const projData: Record<string, any> = scrubUndefined({
-            name: data.projName,
-            status: data.projStatus || 'Concepto',
-            client: data.projClient || '',
-            location: data.projLocation || '',
-            budget: Number(data.projBudget) || 0,
-            description: data.projDesc || '',
-            startDate: data.projStart || '',
-            endDate: data.projEnd || '',
-            companyId: data.projCompany || '',
-            projectType: data.projType || 'Ejecución',
-            progress: 0,
-            tenantId: tenantId || '',
-            createdAt: ts,
-            createdBy: authUser?.uid || '',
-            updatedAt: ts,
-            updatedBy: authUser?.uid || '',
-          });
-          const ref = await db.collection('projects').add(projData);
-          await initPhasesForProject(db, ref.id, data.projType || 'Ejecución', data.enabledPhases || [], ts, tenantId);
-          showToast('✅ Proyecto creado');
-        } catch (directErr: any) {
-          const msg = directErr?.message || '';
-          if (msg.includes('PERMISSION_DENIED') || msg.includes('Missing or insufficient permissions')) {
-            // Fallback: create via Admin SDK API (bypasses Firestore rules)
-            console.warn('[Archii] Firestore direct write blocked, falling back to Admin SDK API');
-            const result = await serverCreateProject(data, tenantId);
-            showToast('✅ Proyecto creado');
-            return result;
-          }
-          throw directErr;
-        }
+        await serverCreateProject(data, tenantId);
+        showToast('✅ Proyecto creado');
       }
     } finally {
       dedupEnd(dedupKey);
