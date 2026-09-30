@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth, isAdminInitialized } from '@/lib/firebase-admin';
 import { isPlatformAdminEmail } from '@/lib/api-auth';
+import { PROJECT_TYPE_PHASES } from '@/lib/types';
 
 /**
  * POST /api/create-entity
@@ -130,24 +131,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Error al crear el proyecto en la base de datos' }, { status: 500 });
       }
 
-      // Initialize work phases based on project type
-      const PROJECT_TYPE_PHASES: Record<string, { key: string; name: string; description: string }[]> = {
-        'Diseño': [
-          { key: 'anteproyecto', name: 'Anteproyecto', description: 'Propuesta inicial del diseño' },
-          { key: 'diseno-desarrollo', name: 'Desarrollo de Diseño', description: 'Desarrollo del diseño hasta plano final' },
-          { key: 'diseno-aprobacion', name: 'Aprobación', description: 'Revisión y aprobación del diseño' },
-          { key: 'diseno-entrega', name: 'Entrega', description: 'Entrega final de documentos de diseño' },
-        ],
-        'Ejecución': [
-          { key: 'preparacion', name: 'Preparación', description: 'Preparación del sitio y movilización' },
-          { key: 'cimentacion', name: 'Cimentación', description: 'Obras de cimentación' },
-          { key: 'estructura', name: 'Estructura', description: 'Estructura del proyecto' },
-          { key: 'instalaciones', name: 'Instalaciones', description: 'Instalaciones técnicas' },
-          { key: 'acabados', name: 'Acabados', description: 'Acabados finales' },
-          { key: 'entrega', name: 'Entrega', description: 'Entrega del proyecto' },
-        ],
-      };
-
+      // Initialize work phases from the canonical project phase templates.
       const projType = data.projectType || 'Ejecución';
       const types = projType === 'Ambos' ? ['Diseño', 'Ejecución'] : [projType];
       const enabledPhases: string[] = data.enabledPhases || [];
