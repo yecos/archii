@@ -37,6 +37,27 @@ service cloud.firestore {
         );
     }
 
+    /** Project role checks. Platform Admin is intentionally not inferred from
+     *  client data; platform-admin writes go through trusted Admin SDK routes. */
+    function hasStoredRole(role) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    function canCreateOrEditProject(tenantId) {
+      return isTenantSuperAdmin(tenantId)
+        || (
+          isTenantMember(tenantId)
+          && (hasStoredRole('Director') || hasStoredRole('Arquitecto'))
+        );
+    }
+
+    function canDeleteProject(tenantId) {
+      return isTenantSuperAdmin(tenantId)
+        || (isTenantMember(tenantId) && hasStoredRole('Director'));
+    }
+
     /** Keep optional tenantId fields immutable on update.
      *  Legacy subcollection documents may not have tenantId; those documents
      *  must remain without it and inherit tenant scope from their parent. */
@@ -119,11 +140,13 @@ service cloud.firestore {
     // Projects
     match /projects/{projectId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
+      allow create: if isSignedIn()
+        && canCreateOrEditProject(request.resource.data.tenantId);
       allow update: if isSignedIn()
-        && isTenantMember(resource.data.tenantId)
+        && canCreateOrEditProject(resource.data.tenantId)
         && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow delete: if isSignedIn()
+        && canDeleteProject(resource.data.tenantId);
 
       // Project subcollections — all inherit parent project's tenantId
       match /messages/{messageId} {
