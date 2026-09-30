@@ -5,7 +5,8 @@ import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import { exportProjectsPDF } from '@/lib/export-pdf';
 import { exportProjectsExcel } from '@/lib/export-excel';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
-import type { Project, Task, Expense } from '@/lib/types';
+import { DEFAULT_ROLE_PERMS, type Project, type Task, type Expense } from '@/lib/types';
+import { updateProjectFields } from '@/lib/firestore-actions';
 import {
   computeHealth,
   HEALTH_CONFIG,
@@ -19,10 +20,19 @@ export function useProjectsData() {
   const {
     loading, projects, companies, forms, setForms, setEditingId, openModal,
     visibleProjects, openEditProject, deleteProject, openProject, getMyRole, tasks,
-    expenses, showToast, teamUsers, activeTenantId,
+    expenses, showToast, teamUsers, activeTenantId, activeTenantRole,
   } = useApp();
 
   const confirmDialog = useConfirmDialog();
+
+  const effectiveProjectRole = activeTenantRole === 'Super Admin' ? 'Super Admin' : getMyRole();
+  const hasProjectPermission = useCallback((permission: 'Crear proyectos' | 'Editar proyectos' | 'Eliminar proyectos') => {
+    return effectiveProjectRole === 'Super Admin'
+      || (DEFAULT_ROLE_PERMS[permission] || []).includes(effectiveProjectRole);
+  }, [effectiveProjectRole]);
+  const canCreateProject = hasProjectPermission('Crear proyectos');
+  const canEditProject = hasProjectPermission('Editar proyectos');
+  const canDeleteProject = hasProjectPermission('Eliminar proyectos');
 
   // --- Local filter state ---
   const [search, setSearch] = useState('');
@@ -230,9 +240,13 @@ export function useProjectsData() {
   }, [filteredProjects, getProjectStats, getProjectSpent, getHealth, showToast]);
 
   const handleNewProject = useCallback(() => {
+    if (!canCreateProject) {
+      showToast('Tu rol no permite crear proyectos', 'error');
+      return;
+    }
     setEditingId(null);
     openModal('project');
-  }, [setEditingId, openModal]);
+  }, [canCreateProject, showToast, setEditingId, openModal]);
 
   // --- Batch operations ---
   const toggleSelect = useCallback((id: string) => {
@@ -270,6 +284,10 @@ export function useProjectsData() {
   }, [projects, selectedIds, exportCSV]);
 
   const batchChangeStatus = useCallback(async (newStatus: string) => {
+    if (!canEditProject) {
+      showToast('Tu rol no permite editar proyectos', 'error');
+      return;
+    }
     const selected = projects.filter((p: Project) => selectedIds.has(p.id));
     if (selected.length === 0) return;
     const confirmed = await confirmDialog.confirm({
@@ -278,22 +296,15 @@ export function useProjectsData() {
     });
     if (!confirmed || !activeTenantId) return;
     try {
-      const { getFirebase } = await import('@/lib/firebase-service');
-      const app = getFirebase();
-      const db = app.firestore();
-      const batch = db.batch();
-      const ts = app.FieldValue.serverTimestamp();
-      selected.forEach((p: Project) => {
-        const ref = db.collection('projects').doc(p.id);
-        batch.update(ref, { status: newStatus, updatedAt: ts });
-      });
-      await batch.commit();
+      await Promise.all(
+        selected.map((p: Project) => updateProjectFields(p.id, { status: newStatus }, activeTenantId))
+      );
       showToast(`${selected.length} proyectos actualizados a "${STATUS_LABELS[newStatus] || newStatus}"`);
       clearSelection();
     } catch (err: unknown) {
       showToast('Error al actualizar proyectos: ' + (err instanceof Error ? err.message : ''), 'error');
     }
-  }, [projects, selectedIds, confirmDialog, activeTenantId, showToast, clearSelection]);
+  }, [canEditProject, projects, selectedIds, confirmDialog, activeTenantId, showToast, clearSelection]);
 
   const isAllSelected = filteredProjects.length > 0 && selectedIds.size === filteredProjects.length;
 
@@ -313,6 +324,10 @@ export function useProjectsData() {
     expenses,
     confirmDialog,
     visibleProjects,
+    effectiveProjectRole,
+    canCreateProject,
+    canEditProject,
+    canDeleteProject,
 
     // Filter state
     search, setSearch,
