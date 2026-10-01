@@ -20,18 +20,18 @@
     { "collectionGroup": "punchItems", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "comments", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
     { "collectionGroup": "directMessages", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "lastMessageAt", "order": "DESCENDING" }] },
-    { "collectionGroup": "messages", "queryScope": "COLLECTION_GROUP", "fields": [{ "fieldPath": "createdAt", "order": "ASCENDING" }] },
 
     { "collectionGroup": "changeOrders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "catalogs", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
 
     { "collectionGroup": "carnets", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "carnets", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "isActive", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
-    { "collectionGroup": "carnets", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "employeeCode", "order": "ASCENDING" }] },
     { "collectionGroup": "error_reports", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "timestamp", "order": "DESCENDING" }] },
     { "collectionGroup": "error_reports", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "resolved", "order": "ASCENDING" }, { "fieldPath": "timestamp", "order": "DESCENDING" }] },
     { "collectionGroup": "beta_feedback", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "timestamp", "order": "DESCENDING" }] },
     { "collectionGroup": "beta_feedback", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "tenantId", "order": "ASCENDING" }, { "fieldPath": "category", "order": "ASCENDING" }, { "fieldPath": "timestamp", "order": "DESCENDING" }] }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "messages", "fieldPath": "createdAt", "indexes": [{ "order": "ASCENDING", "queryScope": "COLLECTION" }, { "order": "DESCENDING", "queryScope": "COLLECTION" }, { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }] }
+  ]
 }
