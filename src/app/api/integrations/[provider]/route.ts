@@ -19,6 +19,7 @@ import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
 import { getProvider, getIntegrationLogs, sanitizeIntegration } from '@/lib/marketplace-service';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { decryptIntegrationConfig } from '@/lib/integration-crypto';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
 
 /* ---- Dynamic connector imports ---- */
@@ -52,7 +53,7 @@ async function getInstanceConfig(
   if (!doc.exists) return null;
   const data = doc.data();
   if (!data || data.tenantId !== tenantId) return null;
-  return { config: data.config || {}, providerId: data.providerId };
+  return { config: decryptIntegrationConfig(data.config || {}), providerId: data.providerId };
 }
 
 /* ================================================================
