@@ -5,6 +5,11 @@ import AIFloatingWrapper from "@/components/archii/AIFloatingWrapper";
 import KeyboardShortcutsInitializer from "@/components/archii/KeyboardShortcutsInitializer";
 import "./globals.css";
 
+// Emulator access is limited to local development and a non-production demo project.
+const useFirebaseEmulators = process.env.NODE_ENV === 'development'
+  && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true'
+  && Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.startsWith('demo-'));
+
 export const metadata: Metadata = {
   title: {
     default: "Archii — Gestión de Proyectos",
@@ -102,7 +107,12 @@ export default function RootLayout({
                 messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || ''}",
                 appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''}"
               });
-              try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(e){ console.warn('[Archii] Persistence unavailable:', e); }); } catch(e){ console.warn('[Archii] Persistence init error:', e); }
+              if (${JSON.stringify(useFirebaseEmulators)}) {
+                firebase.auth().useEmulator('http://127.0.0.1:9099', { disableWarnings: true });
+                firebase.firestore().useEmulator('127.0.0.1', 8085);
+              } else {
+                try { firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(function(e){ console.warn('[Archii] Persistence unavailable:', e); }); } catch(e){ console.warn('[Archii] Persistence init error:', e); }
+              }
               try { firebase.setLogLevel && firebase.setLogLevel('error'); } catch(e){ console.warn('[Archii] setLogLevel error:', e); }
             }
             window.__AF_FB = true;

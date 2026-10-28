@@ -44,3 +44,7 @@ prisma/*.db
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
+
+# Browser test evidence
+test-results/
+playwright-report/

@@ -32,19 +32,23 @@ Las imágenes siguen almacenadas en el documento: se limita la selección a 400 
 npm ci
 npm run test:inventory
 npm run test:inventory:integration
+npx playwright install chromium
+npm run test:inventory:e2e
 npx tsc --noEmit --pretty false
 npm run lint
 npm run build
 ```
 
-La suite de integración requiere Java 21 y descarga el emulador de Firestore. Usa exclusivamente el proyecto ficticio `demo-archii` en `127.0.0.1:8085`; no requiere credenciales ni accede al Firebase de producción. La suite sin emulador omite explícitamente los casos de integración. CI ejecuta la suite completa en un trabajo independiente.
+La suite de integración requiere Java 21 y descarga el emulador de Firestore. Usa exclusivamente el proyecto ficticio `demo-archii` en `127.0.0.1:8085`; no requiere credenciales ni accede al Firebase de producción. La suite sin emulador omite explícitamente los casos de integración. CI ejecuta la suite completa y los recorridos del navegador en un trabajo independiente. Los recorridos usan además Auth local en `127.0.0.1:9099` y una aplicación de desarrollo en el puerto 3100. El lanzador fuerza el proyecto ficticio y excluye credenciales de producción. Para un Chromium instalado se puede definir `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
 Se comprueban: operaciones atómicas, salidas simultáneas, reintentos concurrentes, respuesta perdida, referencias entre tenants, roles, edición de formularios con stock antiguo, saldos iniciales, anulaciones, archivo, consistencia de la IA, reglas de lectura/escritura y reportes con más de cien registros.
 
 ## Publicación y revisión pendiente
 
-El PR se entrega como borrador. Antes de integrar, verificar en un entorno de pruebas con datos ficticios los formularios en escritorio y Android/WebView y confirmar que el servidor tiene Firebase Admin configurado. Estas comprobaciones no deben escribir en el inventario real.
+Los recorridos de navegador verifican formularios, rechazos por saldo insuficiente, transferencias y anulaciones, recuperación de una respuesta perdida sin duplicar stock, y descarga real de Excel en escritorio y Android emulado. La emulación no sustituye una comprobación en un dispositivo Android/WebView físico. Antes de publicar, confirmar que el servidor tiene Firebase Admin configurado. Las pruebas usan datos ficticios y no escriben en el inventario real.
+
+Se fija Radix Slot en 1.2.4 para evitar un fallo al abrir confirmaciones, se libera el estado pendiente si falla la obtención del token y se normalizan los campos opcionales del registro de errores. La conexión a emuladores y sus excepciones CSP solo se habilitan en desarrollo, con una bandera explícita y un proyecto `demo-`.
 
 Coordinar la publicación de las reglas y la aplicación. Para evitar una ventana de escrituras antiguas, activar primero las reglas que bloquean las escrituras directas durante una breve pausa del módulo y después publicar la aplicación nueva. Los clientes antiguos deben recargarse. No se deben relajar las reglas para resolver errores de clientes antiguos. Un rollback de la aplicación antigua necesita mantener inventario deshabilitado hasta restaurar una versión compatible.
 
-No desplegar ni migrar datos automáticamente desde este PR. La conciliación de saldos antiguos, almacenes configurables por obra, recepción de transferencias, costos históricos, SKU únicos e imágenes en Storage quedan para entregas posteriores. Los reportes completos se cargan bajo demanda; para historiales grandes conviene añadir consultas por período y exportación paginada desde servidor.
+El despliegue requiere autorización y acceso operativo a Firebase y Vercel. No ejecutar migraciones de datos como parte de esta publicación. La conciliación de saldos antiguos, almacenes configurables por obra, recepción de transferencias, costos históricos, SKU únicos e imágenes en Storage quedan para entregas posteriores. Los reportes completos se cargan bajo demanda; para historiales grandes conviene añadir consultas por período y exportación paginada desde servidor.

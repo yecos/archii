@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const useFirebaseEmulators = process.env.NODE_ENV === 'development'
+  && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true'
+  && Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.startsWith('demo-'));
+
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
@@ -47,6 +51,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://*.graph.facebook.com https://*.googleapis.com https://graph.microsoft.com https://aadcdn.msauth.net https://aadcdn.msftauth.net https://*.msauth.net https://*.msftauth.net;",
               // connect-src: endpoints de Firebase Auth, Firestore, Google Identity Services, Microsoft OAuth
               "connect-src 'self'",
+              ...(useFirebaseEmulators ? ['http://127.0.0.1:9099', 'http://127.0.0.1:8085', 'ws://127.0.0.1:3100'] : []),
               "  https://*.firebaseio.com",
               "  https://*.googleapis.com",
               "  https://apis.google.com",

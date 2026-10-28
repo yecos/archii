@@ -61,9 +61,10 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
               <div key={wh} className="flex items-center gap-2">
                 <span className="text-xs text-[var(--muted-foreground)] w-36 sm:w-44 flex-shrink-0 truncate">{wh}</span>
                 <input
-                  className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-sm text-[var(--foreground)] outline-none"
+                  className="min-w-0 flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-sm text-[var(--foreground)] outline-none"
                   type="number" min="0" step="any"
                   placeholder="0"
+                  aria-label={`Existencias en ${wh}`}
                   disabled={!!editingId}
                   value={forms[`invProdWS_${wh.replace(/\s/g, '_')}`] || '0'}
                   onChange={e => setForms(p => ({ ...p, [`invProdWS_${wh.replace(/\s/g, '_')}`]: e.target.value }))}

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { inventoryRequest, loadInventoryHistory } from './inventory-client';
-import { getFirebase } from './firebase-service';
+import { getFirebase, getAuthHeaders } from './firebase-service';
 
 vi.mock('./firebase-service', () => ({
   getAuthHeaders: vi.fn(async () => ({ Authorization: 'Bearer verified-token' })),
@@ -29,6 +29,15 @@ describe('inventory request delivery', () => {
     const bodies = fetchMock.mock.calls.map(call => JSON.parse(call[1].body));
     expect(bodies[0].requestId).toBe(bodies[1].requestId);
     expect(stored.size).toBe(0);
+  });
+  it('allows retry when obtaining the authentication header fails', async () => {
+    vi.mocked(getAuthHeaders).mockRejectedValueOnce(new Error('token unavailable'));
+    const fetchMock = vi.fn().mockResolvedValue(success());
+    vi.stubGlobal('fetch', fetchMock);
+    const input = data();
+    await expect(inventoryRequest('company-a', 'movement', input)).rejects.toThrow('token unavailable');
+    await expect(inventoryRequest('company-a', 'movement', input)).resolves.toMatchObject({ stock: 7 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('shares one in-flight request for a double click', async () => {
     let resolve!: (value: Response) => void;

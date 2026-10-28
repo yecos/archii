@@ -31,6 +31,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
       <div className="mb-3">
         <FormField label="Producto" required error={errors.invTrProduct}>
           <FormSelect
+            aria-label="Producto"
             value={forms.invTrProduct || ''}
             onChange={e => { setForms(p => ({ ...p, invTrProduct: e.target.value })); clearError('invTrProduct'); }}
             onBlur={() => onBlurRequired('invTrProduct', forms.invTrProduct || '', 'Producto')}
@@ -45,6 +46,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
       <div className="grid grid-cols-2 gap-3 mb-3">
         <FormField label="Desde" required error={errors.invTrFrom}>
           <FormSelect
+            aria-label="Desde"
             value={forms.invTrFrom || ''}
             onChange={e => { setForms(p => ({ ...p, invTrFrom: e.target.value })); clearError('invTrFrom'); }}
             onBlur={() => onBlurRequired('invTrFrom', forms.invTrFrom || '', 'Origen')}
@@ -58,6 +60,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
         </FormField>
         <FormField label="Hasta" required error={errors.invTrTo}>
           <FormSelect
+            aria-label="Hasta"
             value={forms.invTrTo || ''}
             onChange={e => { setForms(p => ({ ...p, invTrTo: e.target.value })); clearError('invTrTo'); }}
             onBlur={() => onBlurRequired('invTrTo', forms.invTrTo || '', 'Destino')}
@@ -77,6 +80,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
             type="number"
             placeholder="10"
             min="0.000001" step="any"
+            aria-label="Cantidad"
             value={forms.invTrQty || ''}
             onChange={e => { setForms(p => ({ ...p, invTrQty: e.target.value })); clearError('invTrQty'); }}
             onBlur={() => onBlurRequired('invTrQty', forms.invTrQty || '', 'Cantidad')}

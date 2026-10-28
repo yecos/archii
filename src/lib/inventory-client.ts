@@ -22,10 +22,10 @@ export async function inventoryRequest(tenantId: string | null, action: Inventor
   }
   const operation = saved;
   operation.pending = (async () => {
-    const headers = await getAuthHeaders();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch('/api/inventory', {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, signal: controller.signal,
         body: JSON.stringify({ tenantId, action, data, requestId: operation.id }),
