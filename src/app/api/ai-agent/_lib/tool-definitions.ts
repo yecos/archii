@@ -1,3 +1,4 @@
+import { INV_UNITS, INV_WAREHOUSES } from '@/lib/types';
 export const TOOLS = [
   {
     type: "function" as const,
@@ -395,11 +396,11 @@ export const TOOLS = [
           name: { type: "string", description: "Nombre del producto" },
           sku: { type: "string", description: "Código SKU del producto" },
           category: { type: "string", description: "Categoría del producto" },
-          unit: { type: "string", description: "Unidad de medida (ej: unidades, mts, kg, litros)" },
+          unit: { type: "string", enum: [...INV_UNITS], description: "Unidad de medida" },
           price: { type: "number", description: "Precio unitario en COP" },
           stock: { type: "number", description: "Cantidad en stock inicial" },
           min_stock: { type: "number", description: "Stock mínimo para alerta" },
-          warehouse: { type: "string", description: "Bodega o almacén donde se encuentra" },
+          warehouse: { type: "string", enum: [...INV_WAREHOUSES], description: "Almacén; por defecto Almacén Principal" },
         },
         required: ["name"],
       },
@@ -443,7 +444,7 @@ export const TOOLS = [
           quantity: { type: "number", description: "Cantidad del movimiento" },
           reason: { type: "string", description: "Motivo del movimiento" },
           reference: { type: "string", description: "Referencia (ej: número de factura, orden de compra)" },
-          warehouse: { type: "string", description: "Bodega o almacén" },
+          warehouse: { type: "string", enum: [...INV_WAREHOUSES], description: "Almacén; por defecto Almacén Principal" },
         },
         required: ["type", "quantity"],
       },

@@ -1,5 +1,7 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import { loadInventoryHistory } from '@/lib/inventory-client';
 import { fmtCOP } from '@/lib/helpers';
 import { INV_WAREHOUSES } from '@/lib/types';
 import { exportInventoryExcel } from '@/lib/export-excel';
@@ -7,8 +9,6 @@ import { exportInventoryExcel } from '@/lib/export-excel';
 interface InventoryReportsProps {
   invProducts: any[];
   invCategories: any[];
-  invMovements: any[];
-  invTransfers: any[];
   invTotalValue: number;
   invTotalStock: number;
   getInvCategoryName: (id: string) => string;
@@ -20,18 +20,40 @@ interface InventoryReportsProps {
 }
 
 export default function InventoryReports({
-  invProducts, invCategories, invMovements, invTransfers,
+  invProducts, invCategories,
   invTotalValue, invTotalStock,
   getInvCategoryName, getInvCategoryColor, getInvProductName, getTotalStock, getWarehouseStock,
   showToast,
 }: InventoryReportsProps) {
+  const { activeTenantId } = useApp();
+  const [history, setHistory] = useState<Awaited<ReturnType<typeof loadInventoryHistory>> | null>(null);
+  const [error, setError] = useState('');
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setHistory(null); setError('');
+    if (!activeTenantId) return;
+    loadInventoryHistory(activeTenantId).then(result => {
+      if (!cancelled) setHistory(result);
+    }).catch(() => {
+      if (!cancelled) setError('No se pudo obtener el historial completo. Conéctate para generar el reporte.');
+    });
+    return () => { cancelled = true; };
+  }, [activeTenantId, version]);
+  if (!history) return <div className="space-y-3" role={error ? 'alert' : 'status'}>
+    <p>{error || 'Cargando historial completo de inventario…'}</p>
+    {error && <button className="min-h-11 px-3 underline" onClick={() => setVersion(v => v + 1)}>Volver a intentar</button>}
+  </div>;
+  const invMovements = history.movements;
+  const invTransfers = history.transfers;
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold">📊 Reportes</h3>
+        <div><h3 className="text-lg font-semibold">📊 Reportes</h3><p className="text-xs text-[var(--muted-foreground)]">Historial completo al abrir el reporte. Recarga para incluir operaciones posteriores.</p></div>
         <div className="flex gap-2 flex-wrap">
+          <button className="min-h-11 px-3 text-xs underline" onClick={() => setVersion(v => v + 1)}>Actualizar historial</button>
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-[var(--af-accent)] text-background border-none hover:bg-[var(--af-accent2)]" onClick={() => {
-            try { exportInventoryExcel(invProducts, invCategories, invMovements); showToast('Excel de inventario exportado'); } catch { showToast('Error al generar Excel', 'error'); }
+            try { exportInventoryExcel(invProducts, invCategories, invMovements, invTransfers, getInvCategoryName); showToast('Excel de inventario exportado'); } catch { showToast('Error al generar Excel', 'error'); }
           }}>📥 Exportar Excel</button>
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-[var(--af-bg3)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--af-bg4)]" onClick={() => {
             // Export products CSV
@@ -45,8 +67,8 @@ export default function InventoryReports({
           }}>📥 Exportar productos CSV</button>
           <button className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all bg-blue-600 text-white border-none hover:bg-blue-700" onClick={() => {
             // Export movements CSV
-            const headers = ['Fecha', 'Tipo', 'Producto', 'Almacén', 'Cantidad', 'Motivo', 'Referencia'];
-            const rows = invMovements.map(m => [m.data.date || '', m.data.type, getInvProductName(m.data.productId), m.data.warehouse || '', m.data.quantity, m.data.reason || '', m.data.reference || '']);
+            const headers = ['Fecha', 'Tipo', 'Producto', 'Almacén', 'Cantidad', 'Motivo', 'Referencia', 'Anulado', 'Compensa a'];
+            const rows = invMovements.map(m => [m.data.date || '', m.data.type, m.data.productName || getInvProductName(m.data.productId), m.data.warehouse || '', m.data.quantity, m.data.reason || '', m.data.reference || '', m.data.reversedAt ? 'Sí' : 'No', m.data.reversalOf || '']);
             const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
             const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -56,6 +78,7 @@ export default function InventoryReports({
         </div>
       </div>
 
+      <p className="text-xs text-[var(--muted-foreground)]">* Las cantidades agregadas combinan unidades de medida diferentes; consulta el detalle por producto para controlar materiales.</p>
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)]">
@@ -190,7 +213,7 @@ export default function InventoryReports({
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-[var(--foreground)]">{invTotalStock.toLocaleString('es-CO')}</div>
-            <div className="text-[10px] text-[var(--muted-foreground)]">Stock actual</div>
+            <div className="text-[10px] text-[var(--muted-foreground)]">Cantidades agregadas*</div>
           </div>
         </div>
         {/* Movement by warehouse bars */}

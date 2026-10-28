@@ -436,44 +436,23 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
     }
 
-    // Inventory Products
+    // Inventory balances and ledger are written together by the authenticated API.
+    // Membership grants reads, never direct client mutations.
     match /invProducts/{productId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn()
-        && isTenantMember(resource.data.tenantId)
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow write: if false;
     }
-
-    // Inventory Categories
-    match /invCategories/{catId} {
+    match /invCategories/{categoryId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn()
-        && isTenantMember(resource.data.tenantId)
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow write: if false;
     }
-
-    // Inventory Movements
-    match /invMovements/{movId} {
+    match /invMovements/{movementId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn()
-        && isTenantMember(resource.data.tenantId)
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow write: if false;
     }
-
-    // Inventory Transfers
-    match /invTransfers/{transId} {
+    match /invTransfers/{transferId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
-      allow update: if isSignedIn()
-        && isTenantMember(resource.data.tenantId)
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow write: if false;
     }
 
     // Time Entries

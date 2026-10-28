@@ -9,7 +9,7 @@ import { INV_WAREHOUSES } from '@/lib/types';
 
 export default function InvTransferModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, closeModal } = useApp();
-  const { invProducts, saveInvTransfer, getWarehouseStock } = useInventoryContext();
+  const { invProducts, invSaving, saveInvTransfer, getWarehouseStock } = useInventoryContext();
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
 
   const handleSubmit = () => {
@@ -76,7 +76,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
           <FormInput
             type="number"
             placeholder="10"
-            min="1"
+            min="0.000001" step="any"
             value={forms.invTrQty || ''}
             onChange={e => { setForms(p => ({ ...p, invTrQty: e.target.value })); clearError('invTrQty'); }}
             onBlur={() => onBlurRequired('invTrQty', forms.invTrQty || '', 'Cantidad')}
@@ -116,7 +116,7 @@ export default function InvTransferModal({ open, onClose }: { open: boolean; onC
         );
       })()}
 
-      <ModalFooter
+      <ModalFooter submitDisabled={invSaving}
         onCancel={() => closeModal('invTransfer')}
         onSubmit={handleSubmit}
         submitLabel="Transferir"

@@ -5,6 +5,7 @@
  */
 
 import * as XLSX from 'xlsx';
+import { inventoryStock, inventoryTotal } from './inventory-stock';
 import { isOverdue as checkOverdue } from './kanban-helpers';
 
 function fmtCOPFull(n: number): string {
@@ -249,7 +250,7 @@ export function exportTimeExcel(timeEntries: any[], projects: any[], teamUsers: 
    EXPORTAR INVENTARIO A EXCEL
    ═══════════════════════════════════════════════ */
 
-export function exportInventoryExcel(products: any[], categories: any[], movements: any[]) {
+export function exportInventoryExcel(products: any[], categories: any[], movements: any[], transfers: any[] = [], categoryName?: (id: string) => string) {
   const wb = XLSX.utils.book_new();
 
   // Products sheet
@@ -258,12 +259,12 @@ export function exportInventoryExcel(products: any[], categories: any[], movemen
     return {
       Producto: p.data.name,
       SKU: p.data.sku || '-',
-      Categoría: cat?.data.name || '-',
+      Categoría: categoryName?.(p.data.categoryId) || cat?.data.name || '-',
       Unidad: p.data.unit || '-',
       'Precio (COP)': p.data.price || 0,
-      'Stock Total': p.data.stock || 0,
+      'Stock Total': inventoryTotal(p.data),
       'Stock Mínimo': p.data.minStock || 0,
-      Bodega: p.data.warehouse || '-',
+      ...Object.fromEntries(Object.entries(inventoryStock(p.data)).map(([w, qty]) => [`Stock ${w}`, qty])),
     };
   });
 
@@ -276,7 +277,11 @@ export function exportInventoryExcel(products: any[], categories: any[], movemen
 
   // Movements sheet
   const movData = movements.map(m => ({
-    Producto: m.data.productId || '-',
+    Producto: m.data.productName || m.data.productId || '-',
+    Almacén: m.data.warehouse || '-',
+    Unidad: m.data.unit || '-',
+    Anulado: m.data.reversedAt ? 'Sí' : 'No',
+    'Compensa a': m.data.reversalOf || '-',
     Tipo: m.data.type,
     Cantidad: m.data.quantity || 0,
     Razón: m.data.reason || '-',
@@ -291,19 +296,26 @@ export function exportInventoryExcel(products: any[], categories: any[], movemen
   }
 
   // Low stock alert
-  const lowStock = products.filter(p => (p.data.stock || 0) <= (p.data.minStock || 0));
+  const lowStock = products.filter(p => (inventoryTotal(p.data)) <= (p.data.minStock || 0));
   if (lowStock.length > 0) {
     const lowData = lowStock.map(p => ({
       Producto: p.data.name,
-      'Stock Actual': p.data.stock || 0,
+      'Stock Actual': inventoryTotal(p.data),
       'Stock Mínimo': p.data.minStock || 0,
-      'Diferencia': (p.data.stock || 0) - (p.data.minStock || 0),
+      'Diferencia': (inventoryTotal(p.data)) - (p.data.minStock || 0),
     }));
     const ws3 = XLSX.utils.json_to_sheet(lowData);
     ws3['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Stock Bajo');
   }
 
+  if (transfers.length) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(transfers.map(t => ({
+      Producto: t.data.productName || t.data.productId, Origen: t.data.fromWarehouse, Destino: t.data.toWarehouse,
+      Cantidad: t.data.quantity, Unidad: t.data.unit || '-', Estado: t.data.status, Fecha: t.data.date,
+      Anulada: t.data.reversedAt ? 'Sí' : 'No', 'Compensa a': t.data.reversalOf || '-',
+    }))), 'Transferencias');
+  }
   downloadWorkbook(wb, 'archii-inventario');
 }
 

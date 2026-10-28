@@ -70,7 +70,7 @@ interface CollectionRef {
   limit(n: number): CollectionRef;
   limitToLast(n: number): CollectionRef;
   onSnapshot(cb: (snap: QuerySnapshot) => void, errCb?: (err: any) => void): () => void;
-  get(): Promise<QuerySnapshot>;
+  get(options?: { source?: 'server' | 'cache' | 'default' }): Promise<QuerySnapshot>;
   add(data: any): Promise<{ id: string }>;
 }
 

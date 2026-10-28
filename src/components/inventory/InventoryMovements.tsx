@@ -29,6 +29,7 @@ export default function InventoryMovements({
         <h3 className="text-lg font-semibold">📋 Movimientos ({invMovements.length})</h3>
         <button className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer bg-emerald-600 text-white border-none hover:bg-emerald-700 transition-colors flex items-center gap-2 self-start" onClick={() => { setEditingId(null); setForms((p: any) => ({ ...p, invMovProduct: '', invMovType: 'Entrada', invMovWarehouse: 'Almacén Principal', invMovQty: '', invMovReason: '', invMovRef: '', invMovDate: '' })); openModal('invMovement'); }}><Plus size={16} className="stroke-current" aria-hidden="true"/>Registrar movimiento</button>
       </div>
+      <p className="text-xs text-[var(--muted-foreground)]">Se muestran hasta 100 registros recientes. Consulta Reportes para ver y exportar el historial completo.</p>
       <div className="flex gap-2">
         <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invMovFilterType} onChange={e => setInvMovFilterType(e.target.value)}><option value="all">Todos</option><option value="Entrada">Entradas</option><option value="Salida">Salidas</option></select>
         <select className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={invWarehouseFilter} onChange={e => setInvWarehouseFilter(e.target.value)}><option value="all">Todos los almacenes</option>{INV_WAREHOUSES.map(w => <option key={w} value={w}>{w}</option>)}</select>
@@ -49,26 +50,28 @@ export default function InventoryMovements({
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${m.data.type === 'Entrada' ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}><span className={`text-lg font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '↓' : '↑'}</span></div>
                   <div>
-                    <div className="text-sm font-semibold">{getInvProductName(m.data.productId)}</div>
+                    <div className="text-sm font-semibold">{m.data.productName || getInvProductName(m.data.productId)}</div>
                     <div className="text-[11px] text-[var(--muted-foreground)]">{m.data.warehouse || '—'} · {m.data.quantity} uds{m.data.reference ? ` · Ref: ${m.data.reference}` : ''}</div>
+                    {m.data.reversedAt && <div className="text-xs text-amber-400">Anulado · compensación registrada</div>}
+                    {m.data.reversalOf && <div className="text-xs text-[var(--muted-foreground)]">Compensación de anulación</div>}
                     {m.data.reason && <div className="text-[11px] text-[var(--muted-foreground)]">{m.data.reason}</div>}
                   </div>
                 </div>
                 {/* Desktop: quantity + delete */}
                 <div className="hidden md:flex items-center gap-2">
                   <div className="text-right"><div className={`text-sm font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '+' : '-'}{m.data.quantity}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data.date || ''}</div></div>
-                  <button aria-label="Eliminar" className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar movimiento', description: '¿Estás seguro?' })) deleteInvMovement(m.id); }}><Trash2 size={14} className="stroke-current" aria-hidden="true"/></button>
+                  <button aria-label="Anular" disabled={!!m.data.reversedAt || !!m.data.reversalOf || m.data.inventoryVersion !== 1} className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Anular movimiento', description: 'Se conservará el registro original y se compensarán las existencias. Solo disponible para operaciones nuevas con saldo suficiente.' })) deleteInvMovement(m.id); }}><Trash2 size={14} className="stroke-current" aria-hidden="true"/></button>
                 </div>
                 {/* Mobile: quantity + OverflowMenu */}
                 <div className="md:hidden flex items-center gap-2">
                   <div className="text-right"><div className={`text-sm font-bold ${m.data.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.type === 'Entrada' ? '+' : '-'}{m.data.quantity}</div><div className="text-[10px] text-[var(--muted-foreground)]">{m.data.date || ''}</div></div>
-                  <OverflowMenu
+                  {!m.data.reversedAt && !m.data.reversalOf && m.data.inventoryVersion === 1 && <OverflowMenu
                     actions={[
-                      { label: 'Eliminar movimiento', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirm({ title: 'Eliminar movimiento', description: '¿Estás seguro?' })) deleteInvMovement(m.id); }, variant: 'danger' },
+                      { label: 'Anular movimiento', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirm({ title: 'Anular movimiento', description: 'Se conservará el registro original y se compensarán las existencias. Solo disponible para operaciones nuevas con saldo suficiente.' })) deleteInvMovement(m.id); }, variant: 'danger' },
                     ]}
                     side="left"
                     align="end"
-                  />
+                  />}
                 </div>
               </div>
             </div>

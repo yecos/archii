@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test": "vitest",
+    "test:inventory": "vitest run --config vitest.inventory.config.ts",
+    "test:inventory:integration": "firebase emulators:exec --project demo-archii --only firestore --config firebase.inventory-test.json \"npm run test:inventory\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

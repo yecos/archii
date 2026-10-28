@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
@@ -32,7 +33,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { messages, projectContext, tenantId } = await request.json();
+    const { messages, projectContext, tenantId, requestId: suppliedRequestId } = await request.json();
+    if (suppliedRequestId !== undefined && (typeof suppliedRequestId !== 'string' || !/^[A-Za-z0-9_-]{16,128}$/.test(suppliedRequestId))) {
+      return NextResponse.json({ error: 'Identificador de solicitud inválido' }, { status: 400 });
+    }
+    const requestId = suppliedRequestId || randomUUID();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -154,7 +159,7 @@ export async function POST(request: NextRequest) {
       apiMessages.push({ role: "assistant", content: assistantMessage.content || "", tool_calls: assistantMessage.tool_calls });
 
       // Execute each tool call
-      for (const toolCall of assistantMessage.tool_calls as ToolCall[]) {
+      for (const [toolIndex, toolCall] of (assistantMessage.tool_calls as ToolCall[]).entries()) {
         const funcName = toolCall.function.name;
         let funcArgs: Record<string, any>;
         try {
@@ -163,7 +168,7 @@ export async function POST(request: NextRequest) {
           funcArgs = {};
         }
 
-        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId, userRole);
+        const result = await executeToolCall(funcName, funcArgs, db, user.uid, actions, tenantId, userRole, createHash('sha256').update(`${requestId}:${toolIndex}`).digest('hex'));
 
         // Add tool result to conversation
         apiMessages.push({

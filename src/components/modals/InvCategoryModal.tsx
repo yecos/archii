@@ -8,7 +8,7 @@ import { CAT_COLORS } from '@/lib/types';
 
 export default function InvCategoryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, editingId, closeModal } = useApp();
-  const { invCategories, saveInvCategory } = useInventoryContext();
+  const { invCategories, invSaving, saveInvCategory } = useInventoryContext();
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
 
   const handleSubmit = () => {
@@ -46,7 +46,7 @@ export default function InvCategoryModal({ open, onClose }: { open: boolean; onC
         <FormTextarea rows={2} placeholder="Descripción..." value={forms.invCatDesc || ''} onChange={e => setForms(p => ({ ...p, invCatDesc: e.target.value }))} />
       </FormField>
 
-      <ModalFooter onCancel={() => closeModal('invCategory')} onSubmit={handleSubmit} submitLabel={editingId ? 'Guardar' : 'Crear categoría'} />
+      <ModalFooter submitDisabled={invSaving} onCancel={() => closeModal('invCategory')} onSubmit={handleSubmit} submitLabel={editingId ? 'Guardar' : 'Crear categoría'} />
     </CenterModal>
   );
 }

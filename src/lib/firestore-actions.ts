@@ -1,3 +1,4 @@
+import { inventoryRequest } from '@/lib/inventory-client';
 /**
  * firestore-actions.ts
  * Todas las funciones de escritura a Firestore (CRUD).
@@ -712,148 +713,59 @@ export async function deleteGalleryPhoto(photoId: string, showToast: ToastFn, te
 export function saveInvProduct(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
   return fbAction('guardar producto', async () => {
     requireAuth(authUser, 'guardar producto');
-    const fb = getFirebase();
-    const ts = fb.firestore.FieldValue.serverTimestamp();
-    if (editingId) {
-      await fb.firestore().collection('invProducts').doc(editingId).update({
-        name: data.prodName,
-        sku: data.prodSku || '',
-        categoryId: data.prodCategory,
-        unit: data.prodUnit,
-        price: Number(data.prodPrice) || 0,
-        stock: Number(data.prodStock) || 0,
-        minStock: Number(data.prodMinStock) || 0,
-        description: data.prodDesc || '',
-        warehouse: data.prodWarehouse || 'Almacén Principal',
-        updatedAt: ts,
-      });
-      showToast('Producto actualizado');
-    } else {
-      await fb.firestore().collection('invProducts').add({
-        name: data.prodName,
-        sku: data.prodSku || '',
-        categoryId: data.prodCategory,
-        unit: data.prodUnit,
-        price: Number(data.prodPrice) || 0,
-        stock: Number(data.prodStock) || 0,
-        minStock: Number(data.prodMinStock) || 0,
-        description: data.prodDesc || '',
-        imageData: data.prodImage || '',
-        warehouse: data.prodWarehouse || 'Almacén Principal',
-        warehouseStock: {},
-        createdAt: ts,
-        createdBy: authUser?.uid,
-        tenantId: tenantId || '',
-      });
-      showToast('✅ Producto registrado');
-    }
+    const result = await inventoryRequest(tenantId, 'saveProduct', {
+      ...(editingId ? { id: editingId } : { stock: Number(data.prodStock || 0) }),
+      name: data.prodName, sku: data.prodSku || '', categoryId: data.prodCategory || '', unit: data.prodUnit || 'Unidad',
+      price: Number(data.prodPrice || 0), minStock: Number(data.prodMinStock || 0), description: data.prodDesc || '',
+      imageData: data.prodImage || '', warehouse: data.prodWarehouse || 'Almacén Principal',
+    });
+    showToast('Producto guardado'); return result;
   }, showToast);
 }
 
-export async function deleteInvProduct(productId: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('eliminar producto', async () => {
-    await serverDelete('invProduct', productId, tenantId);
-    showToast('Producto eliminado');
-  }, showToast);
+export function deleteInvProduct(id: string, showToast: ToastFn, tenantId: string | null) {
+  return fbAction('archivar producto', async () => { await inventoryRequest(tenantId, 'archiveProduct', { id }); showToast('Producto archivado'); }, showToast);
 }
 
 export function saveInvCategory(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
   return fbAction('guardar categoría', async () => {
     requireAuth(authUser, 'guardar categoría');
-    const fb = getFirebase();
-    const ts = fb.firestore.FieldValue.serverTimestamp();
-    if (editingId) {
-      await fb.firestore().collection('invCategories').doc(editingId).update({
-        name: data.catName,
-        color: data.catColor || '#10b981',
-        description: data.catDesc || '',
-      });
-      showToast('Categoría actualizada');
-    } else {
-      await fb.firestore().collection('invCategories').add({
-        name: data.catName,
-        color: data.catColor || '#10b981',
-        description: data.catDesc || '',
-        createdAt: ts,
-        tenantId: tenantId || '',
-      });
-      showToast('✅ Categoría creada');
-    }
+    await inventoryRequest(tenantId, 'saveCategory', { ...(editingId ? { id: editingId } : {}), name: data.catName, color: data.catColor || '#10b981', description: data.catDesc || '' });
+    showToast('Categoría guardada');
   }, showToast);
 }
 
-export async function deleteInvCategory(catId: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('eliminar categoría', async () => {
-    await serverDelete('invCategory', catId, tenantId);
-    showToast('Categoría eliminada');
-  }, showToast);
+export function deleteInvCategory(id: string, showToast: ToastFn, tenantId: string | null) {
+  return fbAction('archivar categoría', async () => { await inventoryRequest(tenantId, 'archiveCategory', { id }); showToast('Categoría archivada'); }, showToast);
 }
 
 export function saveInvMovement(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
   return fbAction('registrar movimiento', async () => {
     requireAuth(authUser, 'registrar movimiento');
-    const fb = getFirebase();
-    const ts = fb.firestore.FieldValue.serverTimestamp();
-    await fb.firestore().collection('invMovements').add({
-      productId: data.movProduct,
-      type: data.movType,
-      quantity: Number(data.movQuantity) || 0,
-      reason: data.movReason || '',
-      reference: data.movReference || '',
-      date: data.movDate || '',
-      warehouse: data.movWarehouse || 'Almacén Principal',
-      createdAt: ts,
-      createdBy: authUser?.uid,
-      tenantId: tenantId || '',
-    });
-    showToast('✅ Movimiento registrado');
+    await inventoryRequest(tenantId, 'movement', { productId: data.movProduct, type: data.movType, quantity: Number(data.movQuantity || 0), reason: data.movReason || '', reference: data.movReference || '', date: data.movDate || '', warehouse: data.movWarehouse || 'Almacén Principal' });
+    showToast('Movimiento registrado');
   }, showToast);
 }
 
-export async function deleteInvMovement(movId: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('eliminar movimiento', async () => {
-    await serverDelete('invMovement', movId, tenantId);
-    showToast('Movimiento eliminado');
-  }, showToast);
+export function deleteInvMovement(id: string, showToast: ToastFn, tenantId: string | null) {
+  return fbAction('anular movimiento', async () => { await inventoryRequest(tenantId, 'reverseMovement', { id }); showToast('Movimiento anulado'); }, showToast);
 }
 
 export function saveInvTransfer(data: Record<string, any>, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
   return fbAction('registrar transferencia', async () => {
     requireAuth(authUser, 'registrar transferencia');
-    const fb = getFirebase();
-    const ts = fb.firestore.FieldValue.serverTimestamp();
-    await fb.firestore().collection('invTransfers').add({
-      productId: data.transProduct,
-      productName: data.transProductName || '',
-      fromWarehouse: data.transFrom,
-      toWarehouse: data.transTo,
-      quantity: Number(data.transQuantity) || 0,
-      status: 'Pendiente',
-      date: data.transDate || '',
-      notes: data.transNotes || '',
-      createdAt: ts,
-      createdBy: authUser?.uid,
-      tenantId: tenantId || '',
-    });
-    showToast('✅ Transferencia creada');
+    await inventoryRequest(tenantId, 'transfer', { productId: data.transProduct, fromWarehouse: data.transFrom, toWarehouse: data.transTo, quantity: Number(data.transQuantity || 0), date: data.transDate || '', notes: data.transNotes || '' });
+    showToast('Transferencia completada');
   }, showToast);
 }
 
-export async function deleteInvTransfer(transId: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('eliminar transferencia', async () => {
-    await serverDelete('invTransfer', transId, tenantId);
-    showToast('Transferencia eliminada');
-  }, showToast);
+export function deleteInvTransfer(id: string, showToast: ToastFn, tenantId: string | null) {
+  return fbAction('anular transferencia', async () => { await inventoryRequest(tenantId, 'reverseTransfer', { id }); showToast('Transferencia anulada'); }, showToast);
 }
 
-export async function updateTransferStatus(transId: string, status: string, showToast: ToastFn, tenantId: string | null) {
-  return fbAction('actualizar transferencia', async () => {
-    const fb = getFirebase();
-    const updates: Record<string, any> = { status };
-    if (status === 'Completada') updates.completedAt = fb.firestore.FieldValue.serverTimestamp();
-    await fb.firestore().collection('invTransfers').doc(transId).update(updates);
-    showToast(`Transferencia: ${status}`);
-  }, showToast);
+export function updateTransferStatus(id: string, status: string, showToast: ToastFn, tenantId: string | null) {
+  if (status === 'Cancelada') return deleteInvTransfer(id, showToast, tenantId);
+  return fbAction('actualizar transferencia', async () => { throw new Error('Las transferencias se completan con sus existencias. Los registros antiguos requieren conciliación.'); }, showToast);
 }
 
 /* ===== PROJECT PROGRESS ===== */

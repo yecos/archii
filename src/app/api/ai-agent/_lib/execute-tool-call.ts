@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto';
+import { executeInventory } from '@/lib/inventory-service';
+import { inventoryStock, inventoryTotal } from '@/lib/inventory-stock';
 import type { FirestoreDoc, ExecutedAction } from "./types";
 import { formatCOP, findProjectByName, findTaskByTitle } from "./helpers";
 import { requireAdminRole } from "./rbac";
 import { getAdminFieldValue } from "@/lib/firebase-admin";
-import { getNextSequentialNumber, atomicStockUpdate } from "@/app/api/_lib/counter";
+import { getNextSequentialNumber } from "@/app/api/_lib/counter";
 import type { Firestore } from "firebase-admin/firestore";
 
 export async function executeToolCall(
@@ -12,7 +15,8 @@ export async function executeToolCall(
   userUid: string,
   actions: ExecutedAction[],
   tenantId: string,
-  userRole?: string
+  userRole?: string,
+  operationId: string = randomUUID(),
 ): Promise<string> {
   const FieldValue = getAdminFieldValue();
   const ts = FieldValue.serverTimestamp();
@@ -590,14 +594,16 @@ export async function executeToolCall(
 
       // ── INVENTORY OPERATIONS ──
       case "get_inventory_products": {
-        const invSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").limit(50).get();
-        let allProducts = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+        const invSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).orderBy("createdAt", "desc").get();
+        let allProducts = invSnap.docs.map((d: any) => ({ id: d.id, data: d.data() })).filter((p: any) => !p.data.archived);
 
         if (args.category) {
-          allProducts = allProducts.filter((p: any) => p.data.category === args.category);
+          const categories = await db.collection('invCategories').where('tenantId', '==', tenantId).where('name', '==', args.category).get();
+          const categoryIds = new Set(categories.docs.map(d => d.id));
+          allProducts = allProducts.filter((p: any) => categoryIds.has(p.data.categoryId));
         }
         if (args.warehouse) {
-          allProducts = allProducts.filter((p: any) => p.data.warehouse === args.warehouse);
+          allProducts = allProducts.filter((p: any) => (inventoryStock(p.data)[args.warehouse] || 0) > 0);
         }
         if (args.search) {
           const searchLower = args.search.toLowerCase();
@@ -611,37 +617,19 @@ export async function executeToolCall(
 
         const lines = allProducts.map(
           (p: any) =>
-            `- **${p.data.name}**: SKU: ${p.data.sku || "N/A"} | ${p.data.unit || "und"} | Precio: ${formatCOP(p.data.price || 0)} | Stock: ${p.data.stock || 0}${p.data.minStock ? ` (Mín: ${p.data.minStock})` : ""} | Bodega: ${p.data.warehouse || "N/A"} [ID: ${p.id}]`
+            `- **${p.data.name}**: SKU: ${p.data.sku || "N/A"} | ${p.data.unit || "und"} | Precio: ${formatCOP(p.data.price || 0)} | Stock: ${inventoryTotal(p.data)}${p.data.minStock ? ` (Mín: ${p.data.minStock})` : ""} | Bodega: ${p.data.warehouse || "N/A"} [ID: ${p.id}]`
         );
         return `Productos del inventario (${allProducts.length}):\n${lines.join("\n")}`;
       }
 
       case "create_inventory_product": {
-        const docRef = await db.collection("invProducts").add({
-          name: args.name,
-          sku: args.sku || "",
-          category: args.category || "",
-          unit: args.unit || "unidades",
-          price: args.price || 0,
-          stock: args.stock || 0,
-          minStock: args.min_stock || 0,
-          warehouse: args.warehouse || "",
-          warehouseStock: args.warehouse ? { [args.warehouse]: args.stock || 0 } : {},
-          imageData: "",
-          tenantId,
-          createdAt: ts,
-          createdBy: userUid,
+        const result = await executeInventory(db, userUid, tenantId, operationId, 'saveProduct', {
+          name: args.name, sku: args.sku || '', category: args.category || '', unit: args.unit || 'Unidad',
+          price: args.price ?? 0, stock: args.stock ?? 0, minStock: args.min_stock ?? 0,
+          warehouse: args.warehouse || 'Almacén Principal',
         });
-
-        actions.push({
-          type: "inventory_product_created",
-          label: "Producto creado",
-          icon: "📦",
-          details: args.name,
-          success: true,
-        });
-
-        return `Producto "${args.name}" creado exitosamente en el inventario [ID: ${docRef.id}]. SKU: ${args.sku || "N/A"}, Categoría: ${args.category || "N/A"}, Precio: ${formatCOP(args.price || 0)}, Stock inicial: ${args.stock || 0} ${args.unit || "unidades"}`;
+        actions.push({ type: 'inventory_product_created', label: 'Producto creado', icon: '📦', details: args.name, success: true });
+        return `Producto "${args.name}" creado [ID: ${result.id}]. Stock inicial: ${result.stock}.`;
       }
 
       case "get_inventory_movements": {
@@ -670,10 +658,13 @@ export async function executeToolCall(
       case "create_inventory_movement": {
         let productId = args.product_id;
         if (!productId && args.product_name) {
-          const prodSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).limit(50).get();
-          const products = prodSnap.docs.map((d: any) => ({ id: d.id, data: d.data() }));
+          const prodSnap = await db.collection("invProducts").where("tenantId", "==", tenantId).get();
+          const products = prodSnap.docs.map((d: any) => ({ id: d.id, data: d.data() })).filter((p: any) => !p.data.archived);
           const searchLower = args.product_name.toLowerCase();
-          const found = products.find((p: any) => p.data.name?.toLowerCase() === searchLower || p.data.name?.toLowerCase().includes(searchLower));
+          const exact = products.filter((p: any) => p.data.name?.toLowerCase() === searchLower);
+          const matches = exact.length ? exact : products.filter((p: any) => p.data.name?.toLowerCase().includes(searchLower));
+          if (matches.length > 1) return 'Hay varios productos con ese nombre. Indica el ID del producto.';
+          const found = matches[0];
           if (found) productId = found.id;
           else return `No encontré el producto "${args.product_name}" en el inventario.`;
         }
@@ -681,33 +672,12 @@ export async function executeToolCall(
           return "Debes proporcionar el ID del producto o el nombre del producto para registrar el movimiento.";
         }
 
-        const today = new Date().toISOString().split("T")[0];
-        const docRef = await db.collection("invMovements").add({
-          productId,
-          type: args.type || "Entrada",
-          quantity: args.quantity || 0,
-          reason: args.reason || "",
-          reference: args.reference || "",
-          date: today,
-          warehouse: args.warehouse || "",
-          tenantId,
-          createdAt: ts,
-          createdBy: userUid,
+        const result = await executeInventory(db, userUid, tenantId, operationId, 'movement', {
+          productId, type: args.type || 'Entrada', quantity: args.quantity,
+          warehouse: args.warehouse || 'Almacén Principal', reason: args.reason || '', reference: args.reference || '',
         });
-
-        // Update product stock atomically (race-condition safe)
-        const quantityChange = args.type === "Entrada" ? (args.quantity || 0) : -(args.quantity || 0);
-        const newStock = await atomicStockUpdate(productId, quantityChange);
-
-        actions.push({
-          type: "inventory_movement_created",
-          label: `${args.type === "Entrada" ? "📥 Entrada" : "📤 Salida"} registrada`,
-          icon: args.type === "Entrada" ? "📥" : "📤",
-          details: `${args.quantity} unidades`,
-          success: true,
-        });
-
-        return `${args.type === "Entrada" ? "📥 Entrada" : "📤 Salida"} de ${args.quantity} unidades registrada exitosamente [ID: ${docRef.id}].${args.reason ? ` Motivo: ${args.reason}` : ""}${args.reference ? ` | Ref: ${args.reference}` : ""}`;
+        actions.push({ type: 'inventory_movement_created', label: 'Movimiento registrado', icon: '📦', details: `${args.quantity} unidades`, success: true });
+        return `${args.type || 'Entrada'} de ${args.quantity} registrada [ID: ${result.id}]. Stock total: ${result.stock}.`;
       }
 
       // ── INVOICES OPERATIONS ──

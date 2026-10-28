@@ -9,7 +9,7 @@ import { INV_UNITS, INV_WAREHOUSES } from '@/lib/types';
 
 export default function InvProductModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, editingId, closeModal } = useApp();
-  const { invCategories, saveInvProduct, handleInvProductImageSelect } = useInventoryContext();
+  const { invCategories, invSaving, saveInvProduct, handleInvProductImageSelect } = useInventoryContext();
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
 
   const handleSubmit = () => {
@@ -49,7 +49,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
           </FormSelect>
         </FormField>
         <FormField label="Precio unit. COP">
-          <FormInput type="number" placeholder="50000" value={forms.invProdPrice || ''} onChange={e => setForms(p => ({ ...p, invProdPrice: e.target.value }))} />
+          <FormInput type="number" min="0" step="any" placeholder="50000" value={forms.invProdPrice || ''} onChange={e => setForms(p => ({ ...p, invProdPrice: e.target.value }))} />
         </FormField>
       </div>
 
@@ -62,8 +62,9 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
                 <span className="text-xs text-[var(--muted-foreground)] w-36 sm:w-44 flex-shrink-0 truncate">{wh}</span>
                 <input
                   className="flex-1 bg-[var(--af-bg3)] border border-[var(--input)] rounded-lg px-3 py-1.5 text-sm text-[var(--foreground)] outline-none"
-                  type="number"
+                  type="number" min="0" step="any"
                   placeholder="0"
+                  disabled={!!editingId}
                   value={forms[`invProdWS_${wh.replace(/\s/g, '_')}`] || '0'}
                   onChange={e => setForms(p => ({ ...p, [`invProdWS_${wh.replace(/\s/g, '_')}`]: e.target.value }))}
                 />
@@ -73,6 +74,8 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
           </div>
         </FormField>
       </div>
+
+      {editingId && <p className="text-xs text-[var(--muted-foreground)] mb-3">Las existencias se ajustan registrando una entrada o salida en Movimientos.</p>}
 
       {/* Product Image */}
       <div className="mb-3">
@@ -88,7 +91,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
             <label className="flex flex-col items-center justify-center gap-1.5 p-5 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--af-accent)]/50 transition-colors bg-[var(--af-bg3)]">
               <ImageIcon className="w-6 h-6 text-[var(--muted-foreground)]" aria-hidden="true"/>
               <span className="text-xs text-[var(--muted-foreground)]">Toca para agregar foto</span>
-              <span className="text-[10px] text-[var(--muted-foreground)]">JPG, PNG — máx 3 MB</span>
+              <span className="text-[10px] text-[var(--muted-foreground)]">JPG, PNG — máx 400 KB</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleInvProductImageSelect} />
             </label>
           )}
@@ -97,7 +100,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <FormField label="Stock mínimo (total)">
-          <FormInput type="number" placeholder="5" value={forms.invProdMinStock || '5'} onChange={e => setForms(p => ({ ...p, invProdMinStock: e.target.value }))} />
+          <FormInput type="number" min="0" step="any" placeholder="5" value={forms.invProdMinStock || '5'} onChange={e => setForms(p => ({ ...p, invProdMinStock: e.target.value }))} />
         </FormField>
         <FormField label="Almacén principal">
           <FormSelect value={forms.invProdWarehouse || 'Almacén Principal'} onChange={e => setForms(p => ({ ...p, invProdWarehouse: e.target.value }))}>
@@ -110,7 +113,7 @@ export default function InvProductModal({ open, onClose }: { open: boolean; onCl
         <FormTextarea rows={2} placeholder="Descripción..." value={forms.invProdDesc || ''} onChange={e => setForms(p => ({ ...p, invProdDesc: e.target.value }))} />
       </FormField>
 
-      <ModalFooter onCancel={() => closeModal('invProduct')} onSubmit={handleSubmit} submitLabel={editingId ? 'Guardar' : 'Crear producto'} />
+      <ModalFooter submitDisabled={invSaving} onCancel={() => closeModal('invProduct')} onSubmit={handleSubmit} submitLabel={editingId ? 'Guardar' : 'Crear producto'} />
     </CenterModal>
   );
 }
