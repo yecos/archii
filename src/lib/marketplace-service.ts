@@ -405,6 +405,24 @@ export async function uninstallIntegration(
 /**
  * List all installed integrations for a tenant.
  */
+/** Public representations must never include credentials. */
+export function sanitizeIntegration<T extends { providerId: string; config: Record<string, string> }>(instance: T): T {
+  const provider = getProvider(instance.providerId);
+  const safeConfig: Record<string, string> = {};
+  for (const field of provider?.configSchema || []) {
+    if (field.type !== 'password' && !/token|secret|key|webhookurl|password|credential/i.test(field.key)) {
+      if (instance.config?.[field.key]) safeConfig[field.key] = instance.config[field.key];
+    }
+  }
+  return { ...instance, config: safeConfig };
+}
+
+export async function requireTenantIntegration(tenantId: string, instanceId: string): Promise<IntegrationInstance> {
+  const doc = await getAdminDb().collection('integrations').doc(instanceId).get();
+  if (!doc.exists || doc.data()?.tenantId !== tenantId) throw new Error('Integración no encontrada en este tenant');
+  return { id: doc.id, ...(doc.data() as Omit<IntegrationInstance, 'id'>) };
+}
+
 export async function getTenantIntegrations(
   tenantId: string
 ): Promise<IntegrationInstance[]> {
