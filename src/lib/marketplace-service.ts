@@ -13,6 +13,7 @@
  */
 
 import { getAdminDb } from './firebase-admin';
+import { encryptIntegrationConfig, decryptIntegrationConfig } from './integration-crypto';
 import { isFlagEnabled } from './feature-flags';
 
 /* ================================================================
@@ -353,7 +354,7 @@ export async function installIntegration(
     tenantId,
     providerId,
     status: 'active' as IntegrationStatus,
-    config,
+    config: encryptIntegrationConfig(config),
     events: events || provider.eventTypes,
     installedBy,
     lastSyncAt: null,
@@ -420,7 +421,8 @@ export function sanitizeIntegration<T extends { providerId: string; config: Reco
 export async function requireTenantIntegration(tenantId: string, instanceId: string): Promise<IntegrationInstance> {
   const doc = await getAdminDb().collection('integrations').doc(instanceId).get();
   if (!doc.exists || doc.data()?.tenantId !== tenantId) throw new Error('Integración no encontrada en este tenant');
-  return { id: doc.id, ...(doc.data() as Omit<IntegrationInstance, 'id'>) };
+  const item = doc.data() as Omit<IntegrationInstance, 'id'>;
+  return { id: doc.id, ...item, config: decryptIntegrationConfig(item.config) };
 }
 
 export async function getTenantIntegrations(
@@ -436,6 +438,7 @@ export async function getTenantIntegrations(
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...(doc.data() as Omit<IntegrationInstance, 'id'>),
+    config: decryptIntegrationConfig(doc.data().config || {}),
   }));
 }
 
@@ -453,7 +456,7 @@ export async function updateIntegrationConfig(
 
   const db = getAdminDb();
   await db.collection('integrations').doc(instanceId).update({
-    config,
+    config: encryptIntegrationConfig(config),
     status: 'active',
     errorMessage: null,
     updatedAt: new Date().toISOString(),
@@ -482,6 +485,7 @@ export async function triggerIntegration(
   }
 
   const instance = { id: doc.id, ...doc.data() } as IntegrationInstance;
+  instance.config = decryptIntegrationConfig(instance.config);
 
   // Check if this instance subscribes to the event
   if (instance.events.length > 0 && !instance.events.includes(event)) {
