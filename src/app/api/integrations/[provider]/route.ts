@@ -143,6 +143,17 @@ export async function POST(
       return NextResponse.json({ error: 'Sin acceso al tenant' }, { status: 403 });
     }
 
+    // Only tenant administrators may mutate external services or authorize OAuth.
+    if (action === 'sync' || action === 'oauth-callback') {
+      const db = getAdminDb();
+      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+      if (!tenantDoc.exists) return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
+      const data = tenantDoc.data()!;
+      if (data.createdBy !== user.uid && !(data.superAdmins || []).includes(user.uid)) {
+        return NextResponse.json({ error: 'Solo Super Admin puede sincronizar o autorizar integraciones' }, { status: 403 });
+      }
+    }
+
     // Verify provider exists
     const providerInfo = getProvider(provider);
     if (!providerInfo) {
@@ -166,31 +177,14 @@ export async function POST(
           );
         }
 
-        // Calendly OAuth token exchange
-        const clientId = process.env.CALENDLY_CLIENT_ID;
-        const clientSecret = process.env.CALENDLY_CLIENT_SECRET;
-
-        if (!clientId || !clientSecret) {
-          return NextResponse.json(
-            { error: 'Calendly OAuth credentials no configuradas en el servidor' },
-            { status: 500 }
-          );
-        }
-
-        const { exchangeCalendlyCode } = await import('@/lib/connectors/calendly-connector');
-        const tokens = await exchangeCalendlyCode(
-          clientId,
-          clientSecret,
-          body.redirectUri,
-          body.code
+        // OAuth must validate a server-bound state and persist tokens to the
+        // exact tenant integration before a callback can be accepted.
+        // Do not exchange a code yet: the prior implementation falsely claimed
+        // persistence and could complete an unbound authorization.
+        return NextResponse.json(
+          { error: 'Calendly OAuth pendiente de flujo seguro con state validado y almacenamiento de tokens' },
+          { status: 501 }
         );
-
-        // Store tokens server-side, don't return to client
-        // The tokens are already stored in the instance config by the connector
-        return NextResponse.json({
-          message: 'OAuth exitoso — integración configurada',
-          expiresIn: tokens.expires_in,
-        });
       }
 
       /* ---- TEST CONNECTION ---- */
@@ -252,7 +246,7 @@ export async function POST(
             break;
           }
           case 'stripe': {
-            const { createStripeCustomer } = await import('@/lib/connectors/stripe-connector');
+            // Read-only credential verification; never create a customer during testing.
             // Quick balance check
             const resp = await fetch('https://api.stripe.com/v1/balance', {
               headers: { Authorization: `Bearer ${instData.config.secretKey}` },
