@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // SEC-H04: For install, uninstall, and update actions, require Super Admin role
-    const requiresSuperAdmin = ['install', 'uninstall', 'update'].includes(action);
+    const requiresSuperAdmin = ['install', 'uninstall', 'update', 'trigger'].includes(action);
     if (requiresSuperAdmin) {
       const { getAdminDb } = await import('@/lib/firebase-admin');
       const db = getAdminDb();
