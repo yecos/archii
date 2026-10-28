@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
-import { getProvider, getIntegrationLogs } from '@/lib/marketplace-service';
+import { getProvider, getIntegrationLogs, sanitizeIntegration } from '@/lib/marketplace-service';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
 
@@ -97,7 +97,8 @@ export async function GET(
       if (!instData) {
         return NextResponse.json({ error: 'Instancia no encontrada' }, { status: 404 });
       }
-      instance = instData;
+      if (instData.providerId !== provider) return NextResponse.json({ error: 'Proveedor no coincide con la instancia' }, { status: 404 });
+      instance = sanitizeIntegration(instData);
       logs = await getIntegrationLogs(instanceId, 20);
     }
 
@@ -199,7 +200,7 @@ export async function POST(
         }
 
         const instData = await getInstanceConfig(tenantId, body.instanceId);
-        if (!instData) {
+        if (!instData || instData.providerId !== provider) {
           return NextResponse.json({ error: 'Instancia no encontrada' }, { status: 404 });
         }
 
@@ -278,7 +279,7 @@ export async function POST(
         }
 
         const instData = await getInstanceConfig(tenantId, body.instanceId);
-        if (!instData) {
+        if (!instData || instData.providerId !== provider) {
           return NextResponse.json({ error: 'Instancia no encontrada' }, { status: 404 });
         }
 
