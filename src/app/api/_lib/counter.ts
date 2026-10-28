@@ -82,34 +82,3 @@ export async function getNextSequentialNumber(
 
   return `${prefix}-${String(result).padStart(padLength, '0')}`;
 }
-
-/**
- * Atomically update a product's stock within a Firestore transaction.
- * Prevents race conditions in inventory stock updates.
- *
- * @param productId - The Firestore document ID of the product
- * @param quantityChange - Positive for entries, negative for exits
- * @returns The new stock value
- */
-export async function atomicStockUpdate(
-  productId: string,
-  quantityChange: number
-): Promise<number> {
-  const db = getAdminDb();
-  const productRef = db.collection('invProducts').doc(productId);
-
-  return db.runTransaction(async (transaction: Transaction) => {
-    const productDoc = await transaction.get(productRef);
-
-    if (!productDoc.exists) {
-      throw new Error('Producto no encontrado');
-    }
-
-    const currentStock = productDoc.data()?.stock || 0;
-    const newStock = Math.max(0, currentStock + quantityChange);
-
-    transaction.update(productRef, { stock: newStock });
-
-    return newStock;
-  });
-}

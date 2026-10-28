@@ -39,3 +39,12 @@ next-env.d.ts
 prisma/*.db
 .env*
 .firebase-cred.json
+
+# Local Firebase emulator output
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Browser test evidence
+test-results/
+playwright-report/

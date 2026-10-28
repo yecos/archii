@@ -1,1 +1,2 @@
-import '@testing-library/jest-dom/vitest';
+// Tests use the built-in Vitest assertions; no DOM matcher package is required.
+export {};

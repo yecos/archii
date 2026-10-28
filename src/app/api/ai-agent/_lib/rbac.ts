@@ -2,7 +2,8 @@
 export const ADMIN_ONLY_TOOLS = new Set([
   "create_task", "create_project", "create_expense", "create_supplier",
   "create_meeting", "create_rfi", "create_submittal", "create_punch_item",
-  "create_inventory_product", "create_inventory_movement", "create_invoice",
+  // Inventory writes authorize tenant membership and role inside their transaction.
+  "create_invoice",
   "create_time_entry", "create_company", "create_daily_log",
   "update_task_status", "update_project_status", "update_project_progress",
   "update_invoice_status", "delete_task",

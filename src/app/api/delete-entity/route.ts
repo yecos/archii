@@ -128,10 +128,6 @@ export async function POST(request: NextRequest) {
       punchItem: 'punchItems',
       comment: 'comments',
       galleryPhoto: 'galleryPhotos',
-      invProduct: 'invProducts',
-      invCategory: 'invCategories',
-      invMovement: 'invMovements',
-      invTransfer: 'invTransfers',
       timeEntry: 'timeEntries',
     };
 

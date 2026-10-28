@@ -9,7 +9,7 @@ import { INV_WAREHOUSES } from '@/lib/types';
 
 export default function InvMovementModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { forms, setForms, closeModal } = useApp();
-  const { invProducts, saveInvMovement, getWarehouseStock, getTotalStock } = useInventoryContext();
+  const { invProducts, invSaving, saveInvMovement, getWarehouseStock, getTotalStock } = useInventoryContext();
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
 
   const handleSubmit = () => {
@@ -52,6 +52,7 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
       <div className="mb-3">
         <FormField label="Producto" required error={errors.invMovProduct}>
           <FormSelect
+            aria-label="Producto"
             value={forms.invMovProduct || ''}
             onChange={e => { setForms(p => ({ ...p, invMovProduct: e.target.value })); clearError('invMovProduct'); }}
             onBlur={() => onBlurRequired('invMovProduct', forms.invMovProduct || '', 'Producto')}
@@ -68,6 +69,7 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
       <div className="grid grid-cols-2 gap-3 mb-3">
         <FormField label="Almacén" required error={errors.invMovWarehouse}>
           <FormSelect
+            aria-label="Almacén"
             value={forms.invMovWarehouse || 'Almacén Principal'}
             onChange={e => { setForms(p => ({ ...p, invMovWarehouse: e.target.value })); clearError('invMovWarehouse'); }}
             onBlur={() => onBlurRequired('invMovWarehouse', forms.invMovWarehouse || '', 'Almacén')}
@@ -80,7 +82,8 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
           <FormInput
             type="number"
             placeholder="10"
-            min="1"
+            min="0.000001" step="any"
+            aria-label="Cantidad"
             value={forms.invMovQty || ''}
             onChange={e => { setForms(p => ({ ...p, invMovQty: e.target.value })); clearError('invMovQty'); }}
             onBlur={() => onBlurRequired('invMovQty', forms.invMovQty || '', 'Cantidad')}
@@ -133,7 +136,7 @@ export default function InvMovementModal({ open, onClose }: { open: boolean; onC
         );
       })()}
 
-      <ModalFooter
+      <ModalFooter submitDisabled={invSaving}
         onCancel={() => closeModal('invMovement')}
         onSubmit={handleSubmit}
         submitLabel="Registrar"

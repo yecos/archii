@@ -38,6 +38,35 @@ jobs:
         env:
           NODE_ENV: production
 
+  inventory-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Inventory concurrency, isolation and Firestore rules
+        run: npm run test:inventory:integration
+      - name: Install browser for inventory flows
+        run: npx playwright install --with-deps chromium
+      - name: Inventory desktop and Android browser flows
+        run: npm run test:inventory:e2e
+      - name: Browser evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-browser-evidence
+          path: |
+            test-results/inventory
+            playwright-report/inventory
+          retention-days: 7
+
   security-audit:
     runs-on: ubuntu-latest
     needs: lint-and-build

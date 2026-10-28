@@ -17,6 +17,7 @@ import InventoryReports from '@/components/inventory/InventoryReports';
 export default function InventoryScreen() {
   const { openModal, setEditingId, setForms, showToast } = useApp();
   const {
+    invLoading, invLoadError, retryInventory,
     deleteInvCategory, deleteInvMovement, deleteInvProduct, deleteInvTransfer, getInvCategoryColor,
     getInvCategoryName, getInvProductName, getTotalStock, getWarehouseStock, invAlerts,
     invCategories, invFilterCat, invMovFilterType, invMovements, invPendingTransfers,
@@ -54,7 +55,7 @@ export default function InventoryScreen() {
             </div>
 
             {/* Loading skeleton */}
-            {!invProducts.length && !invCategories.length && (
+            {invLoading && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {Array.from({ length: 4 }).map((_, i) => <SkeletonKPI key={i} />)}
@@ -63,6 +64,12 @@ export default function InventoryScreen() {
               </div>
             )}
 
+            {invLoadError && <div role="alert" className="rounded-lg border border-red-500/30 p-4 text-sm">
+              <p>{invLoadError}</p>
+              <button onClick={retryInventory} className="mt-2 min-h-11 px-3 underline">Volver a intentar</button>
+            </div>}
+
+            {!invLoading && !invLoadError && <>
             {/* ===== Dashboard Tab ===== */}
             {invTab === 'dashboard' && <InventoryDashboard
               invProducts={invProducts}
@@ -152,8 +159,6 @@ export default function InventoryScreen() {
             {invTab === 'reports' && <InventoryReports
               invProducts={invProducts}
               invCategories={invCategories}
-              invMovements={invMovements}
-              invTransfers={invTransfers}
               invTotalValue={invTotalValue}
               invTotalStock={invTotalStock}
               getInvCategoryName={getInvCategoryName}
@@ -163,6 +168,7 @@ export default function InventoryScreen() {
               getWarehouseStock={getWarehouseStock}
               showToast={showToast}
             />}
+            </>}
           <ConfirmDialog {...confirmDialog} />
           </div>
   );

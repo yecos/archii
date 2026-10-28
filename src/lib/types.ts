@@ -211,6 +211,8 @@ export interface GalleryPhoto {
 export interface InvProduct {
   id: string;
   data: {
+    tenantId: string;
+    archived?: boolean;
     name: string;
     sku: string;
     categoryId: string;
@@ -231,6 +233,8 @@ export interface InvProduct {
 export interface InvCategory {
   id: string;
   data: {
+    tenantId: string;
+    archived?: boolean;
     name: string;
     color: string;
     description: string;
@@ -241,7 +245,14 @@ export interface InvCategory {
 export interface InvMovement {
   id: string;
   data: {
+    tenantId: string;
+    inventoryVersion?: number;
+    reversedAt?: FirestoreTimestamp;
+    reversalOf?: string;
+    unit?: string;
     productId: string;
+    productName?: string;
+    warehouse: string;
     type: 'Entrada' | 'Salida';
     quantity: number;
     reason: string;
@@ -255,6 +266,11 @@ export interface InvMovement {
 export interface InvTransfer {
   id: string;
   data: {
+    tenantId: string;
+    inventoryVersion?: number;
+    reversedAt?: FirestoreTimestamp;
+    reversalOf?: string;
+    unit?: string;
     productId: string;
     productName: string;
     fromWarehouse: string;

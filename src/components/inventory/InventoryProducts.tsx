@@ -66,7 +66,7 @@ export default function InventoryProducts({
             const isLow = totalSt <= (Number(p.data.minStock) || 0);
             const isOut = totalSt === 0;
             return (
-              <div key={p.id} className={`bg-[var(--af-bg3)] rounded-xl p-3 sm:p-4 border ${isOut ? 'border-red-500/40' : isLow ? 'border-amber-500/30' : 'border-[var(--border)]'}`}>
+              <div key={p.id} data-inventory-product={p.id} className={`bg-[var(--af-bg3)] rounded-xl p-3 sm:p-4 border ${isOut ? 'border-red-500/40' : isLow ? 'border-amber-500/30' : 'border-[var(--border)]'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3 min-w-0">
                     {p.data.imageData ? <img src={p.data.imageData} alt={p.data.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 mt-0.5" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: (getInvCategoryColor(p.data.categoryId) || '#6b7280') + '20' }}><div className="w-4 h-4 rounded-sm" style={{ backgroundColor: getInvCategoryColor(p.data.categoryId) }} /></div>}
@@ -83,14 +83,14 @@ export default function InventoryProducts({
                   {/* Desktop: edit/delete buttons */}
                   <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                     <button aria-label="Editar" className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer" onClick={() => openEditInvProduct(p)}><Pencil size={14} className="stroke-current" aria-hidden="true"/></button>
-                    <button aria-label="Eliminar" className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Eliminar producto', description: '¿Estás seguro? El producto será eliminado permanentemente.' })) deleteInvProduct(p.id); }}><Trash2 size={14} className="stroke-current" aria-hidden="true"/></button>
+                    <button aria-label="Archivar" className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer" onClick={async () => { if (await confirm({ title: 'Archivar producto', description: 'El producto se archivará y conservará su historial. Debe tener existencias en cero.' })) deleteInvProduct(p.id); }}><Trash2 size={14} className="stroke-current" aria-hidden="true"/></button>
                   </div>
                   {/* Mobile: OverflowMenu */}
                   <div className="md:hidden flex-shrink-0">
                     <OverflowMenu
                       actions={[
                         { label: 'Editar producto', icon: <Pencil size={14} aria-hidden="true"/>, onClick: () => openEditInvProduct(p) },
-                        { label: 'Eliminar producto', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirm({ title: 'Eliminar producto', description: '¿Estás seguro? El producto será eliminado permanentemente.' })) deleteInvProduct(p.id); }, variant: 'danger', separator: true },
+                        { label: 'Archivar producto', icon: <Trash2 size={14} aria-hidden="true"/>, onClick: async () => { if (await confirm({ title: 'Archivar producto', description: 'El producto se archivará y conservará su historial. Debe tener existencias en cero.' })) deleteInvProduct(p.id); }, variant: 'danger', separator: true },
                       ]}
                       side="left"
                       align="end"

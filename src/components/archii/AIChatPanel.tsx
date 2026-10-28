@@ -255,7 +255,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
       : undefined;
 
     const userMessage: Message = {
-      id: `msg-${Date.now()}`,
+      id: crypto.randomUUID(),
       role: 'user',
       content: content.trim() || 'Analiza esta imagen',
       timestamp: new Date(),
@@ -302,6 +302,7 @@ export default function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         signal: controller.signal,
         body: JSON.stringify({
+          requestId: userMessage.id,
           messages: apiMessages,
           projectContext: projectContext || undefined,
           tenantId: activeTenantId || undefined,

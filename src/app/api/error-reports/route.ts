@@ -3,8 +3,8 @@ import { requireAuth, AuthError } from '@/lib/api-auth';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
 import { verifyTenantMembership } from '@/lib/tenant-utils';
 
-function limitText(value: unknown, max: number): string | undefined {
-  if (typeof value !== 'string') return undefined;
+function limitText(value: unknown, max: number): string {
+  if (typeof value !== 'string') return '';
   return value.slice(0, max);
 }
 
