@@ -22,6 +22,8 @@ import { verifyTenantMembership } from '@/lib/tenant-utils';
 import {
   getAvailableProviders,
   getTenantIntegrations,
+  sanitizeIntegration,
+  requireTenantIntegration,
   installIntegration,
   uninstallIntegration,
   updateIntegrationConfig,
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     const providers = getAvailableProviders();
-    const installed = await getTenantIntegrations(tenantId);
+    const installed = (await getTenantIntegrations(tenantId)).map(sanitizeIntegration);
 
     return NextResponse.json({
       providers,
@@ -165,7 +167,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'config requerido (objeto)' }, { status: 400 });
         }
 
-        await updateIntegrationConfig(body.instanceId, body.config);
+        const existing = await requireTenantIntegration(tenantId, body.instanceId);
+        const mergedConfig = { ...existing.config, ...Object.fromEntries(Object.entries(body.config).filter(([, value]) => typeof value === 'string' && value.trim() !== '')) };
+        await updateIntegrationConfig(body.instanceId, mergedConfig);
         return NextResponse.json({ message: 'Configuración actualizada' });
       }
 
@@ -178,6 +182,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'event requerido' }, { status: 400 });
         }
 
+        await requireTenantIntegration(tenantId, body.instanceId);
         const result = await triggerIntegration(
           body.instanceId,
           body.event,
@@ -198,6 +203,7 @@ export async function POST(request: NextRequest) {
         }
 
         const limit = Math.min(parseInt(body.limit || '50', 10), 200);
+        await requireTenantIntegration(tenantId, body.instanceId);
         const logs = await getIntegrationLogs(body.instanceId, limit);
 
         return NextResponse.json({ logs, count: logs.length });
