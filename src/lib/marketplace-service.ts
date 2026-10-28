@@ -489,7 +489,16 @@ export async function triggerIntegration(
   }
 
   try {
-    // Delegate to the appropriate connector
+    // Load the provider module before consulting the connector registry.
+    // The modules register themselves when evaluated.
+    switch (instance.providerId) {
+      case 'slack': await import('./connectors/slack-connector'); break;
+      case 'jira': await import('./connectors/jira-connector'); break;
+      case 'github': await import('./connectors/github-connector'); break;
+      case 'calendly': await import('./connectors/calendly-connector'); break;
+      case 'stripe': await import('./connectors/stripe-connector'); break;
+      default: break;
+    }
     const connector = getConnector(instance.providerId);
     if (!connector) {
       return { success: false, error: `Conector no disponible: ${instance.providerId}` };
