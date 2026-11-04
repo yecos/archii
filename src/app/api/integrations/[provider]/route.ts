@@ -17,30 +17,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
-import { getProvider, getIntegrationLogs, sanitizeIntegration } from '@/lib/marketplace-service';
+import { getProvider, getIntegrationLogs, sanitizeIntegration, IntegrationAccessError } from '@/lib/marketplace-service';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { decryptIntegrationConfig } from '@/lib/integration-crypto';
-import { verifyTenantMembership } from '@/lib/tenant-utils';
-
-/* ---- Dynamic connector imports ---- */
-
-// Lazy-loaded connectors for test/sync
-async function getConnector(providerId: string): Promise<any> {
-  switch (providerId) {
-    case 'slack':
-      return await import('@/lib/connectors/slack-connector');
-    case 'jira':
-      return await import('@/lib/connectors/jira-connector');
-    case 'github':
-      return await import('@/lib/connectors/github-connector');
-    case 'calendly':
-      return await import('@/lib/connectors/calendly-connector');
-    case 'stripe':
-      return await import('@/lib/connectors/stripe-connector');
-    default:
-      return null;
-  }
-}
+import { verifyTenantMembership, verifyTenantSuperAdmin } from '@/lib/tenant-utils';
+import { collectSensitiveConfigValues, safeErrorMessage } from '@/lib/integration-security';
 
 /* ---- Helpers ---- */
 
@@ -84,6 +65,10 @@ export async function GET(
       return NextResponse.json({ error: 'Sin acceso al tenant' }, { status: 403 });
     }
 
+    if (instanceId && !await verifyTenantSuperAdmin(user.uid, tenantId)) {
+      return NextResponse.json({ error: 'Solo Super Admin puede consultar los logs de integraciones' }, { status: 403 });
+    }
+
     // Get provider info
     const providerInfo = getProvider(provider);
     if (!providerInfo) {
@@ -100,7 +85,7 @@ export async function GET(
       }
       if (instData.providerId !== provider) return NextResponse.json({ error: 'Proveedor no coincide con la instancia' }, { status: 404 });
       instance = sanitizeIntegration(instData);
-      logs = await getIntegrationLogs(instanceId, 20);
+      logs = await getIntegrationLogs(tenantId, instanceId, 20);
     }
 
     return NextResponse.json({
@@ -144,15 +129,10 @@ export async function POST(
       return NextResponse.json({ error: 'Sin acceso al tenant' }, { status: 403 });
     }
 
-    // Only tenant administrators may mutate external services or authorize OAuth.
-    if (action === 'sync' || action === 'oauth-callback') {
-      const db = getAdminDb();
-      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-      if (!tenantDoc.exists) return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 });
-      const data = tenantDoc.data()!;
-      if (data.createdBy !== user.uid && !(data.superAdmins || []).includes(user.uid)) {
-        return NextResponse.json({ error: 'Solo Super Admin puede sincronizar o autorizar integraciones' }, { status: 403 });
-      }
+    // Tests can send external requests (Slack) and sync/OAuth can mutate
+    // external state. Keep all of them behind the tenant-admin boundary.
+    if (['test', 'sync', 'oauth-callback'].includes(action) && !await verifyTenantSuperAdmin(user.uid, tenantId)) {
+      return NextResponse.json({ error: 'Solo Super Admin puede operar integraciones externas' }, { status: 403 });
     }
 
     // Verify provider exists
@@ -261,7 +241,10 @@ export async function POST(
           }
         }
 
-        return NextResponse.json(testResult);
+        return NextResponse.json({
+          ...testResult,
+          message: safeErrorMessage(testResult.message, collectSensitiveConfigValues(instData.config)),
+        });
       }
 
       /* ---- SYNC ---- */
@@ -328,6 +311,9 @@ export async function POST(
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    if (error instanceof IntegrationAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: safeErrorMessage(error) || 'Error interno' }, { status: 500 });
   }
 }

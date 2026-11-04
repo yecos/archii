@@ -79,6 +79,24 @@ export function isSuperAdmin(tenantData: Record<string, any>, uid: string): bool
 }
 
 /**
+ * Verify the caller has tenant-admin privileges without treating platform
+ * admin email configuration as a tenant role.
+ */
+export async function verifyTenantSuperAdmin(
+  uid: string,
+  tenantId: string
+): Promise<boolean> {
+  const db = getAdminDb();
+
+  try {
+    const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+    return tenantDoc.exists && isSuperAdmin(tenantDoc.data() || {}, uid);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Clamp a number within min/max bounds.
  */
 export function clamp(value: number, min: number, max: number): number {

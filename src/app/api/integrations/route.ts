@@ -18,7 +18,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, AuthError } from '@/lib/api-auth';
 import { isFlagEnabledDynamic } from '@/lib/feature-flags-server';
-import { verifyTenantMembership } from '@/lib/tenant-utils';
+import { verifyTenantMembership, verifyTenantSuperAdmin } from '@/lib/tenant-utils';
+import { safeErrorMessage } from '@/lib/integration-security';
 import {
   getAvailableProviders,
   getTenantIntegrations,
@@ -29,6 +30,7 @@ import {
   updateIntegrationConfig,
   triggerIntegration,
   getIntegrationLogs,
+  IntegrationAccessError,
 } from '@/lib/marketplace-service';
 
 /* ================================================================
@@ -102,19 +104,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sin acceso al tenant' }, { status: 403 });
     }
 
-    // SEC-H04: For install, uninstall, and update actions, require Super Admin role
-    const requiresSuperAdmin = ['install', 'uninstall', 'update', 'trigger'].includes(action);
-    if (requiresSuperAdmin) {
-      const { getAdminDb } = await import('@/lib/firebase-admin');
-      const db = getAdminDb();
-      const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-      if (tenantDoc.exists) {
-        const tData = tenantDoc.data()!;
-        const isSuperAdmin = tData.createdBy === user.uid || (tData.superAdmins || []).includes(user.uid);
-        if (!isSuperAdmin) {
-          return NextResponse.json({ error: 'Solo Super Admin puede instalar, desinstalar o actualizar integraciones' }, { status: 403 });
-        }
-      }
+    // External effects, credential changes, and logs are tenant-admin only.
+    const requiresSuperAdmin = ['install', 'uninstall', 'update', 'trigger', 'logs'].includes(action);
+    if (requiresSuperAdmin && !await verifyTenantSuperAdmin(user.uid, tenantId)) {
+      return NextResponse.json({ error: 'Solo Super Admin puede gestionar integraciones' }, { status: 403 });
     }
 
     switch (action) {
@@ -123,7 +116,7 @@ export async function POST(request: NextRequest) {
         if (!body.providerId?.trim()) {
           return NextResponse.json({ error: 'providerId requerido' }, { status: 400 });
         }
-        if (!body.config || typeof body.config !== 'object') {
+        if (!body.config || typeof body.config !== 'object' || Array.isArray(body.config)) {
           return NextResponse.json({ error: 'config requerido (objeto)' }, { status: 400 });
         }
 
@@ -163,13 +156,17 @@ export async function POST(request: NextRequest) {
         if (!body.instanceId?.trim()) {
           return NextResponse.json({ error: 'instanceId requerido' }, { status: 400 });
         }
-        if (!body.config || typeof body.config !== 'object') {
+        if (!body.config || typeof body.config !== 'object' || Array.isArray(body.config)) {
           return NextResponse.json({ error: 'config requerido (objeto)' }, { status: 400 });
         }
 
         const existing = await requireTenantIntegration(tenantId, body.instanceId);
-        const mergedConfig = { ...existing.config, ...Object.fromEntries(Object.entries(body.config).filter(([, value]) => typeof value === 'string' && value.trim() !== '')) };
-        await updateIntegrationConfig(body.instanceId, mergedConfig);
+        const incomingConfig = Object.fromEntries(
+          Object.entries(body.config as Record<string, unknown>)
+            .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].trim() !== '')
+        );
+        const mergedConfig: Record<string, string> = { ...existing.config, ...incomingConfig };
+        await updateIntegrationConfig(tenantId, body.instanceId, mergedConfig);
         return NextResponse.json({ message: 'Configuración actualizada' });
       }
 
@@ -184,6 +181,7 @@ export async function POST(request: NextRequest) {
 
         await requireTenantIntegration(tenantId, body.instanceId);
         const result = await triggerIntegration(
+          tenantId,
           body.instanceId,
           body.event,
           body.payload || {}
@@ -202,9 +200,10 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'instanceId requerido' }, { status: 400 });
         }
 
-        const limit = Math.min(parseInt(body.limit || '50', 10), 200);
+        const parsedLimit = Number.parseInt(String(body.limit ?? '50'), 10);
+        const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 200) : 50;
         await requireTenantIntegration(tenantId, body.instanceId);
-        const logs = await getIntegrationLogs(body.instanceId, limit);
+        const logs = await getIntegrationLogs(tenantId, body.instanceId, limit);
 
         return NextResponse.json({ logs, count: logs.length });
       }
@@ -220,6 +219,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 });
+    if (error instanceof IntegrationAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: safeErrorMessage(error) || 'Error interno' }, { status: 500 });
   }
 }

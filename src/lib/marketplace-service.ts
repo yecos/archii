@@ -15,6 +15,13 @@
 import { getAdminDb } from './firebase-admin';
 import { encryptIntegrationConfig, decryptIntegrationConfig } from './integration-crypto';
 import { isFlagEnabled } from './feature-flags';
+import {
+  collectSensitiveConfigValues,
+  redactConfig,
+  redactSensitiveData,
+  safeErrorMessage,
+  safeJson,
+} from './integration-security';
 
 /* ================================================================
    TYPES
@@ -102,6 +109,16 @@ export interface IntegrationLogEntry {
   responseBody?: string;
   error?: string;
   createdAt: string;
+}
+
+/** Returned for a missing or cross-tenant integration without revealing which. */
+export class IntegrationAccessError extends Error {
+  readonly status = 404;
+
+  constructor() {
+    super('Integración no encontrada');
+    this.name = 'IntegrationAccessError';
+  }
 }
 
 /* ================================================================
@@ -409,20 +426,17 @@ export async function uninstallIntegration(
 /** Public representations must never include credentials. */
 export function sanitizeIntegration<T extends { providerId: string; config: Record<string, string> }>(instance: T): T {
   const provider = getProvider(instance.providerId);
-  const safeConfig: Record<string, string> = {};
-  for (const field of provider?.configSchema || []) {
-    if (field.type !== 'password' && !/token|secret|key|webhookurl|password|credential/i.test(field.key)) {
-      if (instance.config?.[field.key]) safeConfig[field.key] = instance.config[field.key];
-    }
-  }
-  return { ...instance, config: safeConfig };
+  return {
+    ...instance,
+    config: redactConfig(instance.config, provider?.configSchema),
+  };
 }
 
 export async function requireTenantIntegration(tenantId: string, instanceId: string): Promise<IntegrationInstance> {
   const doc = await getAdminDb().collection('integrations').doc(instanceId).get();
-  if (!doc.exists || doc.data()?.tenantId !== tenantId) throw new Error('Integración no encontrada en este tenant');
+  if (!doc.exists || doc.data()?.tenantId !== tenantId) throw new IntegrationAccessError();
   const item = doc.data() as Omit<IntegrationInstance, 'id'>;
-  return { id: doc.id, ...item, config: decryptIntegrationConfig(item.config) };
+  return { id: doc.id, ...item, config: decryptIntegrationConfig(item.config || {}) };
 }
 
 export async function getTenantIntegrations(
@@ -447,6 +461,7 @@ export async function getTenantIntegrations(
  * Only the `config` object is updated; credentials are handled separately.
  */
 export async function updateIntegrationConfig(
+  tenantId: string,
   instanceId: string,
   config: Record<string, string>
 ): Promise<void> {
@@ -455,6 +470,7 @@ export async function updateIntegrationConfig(
   }
 
   const db = getAdminDb();
+  await requireTenantIntegration(tenantId, instanceId);
   await db.collection('integrations').doc(instanceId).update({
     config: encryptIntegrationConfig(config),
     status: 'active',
@@ -469,6 +485,7 @@ export async function updateIntegrationConfig(
  * Delegates to the appropriate connector.
  */
 export async function triggerIntegration(
+  tenantId: string,
   instanceId: string,
   event: string,
   payload: Record<string, any>
@@ -484,8 +501,13 @@ export async function triggerIntegration(
     return { success: false, error: 'Integración no encontrada' };
   }
 
+  if (doc.data()?.tenantId !== tenantId) {
+    return { success: false, error: 'Integración no encontrada' };
+  }
+
   const instance = { id: doc.id, ...doc.data() } as IntegrationInstance;
-  instance.config = decryptIntegrationConfig(instance.config);
+  instance.config = decryptIntegrationConfig(instance.config || {});
+  const secretValues = collectSensitiveConfigValues(instance.config);
 
   // Check if this instance subscribes to the event
   if (instance.events.length > 0 && !instance.events.includes(event)) {
@@ -518,7 +540,7 @@ export async function triggerIntegration(
       event,
       direction: 'outbound',
       status: 'success',
-      requestBody: JSON.stringify(payload).slice(0, 2000),
+      requestBody: safeJson(payload, secretValues),
     });
 
     // Update lastSyncAt
@@ -530,7 +552,7 @@ export async function triggerIntegration(
 
     return { success: true };
   } catch (err: any) {
-    const errorMsg = err?.message || 'Error desconocido';
+    const errorMsg = safeErrorMessage(err, secretValues);
 
     // Log failure
     await logDelivery({
@@ -541,7 +563,7 @@ export async function triggerIntegration(
       direction: 'outbound',
       status: 'failed',
       error: errorMsg,
-      requestBody: JSON.stringify(payload).slice(0, 2000),
+      requestBody: safeJson(payload, secretValues),
     });
 
     // Mark instance as error
@@ -559,21 +581,26 @@ export async function triggerIntegration(
  * Get delivery logs for a specific integration instance.
  */
 export async function getIntegrationLogs(
+  tenantId: string,
   instanceId: string,
   limit = 50
 ): Promise<IntegrationLogEntry[]> {
   const db = getAdminDb();
+  const instance = await requireTenantIntegration(tenantId, instanceId);
+  const secretValues = collectSensitiveConfigValues(instance.config);
+  const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 200) : 50;
   const snapshot = await db
     .collection('integration_logs')
     .where('instanceId', '==', instanceId)
+    .where('tenantId', '==', tenantId)
     .orderBy('createdAt', 'desc')
-    .limit(limit)
+    .limit(safeLimit)
     .get();
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as IntegrationLogEntry[];
+  return snapshot.docs.map((doc) => {
+    const safeData = redactSensitiveData(doc.data(), secretValues) as Record<string, unknown>;
+    return { id: doc.id, ...safeData } as IntegrationLogEntry;
+  });
 }
 
 /* ================================================================
@@ -636,7 +663,7 @@ export async function dispatchTenantEvent(
     if (instance.status !== 'active') continue;
     if (instance.events.length > 0 && !instance.events.includes(event)) continue;
 
-    const result = await triggerIntegration(instance.id, event, payload);
+    const result = await triggerIntegration(tenantId, instance.id, event, payload);
     if (result.success) {
       dispatched++;
     } else {
