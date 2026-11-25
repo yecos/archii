@@ -1,143 +1,105 @@
+import { Timestamp } from 'firebase-admin/firestore';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/api-auth';
+import { AuthError, isPlatformAdminEmail, requireAuth } from '@/lib/api-auth';
 import { getAdminDb, getAdminFieldValue } from '@/lib/firebase-admin';
 
-/**
- * POST /api/change-orders/approve
- * Approve or reject a change order.
- * When approving with cost impact, updates the project budget.
- * When approving with schedule impact, updates the project endDate.
- */
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    const body = await request.json();
-    const { coId, action, comments, uid, name } = body;
-
-    if (!coId || !action || !uid || !name) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos: coId, action, uid, name' },
-        { status: 400 }
-      );
+    const body = await request.json().catch(() => null);
+    const { coId, action, comments } = body ?? {};
+    if (typeof coId !== 'string' || !coId || coId.includes('/')
+      || (action !== 'approve' && action !== 'reject')) {
+      throw new AuthError('Orden o acción inválida', 400);
     }
-
-    if (action !== 'approve' && action !== 'reject') {
-      return NextResponse.json(
-        { error: 'Acción inválida. Debe ser "approve" o "reject"' },
-        { status: 400 }
-      );
+    if (comments !== undefined && typeof comments !== 'string') {
+      throw new AuthError('Comentarios inválidos', 400);
     }
-
-    if (action === 'reject' && (!comments || !comments.trim())) {
-      return NextResponse.json(
-        { error: 'Se requiere una razón para rechazar' },
-        { status: 400 }
-      );
-    }
+    const review = comments?.trim() ?? '';
+    const approving = action === 'approve';
+    if (!approving && !review) throw new AuthError('Se requiere una razón para rechazar', 400);
 
     const db = getAdminDb();
-    const FieldValue = getAdminFieldValue();
+    const fieldValue = getAdminFieldValue();
+    const orderRef = db.collection('changeOrders').doc(coId);
+    const status = approving ? 'aprobada' : 'rechazada';
 
-    // Get the change order
-    const coRef = db.collection('changeOrders').doc(coId);
-    const coSnap = await coRef.get();
+    await db.runTransaction(async transaction => {
+      const order = (await transaction.get(orderRef)).data();
+      if (!order || typeof order.tenantId !== 'string' || !order.tenantId || order.tenantId.includes('/')) {
+        throw new AuthError('Orden de cambio no encontrada', 404);
+      }
 
-    if (!coSnap.exists) {
-      return NextResponse.json(
-        { error: 'Orden de cambio no encontrada' },
-        { status: 404 }
-      );
-    }
+      const [workspaceSnapshot, profileSnapshot] = await Promise.all([
+        transaction.get(db.collection('tenants').doc(order.tenantId)),
+        transaction.get(db.collection('users').doc(user.uid)),
+      ]);
+      const workspace = workspaceSnapshot.data();
+      if (!workspace?.members?.includes(user.uid)) {
+        throw new AuthError('Orden de cambio no encontrada', 404);
+      }
+      const profile = profileSnapshot.data();
+      const isWorkspaceAdmin = workspace.createdBy === user.uid || workspace.superAdmins?.includes(user.uid);
+      if (!isWorkspaceAdmin && !isPlatformAdminEmail(user.email) && profile?.role !== 'Interventor') {
+        throw new AuthError('Tu rol no permite revisar esta orden', 403);
+      }
+      if (order.status !== 'pendiente_aprobacion') {
+        throw new AuthError('La orden no está pendiente de aprobación', 409);
+      }
 
-    const coData = coSnap.data()!;
-
-    // Verify the CO is in pending status
-    if (coData.status !== 'pendiente_aprobacion') {
-      return NextResponse.json(
-        { error: 'La orden no está pendiente de aprobación' },
-        { status: 400 }
-      );
-    }
-
-    const now = FieldValue.serverTimestamp();
-
-    if (action === 'approve') {
-      // Update the change order
-      const coUpdates: Record<string, any> = {
-        status: 'aprobada',
-        approvedBy: uid,
-        approvedByName: name,
-        approvedAt: now,
-        reviewedComments: comments || '',
-        history: FieldValue.arrayUnion({
-          action: 'approved',
-          by: uid,
-          byName: name,
-          at: now,
-          comments: comments || 'Orden aprobada',
-        }),
-      };
-
-      await coRef.update(coUpdates);
-
-      // If there's cost impact, update the project budget
-      if (coData.costImpact && coData.projectId) {
-        const projectRef = db.collection('projects').doc(coData.projectId);
-        const projectSnap = await projectRef.get();
-
-        if (projectSnap.exists) {
-          const projectData = projectSnap.data()!;
-          const newBudget = coData.costImpact.newBudget || projectData.budget;
-          await projectRef.update({
-            budget: newBudget,
-            updatedAt: now,
-          });
+      const now = Timestamp.now();
+      if (approving) {
+        if (typeof order.projectId !== 'string' || !order.projectId || order.projectId.includes('/')) {
+          throw new AuthError('Proyecto de la orden inválido', 409);
+        }
+        const projectRef = db.collection('projects').doc(order.projectId);
+        const project = (await transaction.get(projectRef)).data();
+        if (!project || project.tenantId !== order.tenantId) {
+          throw new AuthError('El proyecto no está disponible en este espacio', 409);
+        }
+        const projectUpdates: { budget?: number; endDate?: string } = {};
+        if (order.costImpact) {
+          const budget = order.costImpact.newBudget;
+          if (!Number.isFinite(budget) || budget < 0) throw new AuthError('Presupuesto inválido', 409);
+          projectUpdates.budget = budget;
+        }
+        if (order.scheduleImpact) {
+          const days = order.scheduleImpact.daysExtension;
+          if (!Number.isSafeInteger(days) || days <= 0) throw new AuthError('Ampliación de plazo inválida', 409);
+          const endDate = new Date(project.endDate);
+          if (Number.isNaN(endDate.getTime())) throw new AuthError('El proyecto requiere una fecha de entrega válida', 409);
+          endDate.setUTCDate(endDate.getUTCDate() + days);
+          if (Number.isNaN(endDate.getTime())) throw new AuthError('La nueva fecha de entrega es inválida', 409);
+          projectUpdates.endDate = endDate.toISOString().slice(0, 10);
+        }
+        if (Object.keys(projectUpdates).length) {
+          transaction.update(projectRef, { ...projectUpdates, updatedAt: now });
         }
       }
 
-      // If there's schedule impact, update the project endDate
-      if (coData.scheduleImpact && coData.scheduleImpact.daysExtension > 0 && coData.projectId) {
-        const projectRef = db.collection('projects').doc(coData.projectId);
-        const projectSnap = await projectRef.get();
-
-        if (projectSnap.exists) {
-          const projectData = projectSnap.data()!;
-          if (projectData.endDate) {
-            const currentEnd = new Date(projectData.endDate);
-            currentEnd.setDate(currentEnd.getDate() + coData.scheduleImpact.daysExtension);
-            const newEndDate = currentEnd.toISOString().split('T')[0];
-            await projectRef.update({
-              endDate: newEndDate,
-              updatedAt: now,
-            });
-          }
-        }
-      }
-
-      return NextResponse.json({ success: true, status: 'aprobada' });
-    } else {
-      // Reject
-      const coUpdates: Record<string, any> = {
-        status: 'rechazada',
-        rejectionReason: comments,
-        reviewedComments: comments,
-        history: FieldValue.arrayUnion({
-          action: 'rejected',
-          by: uid,
-          byName: name,
+      const reviewer = profile?.name || user.email || 'Usuario';
+      transaction.update(orderRef, {
+        status,
+        ...(approving
+          ? { approvedBy: user.uid, approvedByName: reviewer, approvedAt: now }
+          : { rejectionReason: review }),
+        reviewedComments: review,
+        history: fieldValue.arrayUnion({
+          action: approving ? 'approved' : 'rejected',
+          by: user.uid,
+          byName: reviewer,
           at: now,
-          comments: comments,
+          comments: review || 'Orden aprobada',
         }),
-      };
+      });
+    });
 
-      await coRef.update(coUpdates);
-
-      return NextResponse.json({ success: true, status: 'rechazada' });
+    return NextResponse.json({ success: true, status });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
-  } catch (err: any) {
-    console.error('[Archii] Change order approve/reject error:', err);
-    const status = err.status || 500;
-    const message = err.message || 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status });
+    console.error('[Archii] Error al revisar orden de cambio:', error);
+    return NextResponse.json({ error: 'No se pudo revisar la orden de cambio' }, { status: 500 });
   }
 }

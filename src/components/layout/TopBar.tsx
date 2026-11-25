@@ -145,7 +145,7 @@ export default function TopBar() {
                   {activeTenantRole === 'Super Admin' && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-gradient-to-r from-[var(--af-accent)] to-amber-500 text-background px-1.5 py-0.5 rounded-md flex-shrink-0">
                       <Crown size={9} aria-hidden="true"/>
-                      ADMIN
+                      SUPER ADMIN
                     </span>
                   )}
                 </div>

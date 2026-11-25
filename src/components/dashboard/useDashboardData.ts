@@ -7,6 +7,7 @@ import { useNotificationsContext } from '@/hooks/useNotifications';
 import { useInventoryContext } from '@/hooks/useInventory';
 import type { Task, Expense, Invoice, TimeEntry, RFI, Submittal, PunchItem, Meeting, Approval, TeamUser, NotifEntry, Project, FirestoreTimestamp } from '@/lib/types';
 import { toDate } from '@/lib/types';
+import { isIssuedInvoice } from '@/lib/invoice-status';
 import { getWeekDates, agendaDateKey } from './agenda-helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
 
@@ -72,12 +73,16 @@ export function useDashboardData() {
   const rangeInvoices = useMemo(() => invoices.filter((inv: Invoice) => inRange(inv.data.issueDate)), [invoices, startDate, endDate]);
   const rangeTimeEntries = useMemo(() => timeEntries.filter((te: TimeEntry) => inRange(te.data.date)), [timeEntries, startDate, endDate]);
   const totalExpenses = useMemo(() => rangeExpenses.reduce((s: number, e: Expense) => s + (Number(e.data.amount) || 0), 0), [rangeExpenses]);
-  const totalInvoiced = useMemo(() => rangeInvoices.reduce((s: number, inv: Invoice) => s + (Number(inv.data.total) || 0), 0), [rangeInvoices]);
+  const totalInvoiced = useMemo(() => rangeInvoices.filter(isIssuedInvoice).reduce((s: number, inv: Invoice) => s + (Number(inv.data.total) || 0), 0), [rangeInvoices]);
   const totalPaid = useMemo(() => rangeInvoices.filter((i: Invoice) => i.data.status === 'Pagada').reduce((s: number, i: Invoice) => s + (Number(i.data.total) || 0), 0), [rangeInvoices]);
   const overdueCount = overdueTasks.filter((t: Task) => inRange(t.data.dueDate)).length;
 
   // Quick access metrics
-  const openRFIs = useMemo(() => rfis.filter((r: RFI) => (r.data.status === 'Abierto' || r.data.status === 'En revisión') && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
+  const openRFIs = useMemo(() => rfis.filter((r: RFI) => {
+    if (r.data.status !== 'Abierto' && r.data.status !== 'En revisión') return false;
+    const date = r.data.dueDate || (r.data.createdAt ? agendaDateKey(toDate(r.data.createdAt)) : undefined);
+    return inRange(date);
+  }).length, [rfis, startDate, endDate]);
   const pendingSubmittals = useMemo(() => submittals.filter((s: Submittal) => s.data.status === 'En revisión' && s.data.createdAt && inRange(toDate(s.data.createdAt).toISOString().split('T')[0])).length, [submittals, startDate, endDate]);
   const openPunchItems = useMemo(() => punchItems.filter((p: PunchItem) => p.data.status === 'Pendiente' && p.data.createdAt && inRange(toDate(p.data.createdAt).toISOString().split('T')[0])).length, [punchItems, startDate, endDate]);
   const overdueRFIs = useMemo(() => rfis.filter((r: RFI) => r.data.dueDate && r.data.status !== 'Cerrado' && r.data.status !== 'Respondido' && checkOverdue(r.data.dueDate) && inRange(r.data.dueDate)).length, [rfis, startDate, endDate]);
@@ -127,7 +132,7 @@ export function useDashboardData() {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(); d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const monthInvoiced = invoices.filter((inv: Invoice) => inv.data.issueDate && inv.data.status !== 'Cancelada' && inv.data.issueDate.startsWith(key)).reduce((s, inv) => s + (inv.data.total || 0), 0);
+      const monthInvoiced = invoices.filter((inv: Invoice) => isIssuedInvoice(inv) && inv.data.issueDate?.startsWith(key)).reduce((s, inv) => s + (inv.data.total || 0), 0);
       const monthPaid = invoices.filter((inv: Invoice) => inv.data.paidDate).reduce((s, inv: Invoice) => {
         try { const pd = toDate(inv.data.paidDate); return `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}` === key ? s + (inv.data.total || 0) : s; } catch { return s; }
       }, 0);

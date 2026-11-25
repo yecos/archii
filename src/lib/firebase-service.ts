@@ -53,7 +53,6 @@ interface FirebaseApp {
   firestore: (() => FirestoreDB) & { FieldValue: FieldValueHelpers };
   storage(): any;
   apps: any[];
-  FieldValue: FieldValueHelpers;
 }
 
 interface FirestoreDB {
@@ -148,7 +147,7 @@ export function getAuth() {
 
 /** Convenience: FieldValue helpers. */
 export function FieldValue() {
-  return getFirebase().FieldValue;
+  return getFirebase().firestore.FieldValue;
 }
 
 /** Convenience: Storage reference. */

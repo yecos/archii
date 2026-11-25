@@ -158,7 +158,7 @@ export default function Sidebar({
 
   const isActive = (n: any) => screen === n.id;
   const userRole = teamUsers.find(u => u.id === authUser?.uid)?.data?.role || 'Miembro';
-  const displayRole = isEmailAdmin ? 'Admin' : userRole;
+  const displayRole = activeTenantRole === 'Super Admin' ? 'Super Admin' : isEmailAdmin ? 'Admin' : userRole;
 
   // ─── Shared: render a nav item row ───
   const renderNavItem = (n: any, variant: 'mobile' | 'desktop') => {

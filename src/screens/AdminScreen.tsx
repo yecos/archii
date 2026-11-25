@@ -95,7 +95,7 @@ export default function AdminScreen() {
   };
   const {
     GANTT_DAYS, GANTT_DAY_NAMES, GANTT_PRIO_CFG, GANTT_STATUS_CFG, activeTasks,
-    activeTenantId,
+    activeTenantId, activeTenantRole,
     adminPermSection, adminTab, adminTooltipPos, adminTooltipTask, authUser,
     buildGanttRows, completedTasks, findOverlaps, getGanttDays, getProjectColor,
     getProjectColorLight, getTaskBar, getUserName, isAdmin, overdueTasks,
@@ -103,6 +103,7 @@ export default function AdminScreen() {
     setAdminTooltipTask, setAdminWeekOffset, showToast, tasks, teamUsers,
     toggleRolePerm, updateUserRole,
   } = useApp();
+  const canManageWorkspace = isAdmin || activeTenantRole === 'Super Admin';
 
   // ===== Audit tab state =====
   const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
@@ -342,15 +343,15 @@ export default function AdminScreen() {
 
   return (
     <>
-      {!isAdmin && (
+      {!canManageWorkspace && (
         <div className="animate-fadeIn p-6 text-center">
           <div className="text-4xl mb-3">🔒</div>
           <div className="text-lg font-semibold">Acceso restringido</div>
-          <div className="text-sm text-[var(--muted-foreground)] mt-1">Solo administradores y directores pueden acceder a este panel</div>
+          <div className="text-sm text-[var(--muted-foreground)] mt-1">Se requiere ser Super Admin del espacio, Director o administrador de plataforma.</div>
         </div>
       )}
 
-      {isAdmin && (
+      {canManageWorkspace && (
         <div className="animate-fadeIn p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -626,7 +627,7 @@ export default function AdminScreen() {
                 <h4 className="text-sm font-semibold mb-3">Gestionar Roles</h4>
                 <div className="space-y-2">
                   {teamUsers.map(u => {
-                    const canChange = isAdmin && u.id !== authUser?.uid;
+                    const canChange = canManageWorkspace && u.id !== authUser?.uid;
                     return (<div key={u.id} className="flex items-center gap-3 bg-[var(--card)] rounded-lg p-3 border border-[var(--border)]">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${avatarColor(u.id)}`}>{getInitials(u.data?.name || '?')}</div>
                       <div className="flex-1 min-w-0">
@@ -784,7 +785,7 @@ export default function AdminScreen() {
                 };
                 return (<div key={m.id} className="bg-[var(--af-bg3)] rounded-xl p-4 border border-[var(--border)] relative group">
                   {/* Delete button — visible for Admin/Director users */}
-                  {isAdmin && !isSelf && (
+                  {canManageWorkspace && !isSelf && (
                     <button
                       onClick={handleDeleteMember}
                       disabled={deleting}

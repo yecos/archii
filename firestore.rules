@@ -538,11 +538,28 @@ service cloud.firestore {
     // Change Orders (Ordenes de Cambio)
     match /changeOrders/{coId} {
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
-      allow create: if isSignedIn() && isTenantMember(request.resource.data.tenantId);
+      allow create: if isSignedIn()
+        && isTenantMember(request.resource.data.tenantId)
+        && request.resource.data.status == 'borrador'
+        && request.resource.data.createdBy == request.auth.uid
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.tenantId
+          == request.resource.data.tenantId
+        && !request.resource.data.keys().hasAny(
+          ['approvedBy', 'approvedByName', 'approvedAt', 'rejectionReason', 'reviewedComments']
+        );
       allow update: if isSignedIn()
         && isTenantMember(resource.data.tenantId)
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isSignedIn() && isTenantMember(resource.data.tenantId);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+          ['tenantId', 'projectId', 'createdBy', 'createdByName', 'createdAt', 'orderNumber',
+            'approvedBy', 'approvedByName', 'approvedAt', 'rejectionReason', 'reviewedComments']
+        )
+        && (
+          (resource.data.status == 'borrador' && request.resource.data.status in ['borrador', 'pendiente_aprobacion', 'cancelada'])
+          || (resource.data.status == 'pendiente_aprobacion' && request.resource.data.status == 'cancelada'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        )
+        && (resource.data.createdBy == request.auth.uid || canCreateOrEditProject(resource.data.tenantId));
+      allow delete: if false;
     }
 
     // Carnets (Corporate ID Cards)

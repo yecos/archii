@@ -5,6 +5,7 @@ import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
+import { isIssuedInvoice } from '@/lib/invoice-status';
 import * as fbActions from '@/lib/firestore-actions';
 import { exportInvoicePDF } from '@/lib/export-pdf';
 import { FileText, Download, Pencil, Trash2, Receipt, Plus } from 'lucide-react';
@@ -28,9 +29,9 @@ export default function InvoicesScreen() {
   const confirm = confirmDialog.confirm;
 
   const summaryCards = useMemo(() => {
-    const totalInvoiced = invoices.filter(i => i.data.status !== 'Cancelada').reduce((s, i) => s + (i.data.total || 0), 0);
+    const totalInvoiced = invoices.filter(isIssuedInvoice).reduce((s, i) => s + (i.data.total || 0), 0);
     const totalPaid = invoices.filter(i => i.data.status === 'Pagada').reduce((s, i) => s + (i.data.total || 0), 0);
-    const totalPending = invoices.filter(i => i.data.status === 'Enviada' || i.data.status === 'Borrador').reduce((s, i) => s + (i.data.total || 0), 0);
+    const totalPending = invoices.filter(i => i.data.status === 'Enviada').reduce((s, i) => s + (i.data.total || 0), 0);
     const totalOverdue = invoices.filter(i => i.data.status === 'Vencida').reduce((s, i) => s + (i.data.total || 0), 0);
     return [
       { lbl: 'Facturado', val: fmtCOP(totalInvoiced), color: 'text-[var(--af-accent)]' },

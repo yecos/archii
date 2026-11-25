@@ -15,7 +15,7 @@ interface Tenant {
 }
 
 export default function TenantSelectionScreen() {
-  const { authUser, switchTenant, showToast, userName } = useApp();
+  const { authUser, switchTenant, showToast, userName, showTenantSelector, tenantReady, setShowTenantSelector } = useApp();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -26,15 +26,8 @@ export default function TenantSelectionScreen() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [migrateExisting, setMigrateExisting] = useState(false); // Default: off, set to true when tenants exist
+  const [migrateExisting, setMigrateExisting] = useState(false);
   const [migratedCounts, setMigratedCounts] = useState<Record<string, number> | null>(null);
-
-  // Auto-enable migration if this is the first tenant (user has existing unassigned data)
-  useEffect(() => {
-    if (tenants.length === 0) {
-      setMigrateExisting(true);
-    }
-  }, [tenants.length]);
 
   // Load user's tenants
   const loadTenants = useCallback(async () => {
@@ -85,11 +78,11 @@ export default function TenantSelectionScreen() {
 
   // Auto-select if only one tenant exists (skip showing the selector)
   useEffect(() => {
-    if (tenants.length === 1 && !showCreate && !showJoin) {
+    if (!tenantReady && !showTenantSelector && tenants.length === 1 && !showCreate && !showJoin) {
       const t = tenants[0];
       switchTenant(t.id, t.name, t.role || 'Miembro');
     }
-  }, [tenants.length, showCreate, showJoin, tenants, switchTenant]);
+  }, [tenantReady, showTenantSelector, showCreate, showJoin, tenants, switchTenant]);
 
   const handleCreate = async () => {
     const name = newTenantName.trim();
@@ -161,8 +154,7 @@ export default function TenantSelectionScreen() {
     }
   };
 
-  const copyCode = (code: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const copyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopiedCode(code);
       showToast('Código copiado al portapapeles');
@@ -190,6 +182,16 @@ export default function TenantSelectionScreen() {
       <div className="af-ambient-bg" />
 
       <div className="relative w-full max-w-[480px] my-auto">
+        {tenantReady && (
+          <button
+            type="button"
+            disabled={creating || joining}
+            onClick={() => setShowTenantSelector(false)}
+            className="mb-4 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          >
+            Volver al espacio actual
+          </button>
+        )}
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-gradient-to-br from-[var(--af-accent)] to-[var(--af-accent2)] rounded-2xl shadow-lg af-glow-accent flex items-center justify-center mx-auto mb-4">
@@ -214,11 +216,15 @@ export default function TenantSelectionScreen() {
             {tenants.map((t) => {
               const isSuperAdmin = t.role === 'Super Admin' || t.createdBy === authUser?.uid || (t as any).superAdmins?.includes(authUser?.uid);
               return (
-                <button
+                <div
                   key={t.id}
-                  onClick={() => selectTenant(t)}
-                  className="w-full af-card bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--af-accent)]/40 transition-all group text-left"
+                  className="w-full af-card bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 flex items-center gap-3 hover:border-[var(--af-accent)]/40 transition-all"
                 >
+                  <button
+                    type="button"
+                    onClick={() => selectTenant(t)}
+                    className="flex flex-1 min-w-0 items-center gap-4 py-4 text-left cursor-pointer group"
+                  >
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${isSuperAdmin ? 'bg-gradient-to-br from-[var(--af-accent)]/30 to-amber-500/20' : 'bg-gradient-to-br from-[var(--af-accent)]/20 to-[var(--af-accent2)]/10'} group-hover:from-[var(--af-accent)]/30 group-hover:to-[var(--af-accent2)]/20`}>
                     <Building2 size={20} className="stroke-[var(--af-accent)]" aria-hidden="true"/>
                   </div>
@@ -240,9 +246,11 @@ export default function TenantSelectionScreen() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={(e) => copyCode(t.code, e)}
+                    <ArrowRight size={18} className="flex-shrink-0 stroke-[var(--muted-foreground)] group-hover:stroke-[var(--af-accent)] group-hover:translate-x-0.5 transition-all" aria-hidden="true"/>
+                  </button>
+                  <button
+                      type="button"
+                      onClick={() => copyCode(t.code)}
                       className="w-8 h-8 rounded-lg bg-[var(--af-bg3)] border border-[var(--border)] flex items-center justify-center cursor-pointer hover:bg-[var(--af-bg4)] transition-all"
                       title="Copiar código de invitación"
                     >
@@ -251,10 +259,8 @@ export default function TenantSelectionScreen() {
                       ) : (
                         <Copy size={14} className="stroke-[var(--muted-foreground)]" aria-hidden="true"/>
                       )}
-                    </button>
-                    <ArrowRight size={18} className="stroke-[var(--muted-foreground)] group-hover:stroke-[var(--af-accent)] group-hover:translate-x-0.5 transition-all" aria-hidden="true"/>
-                  </div>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -286,7 +292,7 @@ export default function TenantSelectionScreen() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-base">Crear espacio de trabajo</h2>
               <button
-                onClick={() => { setShowCreate(false); setNewTenantName(''); }}
+                onClick={() => { setShowCreate(false); setNewTenantName(''); setMigrateExisting(false); }}
                 className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] bg-transparent border-none"
               >
                 Cancelar
@@ -306,6 +312,7 @@ export default function TenantSelectionScreen() {
             <div className="mb-4">
                 <button
                   type="button"
+                  aria-pressed={migrateExisting}
                   onClick={() => setMigrateExisting(!migrateExisting)}
                   className={`w-full flex items-start gap-3 px-3.5 py-3 rounded-lg border transition-all text-left cursor-pointer ${migrateExisting ? 'bg-[var(--af-accent)]/10 border-[var(--af-accent)]/30' : 'bg-[var(--af-bg3)] border-[var(--border)]'}`}
                 >

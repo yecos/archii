@@ -11,11 +11,12 @@ interface ChangeOrderApprovalProps {
   getProjectName: (id: string) => string;
   getUserName: (id: string) => string;
   canApprove: boolean;
+  canManage: boolean;
   onClose: () => void;
   onEdit: () => void;
 }
 
-export default function ChangeOrderApproval({ co, getProjectName, getUserName, canApprove, onClose, onEdit }: ChangeOrderApprovalProps) {
+export default function ChangeOrderApproval({ co, getProjectName, getUserName, canApprove, canManage, onClose, onEdit }: ChangeOrderApprovalProps) {
   const { showToast, authUser } = useApp();
   const d = co.data;
   const statusCls = CO_STATUS_COLORS[d?.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
@@ -41,17 +42,12 @@ export default function ChangeOrderApproval({ co, getProjectName, getUserName, c
     if (!authUser) return;
     setIsProcessing(true);
     try {
-      await fbActions.approveChangeOrder(
-        co.id,
-        authUser.uid,
-        authUser.displayName || authUser.email || 'Usuario',
-        comments || 'Orden aprobada'
-      );
+      await fbActions.reviewChangeOrder(co.id, 'approve', comments);
       showToast('✅ Orden aprobada');
       onClose();
     } catch (err) {
       console.error('[Archii] Error approving CO:', err);
-      showToast('Error al aprobar orden', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al aprobar orden', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -65,17 +61,12 @@ export default function ChangeOrderApproval({ co, getProjectName, getUserName, c
     }
     setIsProcessing(true);
     try {
-      await fbActions.rejectChangeOrder(
-        co.id,
-        authUser.uid,
-        authUser.displayName || authUser.email || 'Usuario',
-        rejectionReason
-      );
+      await fbActions.reviewChangeOrder(co.id, 'reject', rejectionReason);
       showToast('Orden rechazada');
       onClose();
     } catch (err) {
       console.error('[Archii] Error rejecting CO:', err);
-      showToast('Error al rechazar orden', 'error');
+      showToast(err instanceof Error ? err.message : 'Error al rechazar orden', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -266,7 +257,7 @@ export default function ChangeOrderApproval({ co, getProjectName, getUserName, c
       )}
 
       {/* Actions */}
-      {d?.status === 'borrador' && (
+      {canManage && d?.status === 'borrador' && (
         <div className="flex gap-2 pt-3 border-t border-[var(--border)]">
           <button
             className="flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 cursor-pointer hover:bg-amber-500/20 transition-colors"

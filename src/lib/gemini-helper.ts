@@ -34,6 +34,7 @@ export interface ChatMessage {
 interface ToolCall {
   id: string;
   type: "function";
+  thoughtSignature?: string;
   function: {
     name: string;
     arguments: string;
@@ -175,6 +176,7 @@ export async function refreshGeminiModels(): Promise<string[]> {
 
 interface GeminiPart {
   text?: string;
+  thoughtSignature?: string;
   inlineData?: { mimeType: string; data: string };
   functionCall?: { name: string; args: Record<string, unknown> };
   functionResponse?: {
@@ -193,6 +195,7 @@ function convertMessages(
 ): { systemInstruction: { parts: GeminiPart[] }; contents: GeminiContent[] } {
   const systemParts: GeminiPart[] = [];
   const contents: GeminiContent[] = [];
+  let pendingToolResponses: GeminiPart[] | undefined;
 
   for (const msg of messages) {
     if (msg.role === "system") {
@@ -201,19 +204,19 @@ function convertMessages(
     }
 
     if (msg.role === "tool") {
-      contents.push({
-        role: "user",
-        parts: [
-          {
-            functionResponse: {
-              name: msg.name || msg.tool_call_id || "unknown",
-              response: { content: msg.content },
-            },
-          },
-        ],
+      if (!pendingToolResponses) {
+        pendingToolResponses = [];
+        contents.push({ role: "user", parts: pendingToolResponses });
+      }
+      pendingToolResponses.push({
+        functionResponse: {
+          name: msg.name || msg.tool_call_id || "unknown",
+          response: { content: msg.content },
+        },
       });
       continue;
     }
+    pendingToolResponses = undefined;
 
     const geminiRole = msg.role === "assistant" ? "model" : "user";
 
@@ -245,6 +248,7 @@ function convertMessages(
             name: tc.function.name,
             args,
           },
+          ...(tc.thoughtSignature ? { thoughtSignature: tc.thoughtSignature } : {}),
         });
       }
       contents.push({ role: geminiRole, parts });
@@ -311,6 +315,7 @@ function convertResponse(geminiRes: GeminiResponse): OpenAIResponse {
     const tool_calls: ToolCall[] = functionCallParts.map((p, i) => ({
       id: `call_${Date.now()}_${i}`,
       type: "function" as const,
+      thoughtSignature: p.thoughtSignature,
       function: {
         name: p.functionCall!.name,
         arguments: JSON.stringify(p.functionCall!.args),
@@ -424,7 +429,7 @@ export async function chatCompletion(
 export async function chatCompletionWithTools(
   messages: ChatMessage[],
   tools?: OpenAITool[],
-  options?: CompletionOptions
+  options?: CompletionOptions & { toolMode?: "AUTO" | "NONE" }
 ): Promise<OpenAIResponse> {
   const { systemInstruction, contents } = convertMessages(messages);
   const geminiTools = convertTools(tools);
@@ -433,11 +438,11 @@ export async function chatCompletionWithTools(
     systemInstruction,
     contents,
     tools: geminiTools,
-    toolConfig: {
+    toolConfig: geminiTools ? {
       functionCallingConfig: {
-        mode: "AUTO",
+        mode: options?.toolMode ?? "AUTO",
       },
-    },
+    } : undefined,
     generationConfig: {
       maxOutputTokens: options?.max_tokens ?? 2048,
       temperature: options?.temperature ?? 0.7,

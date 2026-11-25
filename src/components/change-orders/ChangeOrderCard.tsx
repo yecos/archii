@@ -12,10 +12,11 @@ interface ChangeOrderCardProps {
   getProjectName: (id: string) => string;
   onEdit: (co: any) => void;
   onDelete: (co: any) => void;
+  canManage: boolean;
   onClick: (co: any) => void;
 }
 
-export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, onClick }: ChangeOrderCardProps) {
+export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, onClick, canManage }: ChangeOrderCardProps) {
   const confirmDialog = useConfirmDialog();
   const d = co.data;
   const statusCls = CO_STATUS_COLORS[d?.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
@@ -84,7 +85,7 @@ export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, 
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+        {canManage && ['borrador', 'pendiente_aprobacion'].includes(d?.status) && <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           {(d?.status === 'borrador') && (
             <button
               className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 cursor-pointer hover:bg-amber-500/20 transition-colors"
@@ -93,9 +94,6 @@ export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, 
               ✏️ Editar
             </button>
           )}
-          <button aria-label="Editar" className="hidden md:block px-1.5 py-1.5 rounded bg-[var(--af-bg4)] text-xs cursor-pointer" onClick={() => onEdit(co)}>
-            <Pencil size={12} aria-hidden="true"/>
-          </button>
           <button aria-label="Eliminar" className="hidden md:block px-1.5 py-1.5 rounded bg-red-500/10 text-xs cursor-pointer" onClick={async () => {
             const ok = await confirmDialog.confirm({ title: 'Eliminar orden', description: '¿Estás seguro de eliminar esta orden de cambio?' });
             if (!ok) return;
@@ -106,7 +104,7 @@ export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, 
           <div className="md:hidden">
             <OverflowMenu
               actions={[
-                { label: 'Editar', icon: <Pencil size={14} aria-hidden="true"/>, onClick: () => onEdit(co) },
+                ...(d?.status === 'borrador' ? [{ label: 'Editar', icon: <Pencil size={14} aria-hidden="true"/>, onClick: () => onEdit(co) }] : []),
                 { label: 'Eliminar', icon: <Trash2 size={14} aria-hidden="true"/>, variant: 'danger' as const, separator: true, onClick: async () => {
                   const ok = await confirmDialog.confirm({ title: 'Eliminar orden', description: '¿Estás seguro de eliminar esta orden de cambio?' });
                   if (!ok) return;
@@ -115,7 +113,7 @@ export default function ChangeOrderCard({ co, getProjectName, onEdit, onDelete, 
               ]}
             />
           </div>
-        </div>
+        </div>}
       </div>
       <ConfirmDialog {...confirmDialog} />
     </>

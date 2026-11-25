@@ -18,7 +18,7 @@ export default function ChangeOrdersScreen() {
     changeOrders, projects, teamUsers, loading,
     coFilterProject, setCoFilterProject, coFilterStatus, setCoFilterStatus, coFilterType, setCoFilterType,
     setEditingId, setForms, openModal, closeModal, modals, showToast, authUser, activeTenantId,
-    activeTenantRole,
+    activeTenantRole, getMyRole,
   } = useApp();
 
   const { getProjectName, getUserName } = useEntityResolvers(projects, teamUsers);
@@ -44,8 +44,12 @@ export default function ChangeOrdersScreen() {
     return { total, pending, approved, draft };
   }, [changeOrders]);
 
-  const canCreate = ['Admin', 'Director', 'Arquitecto'].includes(activeTenantRole);
-  const canApprove = ['Interventor', 'Super Admin', 'Admin'].includes(activeTenantRole);
+  const operationalRole = getMyRole();
+  const isWorkspaceAdmin = activeTenantRole === 'Super Admin';
+  const canCreate = isWorkspaceAdmin || ['Admin', 'Director', 'Arquitecto'].includes(operationalRole);
+  const canApprove = isWorkspaceAdmin || ['Interventor', 'Admin'].includes(operationalRole);
+  const canManage = (co: { data: { createdBy?: string } }) =>
+    isWorkspaceAdmin || ['Director', 'Arquitecto'].includes(operationalRole) || co.data.createdBy === authUser?.uid;
 
   const handleCreate = () => {
     setEditingId(null);
@@ -185,6 +189,7 @@ export default function ChangeOrdersScreen() {
               getProjectName={getProjectName}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              canManage={canManage(co)}
               onClick={handleClick}
             />
           ))}
@@ -202,6 +207,7 @@ export default function ChangeOrdersScreen() {
             getProjectName={getProjectName}
             getUserName={getUserName}
             canApprove={canApprove}
+            canManage={canManage(selectedCO)}
             onClose={handleCloseDetail}
             onEdit={() => {
               handleCloseDetail();

@@ -8,7 +8,7 @@ import { fmtCOP } from '@/lib/helpers';
 import * as fbActions from '@/lib/firestore-actions';
 
 export default function ChangeOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, editingId, closeModal, projects, showToast, authUser, activeTenantId } = useApp();
+  const { forms, setForms, editingId, setEditingId, closeModal, projects, showToast, authUser, activeTenantId } = useApp();
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -64,7 +64,7 @@ export default function ChangeOrderModal({ open, onClose }: { open: boolean; onC
               url,
               type: file.type,
               size: file.size,
-              uploadedAt: fb.firestore.FieldValue.serverTimestamp(),
+              uploadedAt: new Date().toISOString(),
             });
           } catch (err) {
             console.error('[Archii] Error uploading attachment:', err);
@@ -92,9 +92,9 @@ export default function ChangeOrderModal({ open, onClose }: { open: boolean; onC
           type: forms.coType || 'alcance',
           description: forms.coDescription || '',
           justification: forms.coJustification || '',
-          costImpact,
-          scheduleImpact,
-          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+          costImpact: costImpact ?? null,
+          scheduleImpact: scheduleImpact ?? null,
+          ...(uploadedAttachments.length > 0 ? { attachments: uploadedAttachments } : {}),
         });
         showToast('Orden actualizada');
       } else {
@@ -106,8 +106,8 @@ export default function ChangeOrderModal({ open, onClose }: { open: boolean; onC
           title: forms.coTitle || '',
           description: forms.coDescription || '',
           justification: forms.coJustification || '',
-          costImpact,
-          scheduleImpact,
+          costImpact: costImpact ?? null,
+          scheduleImpact: scheduleImpact ?? null,
           attachments: uploadedAttachments,
           createdBy: uid,
           createdByName: userName,
@@ -164,7 +164,7 @@ export default function ChangeOrderModal({ open, onClose }: { open: boolean; onC
               url,
               type: file.type,
               size: file.size,
-              uploadedAt: fb.firestore.FieldValue.serverTimestamp(),
+              uploadedAt: new Date().toISOString(),
             });
           } catch (err) {
             console.error('[Archii] Error uploading attachment:', err);
@@ -182,21 +182,23 @@ export default function ChangeOrderModal({ open, onClose }: { open: boolean; onC
           title: forms.coTitle || '',
           description: forms.coDescription || '',
           justification: forms.coJustification || '',
-          costImpact,
-          scheduleImpact,
+          costImpact: costImpact ?? null,
+          scheduleImpact: scheduleImpact ?? null,
           attachments: uploadedAttachments,
           createdBy: uid,
           createdByName: userName,
           createdAt: fb!.firestore.FieldValue.serverTimestamp(),
         });
+        setEditingId(coId);
       } else {
         await fbActions.updateChangeOrder(coId, {
           title: forms.coTitle || '',
           type: forms.coType || 'alcance',
           description: forms.coDescription || '',
           justification: forms.coJustification || '',
-          costImpact,
-          scheduleImpact,
+          costImpact: costImpact ?? null,
+          scheduleImpact: scheduleImpact ?? null,
+          ...(uploadedAttachments.length > 0 ? { attachments: uploadedAttachments } : {}),
         });
       }
 
