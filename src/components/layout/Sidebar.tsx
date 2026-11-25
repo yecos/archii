@@ -119,9 +119,10 @@ export default function Sidebar({
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsedCategories)); } catch {}
   }, [collapsedCategories]);
 
-  const toggleCategory = useCallback((cat: string) => {
-    setCollapsedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
-  }, []);
+  const toggleCategory = (cat: string) => {
+    const defaultCollapsed = !CATEGORY_META[cat as NavCategory]?.defaultOpen;
+    setCollapsedCategories(prev => ({ ...prev, [cat]: !(prev[cat] ?? defaultCollapsed) }));
+  };
 
   const isCategoryCollapsed = useCallback((cat: string) => {
     if (cat === 'principal') return false; // Principal always open
