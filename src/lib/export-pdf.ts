@@ -103,7 +103,7 @@ export function exportInvoicePDF(invoice: any, project?: any) {
   // Logo + Company
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.setTextColor(...BRAND.white);
+  doc.setTextColor(...BRAND.dark);
   doc.text('Archii', 14, 22);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
