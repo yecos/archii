@@ -61,12 +61,12 @@ test('invoices preserve zero tax, export actual tax amounts and record overdue p
   await expect(page.getByText('El IVA debe estar entre 0 y 100', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Crear Factura', exact: true })).toBeVisible();
   await page.getByLabel('IVA (%)', { exact: true }).fill('0');
-  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('200.000');
+  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('$200K');
   expect(await page.locator('#main-content').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   await page.getByRole('button', { name: 'Crear Factura', exact: true }).click({ clickCount: 2 });
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Borrador', { exact: true })).toBeVisible();
-  await expect(card).toContainText('200.000');
+  await expect(card).toContainText('$200K');
   expect(await downloadPdf(card)).toContain('0%');
   await action(card, 'Enviar', 'Enviar factura');
   await expect(card.getByText('Enviada', { exact: true })).toBeVisible();
@@ -77,10 +77,10 @@ test('invoices preserve zero tax, export actual tax amounts and record overdue p
 
   await fillInvoice(`${number}-19`);
   await expect(page.getByLabel('IVA (%)', { exact: true })).toHaveValue('19');
-  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('238.000');
+  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('$238K');
   await page.getByRole('button', { name: 'Crear Factura', exact: true }).click();
   const taxedCard = page.locator(`[data-invoice-number="${number}-19"]`);
-  await expect(taxedCard).toContainText('238.000');
+  await expect(taxedCard).toContainText('$238K');
   const taxedPdf = await downloadPdf(taxedCard);
   expect(taxedPdf).toContain('19%');
   expect(taxedPdf).toContain('($38.000) Tj');
@@ -92,8 +92,8 @@ test('invoices preserve zero tax, export actual tax amounts and record overdue p
   await page.getByText('Facturas', { exact: true }).filter({ visible: true }).first().click();
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Pagada', { exact: true })).toBeVisible();
-  await expect(card).toContainText('200.000');
-  await expect(taxedCard).toContainText('238.000');
+  await expect(card).toContainText('$200K');
+  await expect(taxedCard).toContainText('$238K');
   await page.screenshot({ path: testInfo.outputPath('invoice-lifecycle.png'), fullPage: true });
   expect(errors).toEqual([]);
 });
