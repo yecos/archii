@@ -1,4 +1,5 @@
 import { inventoryRequest } from '@/lib/inventory-client';
+import { calculateInvoiceTotals } from '@/lib/invoice-calculations';
 /**
  * firestore-actions.ts
  * Todas las funciones de escritura a Firestore (CRUD).
@@ -817,14 +818,17 @@ export async function deleteTimeEntry(entryId: string, showToast: ToastFn, tenan
 
 /* ===== INVOICES ===== */
 
-export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null) {
+export function saveInvoice(data: Record<string, any>, editingId: string | null, showToast: ToastFn, authUser: FirebaseUser | null, tenantId: string | null, documentId?: string) {
   return fbAction('guardar factura', async () => {
     requireAuth(authUser, 'guardar factura');
+    if (!tenantId) throw new Error('Selecciona un espacio activo');
+    const totals = calculateInvoiceTotals(Number(data.invSubtotal), data.invTax);
     const fb = getFirebase();
     const db = fb.firestore();
     const ts = fb.firestore.FieldValue.serverTimestamp();
     const proj = data.invProject ? await db.collection('projects').doc(data.invProject).get() : null;
     const projData = proj?.exists ? proj.data() : {};
+    if (!proj?.exists || projData.tenantId !== tenantId) throw new Error('El proyecto no pertenece al espacio activo');
     const invoiceData: Record<string, any> = {
       projectId: data.invProject || '',
       projectName: projData.name || '',
@@ -832,9 +836,9 @@ export function saveInvoice(data: Record<string, any>, editingId: string | null,
       number: data.invNumber || `FACT-${Date.now().toString(36).toUpperCase()}`,
       status: data.invStatus || 'Borrador',
       items: data.invItems || [],
-      subtotal: Number(data.invSubtotal) || 0,
-      tax: Number(data.invTax) || 19,
-      total: Number(data.invTotal) || 0,
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      total: totals.total,
       notes: data.invNotes || '',
       issueDate: data.invIssueDate || new Date().toISOString().split('T')[0],
       dueDate: data.invDueDate || '',
@@ -847,7 +851,7 @@ export function saveInvoice(data: Record<string, any>, editingId: string | null,
       invoiceData.createdAt = ts;
       invoiceData.createdBy = authUser?.uid;
       invoiceData.tenantId = tenantId || '';
-      await db.collection('invoices').add(invoiceData);
+      await db.collection('invoices').doc(documentId).set(invoiceData);
       showToast('✅ Factura creada');
     }
   }, showToast);
