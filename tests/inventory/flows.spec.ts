@@ -31,6 +31,7 @@ test('project files round-trip and daily logs persist after reload', async ({ pa
   const openProject = async () => {
     await page.getByRole('button', { name: /Proyecto ficticio de archivos/ }).click();
     await expect(page.locator('#file-upload-input')).toBeAttached();
+    expect(await page.locator('#main-content').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   };
   await openProject();
   const filename = `plano-${testInfo.project.name}-${Date.now()}.txt`;
@@ -50,6 +51,7 @@ test('project files round-trip and daily logs persist after reload', async ({ pa
   const activity = `Replanteo ficticio ${testInfo.project.name} ${Date.now()}`;
   await page.getByPlaceholder('Nombre del supervisor').fill('Supervisor QA');
   await page.getByPlaceholder('Actividad 1', { exact: true }).fill(activity);
+  expect(await page.locator('#main-content').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   await page.getByRole('button', { name: 'Guardar Registro', exact: true }).click();
   await expect(page.getByText(activity, { exact: true })).toBeVisible();
 

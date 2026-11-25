@@ -160,7 +160,7 @@ export default function ProjectDetailScreen() {
   if (!currentProject) return null;
 
   return (
-<><div className="animate-fadeIn space-y-4">
+<><div className="animate-fadeIn space-y-4 min-w-0">
             {/* 1. HEADER */}
             <div className="bg-gradient-to-br from-[var(--card)] to-[var(--af-bg3)] border border-[var(--border)] rounded-xl p-5 md:p-6 relative overflow-hidden">
               <div className="absolute -right-8 -top-8 w-44 h-44 border-[40px] border-[var(--af-accent)]/5 rounded-full" />
@@ -243,7 +243,7 @@ export default function ProjectDetailScreen() {
             </div>
 
             {/* 3. TAB BAR (9 tabs) */}
-            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit overflow-x-auto -mx-1 px-1 scrollbar-none">
+            <div className="flex gap-1 bg-[var(--af-bg3)] rounded-lg p-1 w-fit max-w-full overflow-x-auto -mx-1 px-1 scrollbar-none">
               {[
                 { id: 'Resumen', icon: '' },
                 { id: 'Tareas', icon: '' },
@@ -255,7 +255,7 @@ export default function ProjectDetailScreen() {
                 { id: 'Reportes', icon: '' },
                 { id: 'Portal', icon: '🌐' },
               ].map(tab => (
-                <button key={tab.id} className={`px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all flex items-center gap-1 ${forms.detailTab === tab.id ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab.id }))}>
+                <button key={tab.id} className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-md text-[13px] cursor-pointer transition-all flex items-center gap-1 ${forms.detailTab === tab.id ? 'bg-[var(--card)] text-[var(--foreground)] font-medium shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`} onClick={() => setForms(p => ({ ...p, detailTab: tab.id }))}>
                   {tab.icon && <span className="text-[11px]">{tab.icon}</span>}{tab.id}
                 </button>
               ))}
