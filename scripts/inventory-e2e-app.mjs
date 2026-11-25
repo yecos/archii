@@ -12,6 +12,7 @@ const db = getFirestore(app);
 const batch = db.batch();
 batch.set(db.doc('tenants/inventory-e2e'), { name: 'Empresa ficticia de pruebas', createdBy: user.uid, members: [user.uid, reader.uid], superAdmins: [], memberRoles: { [user.uid]: 'Director', [reader.uid]: 'Interventor' }, createdAt: FieldValue.serverTimestamp() });
 for (const [account, role] of [[user, 'Director'], [reader, 'Interventor']]) batch.set(db.doc(`users/${account.uid}`), { name: account.displayName, email: account.email, role, defaultTenantId: 'inventory-e2e', defaultTenantName: 'Empresa ficticia de pruebas', createdAt: FieldValue.serverTimestamp() });
+batch.set(db.doc('projects/project-files-e2e'), { tenantId: 'inventory-e2e', name: 'Proyecto ficticio de archivos', status: 'Ejecucion', budget: 100000, createdBy: user.uid, createdAt: FieldValue.serverTimestamp() });
 await batch.commit();
 await db.terminate();
 const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--turbopack', '--port', '3100', '--hostname', '127.0.0.1'], { env: { ...process.env, NODE_ENV: 'development' }, stdio: 'inherit' });

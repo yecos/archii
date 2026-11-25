@@ -188,6 +188,33 @@ describe.skipIf(!host)('inventory transactions against Firestore emulator', () =
     }
   });
 
+  it.each(['files', 'dailyLogs'])('rejects cross-workspace access and forged tenant IDs in %s', async subcollection => {
+    const now = Math.floor(Date.now() / 1000);
+    const token = [
+      Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url'),
+      Buffer.from(JSON.stringify({ aud: projectId, iss: `https://securetoken.google.com/${projectId}`, sub: 'director', user_id: 'director', iat: now, exp: now + 3600, firebase: { sign_in_provider: 'custom', identities: {} } })).toString('base64url'),
+      '',
+    ].join('.');
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const base = `http://${host}/v1/projects/${projectId}/databases/(default)/documents/projects`;
+    await db.doc('projects/own-project').set({ tenantId: 'company-a' });
+    await db.doc('projects/foreign-project').set({ tenantId: 'company-b' });
+    await db.doc(`projects/foreign-project/${subcollection}/existing`).set({ tenantId: 'company-b', name: 'private' });
+    const foreign = `${base}/foreign-project/${subcollection}`;
+    expect((await fetch(`${foreign}/existing`, { headers })).status).toBe(403);
+    expect((await fetch(foreign, { headers })).status).toBe(403);
+    expect((await fetch(`${foreign}/existing`, { method: 'DELETE', headers })).status).toBe(403);
+    const forged = JSON.stringify({ fields: { tenantId: { stringValue: 'company-a' } } });
+    expect((await fetch(foreign, { method: 'POST', headers, body: forged })).status).toBe(403);
+    const mismatched = JSON.stringify({ fields: { tenantId: { stringValue: 'company-b' } } });
+    expect((await fetch(`${base}/own-project/${subcollection}`, { method: 'POST', headers, body: mismatched })).status).toBe(403);
+    await db.doc(`projects/own-project/${subcollection}/existing`).set({ tenantId: 'company-a', name: 'unchanged' });
+    expect((await fetch(`${base}/own-project/${subcollection}/existing`, { method: 'PATCH', headers, body: mismatched })).status).toBe(403);
+    expect((await db.doc(`projects/own-project/${subcollection}/existing`).get()).data()).toEqual({ tenantId: 'company-a', name: 'unchanged' });
+    expect((await db.collection(`projects/foreign-project/${subcollection}`).get()).size).toBe(1);
+    expect((await db.collection(`projects/own-project/${subcollection}`).get()).size).toBe(1);
+  });
+
   it.each([
     ['files', 'name', 'legacy.txt', 'qa.txt'],
     ['dailyLogs', 'date', '2026-11-24', '2026-11-25'],
