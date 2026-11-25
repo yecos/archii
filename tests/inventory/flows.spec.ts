@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import * as XLSX from 'xlsx';
 
-async function login(page: Page, email = 'inventory-e2e@example.test') {
+async function login(page: Page, email = 'inventory-e2e@example.test', destination = 'Inventario') {
   await page.addInitScript(() => {
     if (window !== window.top) return;
     localStorage.setItem('archii-onboarding', JSON.stringify({ state: { completedSteps: ['welcome', 'create-project', 'explore-dashboard', 'invite-team', 'try-ai', 'complete'], completedAt: new Date().toISOString(), spotlightTips: [] }, version: 0 }));
@@ -14,15 +14,57 @@ async function login(page: Page, email = 'inventory-e2e@example.test') {
   await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Ingresar', exact: true })).not.toBeVisible();
   if ((page.viewportSize()?.width || 1440) < 768) await page.getByRole('button', { name: 'Abrir menú' }).click();
-  const inventory = page.getByText('Inventario', { exact: true }).filter({ visible: true }).first();
+  const inventory = page.getByText(destination, { exact: true }).filter({ visible: true }).first();
 
   await inventory.click();
-  await expect(page.getByRole('heading', { name: 'Inventario', exact: true })).toBeVisible();
+  if (destination === 'Inventario') await expect(page.getByRole('heading', { name: 'Inventario', exact: true })).toBeVisible();
 }
 
 function responseFor(page: Page, action: string) {
   return page.waitForResponse(response => response.url().endsWith('/api/inventory') && response.request().postDataJSON()?.action === action);
 }
+
+test('project files round-trip and daily logs persist after reload', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await login(page, 'inventory-e2e@example.test', 'Planos y archivos');
+  const openProject = async () => {
+    await page.getByRole('button', { name: /Proyecto ficticio de archivos/ }).click();
+    await expect(page.locator('#file-upload-input')).toBeAttached();
+  };
+  await openProject();
+  const filename = `plano-${testInfo.project.name}-${Date.now()}.txt`;
+  const contents = Buffer.from('Plano ficticio QA. Sin datos reales.');
+  await page.locator('#file-upload-input').setInputFiles({ name: filename, mimeType: 'text/plain', buffer: contents });
+  await expect(page.getByText(filename, { exact: true })).toBeVisible();
+  const fileCard = page.getByText(filename, { exact: true }).locator('..');
+  const downloadPromise = page.waitForEvent('download');
+  await fileCard.getByRole('link', { name: 'Descargar archivo', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(filename);
+  expect(await readFile((await download.path())!)).toEqual(contents);
+
+  await page.getByRole('button', { name: 'Obra', exact: true }).click();
+  await page.getByRole('button', { name: /Bit.cora/ }).click();
+  await page.getByRole('button', { name: 'Nuevo Registro', exact: true }).click();
+  const activity = `Replanteo ficticio ${testInfo.project.name} ${Date.now()}`;
+  await page.getByPlaceholder('Nombre del supervisor').fill('Supervisor QA');
+  await page.getByPlaceholder('Actividad 1', { exact: true }).fill(activity);
+  await page.getByRole('button', { name: 'Guardar Registro', exact: true }).click();
+  await expect(page.getByText(activity, { exact: true })).toBeVisible();
+
+  await page.reload();
+  const filesNav = page.getByText('Planos y archivos', { exact: true }).filter({ visible: true }).first();
+  if ((page.viewportSize()?.width || 1440) < 768) await page.getByRole('button', { name: /Abrir men/ }).click();
+  await filesNav.click();
+  await openProject();
+  await expect(page.getByText(filename, { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Obra', exact: true }).click();
+  await page.getByRole('button', { name: /Bit.cora/ }).click();
+  await expect(page.getByText(activity, { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('project-daily-log.png'), fullPage: true });
+  expect(errors).toEqual([]);
+});
 
 async function movement(page: Page, productId: string, type: 'Entrada' | 'Salida', qty: string) {
   await page.getByRole('button', { name: /Movimientos/ }).click();
