@@ -177,12 +177,15 @@ export interface DailyLog {
   };
 }
 
+export const MAX_LOCAL_PROJECT_FILE_BYTES = 750 * 1024;
+
 export interface ProjectFile {
   id: string;
   name: string;
   type: string;
   size: number;
   url: string;
+  tenantId?: string;
   createdAt: FirestoreTimestamp;
 }
 

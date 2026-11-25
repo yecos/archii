@@ -7,7 +7,7 @@ import { getFirebase } from '@/lib/firebase-service';
 import { fmtCOP, fmtDate, fmtSize, statusColor, prioColor, taskStColor } from '@/lib/helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
 import { Plus, Layers, MessageSquare, BarChart3, Calendar, Send, ChevronLeft, X, Pencil, Eye, Trash2, Download, XCircle } from 'lucide-react';
-import { PROJECT_TYPE_COLORS, EXPENSE_CATS, DEFAULT_ROLE_PERMS, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
+import { PROJECT_TYPE_COLORS, EXPENSE_CATS, DEFAULT_ROLE_PERMS, MAX_LOCAL_PROJECT_FILE_BYTES, type Task, type WorkPhase, type Expense, type Comment, type TimeEntry, type RFI, type Submittal, type PunchItem, type TeamUser, type DailyLog } from '@/lib/types';
 import { updateProjectFields } from '@/lib/firestore-actions';
 import { SkeletonFileList } from '@/components/ui/SkeletonLoaders';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -27,7 +27,7 @@ export default function ProjectDetailScreen() {
     getUserName, initDefaultPhases, addMissingPhases,
     loading,
     navigateTo, openEditProject, openEditTask, openModal,
-    projectBudget, projectExpenses, projectFiles, projectSpent, projectTasks,
+    projectBudget, projectExpenses, projectFiles, projectFilesError, projectSpent, projectTasks,
     selectedProjectId, setForms, setLightboxIndex, setLightboxPhoto,
     timeAgo, toggleTask,
     updateApproval, updatePhaseStatus, updatePhaseDates, updateProjectProgress, uploadFile, workPhases,
@@ -755,7 +755,9 @@ export default function ProjectDetailScreen() {
 
               {/* Local Files Section */}
               <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-[var(--muted-foreground)]">{projectFiles.length} archivos locales</div>
+                <div className="text-sm text-[var(--muted-foreground)]">
+                  Archivos del proyecto · Hasta {fmtSize(MAX_LOCAL_PROJECT_FILE_BYTES)} por archivo
+                </div>
                 <div>
                   <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={() => document.getElementById('file-upload-input')?.click()}>
                     + Subir archivo
@@ -763,7 +765,8 @@ export default function ProjectDetailScreen() {
                   <input id="file-upload-input" type="file" style={{ display: 'none' }} onChange={uploadFile} />
                 </div>
               </div>
-              {projectFiles.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">📂</div><div className="text-sm">Sin archivos subidos</div></div> :
+              {projectFilesError ? <p role="alert" className="py-6 text-sm text-red-400">{projectFilesError}</p> :
+              projectFiles.length === 0 ? <div className="text-center py-12 text-[var(--af-text3)]"><div className="text-3xl mb-2">📂</div><div className="text-sm">Sin archivos subidos</div></div> :
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {projectFiles.map((f: any) => (
                   <div key={f.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--input)] transition-all group">
