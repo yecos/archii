@@ -173,28 +173,31 @@ export async function POST(request: NextRequest) {
         // Add tool result to conversation
         apiMessages.push({
           role: "tool",
+          name: funcName,
           tool_call_id: toolCall.id,
           content: result,
         });
       }
 
-      // Second call: get final response with tool results (using Gemini API)
+      const fallbackMessage = "No pude resumir el resultado de la consulta. Revisa los resultados mostrados o vuelve a formular la consulta.";
+      // Finalize the response without allowing another round of actions.
       try {
-        const followUpData = await chatCompletionWithTools(apiMessages, undefined, {
+        const followUpData = await chatCompletionWithTools(apiMessages, TOOLS, {
           max_tokens: 2048,
           temperature: 0.7,
+          toolMode: "NONE",
         });
 
         const finalMessage = followUpData.choices?.[0]?.message?.content;
 
         return NextResponse.json({
-          message: finalMessage || "Acciones ejecutadas correctamente.",
+          message: finalMessage?.trim() || fallbackMessage,
           actions: actions.length > 0 ? actions : undefined,
         });
       } catch (error: unknown) {
         console.error("[AI Agent] Follow-up error:", error instanceof Error ? error.message : String(error));
         return NextResponse.json({
-          message: "Acciones ejecutadas correctamente.",
+          message: fallbackMessage,
           actions: actions.length > 0 ? actions : undefined,
         });
       }

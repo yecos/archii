@@ -1103,32 +1103,26 @@ export async function createChangeOrder(data: Record<string, any>): Promise<stri
   const db = fb.firestore();
   const docRef = db.collection('changeOrders').doc();
 
-  // Get next order number atomically
   const counterRef = db.collection('projects').doc(data.projectId).collection('changeOrderCounter').doc('counter');
-  const counterSnap = await counterRef.get();
-  let nextNum = 1;
-  if (counterSnap.exists) {
-    nextNum = (counterSnap.data()?.count || 0) + 1;
-  }
-  const orderNumber = `CO-${String(nextNum).padStart(3, '0')}`;
-
   const historyEntry: ChangeOrderHistoryEntry = {
     action: 'created',
     by: data.createdBy,
     byName: data.createdByName,
-    at: fb.firestore.FieldValue.serverTimestamp(),
+    at: new Date().toISOString(),
     comments: 'Orden creada',
   };
 
-  await docRef.set({
-    ...data,
-    id: docRef.id,
-    orderNumber,
-    history: [historyEntry],
+  await db.runTransaction(async transaction => {
+    const counter = await transaction.get(counterRef);
+    const nextNum = (counter.data()?.count || 0) + 1;
+    transaction.set(docRef, {
+      ...data,
+      id: docRef.id,
+      orderNumber: `CO-${String(nextNum).padStart(3, '0')}`,
+      history: [historyEntry],
+    });
+    transaction.set(counterRef, { count: nextNum }, { merge: true });
   });
-
-  // Update counter
-  await counterRef.set({ count: nextNum }, { merge: true });
 
   return docRef.id;
 }
@@ -1146,7 +1140,7 @@ export async function submitChangeOrder(coId: string, userName: string, uid: str
     action: 'submitted',
     by: uid,
     byName: userName,
-    at: fb.firestore.FieldValue.serverTimestamp(),
+    at: new Date().toISOString(),
     comments: 'Enviada para aprobación',
   };
   await db.collection('changeOrders').doc(coId).update({
@@ -1156,50 +1150,16 @@ export async function submitChangeOrder(coId: string, userName: string, uid: str
   });
 }
 
-export async function approveChangeOrder(
-  coId: string,
-  approverUid: string,
-  approverName: string,
-  comments: string
-): Promise<void> {
-  const fb = getFirebase();
-  const db = fb.firestore();
-  const historyEntry: ChangeOrderHistoryEntry = {
-    action: 'approved',
-    by: approverUid,
-    byName: approverName,
-    at: fb.firestore.FieldValue.serverTimestamp(),
-    comments,
-  };
-  await db.collection('changeOrders').doc(coId).update({
-    status: 'aprobada',
-    approvedBy: approverUid,
-    approvedByName: approverName,
-    approvedAt: fb.firestore.FieldValue.serverTimestamp(),
-    reviewedComments: comments,
-    history: fb.firestore.FieldValue.arrayUnion(historyEntry),
+export async function reviewChangeOrder(coId: string, action: 'approve' | 'reject', comments: string): Promise<void> {
+  const token = await getFirebaseIdToken();
+  if (!token) throw new Error('Inicia sesión para revisar la orden');
+  const response = await fetch('/api/change-orders/approve', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coId, action, comments }),
   });
-}
-
-export async function rejectChangeOrder(
-  coId: string,
-  approverUid: string,
-  approverName: string,
-  reason: string
-): Promise<void> {
-  const fb = getFirebase();
-  const db = fb.firestore();
-  const historyEntry: ChangeOrderHistoryEntry = {
-    action: 'rejected',
-    by: approverUid,
-    byName: approverName,
-    at: fb.firestore.FieldValue.serverTimestamp(),
-    comments: reason,
-  };
-  await db.collection('changeOrders').doc(coId).update({
-    status: 'rechazada',
-    rejectionReason: reason,
-    reviewedComments: reason,
-    history: fb.firestore.FieldValue.arrayUnion(historyEntry),
-  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || 'Error al revisar orden');
+  }
 }

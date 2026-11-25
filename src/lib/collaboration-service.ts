@@ -204,7 +204,7 @@ export class CollaborativeDocument {
 
     const db = this.getDb();
     const fb = getFirebase();
-    const fv = fb.FieldValue;
+    const fv = fb.firestore.FieldValue;
     const fullChange: DocumentChange = {
       ...change,
       changeId: `chg_${this.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -374,7 +374,7 @@ export class PresenceManager {
     if (!isFlagEnabled('realtime_collab')) return;
 
     const db = getFirebase().firestore();
-    const fv = getFirebase().FieldValue;
+    const fv = getFirebase().firestore.FieldValue;
 
     const presenceRef = db
       .collection('tenants')
@@ -487,7 +487,7 @@ export class PresenceManager {
         .doc(this.sessionId)
         .update({
           cursor: position,
-          lastHeartbeat: getFirebase().FieldValue.serverTimestamp(),
+          lastHeartbeat: getFirebase().firestore.FieldValue.serverTimestamp(),
         });
     } catch (err) {
       console.error('[Collab] Error updating cursor:', err);
@@ -509,7 +509,7 @@ export class PresenceManager {
         .doc(this.sessionId)
         .update({
           isTyping,
-          lastHeartbeat: getFirebase().FieldValue.serverTimestamp(),
+          lastHeartbeat: getFirebase().firestore.FieldValue.serverTimestamp(),
         });
     } catch (err) {
       console.error('[Collab] Error updating typing state:', err);
@@ -540,7 +540,7 @@ export class PresenceManager {
         .collection('collab_presence')
         .doc(this.sessionId)
         .update({
-          lastHeartbeat: getFirebase().FieldValue.serverTimestamp(),
+          lastHeartbeat: getFirebase().firestore.FieldValue.serverTimestamp(),
         });
     } catch (err) {
       console.warn('[Collab] Heartbeat failed:', err);
@@ -748,7 +748,7 @@ export class AnchoredCommentsManager {
     }
 
     const db = getFirebase().firestore();
-    const fv = getFirebase().FieldValue;
+    const fv = getFirebase().firestore.FieldValue;
 
     const docRef = await db
       .collection('tenants')
@@ -789,7 +789,7 @@ export class AnchoredCommentsManager {
     }
 
     const db = getFirebase().firestore();
-    const fv = getFirebase().FieldValue;
+    const fv = getFirebase().firestore.FieldValue;
 
     // Get parent comment to inherit location
     const parentDoc = await db
@@ -841,7 +841,7 @@ export class AnchoredCommentsManager {
       .doc(commentId)
       .update({
         status: 'resolved',
-        updatedAt: getFirebase().FieldValue.serverTimestamp(),
+        updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
       });
   }
 

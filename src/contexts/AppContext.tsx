@@ -56,7 +56,7 @@ interface AppContextValue {
   selectedProjectId: string;
   navigateTo: (screen: string, itemId?: string | null) => void;
   saveApproval: () => Promise<void>;
-  saveExpense: () => Promise<void>;
+  saveExpense: (requestId: string) => Promise<boolean>;
   saveMeeting: () => Promise<void>;
 }
 const AppContext = createContext<AppContextValue & Record<string, any>>(null!);
@@ -2108,13 +2108,13 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     } catch (err: any) { console.error("[Archii]", err); showToast('Error al eliminar: ' + (err?.message || err?.code || 'sin permiso'), 'error'); }
   };
 
-  const saveExpense = async () => {
+  const saveExpense = async (requestId: string) => {
     const concept = forms.expConcept || '';
-    if (!concept) { showToast('El concepto es obligatorio', 'error'); return; }
-    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return; }
+    if (!concept.trim()) { showToast('El concepto es obligatorio', 'error'); return false; }
+    if (!authUser) { showToast('Error: no hay sesión activa', 'error'); return false; }
     const db = getFirebase().firestore();
-    const amount = Number(forms.expAmount) || 0;
-    if (amount <= 0) { showToast('El monto debe ser mayor a 0', 'error'); return; }
+    const amount = Number(forms.expAmount);
+    if (!Number.isFinite(amount) || amount <= 0) { showToast('El monto debe ser mayor a 0', 'error'); return false; }
     const raw = {
       concept,
       projectId: forms.expProject || '',
@@ -2137,11 +2137,12 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       } else {
         data.createdAt = getFirebase().firestore.FieldValue.serverTimestamp();
         data.createdBy = authUser.uid;
-        await db.collection('expenses').add(data);
+        await db.collection('expenses').doc(requestId).set(data);
         showToast('Gasto registrado');
       }
       closeModal('expense'); setForms(p => ({ ...p, expConcept: '', expAmount: '', expDate: new Date().toISOString().split('T')[0], expCategory: 'Materiales', expPaymentMethod: 'Efectivo', expVendor: '', expNotes: '' }));
-    } catch (err) { console.error('[Archii]', err); showToast('Error', 'error'); }
+      return true;
+    } catch (err) { console.error('[Archii]', err); showToast('No se pudo guardar el gasto. Intenta de nuevo.', 'error'); return false; }
   };
 
   const openEditExpense = (e: Expense) => {
@@ -3113,6 +3114,10 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // ===== TENANT MANAGEMENT =====
   const switchTenant = useCallback((tenantId: string, tenantName: string, role: string = 'Miembro') => {
+    if (tenantId === activeTenantId) {
+      setShowTenantSelector(false);
+      return;
+    }
     // Clear tenant-scoped state before activating the next tenant.
     // This prevents data from the previous tenant from remaining visible while
     // the new Firestore snapshots are still loading.
@@ -3164,7 +3169,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     }
     const roleLabel = role === 'Super Admin' ? ' (Super Admin)' : '';
     showToast(`Espacio de trabajo: ${tenantName}${roleLabel}`);
-  }, [showToast, authUser]);
+  }, [showToast, authUser, activeTenantId]);
 
   // ===== CONTEXT VALUE =====
   const ctx = {

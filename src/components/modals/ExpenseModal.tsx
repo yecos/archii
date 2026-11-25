@@ -6,20 +6,38 @@ import { FormField, FormInput, FormSelect, FormTextarea, ModalFooter, useFormVal
 import { EXPENSE_CATS, PAYMENT_METHODS } from '@/lib/types';
 
 export default function ExpenseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { forms, setForms, closeModal, saveExpense, editingId, projects } = useApp();
+  const { forms, setForms, saveExpense, editingId, projects } = useApp();
   const isEditing = !!editingId;
   const { errors, validateRequired, onBlurRequired, clearError } = useFormValidation();
+  const [saving, setSaving] = React.useState(false);
+  const submitting = React.useRef(false);
+  const requestId = React.useRef<string | null>(null);
 
-  const handleSubmit = () => {
+  const handleClose = () => {
+    if (submitting.current) return;
+    requestId.current = null;
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (submitting.current) return;
     if (!validateRequired('expConcept', forms.expConcept || '', 'Concepto')) return;
-    saveExpense();
+    submitting.current = true;
+    setSaving(true);
+    try {
+      requestId.current ??= crypto.randomUUID();
+      if (await saveExpense(requestId.current)) requestId.current = null;
+    } finally {
+      submitting.current = false;
+      setSaving(false);
+    }
   };
 
   return (
-    <CenterModal open={open} onClose={onClose} maxWidth={500}>
+    <CenterModal open={open} onClose={handleClose} maxWidth={500}>
       <h2 className="text-lg font-semibold mb-4">{isEditing ? 'Editar gasto' : 'Registrar gasto'}</h2>
 
-      <div className="space-y-3">
+      <fieldset className="space-y-3" disabled={saving}>
         <FormField label="Concepto" required error={errors.expConcept}>
           <FormInput
             value={forms.expConcept || ''}
@@ -101,12 +119,13 @@ export default function ExpenseModal({ open, onClose }: { open: boolean; onClose
             rows={2}
           />
         </FormField>
-      </div>
+      </fieldset>
 
       <ModalFooter
-        onCancel={() => closeModal('expense')}
+        onCancel={handleClose}
         onSubmit={handleSubmit}
-        submitLabel={isEditing ? 'Actualizar' : 'Registrar'}
+        submitDisabled={saving}
+        submitLabel={saving ? 'Guardando…' : isEditing ? 'Actualizar' : 'Registrar'}
       />
     </CenterModal>
   );
