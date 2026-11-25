@@ -5,7 +5,8 @@ import { useTimeTrackingContext } from '@/hooks/useTimeTracking';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { fmtCOP } from '@/lib/helpers';
 import { DEFAULT_PHASES } from '@/lib/types';
-import { isIssuedInvoice } from '@/lib/invoice-status';
+import { isIssuedInvoice, isPayableInvoice } from '@/lib/invoice-status';
+import { calculateInvoiceTotals } from '@/lib/invoice-calculations';
 import * as fbActions from '@/lib/firestore-actions';
 import { exportInvoicePDF } from '@/lib/export-pdf';
 import { FileText, Download, Pencil, Trash2, Receipt, Plus } from 'lucide-react';
@@ -21,7 +22,7 @@ export default function InvoicesScreen() {
   } = useApp();
   const {
     addInvoiceItem, invoiceFilterStatus, invoiceItems, invoiceTab,
-    invoices, openNewInvoice, removeInvoiceItem, saveInvoice,
+    invoices, openNewInvoice, removeInvoiceItem, saveInvoice, isSavingInvoice,
     setInvoiceFilterStatus, setInvoiceTab, updateInvoiceItem,
   } = useTimeTrackingContext();
 
@@ -45,6 +46,10 @@ export default function InvoicesScreen() {
     return invoices.filter(i => invoiceFilterStatus === 'all' || i.data.status === invoiceFilterStatus);
   }, [invoices, invoiceFilterStatus]);
 
+  const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
+  let previewTotal: number | null = null;
+  try { previewTotal = calculateInvoiceTotals(invoiceSubtotal, forms.invTax).total; } catch { /* Validate on save. */ }
+
   return (
 <div className="animate-fadeIn space-y-5">
       {/* Header */}
@@ -56,7 +61,7 @@ export default function InvoicesScreen() {
           </h2>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{invoices.length} facturas</p>
         </div>
-        <button className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={openNewInvoice}>
+        <button disabled={isSavingInvoice} className="flex items-center gap-1.5 bg-[var(--af-accent)] text-background px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] transition-colors" onClick={openNewInvoice}>
           <Plus size={14} aria-hidden="true"/>
           Nueva Factura
         </button>
@@ -88,7 +93,7 @@ export default function InvoicesScreen() {
                 {filteredInvoices.map(inv => {
                   const statusColors: Record<string, string> = { Borrador: 'bg-[var(--af-bg4)] text-[var(--muted-foreground)]', Enviada: 'bg-blue-500/10 text-blue-400', Pagada: 'bg-emerald-500/10 text-emerald-400', Vencida: 'bg-red-500/10 text-red-400', Cancelada: 'bg-red-500/5 text-red-300 line-through' };
                   const proj = projects.find(p => p.id === inv.data.projectId);
-                  return (<div key={inv.id} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--input)] transition-all">
+                  return (<div key={inv.id} data-invoice-number={inv.data.number} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-[var(--input)] transition-all">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-semibold">{inv.data.number}</span>
@@ -108,7 +113,7 @@ export default function InvoicesScreen() {
                         <FileText size={14} aria-hidden="true"/>
                       </button>
                       {inv.data.status === 'Borrador' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast, activeTenantId)}>Enviar</button>}
-                      {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId)}>Pagar</button>}
+                      {isPayableInvoice(inv) && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId)}>Pagar</button>}
                       {inv.data.status === 'Enviada' && <button className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={() => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast, activeTenantId)}>Vencer</button>}
                       <button aria-label="Eliminar" className="px-2 py-1.5 rounded text-xs cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20" onClick={async () => {
                         const ok = await confirm({ title: 'Eliminar factura', description: '¿Estás seguro de eliminar esta factura?' });
@@ -125,7 +130,7 @@ export default function InvoicesScreen() {
                             try { exportInvoicePDF(inv, proj); showToast('PDF descargado'); } catch (err) { showToast('Error al generar PDF', 'error'); }
                           }},
                           ...(inv.data.status === 'Borrador' ? [{ label: 'Enviar factura', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Enviada', showToast, activeTenantId) }] : []),
-                          ...(inv.data.status === 'Enviada' ? [{ label: 'Marcar como pagada', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId) }] : []),
+                          ...(isPayableInvoice(inv) ? [{ label: 'Marcar como pagada', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Pagada', showToast, activeTenantId) }] : []),
                           ...(inv.data.status === 'Enviada' ? [{ label: 'Marcar como vencida', onClick: () => fbActions.updateInvoiceStatus(inv.id, 'Vencida', showToast, activeTenantId) }] : []),
                           { label: 'Eliminar factura', icon: <Trash2 size={14} aria-hidden="true"/>, variant: 'danger' as const, separator: true, onClick: async () => {
                             const ok = await confirm({ title: 'Eliminar factura', description: '¿Estás seguro de eliminar esta factura?' });
@@ -146,10 +151,10 @@ export default function InvoicesScreen() {
         {invoiceTab === 'create' && (<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-[15px] font-semibold">Nueva Factura</h3>
-            <button className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setInvoiceTab('list')}>Cancelar</button>
+            <button disabled={isSavingInvoice} className="text-xs text-[var(--muted-foreground)] cursor-pointer hover:underline" onClick={() => setInvoiceTab('list')}>Cancelar</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <select className="bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invProject || ''} onChange={e => setForms(p => ({ ...p, invProject: e.target.value }))}>
+            <select aria-label="Proyecto de la factura" className="min-w-0 bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none" value={forms.invProject || ''} onChange={e => setForms(p => ({ ...p, invProject: e.target.value }))}>
               <option value="">Seleccionar proyecto</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.data.name}</option>)}
             </select>
@@ -161,37 +166,37 @@ export default function InvoicesScreen() {
           <div className="space-y-2">
             <div className="flex items-center justify-between"><span className="text-[13px] font-medium">Items</span><button className="text-xs text-[var(--af-accent)] cursor-pointer hover:underline" onClick={addInvoiceItem}>+ Agregar item</button></div>
             <div className="bg-[var(--af-bg3)] rounded-lg p-3 space-y-2">
-              <div className="grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-[11px] text-[var(--muted-foreground)] font-medium">
                 <div className="col-span-5 sm:col-span-4">Concepto</div><div className="col-span-3 sm:col-span-3">Fase</div><div className="col-span-2 sm:col-span-2">Horas</div><div className="col-span-2 sm:col-span-2">Tarifa</div><div className="col-span-1"></div>
               </div>
               {invoiceItems.map((item: any, idx: any) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                  <input className="col-span-5 sm:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
-                  <select className="col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
+                  <input className="min-w-0 col-span-12 sm:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" placeholder="Concepto" value={item.concept} onChange={e => updateInvoiceItem(idx, 'concept', e.target.value)} />
+                  <select aria-label={`Fase del concepto ${idx + 1}`} className="min-w-0 col-span-5 sm:col-span-3 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none" value={item.phase} onChange={e => updateInvoiceItem(idx, 'phase', e.target.value)}>
                     <option value="">Fase</option>
                     {DEFAULT_PHASES.map(ph => <option key={ph} value={ph}>{ph}</option>)}
                   </select>
-                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
-                  <input type="number" className="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
+                  <input aria-label={`Horas del concepto ${idx + 1}`} type="number" className="min-w-0 col-span-3 sm:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.hours} onChange={e => updateInvoiceItem(idx, 'hours', e.target.value)} />
+                  <input aria-label={`Tarifa del concepto ${idx + 1}`} type="number" className="min-w-0 col-span-3 sm:col-span-2 bg-[var(--card)] border border-[var(--border)] rounded px-2 py-1.5 text-xs outline-none text-right" value={item.rate} onChange={e => updateInvoiceItem(idx, 'rate', e.target.value)} />
                   <button aria-label="Eliminar concepto" className="col-span-1 text-xs text-red-400 cursor-pointer text-center" onClick={() => removeInvoiceItem(idx)}>✕</button>
                 </div>
               ))}
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-[var(--muted-foreground)]">Subtotal</span>
-              <span>{fmtCOP(invoiceItems.reduce((s: any, i: any) => s + (Number(i.amount) || 0), 0))}</span>
+              <span>{fmtCOP(invoiceSubtotal)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--muted-foreground)]">IVA (%)</span>
-              <input type="number" className="w-20 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right outline-none" value={forms.invTax || 19} onChange={e => setForms(p => ({ ...p, invTax: e.target.value }))} />
+              <input aria-label="IVA (%)" type="number" min="0" max="100" className="w-20 bg-[var(--af-bg3)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right outline-none" value={forms.invTax ?? 19} onChange={e => setForms(p => ({ ...p, invTax: e.target.value }))} />
             </div>
             <div className="flex justify-between items-center text-sm font-semibold">
               <span>Total</span>
-              <span className="text-[var(--af-accent)]">{fmtCOP(invoiceItems.reduce((s: any, i: any) => s + (Number(i.amount) || 0), 0) * (1 + (Number(forms.invTax) || 19) / 100))}</span>
+              <span className="text-[var(--af-accent)]">{previewTotal === null ? '—' : fmtCOP(previewTotal)}</span>
             </div>
           </div>
           <textarea className="w-full bg-[var(--af-bg3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--foreground)] outline-none resize-none" rows={2} placeholder="Notas..." value={forms.invNotes || ''} onChange={e => setForms(p => ({ ...p, invNotes: e.target.value }))} />
-          <button className="w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)]" onClick={saveInvoice}>Crear Factura</button>
+          <button disabled={isSavingInvoice} className="w-full bg-[var(--af-accent)] text-background px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-none hover:bg-[var(--af-accent2)] disabled:opacity-60" onClick={saveInvoice}>{isSavingInvoice ? 'Guardando...' : 'Crear Factura'}</button>
         </div>)}
       <ConfirmDialog {...confirmDialog} />
       </div>

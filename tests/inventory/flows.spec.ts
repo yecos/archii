@@ -14,6 +14,7 @@ async function login(page: Page, email = 'inventory-e2e@example.test', destinati
   await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Ingresar', exact: true })).not.toBeVisible();
   if ((page.viewportSize()?.width || 1440) < 768) await page.getByRole('button', { name: 'Abrir menú' }).click();
+  if (destination === 'Facturas') await page.getByRole('button', { name: /Administraci.*expandir/ }).filter({ visible: true }).first().click();
   const inventory = page.getByText(destination, { exact: true }).filter({ visible: true }).first();
 
   await inventory.click();
@@ -23,6 +24,79 @@ async function login(page: Page, email = 'inventory-e2e@example.test', destinati
 function responseFor(page: Page, action: string) {
   return page.waitForResponse(response => response.url().endsWith('/api/inventory') && response.request().postDataJSON()?.action === action);
 }
+
+test('invoices preserve zero tax, export actual tax amounts and record overdue payment', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await login(page, 'inventory-e2e@example.test', 'Facturas');
+  const number = `QA-${testInfo.project.name}-${Date.now()}`;
+  const card = page.locator(`[data-invoice-number="${number}"]`);
+  const mobile = testInfo.project.name === 'android-emulated';
+  const action = async (target: typeof card, desktopLabel: string, mobileLabel: string) => {
+    if (mobile) {
+      await target.getByRole('button', { name: /M.s opciones/ }).click();
+      await page.getByRole('menuitem', { name: mobileLabel, exact: true }).click();
+    } else await target.getByRole('button', { name: desktopLabel, exact: true }).click();
+  };
+  const fillInvoice = async (invoiceNumber: string) => {
+    await page.getByRole('button', { name: 'Nueva Factura', exact: true }).click();
+    await page.getByLabel('Proyecto de la factura', { exact: true }).selectOption('project-files-e2e');
+    await page.getByPlaceholder('Numero de factura').fill(invoiceNumber);
+    await page.getByPlaceholder('Concepto', { exact: true }).fill('Revisión ficticia QA');
+    await page.getByLabel('Horas del concepto 1', { exact: true }).fill('2');
+    await page.getByLabel('Tarifa del concepto 1', { exact: true }).fill('100000');
+  };
+  const downloadPdf = async (target: typeof card) => {
+    const pending = page.waitForEvent('download');
+    await action(target, 'Descargar PDF', 'Descargar PDF');
+    const downloaded = await pending;
+    const bytes = await readFile((await downloaded.path())!);
+    expect(bytes.subarray(0, 4).toString()).toBe('%PDF');
+    return bytes.toString('latin1');
+  };
+
+  await fillInvoice(number);
+  await page.getByLabel('IVA (%)', { exact: true }).fill('101');
+  await page.getByRole('button', { name: 'Crear Factura', exact: true }).click();
+  await expect(page.getByText('El IVA debe estar entre 0 y 100', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Crear Factura', exact: true })).toBeVisible();
+  await page.getByLabel('IVA (%)', { exact: true }).fill('0');
+  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('200.000');
+  expect(await page.locator('#main-content').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await page.getByRole('button', { name: 'Crear Factura', exact: true }).click({ clickCount: 2 });
+  await expect(card).toHaveCount(1);
+  await expect(card.getByText('Borrador', { exact: true })).toBeVisible();
+  await expect(card).toContainText('200.000');
+  expect(await downloadPdf(card)).toContain('0%');
+  await action(card, 'Enviar', 'Enviar factura');
+  await expect(card.getByText('Enviada', { exact: true })).toBeVisible();
+  await action(card, 'Vencer', 'Marcar como vencida');
+  await expect(card.getByText('Vencida', { exact: true })).toBeVisible();
+  await action(card, 'Pagar', 'Marcar como pagada');
+  await expect(card.getByText('Pagada', { exact: true })).toBeVisible();
+
+  await fillInvoice(`${number}-19`);
+  await expect(page.getByLabel('IVA (%)', { exact: true })).toHaveValue('19');
+  await expect(page.getByText('Total', { exact: true }).locator('..')).toContainText('238.000');
+  await page.getByRole('button', { name: 'Crear Factura', exact: true }).click();
+  const taxedCard = page.locator(`[data-invoice-number="${number}-19"]`);
+  await expect(taxedCard).toContainText('238.000');
+  const taxedPdf = await downloadPdf(taxedCard);
+  expect(taxedPdf).toContain('19%');
+  expect(taxedPdf).toContain('($38.000) Tj');
+
+  await page.reload();
+  if (mobile) await page.getByRole('button', { name: /Abrir men/ }).click();
+  const category = page.getByRole('button', { name: /Administraci.*expandir/ }).filter({ visible: true }).first();
+  if (await category.count()) await category.click();
+  await page.getByText('Facturas', { exact: true }).filter({ visible: true }).first().click();
+  await expect(card).toHaveCount(1);
+  await expect(card.getByText('Pagada', { exact: true })).toBeVisible();
+  await expect(card).toContainText('200.000');
+  await expect(taxedCard).toContainText('238.000');
+  await page.screenshot({ path: testInfo.outputPath('invoice-lifecycle.png'), fullPage: true });
+  expect(errors).toEqual([]);
+});
 
 test('project files round-trip and daily logs persist after reload', async ({ page }, testInfo) => {
   const errors: string[] = [];

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { isIssuedInvoice } from './invoice-status';
+import { isIssuedInvoice, isPayableInvoice } from './invoice-status';
 import type { Invoice } from './types';
 
 it.each([
@@ -14,3 +14,9 @@ it.each([
     expect(isIssuedInvoice({ data: { status } } as Invoice)).toBe(expected);
   },
 );
+
+it.each([
+  ['Borrador', false], ['Cancelada', false], ['Pagada', false], ['Enviada', true], ['Vencida', true],
+] satisfies [Invoice['data']['status'], boolean][])('allows recording payment for %s: %s', (status, expected) => {
+  expect(isPayableInvoice({ data: { status } } as Invoice)).toBe(expected);
+});

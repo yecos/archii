@@ -262,8 +262,8 @@ function AppContent() {
               animate={{ opacity: 1, y: 0 }}
               exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={reduced ? instant : { duration: 0.2, ease: 'easeInOut' }}
-              // Let long project forms grow so main's bottom padding remains scrollable.
-              className={screen === 'projectDetail' ? 'flex flex-col shrink-0' : 'flex-1 flex flex-col min-h-0'}
+              // Let long forms grow so main's bottom padding remains scrollable.
+              className={screen === 'projectDetail' || screen === 'invoices' ? 'flex flex-col shrink-0' : 'flex-1 flex flex-col min-h-0'}
             >
               <ErrorBoundary>
               {screen === 'dashboard' && <DashboardScreen />}

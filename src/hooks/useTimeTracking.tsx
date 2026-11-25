@@ -1,9 +1,10 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import type { TimeEntry, Invoice, InvoiceItem } from '@/lib/types';
 import { getFirebase } from '@/lib/firebase-service';
 import * as fbActions from '@/lib/firestore-actions';
+import { calculateInvoiceTotals } from '@/lib/invoice-calculations';
 
 /* ===== TYPES ===== */
 export interface TimeTrackingContextValue {
@@ -23,6 +24,7 @@ export interface TimeTrackingContextValue {
   invoiceTab: 'list' | 'create';
   setInvoiceTab: React.Dispatch<React.SetStateAction<'list' | 'create'>>;
   invoiceItems: InvoiceItem[];
+  isSavingInvoice: boolean;
   invoiceFilterStatus: string;
   setInvoiceFilterStatus: React.Dispatch<React.SetStateAction<string>>;
 
@@ -34,7 +36,7 @@ export interface TimeTrackingContextValue {
   updateInvoiceItem: (idx: number, field: string, value: any) => void;
   addInvoiceItem: () => void;
   removeInvoiceItem: (idx: number) => void;
-  saveInvoice: () => void;
+  saveInvoice: () => Promise<void>;
 }
 
 const TimeTrackingContext = createContext<TimeTrackingContextValue>(null!);
@@ -56,6 +58,17 @@ export function TimeTrackingProvider({ children }: { children: React.ReactNode }
   const [invoiceTab, setInvoiceTab] = useState<'list' | 'create'>('list');
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceFilterStatus, setInvoiceFilterStatus] = useState<string>('all');
+  const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+  const invoiceSavingRef = useRef(false);
+  const invoiceDocumentIdRef = useRef<string | null>(null);
+  const currentTenantRef = useRef(activeTenantId);
+  currentTenantRef.current = activeTenantId;
+
+  useEffect(() => {
+    setInvoiceTab('list');
+    setInvoiceItems([]);
+    invoiceDocumentIdRef.current = null;
+  }, [activeTenantId]);
 
   // ===== FIRESTORE LISTENERS =====
 
@@ -144,6 +157,8 @@ export function TimeTrackingProvider({ children }: { children: React.ReactNode }
 
   /* ===== INVOICE FUNCTIONS ===== */
   const openNewInvoice = () => {
+    if (invoiceSavingRef.current) return;
+    invoiceDocumentIdRef.current = null;
     setEditingId(null);
     setInvoiceItems([{ concept: '', phase: '', hours: 0, rate: 50000, amount: 0 }]);
     setForms(p => ({ ...p, invProject: '', invNumber: '', invStatus: 'Borrador', invTax: 19, invNotes: '', invIssueDate: new Date().toISOString().split('T')[0], invDueDate: '' }));
@@ -168,31 +183,51 @@ export function TimeTrackingProvider({ children }: { children: React.ReactNode }
     setInvoiceItems(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const saveInvoice = () => {
+  const saveInvoice = async () => {
+    if (invoiceSavingRef.current) return;
     if (!forms.invProject) { showToast('Selecciona un proyecto', 'error'); return; }
-    const subtotal = invoiceItems.reduce((s, item) => s + (Number(item.amount) || 0), 0);
-    const tax = Number(forms.invTax) || 19;
-    const total = subtotal + (subtotal * tax / 100);
-    fbActions.saveInvoice({
-      invProject: forms.invProject,
-      invNumber: forms.invNumber || '',
-      invStatus: forms.invStatus || 'Borrador',
-      invItems: invoiceItems,
-      invSubtotal: subtotal,
-      invTax: tax,
-      invTotal: total,
-      invNotes: forms.invNotes || '',
-      invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
-      invDueDate: forms.invDueDate || '',
-    }, editingId, showToast, authUser, activeTenantId);
-    setInvoiceTab('list');
+    if (!activeTenantId || !authUser) { showToast('Selecciona un espacio activo', 'error'); return; }
+    let totals;
+    try {
+      totals = calculateInvoiceTotals(invoiceItems.reduce((s, item) => s + Number(item.amount), 0), forms.invTax);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Importes inválidos', 'error');
+      return;
+    }
+    const tenantId = activeTenantId;
+    const documentId = invoiceDocumentIdRef.current ??= crypto.randomUUID();
+    invoiceSavingRef.current = true;
+    setIsSavingInvoice(true);
+    try {
+      await fbActions.saveInvoice({
+        invProject: forms.invProject,
+        invNumber: forms.invNumber || '',
+        invStatus: forms.invStatus || 'Borrador',
+        invItems: invoiceItems,
+        invSubtotal: totals.subtotal,
+        invTax: totals.tax,
+        invTotal: totals.total,
+        invNotes: forms.invNotes || '',
+        invIssueDate: forms.invIssueDate || new Date().toISOString().split('T')[0],
+        invDueDate: forms.invDueDate || '',
+      }, editingId, showToast, authUser, tenantId, documentId);
+      if (currentTenantRef.current === tenantId) {
+        setInvoiceTab('list');
+        invoiceDocumentIdRef.current = null;
+      }
+    } catch {
+      // The write action reports the error. Keep the draft and its ID for retry.
+    } finally {
+      invoiceSavingRef.current = false;
+      setIsSavingInvoice(false);
+    }
   };
 
   // ===== CONTEXT VALUE =====
   const value: TimeTrackingContextValue = {
     timeEntries, timeTab, setTimeTab, timeFilterProject, setTimeFilterProject,
     timeFilterDate, setTimeFilterDate, timeSession, timeTimerMs,
-    invoices, invoiceTab, setInvoiceTab, invoiceItems, invoiceFilterStatus, setInvoiceFilterStatus,
+    invoices, invoiceTab, setInvoiceTab, invoiceItems, invoiceFilterStatus, setInvoiceFilterStatus, isSavingInvoice,
     startTimeTracking, stopTimeTracking, saveManualTimeEntry,
     openNewInvoice, updateInvoiceItem, addInvoiceItem, removeInvoiceItem, saveInvoice,
   };

@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { fmtCOP, fmtDate, fmtDuration } from './helpers';
 import { isOverdue as checkOverdue } from './kanban-helpers';
+import { calculateInvoiceTotals } from './invoice-calculations';
 
 // Colores de marca Archii
 const BRAND = {
@@ -208,7 +209,7 @@ export function exportInvoicePDF(invoice: any, project?: any) {
 
   // Totals section
   const subtotal = invoice.data.subtotal || 0;
-  const tax = invoice.data.tax || 0;
+  const { tax, taxAmount } = calculateInvoiceTotals(subtotal, invoice.data.tax ?? 0);
   const total = invoice.data.total || 0;
 
   y = checkAddPage(doc, y, 50);
@@ -222,15 +223,15 @@ export function exportInvoicePDF(invoice: any, project?: any) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...BRAND.muted);
-  doc.text('Subtotal:', totalsX - 2, y, { align: 'right' });
+  doc.text('Subtotal:', totalsX - 80, y);
   doc.setTextColor(...BRAND.dark);
   doc.text(fmtCOPFull(subtotal), totalsX, y, { align: 'right' });
 
   y += 7;
   doc.setTextColor(...BRAND.muted);
-  doc.text(`IVA (${19}%):`, totalsX - 2, y, { align: 'right' });
+  doc.text(`IVA (${tax}%):`, totalsX - 80, y);
   doc.setTextColor(...BRAND.dark);
-  doc.text(fmtCOPFull(tax), totalsX, y, { align: 'right' });
+  doc.text(fmtCOPFull(taxAmount), totalsX, y, { align: 'right' });
 
   y += 2;
   doc.setDrawColor(...BRAND.primary);
@@ -241,7 +242,7 @@ export function exportInvoicePDF(invoice: any, project?: any) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(...BRAND.primary);
-  doc.text('TOTAL:', totalsX - 2, y, { align: 'right' });
+  doc.text('TOTAL:', totalsX - 80, y);
   doc.text(fmtCOPFull(total), totalsX, y, { align: 'right' });
 
   // Notes
