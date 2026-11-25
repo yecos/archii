@@ -139,6 +139,13 @@ service cloud.firestore {
 
     // Projects
     match /projects/{projectId} {
+      function projectTenantId() {
+        return get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId;
+      }
+      function recordTenantMatchesProject() {
+        return request.resource.data.get('tenantId', projectTenantId()) == projectTenantId();
+      }
+
       allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
       allow create: if isSignedIn()
         && canCreateOrEditProject(request.resource.data.tenantId);
@@ -172,25 +179,8 @@ service cloud.firestore {
       }
 
       match /files/{fileId} {
-        allow read: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
-        allow create: if isSignedIn() && isTenantMember(
-          request.resource.data.tenantId != null && request.resource.data.tenantId != ''
-            ? request.resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
-        allow update: if isSignedIn()
-          && isTenantMember(
-            resource.data.tenantId != null ? resource.data.tenantId
-              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-          )
-          && tenantIdUnchanged();
-        allow delete: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow read, delete: if isTenantMember(projectTenantId());
+        allow create, update: if isTenantMember(projectTenantId()) && recordTenantMatchesProject();
       }
 
       match /workPhases/{phaseId} {
@@ -238,25 +228,8 @@ service cloud.firestore {
       }
 
       match /dailyLogs/{logId} {
-        allow read: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
-        allow create: if isSignedIn() && isTenantMember(
-          request.resource.data.tenantId != null && request.resource.data.tenantId != ''
-            ? request.resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
-        allow update: if isSignedIn()
-          && isTenantMember(
-            resource.data.tenantId != null ? resource.data.tenantId
-              : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-          )
-          && tenantIdUnchanged();
-        allow delete: if isSignedIn() && isTenantMember(
-          resource.data.tenantId != null ? resource.data.tenantId
-            : get(/databases/$(database)/documents/projects/$(projectId)).data.tenantId
-        );
+        allow read, delete: if isTenantMember(projectTenantId());
+        allow create, update: if isTenantMember(projectTenantId()) && recordTenantMatchesProject();
       }
 
       match /fieldNotes/{noteId} {

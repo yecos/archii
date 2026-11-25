@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/ui-store';
 
 /* ===== MODULED IMPORTS ===== */
 import type { TeamUser, Project, Task, Expense, Supplier, Approval, WorkPhase, ProjectFile, OneDriveFile, GalleryPhoto, Comment, RFI, Submittal, PunchItem, Company, DailyLog, Meeting, ChangeOrder, Catalog, FieldNote } from '@/lib/types';
-import { ROLE_ICONS } from '@/lib/types';
+import { MAX_LOCAL_PROJECT_FILE_BYTES, ROLE_ICONS } from '@/lib/types';
 
 import { fmtCOP, fmtDate, fmtDateTime, fmtSize, getInitials, statusColor, prioColor, taskStColor, avatarColor, fmtRecTime, fmtDuration, fmtTimer, getWeekStart, fileToBase64, uniqueId, scrubUndefined } from '@/lib/helpers';
 import { isOverdue as checkOverdue } from '@/lib/kanban-helpers';
@@ -77,6 +77,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   const [workPhases, setWorkPhases] = useState<WorkPhase[]>([]);
   const [projectPhasesCache, setProjectPhasesCache] = useState<Record<string, WorkPhase[]>>({});
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
+  const [projectFilesError, setProjectFilesError] = useState<string | null>(null);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -963,15 +964,22 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Load project files
   useEffect(() => {
-    if (!ready || !selectedProjectId) return;
+    if (!ready || !authUser || !activeTenantId || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('files').orderBy('createdAt', 'desc').onSnapshot(snap => {
       setProjectFiles(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-    }, (err: any) => {
-  console.error('[Archii] Snapshot error:', err.code, err.message);
-});
-    return () => { unsub(); setProjectFiles([]); };
-  }, [ready, selectedProjectId]);
+      setProjectFilesError(null);
+    }, (err) => {
+      console.error('[Archii] Project files:', err);
+      setProjectFiles([]);
+      setProjectFilesError('No se pudieron cargar los archivos de este proyecto.');
+    });
+    return () => {
+      unsub();
+      setProjectFiles([]);
+      setProjectFilesError(null);
+    };
+  }, [ready, authUser, activeTenantId, selectedProjectId]);
 
   // Load approvals
   useEffect(() => {
@@ -1136,7 +1144,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Load daily logs for selected project
   useEffect(() => {
-    if (!ready || !authUser || !selectedProjectId) return;
+    if (!ready || !authUser || !activeTenantId || !selectedProjectId) return;
     const db = getFirebase().firestore();
     const unsub = db.collection('projects').doc(selectedProjectId).collection('dailyLogs').orderBy('date', 'desc').limit(100).onSnapshot(snap => {
       setDailyLogs(snap.docs.map((d: any) => ({ id: d.id, data: d.data() })));
@@ -1144,7 +1152,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
   console.error('[Archii] Snapshot error:', err.code, err.message);
 });
     return () => { unsub(); setDailyLogs([]); };
-  }, [ready, authUser, selectedProjectId]);
+  }, [ready, authUser, activeTenantId, selectedProjectId]);
 
   /* ===== NOTIFICATION DETECTION EFFECTS ===== */
   // (Notification engine — state, sound, OS notifications — extracted to NotificationProvider)
@@ -2291,21 +2299,38 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // fileToBase64 imported from @/lib/helpers (canonical version)
 
-  const uploadFile = async (e: any) => {
-    const file = e.target?.files?.[0];
-    if (!file || !selectedProjectId || !authUser) return;
-    if (file.size > 10 * 1024 * 1024) { showToast('El archivo no puede superar 10 MB', 'error'); return; }
+  const uploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file || !selectedProjectId || !authUser || !activeTenantId) return;
+    if (file.size > MAX_LOCAL_PROJECT_FILE_BYTES) {
+      showToast(`El límite de archivos del proyecto es ${fmtSize(MAX_LOCAL_PROJECT_FILE_BYTES)}.`, 'error');
+      return;
+    }
     showToast('Subiendo archivo...');
     try {
       const base64 = await fileToBase64(file);
-      const db = getFirebase().firestore();
-      await db.collection('projects').doc(selectedProjectId).collection('files').add(scrubUndefined({ name: file.name, type: file.type, size: file.size, data: base64, createdAt: getFirebase().firestore.FieldValue.serverTimestamp(), uploadedBy: authUser.uid }));
+      const fb = getFirebase();
+      await fb.firestore().collection('projects').doc(selectedProjectId).collection('files').add({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: base64,
+        tenantId: activeTenantId,
+        createdAt: fb.firestore.FieldValue.serverTimestamp(),
+        uploadedBy: authUser.uid,
+      });
       showToast('Archivo subido');
-    } catch (err: any) { showToast('Error al subir: ' + (err.message || ''), 'error'); }
-    e.target.value = '';
+    } catch (err) {
+      console.error('[Archii] Project file upload:', err);
+      showToast('No se pudo subir el archivo. Verifica tu acceso al proyecto e inténtalo de nuevo.', 'error');
+    }
   };
 
   const deleteFile = async (file: ProjectFile) => {
+    if (!selectedProjectId || !activeTenantId) return;
+    const projectId = selectedProjectId;
+    const tenantId = activeTenantId;
     const { id: fileId, name: fileName, ...fileRest } = file;
     setPendingDeleteAction({
       open: true,
@@ -2314,14 +2339,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       onConfirm: async () => {
         setPendingDeleteAction(null);
         try {
-          await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).delete();
+          const fb = getFirebase();
+          const fileRef = fb.firestore().collection('projects').doc(projectId).collection('files').doc(fileId);
+          await fileRef.delete();
           toast.success('Archivo eliminado', {
             duration: 5000,
             action: {
               label: 'Deshacer',
               onClick: async () => {
                 try {
-                  await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('files').doc(file.id).set(scrubUndefined({ ...fileRest, name: fileName, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }));
+                  await fileRef.set({ ...fileRest, name: fileName, tenantId, updatedAt: fb.firestore.FieldValue.serverTimestamp() });
                   toast.success('Archivo restaurado');
                 } catch (err) { console.error('[Archii] undo deleteFile:', err); toast.error('Error al restaurar'); }
               },
@@ -2519,12 +2546,16 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
   // Daily Log CRUD
   const saveDailyLog = async () => {
-    if (!selectedProjectId) { showToast('Selecciona un proyecto', 'error'); return; }
+    if (!selectedProjectId || !activeTenantId || !authUser) {
+      showToast('Selecciona un proyecto del espacio activo', 'error');
+      return;
+    }
     const lf = logForm;
     if (!lf.date) { showToast('La fecha es obligatoria', 'error'); return; }
     const db = getFirebase().firestore();
     const data: Record<string, any> = {
       projectId: selectedProjectId,
+      tenantId: activeTenantId,
       date: lf.date,
       weather: lf.weather || '',
       temperature: Number(lf.temperature) || 0,
@@ -2534,8 +2565,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       materials: (lf.materials || ['']).filter((m: string) => m.trim()),
       observations: lf.observations || '',
       photos: lf.photos || [],
-      supervisor: lf.supervisor || (authUser ? authUser.displayName || authUser.email?.split('@')[0] || '' : ''),
-      createdBy: authUser ? authUser.uid : '',
+      supervisor: lf.supervisor || authUser.displayName || authUser.email?.split('@')[0] || '',
       updatedAt: getFirebase().firestore.FieldValue.serverTimestamp(),
     };
     try {
@@ -2543,6 +2573,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
         await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(selectedLogId).update(data);
         showToast('Bitácora actualizada');
       } else {
+        data.createdBy = authUser.uid;
         data.createdAt = getFirebase().firestore.FieldValue.serverTimestamp();
         await db.collection('projects').doc(selectedProjectId).collection('dailyLogs').add(data);
         showToast('Bitácora creada');
@@ -2550,14 +2581,20 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       setDailyLogTab('list');
       setSelectedLogId(null);
       resetLogForm();
-    } catch (err) { console.error('[Archii]', err); showToast('Error al guardar', 'error'); }
+    } catch (err) {
+      console.error('[Archii] Daily log save:', err);
+      showToast('No se pudo guardar el registro de bitácora. Verifica tu acceso al proyecto.', 'error');
+    }
   };
 
   const deleteDailyLog = async (logId: string) => {
-    if (!selectedProjectId) return;
-    const logData = (await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId).get()).data();
+    if (!selectedProjectId || !activeTenantId) return;
+    const tenantId = activeTenantId;
     try {
-      await getFirebase().firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId).delete();
+      const fb = getFirebase();
+      const logRef = fb.firestore().collection('projects').doc(selectedProjectId).collection('dailyLogs').doc(logId);
+      const logData = (await logRef.get()).data();
+      await logRef.delete();
       if (logData) {
         toast.success('Bitácora eliminada', {
           duration: 5000,
@@ -2565,7 +2602,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
             label: 'Deshacer',
             onClick: async () => {
               try {
-                await getFirebase().firestore().collection('projects').doc(selectedProjectId!).collection('dailyLogs').doc(logId).set(scrubUndefined({ ...logData, updatedAt: getFirebase().firestore.FieldValue.serverTimestamp() }));
+                await logRef.set({ ...logData, tenantId, updatedAt: fb.firestore.FieldValue.serverTimestamp() });
                 toast.success('Bitácora restaurada');
               } catch (err) { console.error('[Archii] undo deleteDailyLog:', err); toast.error('Error al restaurar'); }
             },
@@ -3228,6 +3265,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     projectPhasesCache,
     setWorkPhases,
     projectFiles,
+    projectFilesError,
     setProjectFiles,
     approvals,
     setApprovals,

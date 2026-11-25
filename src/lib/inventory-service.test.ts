@@ -187,4 +187,47 @@ describe.skipIf(!host)('inventory transactions against Firestore emulator', () =
       expect((await fetch(`${base}/${collection}/new-client-doc`, { method: 'PATCH', headers, body: JSON.stringify({ fields: { tenantId: { stringValue: 'company-a' } } }) })).status).toBe(403);
     }
   });
+
+  it.each([
+    ['files', 'name', 'legacy.txt', 'qa.txt'],
+    ['dailyLogs', 'date', '2026-11-24', '2026-11-25'],
+  ])('lists existing and new %s for a workspace member', async (subcollection, field, legacyValue, newValue) => {
+    const startedAt = Math.floor(Date.now() / 1000);
+    const token = [
+      Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url'),
+      Buffer.from(JSON.stringify({
+        aud: projectId,
+        iss: `https://securetoken.google.com/${projectId}`,
+        sub: 'director',
+        user_id: 'director',
+        iat: startedAt,
+        exp: startedAt + 3600,
+        firebase: { sign_in_provider: 'custom', identities: {} },
+      })).toString('base64url'),
+      '',
+    ].join('.');
+    const root = 'projects/qa-project';
+    await db.doc(root).set({ tenantId: 'company-a' });
+    await db.doc(`${root}/${subcollection}/legacy`).set({ [field]: legacyValue, createdAt: FieldValue.serverTimestamp() });
+
+    const collection = `http://${host}/v1/projects/${projectId}/databases/(default)/documents/${root}/${subcollection}`;
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const uploaded = await fetch(collection, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ fields: {
+        tenantId: { stringValue: 'company-a' },
+        [field]: { stringValue: newValue },
+        ...(subcollection === 'files' ? { data: { stringValue: 'data:text/plain;base64,UUE=' } } : {}),
+        createdAt: { timestampValue: new Date().toISOString() },
+      } }),
+    });
+    expect(uploaded.status).toBe(200);
+
+    const listed = await fetch(collection, { headers });
+    expect(listed.status).toBe(200);
+    const { documents } = await listed.json();
+    expect(documents.map((document: { fields: Record<string, { stringValue: string }> }) => document.fields[field].stringValue).sort())
+      .toEqual([legacyValue, newValue]);
+  });
 });
