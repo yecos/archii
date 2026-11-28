@@ -12,6 +12,7 @@ import { updateProjectFields } from '@/lib/firestore-actions';
 import { SkeletonFileList } from '@/components/ui/SkeletonLoaders';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import NasStoragePanel from '@/components/nas/NasStoragePanel';
 
 
 
@@ -514,6 +515,13 @@ export default function ProjectDetailScreen() {
 
             {/* 7. TAB: Archivos (OneDrive + Local + Approvals) */}
             {forms.detailTab === 'Archivos' && (<div>
+              <NasStoragePanel
+                tenantId={activeTenantId}
+                projectId={selectedProjectId}
+                projectName={currentProject.data.name}
+                showToast={showToast}
+              />
+
               {/* OneDrive Section */}
               {!od.msConnected ? (
                 <div className="mb-4 bg-[#0078d4]/10 border border-[#0078d4]/20 rounded-xl p-6 text-center">
