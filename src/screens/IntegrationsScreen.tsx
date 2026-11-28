@@ -431,7 +431,7 @@ export default function IntegrationsScreen() {
                   </div>
 
                   {/* Test result inline */}
-                  {testing === inst.id && testResult && (
+                  {testing === null && testResult && showLogs !== inst.id && (
                     <div className={`mt-2 text-[11px] px-3 py-1.5 rounded-lg ${testResult.success ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                       {testResult.success ? '✅' : '❌'} {testResult.message}
                     </div>

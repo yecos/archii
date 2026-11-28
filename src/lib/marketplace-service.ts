@@ -13,6 +13,7 @@
  */
 
 import { getAdminDb } from './firebase-admin';
+import { encryptIntegrationConfig, decryptIntegrationConfig } from './integration-crypto';
 import { isFlagEnabled } from './feature-flags';
 
 /* ================================================================
@@ -353,7 +354,7 @@ export async function installIntegration(
     tenantId,
     providerId,
     status: 'active' as IntegrationStatus,
-    config,
+    config: encryptIntegrationConfig(config),
     events: events || provider.eventTypes,
     installedBy,
     lastSyncAt: null,
@@ -405,6 +406,25 @@ export async function uninstallIntegration(
 /**
  * List all installed integrations for a tenant.
  */
+/** Public representations must never include credentials. */
+export function sanitizeIntegration<T extends { providerId: string; config: Record<string, string> }>(instance: T): T {
+  const provider = getProvider(instance.providerId);
+  const safeConfig: Record<string, string> = {};
+  for (const field of provider?.configSchema || []) {
+    if (field.type !== 'password' && !/token|secret|key|webhookurl|password|credential/i.test(field.key)) {
+      if (instance.config?.[field.key]) safeConfig[field.key] = instance.config[field.key];
+    }
+  }
+  return { ...instance, config: safeConfig };
+}
+
+export async function requireTenantIntegration(tenantId: string, instanceId: string): Promise<IntegrationInstance> {
+  const doc = await getAdminDb().collection('integrations').doc(instanceId).get();
+  if (!doc.exists || doc.data()?.tenantId !== tenantId) throw new Error('Integración no encontrada en este tenant');
+  const item = doc.data() as Omit<IntegrationInstance, 'id'>;
+  return { id: doc.id, ...item, config: decryptIntegrationConfig(item.config) };
+}
+
 export async function getTenantIntegrations(
   tenantId: string
 ): Promise<IntegrationInstance[]> {
@@ -418,6 +438,7 @@ export async function getTenantIntegrations(
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...(doc.data() as Omit<IntegrationInstance, 'id'>),
+    config: decryptIntegrationConfig(doc.data().config || {}),
   }));
 }
 
@@ -435,7 +456,7 @@ export async function updateIntegrationConfig(
 
   const db = getAdminDb();
   await db.collection('integrations').doc(instanceId).update({
-    config,
+    config: encryptIntegrationConfig(config),
     status: 'active',
     errorMessage: null,
     updatedAt: new Date().toISOString(),
@@ -464,6 +485,7 @@ export async function triggerIntegration(
   }
 
   const instance = { id: doc.id, ...doc.data() } as IntegrationInstance;
+  instance.config = decryptIntegrationConfig(instance.config);
 
   // Check if this instance subscribes to the event
   if (instance.events.length > 0 && !instance.events.includes(event)) {
@@ -471,7 +493,16 @@ export async function triggerIntegration(
   }
 
   try {
-    // Delegate to the appropriate connector
+    // Load the provider module before consulting the connector registry.
+    // The modules register themselves when evaluated.
+    switch (instance.providerId) {
+      case 'slack': await import('./connectors/slack-connector'); break;
+      case 'jira': await import('./connectors/jira-connector'); break;
+      case 'github': await import('./connectors/github-connector'); break;
+      case 'calendly': await import('./connectors/calendly-connector'); break;
+      case 'stripe': await import('./connectors/stripe-connector'); break;
+      default: break;
+    }
     const connector = getConnector(instance.providerId);
     if (!connector) {
       return { success: false, error: `Conector no disponible: ${instance.providerId}` };
